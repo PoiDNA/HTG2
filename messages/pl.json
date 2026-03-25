@@ -5,6 +5,7 @@
   },
   "Nav": {
     "sessions": "Sesje",
+    "individual": "Umów sesję",
     "subscriptions": "Subskrypcje",
     "recordings": "Nagrania",
     "account": "Moje konto",
@@ -131,6 +132,23 @@
     "retry": "Spróbuj ponownie",
     "loading": "Ładowanie...",
     "error": "Nie udało się załadować nagrania."
+  },
+  "Individual": {
+    "title": "Sesje indywidualne",
+    "subtitle": "Prywatna sesja na żywo z Natalią HTG. Wybierz rodzaj sesji, preferowany termin i opłać online.",
+    "how_title": "Jak to działa?",
+    "step_1": "Wybierz rodzaj sesji — solo z Natalią lub z asystą (Agata / Justyna).",
+    "step_2": "Wskaż preferowany termin — skontaktujemy się, żeby potwierdzić datę.",
+    "step_3": "Opłać sesję online — otrzymasz fakturę i potwierdzenie e-mailem.",
+    "step_4": "W dniu sesji otrzymasz link do pokoju — dołącz o umówionej godzinie.",
+    "choose_session": "Wybierz rodzaj sesji",
+    "date_label": "Preferowany termin",
+    "date_hint": "Skontaktujemy się, żeby potwierdzić dokładną datę i godzinę.",
+    "topics_label": "Zagadnienia na sesję (opcjonalnie)",
+    "topics_placeholder": "Opisz, nad czym chciałbyś/chciałabyś pracować podczas sesji...",
+    "buy": "Opłać sesję",
+    "cancel_policy": "Zmiana terminu / bezkosztowe anulowanie: do 24h przed sesją. Anulowanie < 24h: przedpłata przepada.",
+    "per_session": "za sesję"
   },
   "Legal": {
     "privacy_title": "Polityka prywatności",

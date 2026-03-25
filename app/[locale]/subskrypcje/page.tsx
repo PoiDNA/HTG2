@@ -108,7 +108,7 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
           <h2 className="font-serif font-bold text-2xl text-htg-fg mb-2">{t('a_la_carte_title')}</h2>
           <p className="text-htg-fg-muted text-sm mb-4">{t('a_la_carte_desc')}</p>
           <p className="text-2xl font-bold text-htg-fg mb-1">
-            {t('a_la_carte_price', { price: String(singlePrice?.amount || 150) })}
+            {t('a_la_carte_price', { price: String(singlePrice?.amount || 30) })}
           </p>
           <p className="text-xs text-htg-sage font-medium bg-htg-sage/10 rounded px-2 py-1 inline-block mb-6 w-fit">
             {t('ownership_notice')}
@@ -141,7 +141,7 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
           <h2 className="font-serif font-bold text-2xl text-htg-fg mb-2">{t('monthly_title')}</h2>
           <p className="text-htg-fg-muted text-sm mb-4">{t('monthly_desc')}</p>
           <p className="text-2xl font-bold text-htg-fg mb-1">
-            {t('monthly_price', { price: String(monthlyPrice?.amount || 300) })}
+            {t('monthly_price', { price: String(monthlyPrice?.amount || 99) })}
           </p>
           <p className="text-xs text-htg-sage font-medium bg-htg-sage/10 rounded px-2 py-1 inline-block mb-6 w-fit">
             {t('ownership_notice')}
@@ -178,7 +178,7 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
           <h2 className="font-serif font-bold text-2xl text-htg-fg mb-2 mt-2">{t('yearly_title')}</h2>
           <p className="text-htg-fg-muted text-sm mb-4">{t('yearly_desc')}</p>
           <p className="text-2xl font-bold text-htg-fg mb-1">
-            {t('yearly_price', { price: String(yearlyPrice?.amount || 3000) })}
+            {t('yearly_price', { price: String(yearlyPrice?.amount || 999) })}
           </p>
           <p className="text-xs text-htg-warm-text font-medium bg-htg-warm/10 rounded px-2 py-1 inline-block mb-4 w-fit">
             {t('rental_notice')}

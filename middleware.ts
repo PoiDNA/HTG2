@@ -6,7 +6,7 @@ import { routing, locales } from './i18n-config';
 const intlMiddleware = createMiddleware(routing);
 
 // Paths that don't require authentication
-const PUBLIC_PATHS = ['/', '/sesje', '/subskrypcje', '/nagrania', '/login', '/privacy', '/terms', '/auth'];
+const PUBLIC_PATHS = ['/', '/sesje', '/sesje-indywidualne', '/subskrypcje', '/nagrania', '/login', '/privacy', '/terms', '/auth'];
 
 function isPublicPath(pathname: string): boolean {
   // Strip locale prefix

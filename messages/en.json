@@ -5,6 +5,7 @@
   },
   "Nav": {
     "sessions": "Sessions",
+    "individual": "Book session",
     "subscriptions": "Subscriptions",
     "recordings": "Recordings",
     "account": "My Account",
@@ -131,6 +132,23 @@
     "retry": "Try again",
     "loading": "Loading...",
     "error": "Failed to load recording."
+  },
+  "Individual": {
+    "title": "Individual Sessions",
+    "subtitle": "Private live session with Natalia HTG. Choose a session type, preferred date and pay online.",
+    "how_title": "How it works",
+    "step_1": "Choose session type — solo with Natalia or with an assistant (Agata / Justyna).",
+    "step_2": "Select your preferred date — we'll contact you to confirm the exact time.",
+    "step_3": "Pay online — you'll receive an invoice and confirmation via email.",
+    "step_4": "On the session day, you'll receive a room link — join at the scheduled time.",
+    "choose_session": "Choose session type",
+    "date_label": "Preferred date",
+    "date_hint": "We'll contact you to confirm the exact date and time.",
+    "topics_label": "Topics for the session (optional)",
+    "topics_placeholder": "Describe what you'd like to work on during the session...",
+    "buy": "Pay for session",
+    "cancel_policy": "Reschedule / free cancellation: up to 24h before the session. Cancellation < 24h: prepayment is forfeited.",
+    "per_session": "per session"
   },
   "Legal": {
     "privacy_title": "Privacy Policy",

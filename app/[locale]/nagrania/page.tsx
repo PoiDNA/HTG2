@@ -3,6 +3,8 @@ import { locales } from '@/i18n-config';
 import { Youtube } from 'lucide-react';
 import { createSupabaseServer } from '@/lib/supabase/server';
 
+export const revalidate = 3600; // Re-fetch from DB every hour
+
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }

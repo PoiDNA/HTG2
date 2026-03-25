@@ -3,6 +3,8 @@ import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { SessionPicker } from './SessionPicker';
 
+export const dynamic = 'force-dynamic';
+
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }

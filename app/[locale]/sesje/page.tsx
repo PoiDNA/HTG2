@@ -4,7 +4,7 @@ import { Link } from '@/i18n-config';
 import { Play, Calendar } from 'lucide-react';
 import { createSupabaseServer } from '@/lib/supabase/server';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

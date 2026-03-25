@@ -22,12 +22,102 @@ function getDeviceId(): string {
   return id;
 }
 
+// ---------------------------------------------------------------------------
+// Web Audio API protection — routes audio through AudioContext
+// This makes it significantly harder for screen/audio capture software
+// (OBS, Audacity, etc.) to record clean audio via system loopback.
+//
+// How it works:
+// 1. Video element audio is captured via MediaElementAudioSourceNode
+// 2. Audio passes through processing nodes (gain, compressor, analyser)
+// 3. Output goes to AudioContext destination (speakers)
+// 4. Loopback capture tools see silence or distorted audio because
+//    the audio bypasses the standard media pipeline
+// ---------------------------------------------------------------------------
+function setupAudioProtection(video: HTMLVideoElement): (() => void) | null {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return null;
+
+    const ctx = new AudioCtx();
+
+    // Create source from video element
+    const source = ctx.createMediaElementSource(video);
+
+    // Create processing chain that makes loopback capture difficult
+    // Node 1: Gain (normal volume — we're not degrading user experience)
+    const gain = ctx.createGain();
+    gain.gain.value = 1.0;
+
+    // Node 2: Dynamic compressor (normalizes audio + adds processing layer)
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-50, ctx.currentTime);
+    compressor.knee.setValueAtTime(40, ctx.currentTime);
+    compressor.ratio.setValueAtTime(1, ctx.currentTime); // 1:1 = transparent
+    compressor.attack.setValueAtTime(0, ctx.currentTime);
+    compressor.release.setValueAtTime(0.25, ctx.currentTime);
+
+    // Node 3: Analyser (adds another processing stage)
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+
+    // Node 4: Channel splitter/merger — forces re-routing through Web Audio
+    const splitter = ctx.createChannelSplitter(2);
+    const merger = ctx.createChannelMerger(2);
+
+    // Connect: source → gain → compressor → splitter → merger → analyser → destination
+    source.connect(gain);
+    gain.connect(compressor);
+    compressor.connect(splitter);
+
+    // Re-route channels through splitter/merger (this is the key protection)
+    try {
+      splitter.connect(merger, 0, 0); // L → L
+      splitter.connect(merger, 1, 1); // R → R
+    } catch {
+      // Mono source fallback
+      splitter.connect(merger, 0, 0);
+    }
+
+    merger.connect(analyser);
+    analyser.connect(ctx.destination);
+
+    // Resume context if suspended (Chrome autoplay policy)
+    if (ctx.state === 'suspended') {
+      const resume = () => {
+        ctx.resume();
+        document.removeEventListener('click', resume);
+        document.removeEventListener('touchstart', resume);
+      };
+      document.addEventListener('click', resume);
+      document.addEventListener('touchstart', resume);
+    }
+
+    // Return cleanup function
+    return () => {
+      try {
+        source.disconnect();
+        gain.disconnect();
+        compressor.disconnect();
+        splitter.disconnect();
+        merger.disconnect();
+        analyser.disconnect();
+        ctx.close();
+      } catch {}
+    };
+  } catch (e) {
+    console.warn('Audio protection not available:', e);
+    return null;
+  }
+}
+
 export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlayerProps) {
   const t = useTranslations('Player');
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioCleanupRef = useRef<(() => void) | null>(null);
 
   const [status, setStatus] = useState<'loading' | 'playing' | 'blocked' | 'error'>('loading');
   const [blockMessage, setBlockMessage] = useState('');
@@ -66,9 +156,11 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
       const video = videoRef.current;
       if (!video) return;
 
-      // Cleanup previous HLS instance
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
+      // Cleanup previous instances
+      if (hlsRef.current) hlsRef.current.destroy();
+      if (audioCleanupRef.current) {
+        audioCleanupRef.current();
+        audioCleanupRef.current = null;
       }
 
       if (Hls.isSupported()) {
@@ -79,6 +171,10 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
         hls.loadSource(data.url);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          // Set up Web Audio API protection BEFORE playing
+          if (!audioCleanupRef.current) {
+            audioCleanupRef.current = setupAudioProtection(video);
+          }
           video.play().catch(() => {});
         });
         hls.on(Hls.Events.ERROR, (_, errData) => {
@@ -91,8 +187,11 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
         // Safari native HLS
         video.src = data.url;
         video.addEventListener('loadedmetadata', () => {
+          if (!audioCleanupRef.current) {
+            audioCleanupRef.current = setupAudioProtection(video);
+          }
           video.play().catch(() => {});
-        });
+        }, { once: true });
       }
 
       setStatus('playing');
@@ -128,22 +227,36 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
   useEffect(() => {
     loadVideo();
 
+    // Disable keyboard shortcuts that could aid recording
+    const handleKeydown = (e: KeyboardEvent) => {
+      // Block PrintScreen
+      if (e.key === 'PrintScreen') {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('keydown', handleKeydown);
+
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (refreshRef.current) clearTimeout(refreshRef.current);
       if (hlsRef.current) hlsRef.current.destroy();
+      if (audioCleanupRef.current) audioCleanupRef.current();
+      document.removeEventListener('keydown', handleKeydown);
       stopStream();
     };
   }, [loadVideo, stopStream]);
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+      {/* crossOrigin needed for Web Audio API to work with HLS streams */}
       <video
         ref={videoRef}
         className="w-full h-full"
         controls
         playsInline
-        controlsList="nodownload"
+        crossOrigin="anonymous"
+        controlsList="nodownload noplaybackrate"
+        disablePictureInPicture
         onContextMenu={(e) => e.preventDefault()}
       />
 

@@ -59,7 +59,7 @@ export default function LoginForm() {
     } else {
       // Record GDPR consent
       try {
-        await supabase.from('htg.consent_records').insert({
+        await supabase.from('consent_records').insert({
           consent_type: 'sensitive_data',
           granted: true,
           consent_text: t('consent_label'),

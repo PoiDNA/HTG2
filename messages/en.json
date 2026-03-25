@@ -1,0 +1,129 @@
+{
+  "Metadata": {
+    "title": "HTG — Spiritual Development Sessions",
+    "description": "Spiritual development sessions led by Natalia HTG. Recordings, workshops and individual sessions online."
+  },
+  "Nav": {
+    "sessions": "Sessions",
+    "subscriptions": "Subscriptions",
+    "recordings": "Recordings",
+    "account": "My Account",
+    "login": "Log in",
+    "logout": "Log out",
+    "menu": "Menu"
+  },
+  "Footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact",
+    "copyright": "© {year} HTG. All rights reserved.",
+    "email": "sesje@htg.cyou",
+    "tagline": "Spiritual development sessions"
+  },
+  "Home": {
+    "hero_title": "Your path of spiritual development",
+    "hero_subtitle": "Sessions led by Natalia HTG — available online, at your own pace.",
+    "hero_cta": "Browse sessions",
+    "vod_title": "Latest sessions",
+    "vod_subtitle": "Discover recordings from recent workshops and group sessions.",
+    "subscriptions_title": "Choose your plan",
+    "subscriptions_subtitle": "Flexible options for accessing our session archive.",
+    "youtube_title": "Public recordings",
+    "youtube_subtitle": "Free materials on YouTube.",
+    "team_title": "Our team",
+    "team_natalia": "Session facilitator",
+    "team_agata": "Assistant",
+    "team_justyna": "Assistant",
+    "testimonials_title": "Participant reviews",
+    "help_title": "Need help?",
+    "help_subtitle": "We're here to help. Call or write to us.",
+    "help_phone": "Phone",
+    "help_email": "Email"
+  },
+  "Auth": {
+    "login_title": "Log in",
+    "login_subtitle": "Enter your email address — we'll send you a login code.",
+    "email_label": "Email address",
+    "email_placeholder": "your@email.com",
+    "send_code": "Send code",
+    "code_sent": "Check your inbox!",
+    "code_subtitle": "Enter the 6-digit code we sent to {email}.",
+    "code_label": "Code from email",
+    "code_placeholder": "000000",
+    "verify": "Verify",
+    "back": "Back",
+    "error_email": "Failed to send code. Please try again.",
+    "error_code": "Invalid code. Please try again.",
+    "consent_label": "I consent to the processing of my data regarding beliefs and health status for the purpose of providing spiritual development sessions (GDPR Art. 9).",
+    "consent_required": "Consent is required to continue."
+  },
+  "Sessions": {
+    "title": "Group sessions",
+    "subtitle": "Recordings from workshops and group sessions available in monthly packages or individually.",
+    "buy_access": "Buy access",
+    "watch": "Watch",
+    "no_sessions": "No sessions available.",
+    "duration": "{minutes} min",
+    "included_in_set": "In set: {setTitle}"
+  },
+  "Subscriptions": {
+    "title": "Subscriptions",
+    "subtitle": "Choose the plan that best fits your needs.",
+    "a_la_carte_title": "Individual sessions",
+    "a_la_carte_desc": "Choose specific sessions from any month. Access for 24 months from purchase — you buy it, you own it.",
+    "a_la_carte_price": "from {price} PLN / session",
+    "monthly_title": "Monthly package",
+    "monthly_desc": "Ready-made set of sessions from a given month at a lower price. Access for 24 months from purchase — you buy it, you own it.",
+    "monthly_price": "from {price} PLN / month",
+    "yearly_title": "Yearly package",
+    "yearly_desc": "Full access to the entire archive and new sessions for 12 months. Pay for 10 months, get 12.",
+    "yearly_price": "{price} PLN / year",
+    "yearly_badge": "Best value",
+    "yearly_notice": "The Yearly Package is a rental of the full session catalog for 12 months. After the year ends, access expires unless you renew.",
+    "ownership_notice": "You buy it, you keep it for 24 months",
+    "rental_notice": "You rent the catalog for 12 months",
+    "buy": "Buy now",
+    "subscribe": "Subscribe"
+  },
+  "Recordings": {
+    "title": "Public recordings",
+    "subtitle": "Free materials on YouTube — get to know our work."
+  },
+  "Account": {
+    "title": "My Account",
+    "my_sessions": "My sessions",
+    "my_subscriptions": "My subscriptions",
+    "orders": "Orders & invoices",
+    "profile": "Profile",
+    "no_sessions": "You don't have access to any sessions yet.",
+    "browse_sessions": "Browse sessions",
+    "valid_until": "Access until: {date}",
+    "subscription_active": "Active",
+    "subscription_expired": "Expired",
+    "manage_subscription": "Manage subscription",
+    "order_date": "Order date",
+    "order_total": "Amount",
+    "order_status": "Status",
+    "download_invoice": "Download invoice",
+    "profile_name": "Full name",
+    "profile_email": "Email",
+    "profile_phone": "Phone",
+    "profile_save": "Save",
+    "profile_saved": "Saved!",
+    "gdpr_consents": "Your consents",
+    "gdpr_granted": "Granted: {date}",
+    "gdpr_revoke": "Revoke consent",
+    "delete_account": "Delete account"
+  },
+  "Player": {
+    "concurrent_title": "Playing on another device",
+    "concurrent_message": "Your account is already playing content on another device. Stop playback there to start here.",
+    "retry": "Try again",
+    "loading": "Loading...",
+    "error": "Failed to load recording."
+  },
+  "Legal": {
+    "privacy_title": "Privacy Policy",
+    "terms_title": "Terms of Service"
+  }
+}

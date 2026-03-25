@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  /* Raw palette */
+  --color-htg-indigo: #4A3B6B;
+  --color-htg-indigo-light: #5D4E7E;
+  --color-htg-lavender: #8B7AAF;
+  --color-htg-sage: #7A9E7E;
+  --color-htg-sage-dark: #5F8363;
+  --color-htg-cream: #FBF8F1;
+  --color-htg-warm: #D4A76A;
+  /* Accessible warm for text on cream — passes WCAG AA 4.5:1 */
+  --color-htg-warm-text: #8B6914;
+
+  /* Semantic tokens (light-mode defaults) */
+  --color-htg-bg: #FBF8F1;
+  --color-htg-fg: #2D2A3E;
+  --color-htg-fg-muted: rgba(45, 42, 62, 0.6);
+  --color-htg-card: #FFFFFF;
+  --color-htg-card-border: rgba(74, 59, 107, 0.08);
+  --color-htg-surface: rgba(74, 59, 107, 0.04);
+
+  --font-serif: Georgia, "Playfair Display", serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-serif {
+    font-family: var(--font-serif);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-htg-sage);
+    outline-offset: 2px;
+  }
+
+  /* Senior-friendly: minimum touch target */
+  button, a, [role="button"] {
+    min-height: 44px;
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

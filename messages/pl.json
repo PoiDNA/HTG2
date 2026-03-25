@@ -1,0 +1,129 @@
+{
+  "Metadata": {
+    "title": "HTG — Sesje Rozwoju Duchowego",
+    "description": "Sesje rozwoju duchowego prowadzone przez Natalię HTG. Nagrania, warsztaty i sesje indywidualne online."
+  },
+  "Nav": {
+    "sessions": "Sesje",
+    "subscriptions": "Subskrypcje",
+    "recordings": "Nagrania",
+    "account": "Moje konto",
+    "login": "Zaloguj",
+    "logout": "Wyloguj",
+    "menu": "Menu"
+  },
+  "Footer": {
+    "privacy": "Polityka prywatności",
+    "terms": "Regulamin",
+    "contact": "Kontakt",
+    "copyright": "© {year} HTG. Wszelkie prawa zastrzeżone.",
+    "email": "sesje@htg.cyou",
+    "tagline": "Sesje rozwoju duchowego"
+  },
+  "Home": {
+    "hero_title": "Twoja droga rozwoju duchowego",
+    "hero_subtitle": "Sesje prowadzone przez Natalię HTG — dostępne online, w Twoim tempie.",
+    "hero_cta": "Przeglądaj sesje",
+    "vod_title": "Najnowsze sesje",
+    "vod_subtitle": "Odkryj nagrania z ostatnich warsztatów i sesji grupowych.",
+    "subscriptions_title": "Wybierz swój plan",
+    "subscriptions_subtitle": "Elastyczne opcje dostępu do naszego archiwum sesji.",
+    "youtube_title": "Nagrania publiczne",
+    "youtube_subtitle": "Bezpłatne materiały na YouTube.",
+    "team_title": "Nasz zespół",
+    "team_natalia": "Prowadząca sesje",
+    "team_agata": "Asystentka",
+    "team_justyna": "Asystentka",
+    "testimonials_title": "Opinie uczestników",
+    "help_title": "Potrzebujesz pomocy?",
+    "help_subtitle": "Jesteśmy tu, żeby Ci pomóc. Zadzwoń lub napisz.",
+    "help_phone": "Telefon",
+    "help_email": "E-mail"
+  },
+  "Auth": {
+    "login_title": "Zaloguj się",
+    "login_subtitle": "Wpisz swój adres e-mail — wyślemy Ci kod logowania.",
+    "email_label": "Adres e-mail",
+    "email_placeholder": "twoj@email.pl",
+    "send_code": "Wyślij kod",
+    "code_sent": "Sprawdź swoją skrzynkę e-mail!",
+    "code_subtitle": "Wpisz 6-cyfrowy kod, który wysłaliśmy na {email}.",
+    "code_label": "Kod z e-maila",
+    "code_placeholder": "000000",
+    "verify": "Weryfikuj",
+    "back": "Wróć",
+    "error_email": "Nie udało się wysłać kodu. Spróbuj ponownie.",
+    "error_code": "Nieprawidłowy kod. Spróbuj ponownie.",
+    "consent_label": "Wyrażam zgodę na przetwarzanie moich danych dotyczących przekonań i stanu zdrowia w celu świadczenia usługi sesji rozwoju duchowego (RODO art. 9).",
+    "consent_required": "Zgoda jest wymagana, aby kontynuować."
+  },
+  "Sessions": {
+    "title": "Sesje grupowe",
+    "subtitle": "Nagrania z warsztatów i sesji grupowych dostępne w pakietach miesięcznych lub pojedynczo.",
+    "buy_access": "Kup dostęp",
+    "watch": "Oglądaj",
+    "no_sessions": "Brak dostępnych sesji.",
+    "duration": "{minutes} min",
+    "included_in_set": "W zestawie: {setTitle}"
+  },
+  "Subscriptions": {
+    "title": "Subskrypcje",
+    "subtitle": "Wybierz plan, który najlepiej odpowiada Twoim potrzebom.",
+    "a_la_carte_title": "Pojedyncze sesje",
+    "a_la_carte_desc": "Wybierz konkretne sesje z dowolnych miesięcy. Dostęp na 24 miesiące od zakupu — kupujesz i masz.",
+    "a_la_carte_price": "od {price} PLN / sesja",
+    "monthly_title": "Pakiet miesięczny",
+    "monthly_desc": "Gotowy zestaw sesji z danego miesiąca w niższej cenie. Dostęp na 24 miesiące od zakupu — kupujesz i masz.",
+    "monthly_price": "od {price} PLN / miesiąc",
+    "yearly_title": "Pakiet roczny",
+    "yearly_desc": "Pełny dostęp do całego archiwum i nowych sesji przez 12 miesięcy. Płacisz za 10 miesięcy, dostajesz 12.",
+    "yearly_price": "{price} PLN / rok",
+    "yearly_badge": "Najlepsza oferta",
+    "yearly_notice": "Pakiet Roczny to wypożyczenie pełnego katalogu sesji na 12 miesięcy. Po upływie roku dostęp wygasa, chyba że przedłużysz subskrypcję.",
+    "ownership_notice": "Kupujesz i masz na 24 miesiące",
+    "rental_notice": "Wypożyczasz katalog na 12 miesięcy",
+    "buy": "Kup teraz",
+    "subscribe": "Subskrybuj"
+  },
+  "Recordings": {
+    "title": "Nagrania publiczne",
+    "subtitle": "Bezpłatne materiały na YouTube — poznaj naszą pracę."
+  },
+  "Account": {
+    "title": "Moje konto",
+    "my_sessions": "Moje sesje",
+    "my_subscriptions": "Moje subskrypcje",
+    "orders": "Zamówienia i faktury",
+    "profile": "Profil",
+    "no_sessions": "Nie masz jeszcze dostępu do żadnych sesji.",
+    "browse_sessions": "Przeglądaj sesje",
+    "valid_until": "Dostęp do: {date}",
+    "subscription_active": "Aktywna",
+    "subscription_expired": "Wygasła",
+    "manage_subscription": "Zarządzaj subskrypcją",
+    "order_date": "Data zamówienia",
+    "order_total": "Kwota",
+    "order_status": "Status",
+    "download_invoice": "Pobierz fakturę",
+    "profile_name": "Imię i nazwisko",
+    "profile_email": "E-mail",
+    "profile_phone": "Telefon",
+    "profile_save": "Zapisz",
+    "profile_saved": "Zapisano!",
+    "gdpr_consents": "Twoje zgody",
+    "gdpr_granted": "Udzielona: {date}",
+    "gdpr_revoke": "Wycofaj zgodę",
+    "delete_account": "Usuń konto"
+  },
+  "Player": {
+    "concurrent_title": "Odtwarzanie na innym urządzeniu",
+    "concurrent_message": "Twoje konto odtwarza już materiał na innym urządzeniu. Zatrzymaj odtwarzanie tam, aby rozpocząć tutaj.",
+    "retry": "Spróbuj ponownie",
+    "loading": "Ładowanie...",
+    "error": "Nie udało się załadować nagrania."
+  },
+  "Legal": {
+    "privacy_title": "Polityka prywatności",
+    "terms_title": "Regulamin"
+  }
+}

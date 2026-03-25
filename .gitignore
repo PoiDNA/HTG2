@@ -34,3 +34,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# migration
+migration-report-*.json
+scripts/data/wix-*.json
+!scripts/data/wix-example.json

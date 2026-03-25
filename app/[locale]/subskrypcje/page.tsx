@@ -1,6 +1,8 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { Star, Check } from 'lucide-react';
+import { createSupabaseServer } from '@/lib/supabase/server';
+import { CheckoutButton } from '@/components/CheckoutButton';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -12,10 +14,61 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: t('title') };
 }
 
+// ---------------------------------------------------------------------------
+// Data fetching
+// ---------------------------------------------------------------------------
+
+interface PriceInfo {
+  stripeId: string;
+  amount: number; // in PLN (grosze → PLN)
+  interval: string | null;
+  mode: 'payment' | 'subscription';
+}
+
+async function getPriceByProductSlug(slug: string): Promise<PriceInfo | null> {
+  const supabase = await createSupabaseServer();
+
+  const { data: product } = await supabase
+    .from('products')
+    .select('id')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .single();
+
+  if (!product) return null;
+
+  const { data: price } = await supabase
+    .from('prices')
+    .select('stripe_price_id, amount, interval')
+    .eq('product_id', product.id)
+    .eq('is_active', true)
+    .single();
+
+  if (!price) return null;
+
+  return {
+    stripeId: price.stripe_price_id,
+    amount: price.amount / 100, // grosze → PLN
+    interval: price.interval,
+    mode: price.interval ? 'subscription' : 'payment',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default async function SubscriptionsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Subscriptions' });
+
+  // Fetch prices from DB (falls back to placeholder if no data yet)
+  const [singlePrice, monthlyPrice, yearlyPrice] = await Promise.all([
+    getPriceByProductSlug('sesja-pojedyncza'),
+    getPriceByProductSlug('pakiet-miesieczny'),
+    getPriceByProductSlug('pakiet-roczny'),
+  ]);
 
   const features = {
     a_la_carte: [
@@ -54,7 +107,9 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
         <div className="bg-htg-card border border-htg-card-border rounded-2xl p-8 flex flex-col">
           <h2 className="font-serif font-bold text-2xl text-htg-fg mb-2">{t('a_la_carte_title')}</h2>
           <p className="text-htg-fg-muted text-sm mb-4">{t('a_la_carte_desc')}</p>
-          <p className="text-2xl font-bold text-htg-fg mb-1">{t('a_la_carte_price', { price: '150' })}</p>
+          <p className="text-2xl font-bold text-htg-fg mb-1">
+            {t('a_la_carte_price', { price: String(singlePrice?.amount || 150) })}
+          </p>
           <p className="text-xs text-htg-sage font-medium bg-htg-sage/10 rounded px-2 py-1 inline-block mb-6 w-fit">
             {t('ownership_notice')}
           </p>
@@ -66,16 +121,28 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
               </li>
             ))}
           </ul>
-          <button className="w-full bg-htg-indigo text-white py-3 rounded-lg font-medium hover:bg-htg-indigo-light transition-colors">
-            {t('buy')}
-          </button>
+          {singlePrice ? (
+            <CheckoutButton
+              priceId={singlePrice.stripeId}
+              mode={singlePrice.mode}
+              className="w-full bg-htg-indigo text-white py-3 rounded-lg font-medium hover:bg-htg-indigo-light transition-colors"
+            >
+              {t('buy')}
+            </CheckoutButton>
+          ) : (
+            <button disabled className="w-full bg-htg-indigo/50 text-white/60 py-3 rounded-lg font-medium cursor-not-allowed">
+              {t('buy')}
+            </button>
+          )}
         </div>
 
         {/* Monthly */}
         <div className="bg-htg-card border border-htg-card-border rounded-2xl p-8 flex flex-col">
           <h2 className="font-serif font-bold text-2xl text-htg-fg mb-2">{t('monthly_title')}</h2>
           <p className="text-htg-fg-muted text-sm mb-4">{t('monthly_desc')}</p>
-          <p className="text-2xl font-bold text-htg-fg mb-1">{t('monthly_price', { price: '300' })}</p>
+          <p className="text-2xl font-bold text-htg-fg mb-1">
+            {t('monthly_price', { price: String(monthlyPrice?.amount || 300) })}
+          </p>
           <p className="text-xs text-htg-sage font-medium bg-htg-sage/10 rounded px-2 py-1 inline-block mb-6 w-fit">
             {t('ownership_notice')}
           </p>
@@ -87,9 +154,19 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
               </li>
             ))}
           </ul>
-          <button className="w-full bg-htg-indigo text-white py-3 rounded-lg font-medium hover:bg-htg-indigo-light transition-colors">
-            {t('buy')}
-          </button>
+          {monthlyPrice ? (
+            <CheckoutButton
+              priceId={monthlyPrice.stripeId}
+              mode={monthlyPrice.mode}
+              className="w-full bg-htg-indigo text-white py-3 rounded-lg font-medium hover:bg-htg-indigo-light transition-colors"
+            >
+              {t('buy')}
+            </CheckoutButton>
+          ) : (
+            <button disabled className="w-full bg-htg-indigo/50 text-white/60 py-3 rounded-lg font-medium cursor-not-allowed">
+              {t('buy')}
+            </button>
+          )}
         </div>
 
         {/* Yearly — highlighted */}
@@ -100,7 +177,9 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
           </div>
           <h2 className="font-serif font-bold text-2xl text-htg-fg mb-2 mt-2">{t('yearly_title')}</h2>
           <p className="text-htg-fg-muted text-sm mb-4">{t('yearly_desc')}</p>
-          <p className="text-2xl font-bold text-htg-fg mb-1">{t('yearly_price', { price: '3000' })}</p>
+          <p className="text-2xl font-bold text-htg-fg mb-1">
+            {t('yearly_price', { price: String(yearlyPrice?.amount || 3000) })}
+          </p>
           <p className="text-xs text-htg-warm-text font-medium bg-htg-warm/10 rounded px-2 py-1 inline-block mb-4 w-fit">
             {t('rental_notice')}
           </p>
@@ -115,9 +194,19 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
               </li>
             ))}
           </ul>
-          <button className="w-full bg-htg-sage text-white py-3 rounded-lg font-medium hover:bg-htg-sage-dark transition-colors">
-            {t('subscribe')}
-          </button>
+          {yearlyPrice ? (
+            <CheckoutButton
+              priceId={yearlyPrice.stripeId}
+              mode={yearlyPrice.mode}
+              className="w-full bg-htg-sage text-white py-3 rounded-lg font-medium hover:bg-htg-sage-dark transition-colors"
+            >
+              {t('subscribe')}
+            </CheckoutButton>
+          ) : (
+            <button disabled className="w-full bg-htg-sage/50 text-white/60 py-3 rounded-lg font-medium cursor-not-allowed">
+              {t('subscribe')}
+            </button>
+          )}
         </div>
       </div>
     </div>

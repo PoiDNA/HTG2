@@ -1,5 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
+import { Youtube } from 'lucide-react';
+import { createSupabaseServer } from '@/lib/supabase/server';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -16,12 +18,14 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Recordings' });
 
-  // TODO: Fetch from Supabase htg.youtube_videos
-  const videos = [
-    { id: 'dQw4w9WgXcQ', title: 'Wprowadzenie do HTG', description: 'Czym są sesje rozwoju duchowego i jak wyglądają.' },
-    { id: 'dQw4w9WgXcQ', title: 'Sesja otwarta — fragment', description: 'Fragment sesji grupowej dostępnej publicznie.' },
-    { id: 'dQw4w9WgXcQ', title: 'Q&A z Natalią', description: 'Odpowiedzi na najczęściej zadawane pytania.' },
-  ];
+  const supabase = await createSupabaseServer();
+  const { data: videos } = await supabase
+    .from('youtube_videos')
+    .select('id, youtube_id, title, description')
+    .eq('is_visible', true)
+    .order('sort_order', { ascending: true });
+
+  const videoList = videos || [];
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-16">
@@ -34,26 +38,36 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {videos.map((video, i) => (
-          <div key={i} className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
-            <div className="aspect-video">
-              <iframe
-                src={`https://www.youtube.com/embed/${video.id}`}
-                title={video.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-                loading="lazy"
-              />
+      {videoList.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {videoList.map((video: any) => (
+            <div key={video.id} className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
+              <div className="aspect-video">
+                <iframe
+                  src={`https://www.youtube.com/embed/${video.youtube_id}`}
+                  title={video.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                  loading="lazy"
+                />
+              </div>
+              <div className="p-5">
+                <h3 className="font-serif font-semibold text-lg text-htg-fg mb-2">{video.title}</h3>
+                {video.description && (
+                  <p className="text-htg-fg-muted text-sm">{video.description}</p>
+                )}
+              </div>
             </div>
-            <div className="p-5">
-              <h3 className="font-serif font-semibold text-lg text-htg-fg mb-2">{video.title}</h3>
-              <p className="text-htg-fg-muted text-sm">{video.description}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20">
+          <Youtube className="w-16 h-16 text-htg-fg-muted mx-auto mb-4" />
+          <h2 className="text-xl font-serif text-htg-fg mb-2">Wkrótce nowe nagrania</h2>
+          <p className="text-htg-fg-muted">Pracujemy nad udostępnieniem materiałów publicznych.</p>
+        </div>
+      )}
     </div>
   );
 }

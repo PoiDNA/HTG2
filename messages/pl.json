@@ -61,10 +61,16 @@
     "title": "Sesje grupowe",
     "subtitle": "Nagrania z warsztatów i sesji grupowych dostępne w pakietach miesięcznych lub pojedynczo.",
     "buy_access": "Kup dostęp",
+    "buy_set": "Kup ten zestaw",
     "watch": "Oglądaj",
     "no_sessions": "Brak dostępnych sesji.",
     "duration": "{minutes} min",
-    "included_in_set": "W zestawie: {setTitle}"
+    "included_in_set": "W zestawie: {setTitle}",
+    "monthly_sets": "Zestawy miesięczne",
+    "individual_sessions": "Sesje pojedyncze",
+    "sessions_in_set": "{count, plural, one {# sesja} few {# sesje} other {# sesji}} w zestawie",
+    "empty_title": "Wkrótce nowe sesje",
+    "empty_description": "Pracujemy nad udostępnieniem naszego archiwum. Wróć tu wkrótce!"
   },
   "Subscriptions": {
     "title": "Subskrypcje",
@@ -113,7 +119,11 @@
     "gdpr_consents": "Twoje zgody",
     "gdpr_granted": "Udzielona: {date}",
     "gdpr_revoke": "Wycofaj zgodę",
-    "delete_account": "Usuń konto"
+    "delete_account": "Usuń konto",
+    "watch": "Oglądaj",
+    "no_orders": "Brak zamówień.",
+    "no_subscriptions": "Nie masz aktywnych subskrypcji.",
+    "full_catalog_access": "Pełny dostęp do całego archiwum sesji"
   },
   "Player": {
     "concurrent_title": "Odtwarzanie na innym urządzeniu",

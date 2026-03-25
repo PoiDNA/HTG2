@@ -1,5 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
+import { createSupabaseServer } from '@/lib/supabase/server';
+import { ProfileForm } from './ProfileForm';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -10,62 +12,49 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Account' });
 
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Fetch profile
+  const { data: profile } = user
+    ? await supabase
+        .from('profiles')
+        .select('display_name, phone')
+        .eq('id', user.id)
+        .single()
+    : { data: null };
+
+  // Fetch consents
+  const { data: consents } = user
+    ? await supabase
+        .from('consent_records')
+        .select('id, consent_type, granted, consent_text, created_at')
+        .eq('user_id', user.id)
+        .eq('granted', true)
+        .order('created_at', { ascending: false })
+    : { data: null };
+
   return (
     <div>
       <h2 className="text-xl font-serif font-semibold text-htg-fg mb-6">{t('profile')}</h2>
 
-      <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-6">
-        {/* Profile form */}
-        <div className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-medium text-htg-fg">{t('profile_name')}</span>
-            <input
-              type="text"
-              className="mt-1 w-full px-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg text-base"
-              placeholder="Jan Kowalski"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-medium text-htg-fg">{t('profile_email')}</span>
-            <input
-              type="email"
-              className="mt-1 w-full px-4 py-3 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg-muted text-base cursor-not-allowed"
-              disabled
-              placeholder="twoj@email.pl"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-sm font-medium text-htg-fg">{t('profile_phone')}</span>
-            <input
-              type="tel"
-              className="mt-1 w-full px-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg text-base"
-              placeholder="+48 000 000 000"
-            />
-          </label>
-
-          <button className="bg-htg-sage text-white px-6 py-3 rounded-lg font-medium hover:bg-htg-sage-dark transition-colors">
-            {t('profile_save')}
-          </button>
-        </div>
-
-        {/* GDPR Consents */}
-        <div className="border-t border-htg-card-border pt-6">
-          <h3 className="text-lg font-semibold text-htg-fg mb-4">{t('gdpr_consents')}</h3>
-          <p className="text-sm text-htg-fg-muted">
-            {/* TODO: Fetch from htg.consent_records */}
-            Zarządzaj swoimi zgodami na przetwarzanie danych.
-          </p>
-        </div>
-
-        {/* Danger zone */}
-        <div className="border-t border-htg-card-border pt-6">
-          <button className="text-red-600 text-sm font-medium hover:underline">
-            {t('delete_account')}
-          </button>
-        </div>
-      </div>
+      <ProfileForm
+        email={user?.email || ''}
+        displayName={profile?.display_name || ''}
+        phone={profile?.phone || ''}
+        consents={consents || []}
+        labels={{
+          name: t('profile_name'),
+          email: t('profile_email'),
+          phone: t('profile_phone'),
+          save: t('profile_save'),
+          saved: t('profile_saved'),
+          gdprConsents: t('gdpr_consents'),
+          gdprGranted: t('gdpr_granted', { date: '' }),
+          gdprRevoke: t('gdpr_revoke'),
+          deleteAccount: t('delete_account'),
+        }}
+      />
     </div>
   );
 }

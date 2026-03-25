@@ -61,10 +61,16 @@
     "title": "Group sessions",
     "subtitle": "Recordings from workshops and group sessions available in monthly packages or individually.",
     "buy_access": "Buy access",
+    "buy_set": "Buy this set",
     "watch": "Watch",
     "no_sessions": "No sessions available.",
     "duration": "{minutes} min",
-    "included_in_set": "In set: {setTitle}"
+    "included_in_set": "In set: {setTitle}",
+    "monthly_sets": "Monthly sets",
+    "individual_sessions": "Individual sessions",
+    "sessions_in_set": "{count, plural, one {# session} other {# sessions}} in set",
+    "empty_title": "New sessions coming soon",
+    "empty_description": "We're working on making our archive available. Check back soon!"
   },
   "Subscriptions": {
     "title": "Subscriptions",
@@ -113,7 +119,11 @@
     "gdpr_consents": "Your consents",
     "gdpr_granted": "Granted: {date}",
     "gdpr_revoke": "Revoke consent",
-    "delete_account": "Delete account"
+    "delete_account": "Delete account",
+    "watch": "Watch",
+    "no_orders": "No orders yet.",
+    "no_subscriptions": "You don't have any active subscriptions.",
+    "full_catalog_access": "Full access to the entire session archive"
   },
   "Player": {
     "concurrent_title": "Playing on another device",

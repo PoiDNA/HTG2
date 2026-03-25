@@ -6,7 +6,10 @@
     "dev": "next dev --port 3003",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:wix": "npx tsx scripts/migrate-wix.ts",
+    "migrate:wix:dry": "npx tsx scripts/migrate-wix.ts --dry-run",
+    "seed:products": "npx tsx scripts/seed-products.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

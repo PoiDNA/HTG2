@@ -5,6 +5,7 @@ import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
+  ListMusic, Headphones, Archive, PlusCircle,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -27,6 +28,7 @@ export default async function AccountLayout({
   // Determine user role
   let isAdmin = false;
   let isStaff = false;
+  let isPublikacja = false;
   try {
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
@@ -42,10 +44,14 @@ export default async function AccountLayout({
         .single();
       if (profile?.role === 'admin') isAdmin = true;
       if (profile?.role === 'moderator' || profile?.role === 'admin') isStaff = true;
+      if (profile?.role === 'publikacja') isPublikacja = true;
     }
   } catch {
     // fallback — just show user items
   }
+
+  // publikacja role (also available to admin/moderator)
+  const showPublikacja = isPublikacja || isAdmin || isStaff;
 
   // Staff sees only staff items + profile/subscriptions (no user session items)
   const userItems = (isStaff && !isAdmin) ? [
@@ -63,6 +69,14 @@ export default async function AccountLayout({
     { href: '/prowadzacy', label: tPanel('staff_panel'), icon: LayoutDashboard },
     { href: '/prowadzacy/grafik', label: tPanel('staff_schedule'), icon: Calendar },
     { href: '/prowadzacy/sesje', label: tPanel('staff_sessions'), icon: Presentation },
+  ] as const;
+
+  const publikacjaItems = [
+    { href: '/publikacja', label: tPanel('pub_panel'), icon: LayoutDashboard },
+    { href: '/publikacja/sesje', label: tPanel('pub_sessions'), icon: ListMusic },
+    { href: '/publikacja/moje', label: tPanel('pub_my_sessions'), icon: Headphones },
+    { href: '/publikacja/archiwum', label: tPanel('pub_archive'), icon: Archive },
+    { href: '/publikacja/dodaj', label: tPanel('pub_add'), icon: PlusCircle },
   ] as const;
 
   const adminItems = [
@@ -107,6 +121,24 @@ export default async function AccountLayout({
               <>
                 <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">Admin</p>
                 {adminItems.map(({ href, label, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors whitespace-nowrap"
+                  >
+                    <Icon className="w-5 h-5 shrink-0" />
+                    {label}
+                  </Link>
+                ))}
+                <div className="hidden md:block border-t border-htg-card-border my-2" />
+              </>
+            )}
+
+            {/* Publikacja panel */}
+            {showPublikacja && (
+              <>
+                <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{tPanel('pub_panel')}</p>
+                {publikacjaItems.map(({ href, label, icon: Icon }) => (
                   <Link
                     key={href}
                     href={href}

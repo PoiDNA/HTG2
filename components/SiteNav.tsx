@@ -7,6 +7,7 @@ import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { Menu, X, LogOut } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import HeaderAuthButton from './HeaderAuthButton';
 import UserPanelNav from './UserPanelNav';
 
 const navLinks = [
@@ -33,23 +34,28 @@ export default function SiteNav() {
 
   return (
     <nav aria-label="Nawigacja główna">
-      {/* Desktop nav */}
-      <div className="hidden md:flex items-center gap-6">
-        {navLinks.map(({ href, key }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
-              pathname.startsWith(href)
-                ? 'text-htg-indigo border-b-2 border-htg-sage pb-0.5'
-                : 'text-htg-fg-muted'
-            }`}
-          >
-            {t(key)}
-          </Link>
-        ))}
-        {/* Show UserPanelNav dropdown when logged in */}
-        {!loading && isLoggedIn && <UserPanelNav />}
+      {/* Desktop nav — linki absolutnie wyśrodkowane w headerze */}
+      <div className="hidden md:block absolute left-1/2 -translate-x-1/2">
+        <div className="flex items-center gap-5">
+          {navLinks.map(({ href, key }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
+                pathname.startsWith(href)
+                  ? 'text-htg-indigo border-b-2 border-htg-sage pb-0.5'
+                  : 'text-htg-fg-muted'
+              }`}
+            >
+              {t(key)}
+            </Link>
+          ))}
+        </div>
+      </div>
+      {/* Desktop: ThemeToggle + auth — po prawej */}
+      <div className="hidden md:flex items-center gap-3">
+        <ThemeToggle />
+        {!loading && isLoggedIn ? <UserPanelNav /> : <HeaderAuthButton />}
       </div>
 
       {/* Mobile hamburger */}

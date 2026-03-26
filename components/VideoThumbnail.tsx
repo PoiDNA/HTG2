@@ -41,9 +41,9 @@ export default function VideoThumbnail({ youtubeId, title }: VideoThumbnailProps
         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         loading="lazy"
       />
-      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-        <div className="w-16 h-16 rounded-full bg-htg-sage/90 group-hover:bg-htg-sage flex items-center justify-center transition-colors shadow-lg">
-          <Play className="w-7 h-7 text-white ml-1" fill="white" />
+      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors">
+        <div className="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-htg-sage/90 group-hover:bg-htg-sage flex items-center justify-center transition-colors shadow-lg">
+          <Play className="w-5 h-5 text-white ml-0.5" fill="white" />
         </div>
       </div>
     </button>

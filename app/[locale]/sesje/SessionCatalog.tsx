@@ -255,35 +255,38 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
           </button>
         </div>
 
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Szukaj sesji po tytule, opisie, słowach kluczowych..."
-            className="w-full pl-10 pr-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-sage/50"
-          />
-        </div>
+        {/* Search + Filter — only in sessions view */}
+        {view === 'sessions' && (
+          <>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Szukaj sesji po tytule, opisie, słowach kluczowych..."
+                className="w-full pl-10 pr-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-sage/50"
+              />
+            </div>
 
-        {/* Filter toggle */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors shrink-0 flex items-center gap-2 ${
-            showFilters ? 'border-htg-sage bg-htg-sage/10 text-htg-sage' : 'border-htg-card-border text-htg-fg-muted hover:text-htg-fg'
-          }`}
-        >
-          <SlidersHorizontal className="w-4 h-4" />
-          Filtry
-          {(category !== 'all' || selectedMonth || selectedTag) && (
-            <span className="w-2 h-2 bg-htg-sage rounded-full" />
-          )}
-        </button>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors shrink-0 flex items-center gap-2 ${
+                showFilters ? 'border-htg-sage bg-htg-sage/10 text-htg-sage' : 'border-htg-card-border text-htg-fg-muted hover:text-htg-fg'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filtry
+              {(category !== 'all' || selectedMonth || selectedTag) && (
+                <span className="w-2 h-2 bg-htg-sage rounded-full" />
+              )}
+            </button>
+          </>
+        )}
       </div>
 
-      {/* ── Filters panel ── */}
-      {showFilters && (
+      {/* ── Filters panel (sessions view only) ── */}
+      {showFilters && view === 'sessions' && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Categories */}
           <div>

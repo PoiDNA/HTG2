@@ -62,13 +62,20 @@ export default function LoginForm() {
     if (verifyError) {
       setError(t('error_code'));
     } else {
-      // Verify session is actually set
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session && !verifyData?.session) {
-        // PKCE flow — session not set client-side, try exchangeCodeForSession
-        const urlCode = new URLSearchParams(window.location.search).get('code');
-        if (urlCode) {
-          await supabase.auth.exchangeCodeForSession(urlCode);
+      // Get session tokens and sync to server-side cookies
+      const session = verifyData?.session;
+      if (session?.access_token && session?.refresh_token) {
+        try {
+          await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            }),
+          });
+        } catch {
+          // Non-blocking — worst case server cookies not set
         }
       }
 

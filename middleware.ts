@@ -18,6 +18,11 @@ function isPublicPath(pathname: string): boolean {
   });
 }
 
+function getLocaleFromPath(pathname: string): string {
+  const match = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
+  return match ? match[1] : routing.defaultLocale;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
@@ -31,42 +36,46 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // If ?code= is present on any page, exchange it for session first
+  // ─── PKCE Code Exchange ───────────────────────────────────────
+  // If ?code= is present, exchange it for a session BEFORE anything else
   const authCode = searchParams.get('code');
-  if (authCode && authCode.length > 10) {
-    const supabaseExchange = createServerClient(
+  if (authCode && authCode.length > 20) {
+    const locale = getLocaleFromPath(pathname);
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}/konto`;
+    url.searchParams.delete('code');
+
+    const response = NextResponse.redirect(url);
+
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() { return request.cookies.getAll(); },
+          getAll() {
+            return request.cookies.getAll();
+          },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options);
+            });
           },
         },
       }
     );
 
-    const { data: { session } } = await supabaseExchange.auth.exchangeCodeForSession(authCode);
-    if (session) {
-      // Redirect to /konto after successful exchange (remove code from URL)
-      const localeMatch = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
-      const locale = localeMatch ? localeMatch[1] : routing.defaultLocale;
-      const url = request.nextUrl.clone();
-      url.pathname = `/${locale}/konto`;
-      url.searchParams.delete('code');
-
-      const redirectResponse = NextResponse.redirect(url);
-      // Copy cookies from exchange
-      const responseCookies = supabaseExchange as any;
-      request.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie.name, cookie.value);
-      });
-      return redirectResponse;
+    const { error } = await supabase.auth.exchangeCodeForSession(authCode);
+    if (error) {
+      console.error('Code exchange failed:', error.message);
+      // Redirect to login on failure
+      url.pathname = `/${locale}/login`;
+      return NextResponse.redirect(url);
     }
+
+    return response;
   }
 
-  // Run i18n middleware first
+  // ─── i18n Middleware ──────────────────────────────────────────
   const response = intlMiddleware(request);
 
   // For public paths, no auth check needed
@@ -74,9 +83,7 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // For protected paths, check Supabase auth
-  let supabaseResponse = response;
-
+  // ─── Auth Check for Protected Routes ─────────────────────────
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -86,7 +93,7 @@ export async function middleware(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           );
         },
       },
@@ -96,18 +103,17 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    const localeMatch = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
-    const locale = localeMatch ? localeMatch[1] : routing.defaultLocale;
+    const locale = getLocaleFromPath(pathname);
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
     return NextResponse.redirect(url);
   }
 
   // No-cache for protected pages
-  supabaseResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  supabaseResponse.headers.set('Pragma', 'no-cache');
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.headers.set('Pragma', 'no-cache');
 
-  return supabaseResponse;
+  return response;
 }
 
 export const config = {

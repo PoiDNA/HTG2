@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { Mail, KeyRound, ArrowLeft, Loader2 } from 'lucide-react';
+import { getRoleForEmail } from '@/lib/roles';
 
 type Step = 'email' | 'code';
 
@@ -67,6 +68,23 @@ export default function LoginForm() {
       } catch {
         // Non-blocking — consent may fail if table not yet created
       }
+
+      // Auto-set role based on email
+      try {
+        const expectedRole = getRoleForEmail(email);
+        if (expectedRole) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase
+              .from('profiles')
+              .update({ role: expectedRole })
+              .eq('id', user.id);
+          }
+        }
+      } catch {
+        // Non-blocking
+      }
+
       router.push('/konto');
     }
   }

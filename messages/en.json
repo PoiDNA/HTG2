@@ -230,7 +230,15 @@
     "error": "An error occurred",
     "success": "Saved successfully",
     "no_data": "No data",
-    "not_authorized": "Not authorized"
+    "not_authorized": "Not authorized",
+    "users": "Users",
+    "users_desc": "User management — list, search, filter by role and status.",
+    "subscriptions_admin": "Subscriptions",
+    "subscriptions_desc": "Overview of all entitlements and subscriptions, grouped by user.",
+    "sessions_admin": "Sessions (templates)",
+    "sessions_desc": "Session template management — add, edit, archive.",
+    "sets": "Monthly sets",
+    "sets_desc": "Monthly sets management — create, edit, assign sessions."
   },
   "Staff": {
     "title": "Staff Panel",
@@ -271,7 +279,31 @@
     "day_sun": "Sunday",
     "confirm_delete": "Are you sure you want to delete?",
     "loading": "Loading...",
-    "nav_staff": "Staff Panel"
+    "nav_staff": "Staff Panel",
+    "sessions": "My sessions",
+    "sessions_desc": "Upcoming sessions where you are the practitioner or assistant.",
+    "clients": "My clients",
+    "clients_desc": "Users who have booked sessions with you."
+  },
+  "PanelNav": {
+    "my_sessions": "My VOD sessions",
+    "individual_sessions": "Individual sessions",
+    "my_subscriptions": "My subscriptions",
+    "orders": "Orders",
+    "profile": "Profile",
+    "staff_panel": "Staff panel",
+    "staff_schedule": "My schedule",
+    "staff_sessions": "My sessions",
+    "staff_clients": "My clients",
+    "admin_panel": "Admin panel",
+    "admin_calendar": "Calendar",
+    "admin_queue": "Queue",
+    "admin_slots": "Slots",
+    "admin_users": "Users",
+    "admin_subscriptions": "Subscriptions",
+    "admin_sessions": "Sessions (templates)",
+    "admin_sets": "Monthly sets",
+    "logout": "Log out"
   },
   "Booking": {
     "title": "Individual Sessions",

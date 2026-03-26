@@ -230,7 +230,15 @@
     "error": "Wystąpił błąd",
     "success": "Zapisano pomyślnie",
     "no_data": "Brak danych",
-    "not_authorized": "Brak uprawnień"
+    "not_authorized": "Brak uprawnień",
+    "users": "Użytkownicy",
+    "users_desc": "Zarządzanie użytkownikami — lista, wyszukiwanie, filtrowanie po roli i statusie.",
+    "subscriptions_admin": "Subskrypcje",
+    "subscriptions_desc": "Przegląd wszystkich uprawnień i subskrypcji, pogrupowanych wg użytkownika.",
+    "sessions_admin": "Sesje (szablony)",
+    "sessions_desc": "Zarządzanie szablonami sesji — dodawanie, edycja, archiwizacja.",
+    "sets": "Zestawy miesięczne",
+    "sets_desc": "Zarządzanie zestawami miesięcznymi — tworzenie, edycja, przypisywanie sesji."
   },
   "Staff": {
     "title": "Panel prowadzącego",
@@ -271,7 +279,31 @@
     "day_sun": "Niedziela",
     "confirm_delete": "Na pewno usunąć?",
     "loading": "Ładowanie...",
-    "nav_staff": "Panel prowadzącego"
+    "nav_staff": "Panel prowadzącego",
+    "sessions": "Moje sesje",
+    "sessions_desc": "Nadchodzące sesje, w których prowadzisz lub asytujesz.",
+    "clients": "Moi klienci",
+    "clients_desc": "Użytkownicy, którzy zarezerwowali sesje z Tobą."
+  },
+  "PanelNav": {
+    "my_sessions": "Moje sesje VOD",
+    "individual_sessions": "Sesje indywidualne",
+    "my_subscriptions": "Moje subskrypcje",
+    "orders": "Zamówienia",
+    "profile": "Profil",
+    "staff_panel": "Panel prowadzącego",
+    "staff_schedule": "Mój grafik",
+    "staff_sessions": "Moje sesje",
+    "staff_clients": "Moi klienci",
+    "admin_panel": "Panel admina",
+    "admin_calendar": "Kalendarz",
+    "admin_queue": "Kolejka",
+    "admin_slots": "Sloty",
+    "admin_users": "Użytkownicy",
+    "admin_subscriptions": "Subskrypcje",
+    "admin_sessions": "Sesje (szablony)",
+    "admin_sets": "Zestawy miesięczne",
+    "logout": "Wyloguj"
   },
   "Booking": {
     "title": "Sesje indywidualne",

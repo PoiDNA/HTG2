@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Link, usePathname } from '@/i18n-config';
-import { Menu, X } from 'lucide-react';
+import { Link, usePathname, useRouter } from '@/i18n-config';
+import { useUserRole } from '@/lib/useUserRole';
+import { createSupabaseBrowser } from '@/lib/supabase/client';
+import { Menu, X, LogOut } from 'lucide-react';
 import LocaleSwitcher from './LocaleSwitcher';
 import ThemeToggle from './ThemeToggle';
+import UserPanelNav from './UserPanelNav';
 
 const navLinks = [
   { href: '/sesje', key: 'sessions' },
@@ -14,10 +17,20 @@ const navLinks = [
   { href: '/nagrania', key: 'recordings' },
 ] as const;
 
-export default function SiteNav({ isLoggedIn = false, isAdmin = false, isStaff = false }: { isLoggedIn?: boolean; isAdmin?: boolean; isStaff?: boolean }) {
+export default function SiteNav() {
   const [open, setOpen] = useState(false);
   const t = useTranslations('Nav');
+  const tPanel = useTranslations('PanelNav');
   const pathname = usePathname();
+  const router = useRouter();
+  const { isLoggedIn, isAdmin, isStaff, loading } = useUserRole();
+
+  async function handleLogout() {
+    const supabase = createSupabaseBrowser();
+    await supabase.auth.signOut();
+    router.push('/');
+    setOpen(false);
+  }
 
   return (
     <nav aria-label="Nawigacja główna">
@@ -36,42 +49,8 @@ export default function SiteNav({ isLoggedIn = false, isAdmin = false, isStaff =
             {t(key)}
           </Link>
         ))}
-        {isLoggedIn && (
-          <Link
-            href="/konto"
-            className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
-              pathname.startsWith('/konto')
-                ? 'text-htg-indigo border-b-2 border-htg-sage pb-0.5'
-                : 'text-htg-fg-muted'
-            }`}
-          >
-            {t('account')}
-          </Link>
-        )}
-        {isStaff && (
-          <Link
-            href="/prowadzacy"
-            className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
-              pathname.startsWith('/prowadzacy')
-                ? 'text-htg-indigo border-b-2 border-htg-sage pb-0.5'
-                : 'text-htg-fg-muted'
-            }`}
-          >
-            {t('staff')}
-          </Link>
-        )}
-        {isAdmin && (
-          <Link
-            href="/admin"
-            className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
-              pathname.startsWith('/admin')
-                ? 'text-htg-indigo border-b-2 border-htg-sage pb-0.5'
-                : 'text-htg-fg-muted'
-            }`}
-          >
-            Admin
-          </Link>
-        )}
+        {/* Show UserPanelNav dropdown when logged in */}
+        {!loading && isLoggedIn && <UserPanelNav />}
       </div>
 
       {/* Mobile hamburger */}
@@ -102,45 +81,55 @@ export default function SiteNav({ isLoggedIn = false, isAdmin = false, isStaff =
                 {t(key)}
               </Link>
             ))}
+
             {isLoggedIn && (
-              <Link
-                href="/konto"
-                onClick={() => setOpen(false)}
-                className={`py-3 px-4 rounded-lg text-base font-medium transition-colors ${
-                  pathname.startsWith('/konto')
-                    ? 'bg-htg-surface text-htg-indigo'
-                    : 'text-htg-fg hover:bg-htg-surface'
-                }`}
-              >
-                {t('account')}
-              </Link>
+              <>
+                <div className="border-t border-htg-card-border my-2" />
+                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{t('account')}</p>
+                <MobileLink href="/konto" label={tPanel('my_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/sesje-indywidualne" label={tPanel('individual_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/subskrypcje" label={tPanel('my_subscriptions')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/zamowienia" label={tPanel('orders')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/profil" label={tPanel('profile')} pathname={pathname} onClick={() => setOpen(false)} />
+              </>
             )}
+
             {isStaff && (
-              <Link
-                href="/prowadzacy"
-                onClick={() => setOpen(false)}
-                className={`py-3 px-4 rounded-lg text-base font-medium transition-colors ${
-                  pathname.startsWith('/prowadzacy')
-                    ? 'bg-htg-surface text-htg-indigo'
-                    : 'text-htg-fg hover:bg-htg-surface'
-                }`}
-              >
-                {t('staff')}
-              </Link>
+              <>
+                <div className="border-t border-htg-card-border my-2" />
+                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{tPanel('staff_panel')}</p>
+                <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/prowadzacy/sesje" label={tPanel('staff_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
+              </>
             )}
+
             {isAdmin && (
-              <Link
-                href="/admin"
-                onClick={() => setOpen(false)}
-                className={`py-3 px-4 rounded-lg text-base font-medium transition-colors ${
-                  pathname.startsWith('/admin')
-                    ? 'bg-htg-surface text-htg-indigo'
-                    : 'text-htg-fg hover:bg-htg-surface'
-                }`}
-              >
-                Admin
-              </Link>
+              <>
+                <div className="border-t border-htg-card-border my-2" />
+                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">Admin</p>
+                <MobileLink href="/admin" label={tPanel('admin_panel')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/admin/kalendarz" label={tPanel('admin_calendar')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/admin/kolejka" label={tPanel('admin_queue')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/admin/sloty" label={tPanel('admin_slots')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/admin/uzytkownicy" label={tPanel('admin_users')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/admin/subskrypcje" label={tPanel('admin_subscriptions')} pathname={pathname} onClick={() => setOpen(false)} />
+              </>
             )}
+
+            {isLoggedIn && (
+              <>
+                <div className="border-t border-htg-card-border my-2" />
+                <button
+                  onClick={handleLogout}
+                  className="py-3 px-4 rounded-lg text-base font-medium text-red-600 dark:text-red-400 hover:bg-htg-surface transition-colors text-left flex items-center gap-2"
+                >
+                  <LogOut className="w-5 h-5" />
+                  {tPanel('logout')}
+                </button>
+              </>
+            )}
+
             <div className="flex items-center gap-2 pt-2 border-t border-htg-card-border mt-2">
               <LocaleSwitcher />
               <ThemeToggle />
@@ -149,5 +138,21 @@ export default function SiteNav({ isLoggedIn = false, isAdmin = false, isStaff =
         </div>
       )}
     </nav>
+  );
+}
+
+function MobileLink({ href, label, pathname, onClick }: { href: string; label: string; pathname: string; onClick: () => void }) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${
+        pathname === href
+          ? 'bg-htg-surface text-htg-indigo'
+          : 'text-htg-fg hover:bg-htg-surface'
+      }`}
+    >
+      {label}
+    </Link>
   );
 }

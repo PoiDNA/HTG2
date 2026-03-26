@@ -2,7 +2,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { LayoutDashboard, Calendar, Users, Clock } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, Clock, CreditCard, BookOpen, Package } from 'lucide-react';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -42,6 +42,10 @@ export default async function AdminLayout({
     { href: '/admin/kalendarz', label: t('calendar'), icon: Calendar },
     { href: '/admin/kolejka', label: t('queue'), icon: Users },
     { href: '/admin/sloty', label: t('slots'), icon: Clock },
+    { href: '/admin/uzytkownicy', label: t('users'), icon: Users },
+    { href: '/admin/subskrypcje', label: t('subscriptions_admin'), icon: CreditCard },
+    { href: '/admin/sesje', label: t('sessions_admin'), icon: BookOpen },
+    { href: '/admin/zestawy', label: t('sets'), icon: Package },
   ] as const;
 
   return (

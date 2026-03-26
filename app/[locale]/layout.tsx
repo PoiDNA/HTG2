@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
 import SiteNav from "@/components/SiteNav";
+import HeaderAuthButton from "@/components/HeaderAuthButton";
 import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -54,7 +55,6 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
   const messages = await getMessages();
-  const t = await getTranslations({ locale, namespace: 'Nav' });
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -99,12 +99,7 @@ export default async function LocaleLayout({
                     <LocaleSwitcher />
                     <ThemeToggle />
                   </div>
-                  <Link
-                    href="/login"
-                    className="bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors"
-                  >
-                    {t('login')}
-                  </Link>
+                  <HeaderAuthButton />
                 </div>
               </div>
             </header>

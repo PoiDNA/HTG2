@@ -132,22 +132,30 @@ export default function SessionCatalog({ monthSets, prices, initialTab = 'sessio
   return (
     <div className="pb-24">
       {/* Tab switcher */}
-      <div className="flex gap-2 mb-8">
+      <div className="flex flex-col sm:flex-row gap-3 mb-10">
         <button
           onClick={() => setTab('sessions')}
-          className={`px-5 py-2.5 rounded-lg font-medium transition-colors ${
-            tab === 'sessions' ? 'bg-htg-indigo text-white' : 'bg-htg-surface text-htg-fg-muted hover:bg-htg-surface/80'
+          className={`flex-1 p-5 rounded-xl border-2 text-left transition-all ${
+            tab === 'sessions'
+              ? 'border-htg-sage bg-htg-sage/10'
+              : 'border-htg-card-border bg-htg-card hover:border-htg-sage/40'
           }`}
         >
-          Pojedyncze sesje · {prices.sessionAmount} PLN / szt.
+          <p className="font-serif font-bold text-lg text-htg-fg">Sesje pojedyncze</p>
+          <p className="text-htg-fg-muted text-sm mt-1">Wybierz konkretne sesje z dowolnych miesięcy. Kupujesz dokładnie to, co chcesz.</p>
+          <p className="text-htg-sage font-bold text-lg mt-2">{prices.sessionAmount} PLN <span className="text-sm font-normal text-htg-fg-muted">/ sesja</span></p>
         </button>
         <button
           onClick={() => setTab('monthly')}
-          className={`px-5 py-2.5 rounded-lg font-medium transition-colors ${
-            tab === 'monthly' ? 'bg-htg-indigo text-white' : 'bg-htg-surface text-htg-fg-muted hover:bg-htg-surface/80'
+          className={`flex-1 p-5 rounded-xl border-2 text-left transition-all ${
+            tab === 'monthly'
+              ? 'border-htg-sage bg-htg-sage/10'
+              : 'border-htg-card-border bg-htg-card hover:border-htg-sage/40'
           }`}
         >
-          Pakiety miesięczne · {prices.monthlyAmount} PLN / mies.
+          <p className="font-serif font-bold text-lg text-htg-fg">Pakiety miesięczne</p>
+          <p className="text-htg-fg-muted text-sm mt-1">Cały zestaw sesji z danego miesiąca w niższej cenie. Dostęp na 24 miesiące.</p>
+          <p className="text-htg-sage font-bold text-lg mt-2">{prices.monthlyAmount} PLN <span className="text-sm font-normal text-htg-fg-muted">/ miesiąc</span></p>
         </button>
       </div>
 
@@ -184,15 +192,17 @@ export default function SessionCatalog({ monthSets, prices, initialTab = 'sessio
 
       {/* Monthly packages tab */}
       {tab === 'monthly' && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {monthSets.map(ms => (
             <MonthCard
               key={ms.id}
               id={ms.id}
               title={ms.title}
               sessionCount={ms.sessions.length}
+              sessions={ms.sessions.map(s => ({ title: s.title }))}
               selected={selectedMonths.has(ms.id)}
               onToggle={toggleMonth}
+              price={prices.monthlyAmount}
             />
           ))}
         </div>

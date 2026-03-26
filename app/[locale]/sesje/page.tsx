@@ -1,8 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { Link } from '@/i18n-config';
-import { Play, Calendar } from 'lucide-react';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import SessionCatalog from './SessionCatalog';
 
 export const dynamic = 'force-dynamic';
 
@@ -95,12 +94,24 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Sessions' });
 
-  const [monthlySets, sessions] = await Promise.all([
-    getMonthlySets(),
-    getStandaloneSessions(),
-  ]);
+  const monthlySets = await getMonthlySets();
 
-  const hasContent = monthlySets.length > 0 || sessions.length > 0;
+  // Fetch prices from DB
+  const supabase2 = await createSupabaseServer();
+  const { data: sessionProduct } = await supabase2.from('products').select('id').eq('slug', 'sesja-pojedyncza').single();
+  const { data: monthlyProduct } = await supabase2.from('products').select('id').eq('slug', 'pakiet-miesieczny').single();
+
+  const { data: sessionPrice } = await supabase2.from('prices').select('stripe_price_id, amount')
+    .eq('product_id', sessionProduct?.id || '').eq('is_active', true).single();
+  const { data: monthlyPrice } = await supabase2.from('prices').select('stripe_price_id, amount')
+    .eq('product_id', monthlyProduct?.id || '').eq('is_active', true).single();
+
+  const catalogData = monthlySets.map(ms => ({
+    id: ms.id,
+    title: ms.title,
+    month_label: ms.month_label || '',
+    sessions: ms.sessions.map(s => ({ id: s.id, title: s.title, description: s.description })),
+  }));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-16">
@@ -113,122 +124,15 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
         </p>
       </div>
 
-      {/* Monthly sets */}
-      {monthlySets.length > 0 && (
-        <section className="mb-16">
-          <h2 className="text-2xl font-serif font-bold text-htg-fg mb-6 flex items-center gap-2">
-            <Calendar className="w-6 h-6 text-htg-sage" />
-            {t('monthly_sets')}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {monthlySets.map((set) => (
-              <div
-                key={set.id}
-                className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden"
-              >
-                {set.cover_image_url ? (
-                  <img
-                    src={set.cover_image_url}
-                    alt={set.title}
-                    className="w-full aspect-video object-cover"
-                  />
-                ) : (
-                  <div className="w-full aspect-video bg-htg-surface flex items-center justify-center">
-                    <Calendar className="w-12 h-12 text-htg-fg-muted" />
-                  </div>
-                )}
-                <div className="p-5">
-                  <h3 className="font-serif font-semibold text-lg text-htg-fg mb-2">
-                    {set.title}
-                  </h3>
-                  {set.description && (
-                    <p className="text-htg-fg-muted text-sm mb-3">{set.description}</p>
-                  )}
-                  <p className="text-xs text-htg-fg-muted mb-3">
-                    {t('sessions_in_set', { count: set.sessions.length })}
-                  </p>
-                  <ul className="space-y-1 mb-4">
-                    {set.sessions.map((session) => (
-                      <li key={session.id} className="flex items-center gap-2 text-sm text-htg-fg">
-                        <Play className="w-3 h-3 text-htg-sage shrink-0" />
-                        <span>{session.title}</span>
-                        {session.duration_minutes && (
-                          <span className="text-htg-fg-muted text-xs ml-auto">
-                            {session.duration_minutes} min
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={'/subskrypcje' as any}
-                    className="inline-block w-full text-center bg-htg-sage text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
-                  >
-                    {t('buy_set')}
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Individual sessions */}
-      {sessions.length > 0 && (
-        <section>
-          <h2 className="text-2xl font-serif font-bold text-htg-fg mb-6 flex items-center gap-2">
-            <Play className="w-6 h-6 text-htg-sage" />
-            {t('individual_sessions')}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sessions.map((session) => (
-              <div
-                key={session.id}
-                className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden hover:shadow-md transition-shadow group"
-              >
-                {session.thumbnail_url ? (
-                  <img
-                    src={session.thumbnail_url}
-                    alt={session.title}
-                    className="w-full aspect-video object-cover"
-                  />
-                ) : (
-                  <div className="aspect-video bg-htg-surface flex items-center justify-center">
-                    <Play className="w-12 h-12 text-htg-fg-muted group-hover:text-htg-sage transition-colors" />
-                  </div>
-                )}
-                <div className="p-5">
-                  <h3 className="font-serif font-semibold text-lg text-htg-fg mb-2 group-hover:text-htg-indigo transition-colors">
-                    {session.title}
-                  </h3>
-                  {session.description && (
-                    <p className="text-htg-fg-muted text-sm mb-3">{session.description}</p>
-                  )}
-                  <div className="flex items-center justify-between">
-                    {session.duration_minutes && (
-                      <span className="text-xs text-htg-fg-muted bg-htg-surface px-2 py-1 rounded">
-                        {t('duration', { minutes: session.duration_minutes })}
-                      </span>
-                    )}
-                    <span className="text-sm font-medium text-htg-sage">
-                      {t('buy_access')} →
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Empty state */}
-      {!hasContent && (
-        <div className="text-center py-20">
-          <Play className="w-16 h-16 text-htg-fg-muted mx-auto mb-4" />
-          <h2 className="text-xl font-serif text-htg-fg mb-2">{t('empty_title')}</h2>
-          <p className="text-htg-fg-muted">{t('empty_description')}</p>
-        </div>
-      )}
+      <SessionCatalog
+        monthSets={catalogData}
+        prices={{
+          sessionPriceId: sessionPrice?.stripe_price_id || '',
+          sessionAmount: (sessionPrice?.amount || 3000) / 100,
+          monthlyPriceId: monthlyPrice?.stripe_price_id || '',
+          monthlyAmount: (monthlyPrice?.amount || 9900) / 100,
+        }}
+      />
     </div>
   );
 }

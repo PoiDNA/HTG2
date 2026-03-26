@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { priceId, mode = 'payment' } = await request.json();
+    const { priceId, mode = 'payment', quantity = 1, metadata = {} } = await request.json();
 
     if (!priceId) {
       return NextResponse.json({ error: 'priceId required' }, { status: 400 });
@@ -43,15 +43,18 @@ export async function POST(request: NextRequest) {
 
     const sessionParams: any = {
       customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: Math.max(1, Math.min(quantity, 100)) }],
       mode,
       success_url: `${origin}/pl/konto?checkout=success`,
       cancel_url: `${origin}/pl/subskrypcje?checkout=cancelled`,
       metadata: {
         supabase_user_id: user.id,
+        // Pass through purchase metadata for webhook processing
+        purchase_type: metadata.type || 'single',
+        session_ids: metadata.sessionIds || '',
+        month_labels: metadata.monthLabels || '',
+        start_month: metadata.startMonth || '',
       },
-      // TODO: Enable consent_collection after configuring Terms URL in Stripe Dashboard
-      // consent_collection: { terms_of_service: 'required' },
     };
 
     // Enable automatic invoicing for one-time payments
@@ -63,18 +66,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
-    console.error('Stripe checkout error:', {
-      message: error?.message,
-      type: error?.type,
-      statusCode: error?.statusCode,
-      code: error?.code,
-      stripeKey: process.env.STRIPE_SECRET_KEY ? 'SET (' + process.env.STRIPE_SECRET_KEY.slice(0, 10) + '...)' : 'NOT SET',
-    });
+    console.error('Stripe checkout error:', error?.message, error?.type);
     return NextResponse.json({
       error: error.message || 'Unknown error',
       type: error?.type,
-      keyPresent: !!process.env.STRIPE_SECRET_KEY,
-      keyPrefix: process.env.STRIPE_SECRET_KEY?.slice(0, 10),
     }, { status: 500 });
   }
 }

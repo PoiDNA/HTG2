@@ -55,6 +55,7 @@
     "verify": "Verify",
     "back": "Back",
     "error_email": "Failed to send code. Please try again.",
+    "error_rate_limit": "Too many login attempts. Please wait a few minutes and try again.",
     "error_code": "Invalid code. Please try again.",
     "consent_label": "I consent to the processing of my data regarding beliefs and health status for the purpose of providing spiritual development sessions (GDPR Art. 9).",
     "consent_required": "Consent is required to continue."

@@ -37,7 +37,11 @@ export default function LoginForm() {
 
     setLoading(false);
     if (otpError) {
-      setError(t('error_email'));
+      if (otpError.message?.includes('rate limit')) {
+        setError(t('error_rate_limit'));
+      } else {
+        setError(t('error_email'));
+      }
     } else {
       setStep('code');
     }

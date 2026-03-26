@@ -63,10 +63,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
-    console.error('Stripe checkout error:', error?.message, error?.type, error?.statusCode);
+    console.error('Stripe checkout error:', {
+      message: error?.message,
+      type: error?.type,
+      statusCode: error?.statusCode,
+      code: error?.code,
+      stripeKey: process.env.STRIPE_SECRET_KEY ? 'SET (' + process.env.STRIPE_SECRET_KEY.slice(0, 10) + '...)' : 'NOT SET',
+    });
     return NextResponse.json({
       error: error.message || 'Unknown error',
       type: error?.type,
+      keyPresent: !!process.env.STRIPE_SECRET_KEY,
+      keyPrefix: process.env.STRIPE_SECRET_KEY?.slice(0, 10),
     }, { status: 500 });
   }
 }

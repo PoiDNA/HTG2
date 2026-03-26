@@ -14,7 +14,7 @@ const navLinks = [
   { href: '/nagrania', key: 'recordings' },
 ] as const;
 
-export default function SiteNav({ isLoggedIn = false, isAdmin = false }: { isLoggedIn?: boolean; isAdmin?: boolean }) {
+export default function SiteNav({ isLoggedIn = false, isAdmin = false, isStaff = false }: { isLoggedIn?: boolean; isAdmin?: boolean; isStaff?: boolean }) {
   const [open, setOpen] = useState(false);
   const t = useTranslations('Nav');
   const pathname = usePathname();
@@ -46,6 +46,18 @@ export default function SiteNav({ isLoggedIn = false, isAdmin = false }: { isLog
             }`}
           >
             {t('account')}
+          </Link>
+        )}
+        {isStaff && (
+          <Link
+            href="/prowadzacy"
+            className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
+              pathname.startsWith('/prowadzacy')
+                ? 'text-htg-indigo border-b-2 border-htg-sage pb-0.5'
+                : 'text-htg-fg-muted'
+            }`}
+          >
+            {t('staff')}
           </Link>
         )}
         {isAdmin && (
@@ -101,6 +113,19 @@ export default function SiteNav({ isLoggedIn = false, isAdmin = false }: { isLog
                 }`}
               >
                 {t('account')}
+              </Link>
+            )}
+            {isStaff && (
+              <Link
+                href="/prowadzacy"
+                onClick={() => setOpen(false)}
+                className={`py-3 px-4 rounded-lg text-base font-medium transition-colors ${
+                  pathname.startsWith('/prowadzacy')
+                    ? 'bg-htg-surface text-htg-indigo'
+                    : 'text-htg-fg hover:bg-htg-surface'
+                }`}
+              >
+                {t('staff')}
               </Link>
             )}
             {isAdmin && (

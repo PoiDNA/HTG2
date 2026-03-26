@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No Stripe customer found' }, { status: 400 });
     }
 
-    const origin = request.headers.get('origin') || 'https://htg.cyou';
+    const origin = request.headers.get('origin') || 'https://htgcyou.com';
 
     const session = await getStripe().billingPortal.sessions.create({
       customer: profile.stripe_customer_id,

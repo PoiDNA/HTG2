@@ -24,10 +24,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const t = await getTranslations({ locale, namespace: 'Metadata' });
 
   const languages: Record<string, string> = {
-    'x-default': 'https://htg.cyou/pl'
+    'x-default': 'https://htgcyou.com/pl'
   };
   locales.forEach((l) => {
-    languages[l] = `https://htg.cyou/${l}`;
+    languages[l] = `https://htgcyou.com/${l}`;
   });
 
   const title = t('title');
@@ -39,9 +39,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       template: `%s | HTG`,
     },
     description,
-    metadataBase: new URL('https://htg.cyou'),
+    metadataBase: new URL('https://htgcyou.com'),
     alternates: {
-      canonical: `https://htg.cyou/${locale}`,
+      canonical: `https://htgcyou.com/${locale}`,
       languages
     },
     robots: {
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       siteName: 'HTG — Hacking The Game',
       title,
       description,
-      url: `https://htg.cyou/${locale}`,
+      url: `https://htgcyou.com/${locale}`,
       locale: locale === 'pl' ? 'pl_PL' : 'en_US',
     },
     twitter: {

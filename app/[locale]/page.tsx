@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     openGraph: {
       title: t('title'),
       description: t('description'),
-      url: `https://htg.cyou/${locale}`,
+      url: `https://htgcyou.com/${locale}`,
     },
   };
 }

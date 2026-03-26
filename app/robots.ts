@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ['/konto/', '/prowadzacy/', '/publikacja/', '/admin/', '/api/', '/auth/'],
       },
     ],
-    sitemap: 'https://htg.cyou/sitemap.xml',
+    sitemap: 'https://htgcyou.com/sitemap.xml',
   };
 }

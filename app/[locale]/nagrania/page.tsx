@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     openGraph: {
       title: t('title'),
       description: t('subtitle'),
-      url: `https://htg.cyou/${locale}/nagrania`,
+      url: `https://htgcyou.com/${locale}/nagrania`,
     },
   };
 }

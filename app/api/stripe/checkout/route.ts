@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id);
     }
 
-    const origin = request.headers.get('origin') || 'https://htg.cyou';
+    const origin = request.headers.get('origin') || 'https://htgcyou.com';
 
     const sessionParams: any = {
       customer: customerId,

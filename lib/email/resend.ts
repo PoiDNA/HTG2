@@ -31,7 +31,7 @@ export async function sendOrderConfirmation(to: string, data: {
             <p style="margin: 8px 0 0; font-size: 24px; color: #8B9E7C;">${(data.amount / 100).toFixed(0)} ${data.currency.toUpperCase()}</p>
           </div>
           <p>Materiały są dostępne w Twoim panelu:</p>
-          <a href="https://htg.cyou/pl/konto" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Moje konto</a>
+          <a href="https://htgcyou.com/pl/konto" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Moje konto</a>
         </div>
         <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
           <p>XX Operator PSA | htg@htg.cyou</p>
@@ -69,7 +69,7 @@ export async function sendBookingConfirmation(to: string, data: {
             <p style="margin: 8px 0 0;"><strong>Godzina:</strong> ${data.time}</p>
             <p style="margin: 8px 0 0; color: #CC9544;"><strong>Potwierdź do:</strong> ${data.expiresAt}</p>
           </div>
-          <a href="https://htg.cyou/pl/konto/sesje-indywidualne" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Potwierdź rezerwację</a>
+          <a href="https://htgcyou.com/pl/konto/sesje-indywidualne" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Potwierdź rezerwację</a>
         </div>
         <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
           <p>XX Operator PSA | htg@htg.cyou</p>
@@ -140,7 +140,7 @@ export async function sendEarlierSlotNotification(to: string, data: {
             <p style="margin: 8px 0 0; font-size: 20px; color: #8B9E7C;">${data.newDate} o ${data.newTime}</p>
           </div>
           <p>Masz 24 godziny na potwierdzenie. Jeśli nie potwierdzisz, termin wróci do puli.</p>
-          <a href="https://htg.cyou/pl/konto/sesje-indywidualne" style="display: inline-block; background: #CC9544; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Sprawdź termin</a>
+          <a href="https://htgcyou.com/pl/konto/sesje-indywidualne" style="display: inline-block; background: #CC9544; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Sprawdź termin</a>
         </div>
         <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
           <p>XX Operator PSA | htg@htg.cyou</p>
@@ -169,7 +169,7 @@ export async function sendPaymentFailedNotification(to: string, data: {
           <p>Cześć ${data.name},</p>
           <p>Płatność za <strong>${data.productName}</strong> nie powiodła się.</p>
           <p>Sprawdź dane karty lub skontaktuj się z nami: htg@htg.cyou</p>
-          <a href="https://htg.cyou/pl/konto/subskrypcje" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Zarządzaj subskrypcją</a>
+          <a href="https://htgcyou.com/pl/konto/subskrypcje" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Zarządzaj subskrypcją</a>
         </div>
         <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
           <p>XX Operator PSA | htg@htg.cyou</p>

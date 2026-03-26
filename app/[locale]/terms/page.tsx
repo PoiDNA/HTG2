@@ -85,7 +85,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
       <div className="space-y-2">
         <Section id="definicje" title="1. Definicje">
           <UL>
-            <li><strong>Sesja HTG</strong> — konsultacja prowadzona przez dwie osoby w ramach inicjatywy Hacking&nbsp;The&nbsp;Game (serwisy YouTube oraz htg.cyou), mająca na celu rozwój osobisty, z udziałem osoby posługującej się postrzeganiem pozazmysłowym.</li>
+            <li><strong>Sesja HTG</strong> — konsultacja prowadzona przez dwie osoby w ramach inicjatywy Hacking&nbsp;The&nbsp;Game (serwisy YouTube oraz htgcyou.com), mająca na celu rozwój osobisty, z udziałem osoby posługującej się postrzeganiem pozazmysłowym.</li>
             <li><strong>Operator</strong> — XX Operator PSA z siedzibą w Warszawie, KRS&nbsp;0001086847, NIP&nbsp;9512589259, REGON&nbsp;527748673 — administrator Sesji HTG.</li>
             <li><strong>Uczestnik</strong> — osoba fizyczna zawierająca umowę o świadczenie Sesji HTG.</li>
             <li><strong>Zespół HTG</strong> — osoby prowadzące Sesje HTG, posługujące się adresami e‑mail w domenie @htg.cyou.</li>
@@ -143,7 +143,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <UL>
             <li>Zabrania się upubliczniania własnej sesji oraz sesji nieopublikowanych bez pisemnej zgody Zespołu HTG.</li>
             <li>Zakaz obejmuje media społecznościowe i udostępnianie osobom trzecim.</li>
-            <li>Emisja zmontowanej sesji (np. na YouTube, htg.cyou) może być związana z opłatami obniżającymi koszty organizacji Sesji HTG.</li>
+            <li>Emisja zmontowanej sesji (np. na YouTube, htgcyou.com) może być związana z opłatami obniżającymi koszty organizacji Sesji HTG.</li>
           </UL>
         </Section>
 
@@ -153,7 +153,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
 
         <Section id="platnosci" title="10. Płatności">
           <UL>
-            <li>Płatność za Sesję HTG odbywa się poprzez stronę htg.cyou (Stripe — karty, BLIK, P24), przelew lub gotówkę.</li>
+            <li>Płatność za Sesję HTG odbywa się poprzez stronę htgcyou.com (Stripe — karty, BLIK, P24), przelew lub gotówkę.</li>
             <li>Przetwarzanie płatności obsługuje XX Operator PSA.</li>
             <li>Faktury generowane automatycznie — dostępne w panelu klienta i wysyłane e-mailem.</li>
           </UL>
@@ -186,7 +186,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
 
         <Section id="zmiany" title="15. Zmiany regulaminu">
           <UL>
-            <li>Operator może zmienić regulamin z ważnych przyczyn (np. zmiana przepisów prawa). Zmiany publikowane są na htg.cyou.</li>
+            <li>Operator może zmienić regulamin z ważnych przyczyn (np. zmiana przepisów prawa). Zmiany publikowane są na htgcyou.com.</li>
             <li>Uczestnicy, którzy nie akceptują zmian, mogą zrezygnować z sesji i uzyskać zwrot kosztów za niewykorzystane sesje.</li>
           </UL>
         </Section>
@@ -195,7 +195,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <UL>
             <li>W sprawach nieuregulowanych zastosowanie mają przepisy prawa polskiego.</li>
             <li>Spory będą rozstrzygane przez sąd właściwy dla siedziby Operatora.</li>
-            <li>Regulamin wchodzi w życie z dniem opublikowania na htg.cyou.</li>
+            <li>Regulamin wchodzi w życie z dniem opublikowania na htgcyou.com.</li>
           </UL>
         </Section>
 

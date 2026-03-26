@@ -90,7 +90,7 @@ export default async function LocaleLayout({
                 <Link href="/" className="flex items-center gap-3">
                   <span className="text-2xl font-serif font-bold text-htg-indigo">HTG</span>
                   <span className="hidden sm:inline-block text-xs text-htg-fg-muted border-l border-htg-card-border pl-3">
-                    Sesje Rozwoju Duchowego
+                    Hacking The Game
                   </span>
                 </Link>
                 <div className="flex items-center gap-4">

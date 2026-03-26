@@ -537,17 +537,23 @@ function AssistantEditor() {
 
   const [availableSlots, setAvailableSlots] = useState<SlotData[]>([]);
   const [mySlots, setMySlots] = useState<SlotData[]>([]);
+  const [otherAssistants, setOtherAssistants] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
+  const [swapping, setSwapping] = useState<string | null>(null); // slotId being swapped
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/staff/slots');
-    if (res.ok) {
-      const data = await res.json();
-      setAvailableSlots(data.availableSlots ?? []);
-      setMySlots(data.mySlots ?? []);
-    }
+    const [slotsRes, staffRes] = await Promise.all([
+      fetch('/api/staff/slots').then(r => r.ok ? r.json() : { availableSlots: [], mySlots: [] }),
+      fetch('/api/admin/staff').then(r => r.ok ? r.json() : { staff: [] }).catch(() => ({ staff: [] })),
+    ]);
+    setAvailableSlots(slotsRes.availableSlots ?? []);
+    setMySlots(slotsRes.mySlots ?? []);
+    // Get other assistants (not me)
+    const meRes = await fetch('/api/staff/me').then(r => r.ok ? r.json() : { staffMember: null });
+    const myId = meRes.staffMember?.id;
+    setOtherAssistants((staffRes.staff ?? []).filter((s: StaffMember) => s.role === 'assistant' && s.is_active && s.id !== myId));
     setLoading(false);
   }, []);
 
@@ -578,12 +584,24 @@ function AssistantEditor() {
       body: JSON.stringify({ slotId }),
     });
     setActing(null);
-    if (res.ok) {
-      fetchData();
-    } else {
-      const data = await res.json();
-      alert(data.error || 'Błąd');
-    }
+    if (res.ok) fetchData();
+    else { const data = await res.json(); alert(data.error || 'Błąd'); }
+  };
+
+  // Swap: transfer slot to another assistant
+  const swapToAssistant = async (slotId: string, newAssistantId: string) => {
+    setActing(slotId);
+    // First leave, then the new assistant needs to confirm
+    // For now: use PATCH to change assistant directly (Natalia-level action)
+    const res = await fetch('/api/staff/slots/swap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slotId, newAssistantId }),
+    });
+    setActing(null);
+    setSwapping(null);
+    if (res.ok) fetchData();
+    else { const data = await res.json(); alert(data.error || 'Błąd'); }
   };
 
   // Group available slots by month
@@ -626,27 +644,56 @@ function AssistantEditor() {
         ) : (
           <div className="space-y-2">
             {mySlots.map(slot => (
-              <div key={slot.id} className="flex items-center justify-between bg-htg-surface rounded-lg px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-htg-fg">{formatDay(slot.slot_date)}</span>
-                  <span className="text-sm text-htg-fg">{slot.slot_date}</span>
-                  <span className="text-sm text-htg-fg-muted">{slot.start_time.slice(0,5)}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${
-                    slot.status === 'available' ? 'bg-htg-sage/20 text-htg-sage-dark' :
-                    slot.status === 'booked' ? 'bg-htg-indigo/20 text-htg-indigo' :
-                    slot.status === 'held' ? 'bg-htg-warm/20 text-htg-warm-text' :
-                    'bg-htg-surface text-htg-fg-muted'
-                  }`}>{slot.status === 'available' ? 'Wolny' : slot.status === 'booked' ? 'Zarezerwowany' : slot.status}</span>
+              <div key={slot.id} className="bg-htg-surface rounded-lg px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-htg-fg">{formatDay(slot.slot_date)}</span>
+                    <span className="text-sm text-htg-fg">{slot.slot_date}</span>
+                    <span className="text-sm text-htg-fg-muted">{slot.start_time.slice(0,5)}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      slot.status === 'available' ? 'bg-htg-sage/20 text-htg-sage-dark' :
+                      slot.status === 'booked' ? 'bg-htg-indigo/20 text-htg-indigo' :
+                      slot.status === 'held' ? 'bg-htg-warm/20 text-htg-warm-text' :
+                      'bg-htg-surface text-htg-fg-muted'
+                    }`}>{slot.status === 'available' ? 'Wolny' : slot.status === 'booked' ? 'Zarezerwowany' : slot.status}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {otherAssistants.length > 0 && slot.status !== 'booked' && (
+                      <button
+                        onClick={() => setSwapping(swapping === slot.id ? null : slot.id)}
+                        className="text-xs text-htg-fg-muted hover:text-htg-warm transition-colors"
+                      >
+                        Przekaż →
+                      </button>
+                    )}
+                    {slot.status !== 'booked' && (
+                      <button
+                        onClick={() => leaveSlot(slot.id)}
+                        disabled={acting === slot.id}
+                        className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                      >
+                        <UserMinus className="w-3.5 h-3.5" />
+                        {acting === slot.id ? '...' : 'Opuść'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {slot.status !== 'booked' && (
-                  <button
-                    onClick={() => leaveSlot(slot.id)}
-                    disabled={acting === slot.id}
-                    className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
-                  >
-                    <UserMinus className="w-3.5 h-3.5" />
-                    {acting === slot.id ? '...' : 'Opuść'}
-                  </button>
+                {/* Swap picker */}
+                {swapping === slot.id && (
+                  <div className="mt-2 flex items-center gap-2 pl-4 border-t border-htg-card-border pt-2">
+                    <span className="text-xs text-htg-fg-muted">Przekaż do:</span>
+                    {otherAssistants.map(a => (
+                      <button
+                        key={a.id}
+                        onClick={() => swapToAssistant(slot.id, a.id)}
+                        disabled={acting === slot.id}
+                        className="px-3 py-1 bg-htg-warm/20 text-htg-warm rounded-lg text-xs font-medium hover:bg-htg-warm/30 transition-colors disabled:opacity-50"
+                      >
+                        {a.name}
+                      </button>
+                    ))}
+                    <button onClick={() => setSwapping(null)} className="text-xs text-htg-fg-muted hover:text-htg-fg">✕</button>
+                  </div>
                 )}
               </div>
             ))}

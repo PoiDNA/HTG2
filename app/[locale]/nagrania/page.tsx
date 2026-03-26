@@ -1,7 +1,8 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { Youtube } from 'lucide-react';
+import { Youtube, Play } from 'lucide-react';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import VideoThumbnail from '@/components/VideoThumbnail';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,21 +45,9 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {videoList.map((video: any) => (
             <div key={video.id} className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
-              <div className="aspect-video">
-                <iframe
-                  src={`https://www.youtube-nocookie.com/embed/${video.youtube_id}?modestbranding=1&rel=0&showinfo=0&iv_load_policy=3`}
-                  title={video.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                  loading="lazy"
-                />
-              </div>
-              <div className="p-5">
-                <h3 className="font-serif font-semibold text-lg text-htg-fg mb-2">{video.title}</h3>
-                {video.description && (
-                  <p className="text-htg-fg-muted text-sm">{video.description}</p>
-                )}
+              <VideoThumbnail youtubeId={video.youtube_id} title={video.title} />
+              <div className="p-4">
+                <h3 className="font-serif font-semibold text-htg-fg leading-snug">{video.title}</h3>
               </div>
             </div>
           ))}

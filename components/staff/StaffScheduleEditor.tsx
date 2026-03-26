@@ -512,7 +512,7 @@ function PractitionerEditor() {
                         onChange={e => changeAssistant(slot.id, e.target.value || null)}
                         className="bg-htg-surface border border-htg-card-border rounded-lg px-2 py-1 text-xs text-htg-fg"
                       >
-                        <option value="">Solo (2h)</option>
+                        <option value="">Sama (1:1)</option>
                         {assistants.map(a => (
                           <option key={a.id} value={a.id}>{a.name}</option>
                         ))}
@@ -586,48 +586,32 @@ function AssistantEditor() {
     }
   };
 
+  // Group available slots by month
+  const slotsByMonth = availableSlots.reduce<Record<string, SlotData[]>>((acc, slot) => {
+    const [y, m] = slot.slot_date.split('-');
+    const key = `${y}-${m}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(slot);
+    return acc;
+  }, {});
+
+  const MONTH_NAMES_PL: Record<string, string> = {
+    '01': 'Styczeń', '02': 'Luty', '03': 'Marzec', '04': 'Kwiecień',
+    '05': 'Maj', '06': 'Czerwiec', '07': 'Lipiec', '08': 'Sierpień',
+    '09': 'Wrzesień', '10': 'Październik', '11': 'Listopad', '12': 'Grudzień',
+  };
+
+  const formatDay = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const dayNames = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+    return dayNames[d.getDay()] + ' ' + dateStr.split('-')[2];
+  };
+
   if (loading) return <p className="text-htg-fg-muted">{t('loading')}</p>;
 
   return (
     <div className="space-y-8">
-      {/* Available slots to join */}
-      <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-        <h3 className="text-lg font-serif font-bold text-htg-fg mb-2 flex items-center gap-2">
-          <UserPlus className="w-5 h-5 text-htg-sage" />
-          Dostępne terminy Natalii
-        </h3>
-        <p className="text-sm text-htg-fg-muted mb-4">
-          Terminy solo, do których możesz dołączyć jako asystentka.
-        </p>
-
-        {availableSlots.length === 0 ? (
-          <p className="text-sm text-htg-fg-muted">Brak dostępnych terminów do dołączenia.</p>
-        ) : (
-          <div className="space-y-2">
-            {availableSlots.map(slot => (
-              <div key={slot.id} className="flex items-center justify-between bg-htg-surface rounded-lg px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-htg-fg">{slot.slot_date}</span>
-                  <span className="text-sm text-htg-fg-muted">{slot.start_time.slice(0,5)}&ndash;{slot.end_time.slice(0,5)}</span>
-                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-htg-indigo text-white">
-                    Solo (2h)
-                  </span>
-                </div>
-                <button
-                  onClick={() => joinSlot(slot.id)}
-                  disabled={acting === slot.id}
-                  className="flex items-center gap-1 bg-htg-sage text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  {acting === slot.id ? 'Dołączanie...' : 'Dołącz'}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* My assigned slots */}
+      {/* 1. My assigned slots — ON TOP */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
         <h3 className="text-lg font-serif font-bold text-htg-fg mb-2 flex items-center gap-2">
           <UserCheck className="w-5 h-5 text-htg-warm" />
@@ -644,19 +628,15 @@ function AssistantEditor() {
             {mySlots.map(slot => (
               <div key={slot.id} className="flex items-center justify-between bg-htg-surface rounded-lg px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-htg-fg">{slot.slot_date}</span>
-                  <span className="text-sm text-htg-fg-muted">{slot.start_time.slice(0,5)}&ndash;{slot.end_time.slice(0,5)}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    SESSION_CONFIG[slot.session_type as SessionType]?.color ?? 'bg-htg-surface'
-                  } text-white`}>
-                    {SESSION_CONFIG[slot.session_type as SessionType]?.labelShort ?? slot.session_type}
-                  </span>
+                  <span className="text-sm font-medium text-htg-fg">{formatDay(slot.slot_date)}</span>
+                  <span className="text-sm text-htg-fg">{slot.slot_date}</span>
+                  <span className="text-sm text-htg-fg-muted">{slot.start_time.slice(0,5)}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs ${
                     slot.status === 'available' ? 'bg-htg-sage/20 text-htg-sage-dark' :
                     slot.status === 'booked' ? 'bg-htg-indigo/20 text-htg-indigo' :
                     slot.status === 'held' ? 'bg-htg-warm/20 text-htg-warm-text' :
                     'bg-htg-surface text-htg-fg-muted'
-                  }`}>{slot.status}</span>
+                  }`}>{slot.status === 'available' ? 'Wolny' : slot.status === 'booked' ? 'Zarezerwowany' : slot.status}</span>
                 </div>
                 {slot.status !== 'booked' && (
                   <button
@@ -665,11 +645,54 @@ function AssistantEditor() {
                     className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
                   >
                     <UserMinus className="w-3.5 h-3.5" />
-                    {acting === slot.id ? 'Opuszczanie...' : 'Opuść termin'}
+                    {acting === slot.id ? '...' : 'Opuść'}
                   </button>
                 )}
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* 2. Available slots grouped by month */}
+      <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
+        <h3 className="text-lg font-serif font-bold text-htg-fg mb-2 flex items-center gap-2">
+          <UserPlus className="w-5 h-5 text-htg-sage" />
+          Dostępne terminy Natalii
+        </h3>
+        <p className="text-sm text-htg-fg-muted mb-4">
+          Wybierz terminy, do których chcesz dołączyć.
+        </p>
+
+        {Object.keys(slotsByMonth).length === 0 ? (
+          <p className="text-sm text-htg-fg-muted">Brak dostępnych terminów.</p>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(slotsByMonth).sort(([a], [b]) => a.localeCompare(b)).map(([monthKey, monthSlots]) => {
+              const [y, m] = monthKey.split('-');
+              const monthName = MONTH_NAMES_PL[m] || m;
+              return (
+                <div key={monthKey}>
+                  <h4 className="text-sm font-semibold text-htg-fg mb-3">{monthName} {y}</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {monthSlots.map(slot => (
+                      <div key={slot.id} className="bg-htg-surface border border-htg-card-border rounded-lg p-3 flex flex-col items-center gap-2">
+                        <span className="text-xs text-htg-fg-muted">{formatDay(slot.slot_date)}</span>
+                        <span className="text-lg font-bold text-htg-fg">{slot.start_time.slice(0,5)}</span>
+                        <button
+                          onClick={() => joinSlot(slot.id)}
+                          disabled={acting === slot.id}
+                          className="w-full flex items-center justify-center gap-1 bg-htg-sage text-white px-2 py-1.5 rounded-lg text-xs font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50"
+                        >
+                          <UserPlus className="w-3 h-3" />
+                          {acting === slot.id ? '...' : 'Dołącz'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

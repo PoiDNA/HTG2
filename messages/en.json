@@ -350,5 +350,30 @@
     "success_cancelled": "Session cancelled.",
     "success_transferred": "Session moved to the new slot.",
     "nav_label": "Individual sessions"
+  },
+  "Live": {
+    "waiting_title": "Waiting for the facilitator...",
+    "waiting_message": "The session will start when the facilitator admits you. Please wait.",
+    "staff_waiting": "Client is waiting in the lobby. Click below to admit.",
+    "participant": "Participant",
+    "admit_client": "Admit client",
+    "go_to_session": "Go to session",
+    "start_session": "Start session",
+    "end_session": "End session",
+    "leave_session": "Leave session",
+    "loading": "Loading...",
+    "mic_on": "Unmute microphone",
+    "mic_off": "Mute microphone",
+    "cam_on": "Turn on camera",
+    "cam_off": "Turn off camera",
+    "private_talk": "Private talk",
+    "private_talk_active": "Private talk active",
+    "break_request": "Request a short break",
+    "break_confirmed": "Break requested",
+    "break_notification": "Client requests a break",
+    "outro_title": "Thank you for the session",
+    "outro_message": "The session has been ended by the facilitator. You can stay a bit longer or close the room.",
+    "error_title": "Connection error",
+    "error_message": "Failed to connect to the session room."
   }
 }

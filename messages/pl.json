@@ -350,5 +350,30 @@
     "success_cancelled": "Sesja anulowana.",
     "success_transferred": "Sesja przeniesiona na nowy termin.",
     "nav_label": "Sesje indywidualne"
+  },
+  "Live": {
+    "waiting_title": "Oczekiwanie na prowadzącego...",
+    "waiting_message": "Sesja rozpocznie się, gdy prowadzący Cię wpuści. Proszę czekać.",
+    "staff_waiting": "Klient czeka w poczekalni. Kliknij poniżej, aby wpuścić.",
+    "participant": "Uczestnik",
+    "admit_client": "Wpuść klienta",
+    "go_to_session": "Przejdź do sesji",
+    "start_session": "Rozpocznij sesję",
+    "end_session": "Zakończ sesję",
+    "leave_session": "Opuść sesję",
+    "loading": "Ładowanie...",
+    "mic_on": "Włącz mikrofon",
+    "mic_off": "Wyłącz mikrofon",
+    "cam_on": "Włącz kamerę",
+    "cam_off": "Wyłącz kamerę",
+    "private_talk": "Rozmowa prywatna",
+    "private_talk_active": "Rozmowa prywatna aktywna",
+    "break_request": "Proszę o chwilę przerwy",
+    "break_confirmed": "Przerwa zgłoszona",
+    "break_notification": "Klient prosi o przerwę",
+    "outro_title": "Dziękujemy za sesję",
+    "outro_message": "Sesja została zakończona przez prowadzącego. Możesz jeszcze chwilę zostać lub zamknąć pokój.",
+    "error_title": "Błąd połączenia",
+    "error_message": "Nie udało się połączyć z pokojem sesji."
   }
 }

@@ -52,7 +52,7 @@ export default function LoginForm() {
     setError('');
     setLoading(true);
 
-    const { error: verifyError } = await supabase.auth.verifyOtp({
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
       email,
       token: code,
       type: 'email',
@@ -62,6 +62,16 @@ export default function LoginForm() {
     if (verifyError) {
       setError(t('error_code'));
     } else {
+      // Verify session is actually set
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session && !verifyData?.session) {
+        // PKCE flow — session not set client-side, try exchangeCodeForSession
+        const urlCode = new URLSearchParams(window.location.search).get('code');
+        if (urlCode) {
+          await supabase.auth.exchangeCodeForSession(urlCode);
+        }
+      }
+
       // Record GDPR consent
       try {
         await supabase.from('consent_records').insert({
@@ -89,7 +99,8 @@ export default function LoginForm() {
         // Non-blocking
       }
 
-      router.push('/konto');
+      // Force hard navigation to ensure cookies are sent with next request
+      window.location.href = `/${window.location.pathname.split('/')[1] || 'pl'}/konto`;
     }
   }
 

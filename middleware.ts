@@ -19,7 +19,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
 
   // Skip static assets
   if (pathname.includes('/_next/') || pathname.includes('/favicon.ico') || pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)) {
@@ -29,6 +29,41 @@ export async function middleware(request: NextRequest) {
   // Skip auth callback from i18n (no locale prefix needed)
   if (pathname.startsWith('/auth/')) {
     return NextResponse.next();
+  }
+
+  // If ?code= is present on any page, exchange it for session first
+  const authCode = searchParams.get('code');
+  if (authCode && authCode.length > 10) {
+    const supabaseExchange = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll(); },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          },
+        },
+      }
+    );
+
+    const { data: { session } } = await supabaseExchange.auth.exchangeCodeForSession(authCode);
+    if (session) {
+      // Redirect to /konto after successful exchange (remove code from URL)
+      const localeMatch = pathname.match(/^\/([a-z]{2})(?:\/|$)/);
+      const locale = localeMatch ? localeMatch[1] : routing.defaultLocale;
+      const url = request.nextUrl.clone();
+      url.pathname = `/${locale}/konto`;
+      url.searchParams.delete('code');
+
+      const redirectResponse = NextResponse.redirect(url);
+      // Copy cookies from exchange
+      const responseCookies = supabaseExchange as any;
+      request.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie.name, cookie.value);
+      });
+      return redirectResponse;
+    }
   }
 
   // Run i18n middleware first

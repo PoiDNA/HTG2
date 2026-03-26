@@ -1,0 +1,18 @@
+import { setRequestLocale } from 'next-intl/server';
+import { locales } from '@/i18n-config';
+import QueueManager from '@/components/admin/QueueManager';
+
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }));
+}
+
+export default async function QueuePage({
+  params
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  return <QueueManager />;
+}

@@ -14,7 +14,7 @@ const navLinks = [
   { href: '/nagrania', key: 'recordings' },
 ] as const;
 
-export default function SiteNav({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+export default function SiteNav({ isLoggedIn = false, isAdmin = false }: { isLoggedIn?: boolean; isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const t = useTranslations('Nav');
   const pathname = usePathname();
@@ -46,6 +46,18 @@ export default function SiteNav({ isLoggedIn = false }: { isLoggedIn?: boolean }
             }`}
           >
             {t('account')}
+          </Link>
+        )}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
+              pathname.startsWith('/admin')
+                ? 'text-htg-indigo border-b-2 border-htg-sage pb-0.5'
+                : 'text-htg-fg-muted'
+            }`}
+          >
+            Admin
           </Link>
         )}
       </div>
@@ -89,6 +101,19 @@ export default function SiteNav({ isLoggedIn = false }: { isLoggedIn?: boolean }
                 }`}
               >
                 {t('account')}
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className={`py-3 px-4 rounded-lg text-base font-medium transition-colors ${
+                  pathname.startsWith('/admin')
+                    ? 'bg-htg-surface text-htg-indigo'
+                    : 'text-htg-fg hover:bg-htg-surface'
+                }`}
+              >
+                Admin
               </Link>
             )}
             <div className="flex items-center gap-2 pt-2 border-t border-htg-card-border mt-2">

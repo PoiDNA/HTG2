@@ -55,7 +55,7 @@ async function getMonthlySets(): Promise<MonthlySet[]> {
       id, slug, title, description, month_label, cover_image_url,
       set_sessions (
         sort_order,
-        session:session_templates ( id, slug, title, description, duration_minutes, thumbnail_url )
+        session:session_templates ( id, slug, title, description, duration_minutes, thumbnail_url, category, tags, view_count )
       )
     `)
     .eq('is_published', true)
@@ -110,7 +110,10 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
     id: ms.id,
     title: ms.title,
     month_label: ms.month_label || '',
-    sessions: ms.sessions.map(s => ({ id: s.id, title: s.title, description: s.description })),
+    sessions: ms.sessions.map((s: any) => ({
+      id: s.id, title: s.title, description: s.description,
+      category: s.category || 'grupowa', tags: s.tags || [], view_count: s.view_count || 0,
+    })),
   }));
 
   return (

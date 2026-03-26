@@ -6,7 +6,6 @@ import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { Menu, X, LogOut } from 'lucide-react';
-import LocaleSwitcher from './LocaleSwitcher';
 import ThemeToggle from './ThemeToggle';
 import UserPanelNav from './UserPanelNav';
 
@@ -82,7 +81,21 @@ export default function SiteNav() {
               </Link>
             ))}
 
-            {isLoggedIn && (
+            {/* Staff: show staff panel first, then profile only */}
+            {isStaff && !isAdmin && (
+              <>
+                <div className="border-t border-htg-card-border my-2" />
+                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{tPanel('staff_panel')}</p>
+                <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/prowadzacy/sesje" label={tPanel('staff_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/subskrypcje" label={tPanel('my_subscriptions')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/profil" label={tPanel('profile')} pathname={pathname} onClick={() => setOpen(false)} />
+              </>
+            )}
+
+            {/* Regular user: full user menu */}
+            {isLoggedIn && !isStaff && !isAdmin && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
                 <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{t('account')}</p>
@@ -94,16 +107,7 @@ export default function SiteNav() {
               </>
             )}
 
-            {isStaff && (
-              <>
-                <div className="border-t border-htg-card-border my-2" />
-                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{tPanel('staff_panel')}</p>
-                <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/prowadzacy/sesje" label={tPanel('staff_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
-              </>
-            )}
-
+            {/* Admin: all sections */}
             {isAdmin && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
@@ -113,7 +117,14 @@ export default function SiteNav() {
                 <MobileLink href="/admin/kolejka" label={tPanel('admin_queue')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/admin/sloty" label={tPanel('admin_slots')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/admin/uzytkownicy" label={tPanel('admin_users')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/admin/subskrypcje" label={tPanel('admin_subscriptions')} pathname={pathname} onClick={() => setOpen(false)} />
+                <div className="border-t border-htg-card-border my-2" />
+                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{tPanel('staff_panel')}</p>
+                <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setOpen(false)} />
+                <div className="border-t border-htg-card-border my-2" />
+                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{t('account')}</p>
+                <MobileLink href="/konto" label={tPanel('my_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/profil" label={tPanel('profile')} pathname={pathname} onClick={() => setOpen(false)} />
               </>
             )}
 
@@ -131,7 +142,6 @@ export default function SiteNav() {
             )}
 
             <div className="flex items-center gap-2 pt-2 border-t border-htg-card-border mt-2">
-              <LocaleSwitcher />
               <ThemeToggle />
             </div>
           </div>

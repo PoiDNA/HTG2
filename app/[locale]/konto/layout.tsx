@@ -47,7 +47,11 @@ export default async function AccountLayout({
     // fallback — just show user items
   }
 
-  const userItems = [
+  // Staff sees only staff items + profile/subscriptions (no user session items)
+  const userItems = (isStaff && !isAdmin) ? [
+    { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
+    { href: '/konto/profil', label: t('profile'), icon: UserCircle },
+  ] as const : [
     { href: '/konto', label: t('my_sessions'), icon: Film },
     { href: '/konto/sesje-indywidualne', label: tBooking('nav_label'), icon: CalendarDays },
     { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
@@ -80,20 +84,9 @@ export default async function AccountLayout({
         {/* Sidebar nav */}
         <nav className="md:w-56 shrink-0">
           <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-            {userItems.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors whitespace-nowrap"
-              >
-                <Icon className="w-5 h-5 shrink-0" />
-                {label}
-              </Link>
-            ))}
-
+            {/* Staff panel first for staff/admin */}
             {isStaff && (
               <>
-                <div className="hidden md:block border-t border-htg-card-border my-2" />
                 <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{tPanel('staff_panel')}</p>
                 {staffItems.map(({ href, label, icon: Icon }) => (
                   <Link
@@ -105,12 +98,13 @@ export default async function AccountLayout({
                     {label}
                   </Link>
                 ))}
+                <div className="hidden md:block border-t border-htg-card-border my-2" />
               </>
             )}
 
+            {/* Admin panel */}
             {isAdmin && (
               <>
-                <div className="hidden md:block border-t border-htg-card-border my-2" />
                 <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">Admin</p>
                 {adminItems.map(({ href, label, icon: Icon }) => (
                   <Link
@@ -122,8 +116,24 @@ export default async function AccountLayout({
                     {label}
                   </Link>
                 ))}
+                <div className="hidden md:block border-t border-htg-card-border my-2" />
               </>
             )}
+
+            {/* User items (reduced for staff) */}
+            {(!isStaff || isAdmin) && (
+              <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{t('title')}</p>
+            )}
+            {userItems.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors whitespace-nowrap"
+              >
+                <Icon className="w-5 h-5 shrink-0" />
+                {label}
+              </Link>
+            ))}
           </div>
         </nav>
 

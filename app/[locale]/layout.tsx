@@ -6,7 +6,7 @@ import HeaderAuthButton from "@/components/HeaderAuthButton";
 import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
 import ThemeToggle from "@/components/ThemeToggle";
-import LocaleSwitcher from "@/components/LocaleSwitcher";
+// LocaleSwitcher removed — Polish only for now
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
@@ -96,7 +96,6 @@ export default async function LocaleLayout({
                 <div className="flex items-center gap-4">
                   <SiteNav />
                   <div className="hidden md:flex items-center gap-2">
-                    <LocaleSwitcher />
                     <ThemeToggle />
                   </div>
                   <HeaderAuthButton />

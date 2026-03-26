@@ -50,10 +50,8 @@ export async function POST(request: NextRequest) {
       metadata: {
         supabase_user_id: user.id,
       },
-      // Art. 38 pkt 13 — consent to digital content delivery
-      consent_collection: {
-        terms_of_service: 'required',
-      },
+      // TODO: Enable consent_collection after configuring Terms URL in Stripe Dashboard
+      // consent_collection: { terms_of_service: 'required' },
     };
 
     // Enable automatic invoicing for one-time payments
@@ -65,7 +63,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
-    console.error('Stripe checkout error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Stripe checkout error:', error?.message, error?.type, error?.statusCode);
+    return NextResponse.json({
+      error: error.message || 'Unknown error',
+      type: error?.type,
+    }, { status: 500 });
   }
 }

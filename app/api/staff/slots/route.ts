@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireStaff } from '@/lib/staff/auth';
-import { SESSION_CONFIG } from '@/lib/booking/constants';
+import { SESSION_CONFIG, slotEndTime } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
-// GET: list slots created by this staff member (extra slots)
-export async function GET() {
+// GET: list slots based on staff role
+// Practitioner (Natalia): all her slots (future)
+// Assistant: all Natalia's available slots (to browse/join) + own assigned slots
+export async function GET(request: NextRequest) {
   const auth = await requireStaff();
   if ('error' in auth) return auth.error;
   const { supabase, staffMember } = auth;
@@ -13,24 +15,54 @@ export async function GET() {
     return NextResponse.json({ error: 'No staff member record' }, { status: 400 });
   }
 
-  // Get slots that match this staff member's session types
-  const { data: slots, error } = await supabase
+  const today = new Date().toISOString().split('T')[0];
+
+  if (staffMember.role === 'practitioner') {
+    // Natalia sees all her future slots
+    const { data: slots, error } = await supabase
+      .from('booking_slots')
+      .select('*, assistant:staff_members!booking_slots_assistant_id_fkey(id, name, slug, role)')
+      .gte('slot_date', today)
+      .order('slot_date', { ascending: true })
+      .order('start_time', { ascending: true });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ slots: slots ?? [] });
+  }
+
+  // Assistant: get Natalia's available slots (no assistant assigned) + slots assigned to self
+  const { data: availableSlots, error: availErr } = await supabase
     .from('booking_slots')
     .select('*')
-    .eq('is_extra', true)
-    .in('session_type', staffMember.session_types)
-    .gte('slot_date', new Date().toISOString().split('T')[0])
+    .is('assistant_id', null)
+    .eq('status', 'available')
+    .gte('slot_date', today)
     .order('slot_date', { ascending: true })
     .order('start_time', { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  const { data: mySlots, error: myErr } = await supabase
+    .from('booking_slots')
+    .select('*')
+    .eq('assistant_id', staffMember.id)
+    .gte('slot_date', today)
+    .order('slot_date', { ascending: true })
+    .order('start_time', { ascending: true });
+
+  if (availErr || myErr) {
+    return NextResponse.json({ error: (availErr || myErr)!.message }, { status: 500 });
   }
 
-  return NextResponse.json({ slots });
+  return NextResponse.json({
+    availableSlots: availableSlots ?? [],
+    mySlots: mySlots ?? [],
+  });
 }
 
-// POST: create a specific date slot (public or private for a user)
+// POST: create a slot (Natalia/practitioner only, or admin)
+// New model: Natalia sets start times, system creates natalia_solo slots
 export async function POST(request: NextRequest) {
   const auth = await requireStaff();
   if ('error' in auth) return auth.error;
@@ -40,16 +72,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No staff member record' }, { status: 400 });
   }
 
-  const { date, start_time, end_time, session_type, private_for_email } = await request.json();
-
-  if (!date || !start_time || !end_time || !session_type) {
-    return NextResponse.json({ error: 'date, start_time, end_time, session_type required' }, { status: 400 });
+  // Only practitioners (Natalia) can create slots
+  if (staffMember.role !== 'practitioner') {
+    return NextResponse.json({ error: 'Tylko prowadząca może tworzyć terminy' }, { status: 403 });
   }
 
-  // Validate session type belongs to this staff member
-  if (!staffMember.session_types.includes(session_type)) {
-    return NextResponse.json({ error: 'Ten typ sesji nie jest przypisany do Ciebie' }, { status: 403 });
+  const { date, start_time, session_type, private_for_email } = await request.json();
+
+  if (!date || !start_time) {
+    return NextResponse.json({ error: 'date and start_time required' }, { status: 400 });
   }
+
+  // Default to natalia_solo unless explicitly set
+  const finalType: SessionType = session_type || 'natalia_solo';
+  const endTime = slotEndTime(start_time, finalType);
 
   // Check Natalia conflict
   const { data: conflicts } = await supabase
@@ -57,7 +93,7 @@ export async function POST(request: NextRequest) {
     .select('id')
     .eq('slot_date', date)
     .in('status', ['held', 'booked', 'available'])
-    .or(`and(start_time.lt.${end_time},end_time.gt.${start_time})`);
+    .or(`and(start_time.lt.${endTime},end_time.gt.${start_time})`);
 
   if (conflicts && conflicts.length > 0) {
     return NextResponse.json({ error: 'Konflikt — istnieje już termin w tym czasie' }, { status: 409 });
@@ -70,9 +106,6 @@ export async function POST(request: NextRequest) {
   let status = 'available';
 
   if (private_for_email) {
-    // Find user by email
-    const { data: users } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 });
-    // Can't search by email in listUsers easily, use profiles table
     const { data: profile } = await supabase
       .from('profiles')
       .select('id, email, display_name')
@@ -84,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     heldForUser = profile.id;
-    heldUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days to respond
+    heldUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     notes = `Prywatny termin dla: ${profile.display_name || profile.email}`;
     status = 'held';
   }
@@ -92,15 +125,16 @@ export async function POST(request: NextRequest) {
   const { data: slot, error } = await supabase
     .from('booking_slots')
     .insert({
-      session_type,
+      session_type: finalType,
       slot_date: date,
       start_time,
-      end_time,
+      end_time: endTime,
       status,
       held_for_user: heldForUser,
       held_until: heldUntil,
       is_extra: true,
       notes,
+      assistant_id: null,
     })
     .select()
     .single();
@@ -114,7 +148,7 @@ export async function POST(request: NextRequest) {
     await supabase.from('bookings').insert({
       user_id: heldForUser,
       slot_id: slot.id,
-      session_type,
+      session_type: finalType,
       status: 'pending_confirmation',
       topics: null,
       assigned_at: new Date().toISOString(),
@@ -125,7 +159,78 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ slot });
 }
 
-// DELETE: remove a specific slot (only if available or held, not booked)
+// PATCH: assign/remove assistant on a slot (Natalia/admin only)
+export async function PATCH(request: NextRequest) {
+  const auth = await requireStaff();
+  if ('error' in auth) return auth.error;
+  const { supabase, staffMember } = auth;
+
+  if (!staffMember) {
+    return NextResponse.json({ error: 'No staff member record' }, { status: 400 });
+  }
+
+  if (staffMember.role !== 'practitioner') {
+    return NextResponse.json({ error: 'Tylko prowadząca może zmieniać asystentki' }, { status: 403 });
+  }
+
+  const { slot_id, assistant_id } = await request.json();
+
+  if (!slot_id) {
+    return NextResponse.json({ error: 'slot_id required' }, { status: 400 });
+  }
+
+  // Determine new session type
+  let newSessionType: SessionType = 'natalia_solo';
+  let newEndTime: string | null = null;
+
+  if (assistant_id) {
+    // Look up assistant's slug
+    const { data: assistant } = await supabase
+      .from('staff_members')
+      .select('slug, role')
+      .eq('id', assistant_id)
+      .eq('is_active', true)
+      .single();
+
+    if (!assistant || assistant.role !== 'assistant') {
+      return NextResponse.json({ error: 'Nie znaleziono asystentki' }, { status: 404 });
+    }
+
+    if (assistant.slug === 'agata') newSessionType = 'natalia_agata';
+    else if (assistant.slug === 'justyna') newSessionType = 'natalia_justyna';
+    else return NextResponse.json({ error: 'Nieznana asystentka' }, { status: 400 });
+  }
+
+  // Get current slot to compute new end time
+  const { data: slot } = await supabase
+    .from('booking_slots')
+    .select('start_time')
+    .eq('id', slot_id)
+    .single();
+
+  if (!slot) {
+    return NextResponse.json({ error: 'Slot nie znaleziony' }, { status: 404 });
+  }
+
+  newEndTime = slotEndTime(slot.start_time, newSessionType);
+
+  const { error } = await supabase
+    .from('booking_slots')
+    .update({
+      assistant_id: assistant_id || null,
+      session_type: newSessionType,
+      end_time: newEndTime,
+    })
+    .eq('id', slot_id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, session_type: newSessionType });
+}
+
+// DELETE: remove a specific slot (only if available, not booked)
 export async function DELETE(request: NextRequest) {
   const auth = await requireStaff();
   if ('error' in auth) return auth.error;
@@ -135,17 +240,19 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'No staff member record' }, { status: 400 });
   }
 
+  if (staffMember.role !== 'practitioner') {
+    return NextResponse.json({ error: 'Tylko prowadząca może usuwać terminy' }, { status: 403 });
+  }
+
   const id = request.nextUrl.searchParams.get('id');
   if (!id) {
     return NextResponse.json({ error: 'id required' }, { status: 400 });
   }
 
-  // Only delete extra slots that aren't booked
   const { error } = await supabase
     .from('booking_slots')
     .delete()
     .eq('id', id)
-    .eq('is_extra', true)
     .in('status', ['available', 'held']);
 
   if (error) {

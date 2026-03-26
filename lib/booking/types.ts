@@ -45,7 +45,10 @@ export interface BookingSlot {
   held_until: string | null;
   is_extra: boolean;
   notes: string | null;
+  assistant_id: string | null;
   created_at: string;
+  // Joined data
+  assistant?: Pick<StaffMember, 'id' | 'name' | 'slug' | 'role'>;
 }
 
 export interface Booking {

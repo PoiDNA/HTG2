@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Trash2 } from 'lucide-react';
-import type { StaffMember, AvailabilityRule, AvailabilityException, SessionType } from '@/lib/booking/types';
-import { ALL_SESSION_TYPES, SESSION_CONFIG } from '@/lib/booking/constants';
+import type { StaffMember, AvailabilityRule, AvailabilityException } from '@/lib/booking/types';
 
 const DAY_KEYS = ['day_sun', 'day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat'] as const;
 
@@ -29,7 +28,6 @@ export default function CalendarManager() {
   // Slot generation form
   const [genFrom, setGenFrom] = useState('');
   const [genTo, setGenTo] = useState('');
-  const [genType, setGenType] = useState<SessionType>('natalia_solo');
   const [genResult, setGenResult] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -116,7 +114,6 @@ export default function CalendarManager() {
       body: JSON.stringify({
         date_from: genFrom,
         date_to: genTo,
-        session_type: genType,
       }),
     });
     const data = await res.json();
@@ -295,18 +292,6 @@ export default function CalendarManager() {
                   onChange={e => setGenTo(e.target.value)}
                   className="bg-htg-card border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg"
                 />
-              </div>
-              <div>
-                <label className="block text-xs text-htg-fg-muted mb-1">{t('session_type')}</label>
-                <select
-                  value={genType}
-                  onChange={e => setGenType(e.target.value as SessionType)}
-                  className="bg-htg-card border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg"
-                >
-                  {ALL_SESSION_TYPES.map(st => (
-                    <option key={st} value={st}>{SESSION_CONFIG[st].labelShort}</option>
-                  ))}
-                </select>
               </div>
               <button
                 onClick={generateSlots}

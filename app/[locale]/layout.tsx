@@ -45,8 +45,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       languages
     },
     robots: {
-      index: true,
-      follow: true,
+      index: false,
+      follow: false,
     },
     openGraph: {
       type: 'website',
@@ -113,11 +113,9 @@ export default async function LocaleLayout({
                     Hacking The Game
                   </span>
                 </Link>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <SiteNav />
-                  <div className="hidden md:flex items-center gap-2">
-                    <ThemeToggle />
-                  </div>
+                  <ThemeToggle />
                   <HeaderAuthButton />
                 </div>
               </div>

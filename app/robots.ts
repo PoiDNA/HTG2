@@ -1,14 +1,13 @@
 import type { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
+  // STAGING: block all indexing until production
   return {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
-        disallow: ['/konto/', '/prowadzacy/', '/publikacja/', '/admin/', '/api/', '/auth/'],
+        disallow: '/',
       },
     ],
-    sitemap: 'https://htgcyou.com/sitemap.xml',
   };
 }

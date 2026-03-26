@@ -1,5 +1,6 @@
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
+import type { Metadata } from 'next';
 import HeroSection from '@/components/home/HeroSection';
 import VODPreviewSection from '@/components/home/VODPreviewSection';
 import SubscriptionCTASection from '@/components/home/SubscriptionCTASection';
@@ -10,6 +11,20 @@ import HelpContactSection from '@/components/home/HelpContactSection';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'Metadata' });
+  return {
+    title: t('title'),
+    description: t('description'),
+    openGraph: {
+      title: t('title'),
+      description: t('description'),
+      url: `https://htg.cyou/${locale}`,
+    },
+  };
 }
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {

@@ -30,9 +30,16 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     languages[l] = `https://htg.cyou/${l}`;
   });
 
+  const title = t('title');
+  const description = t('description');
+
   return {
-    title: t('title'),
-    description: t('description'),
+    title: {
+      default: title,
+      template: `%s | HTG`,
+    },
+    description,
+    metadataBase: new URL('https://htg.cyou'),
     alternates: {
       canonical: `https://htg.cyou/${locale}`,
       languages
@@ -40,6 +47,19 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     robots: {
       index: true,
       follow: true,
+    },
+    openGraph: {
+      type: 'website',
+      siteName: 'HTG — Hacking The Game',
+      title,
+      description,
+      url: `https://htg.cyou/${locale}`,
+      locale: locale === 'pl' ? 'pl_PL' : 'en_US',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
     },
   };
 }

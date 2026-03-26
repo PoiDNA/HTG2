@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
+import { sendOrderConfirmation, sendPaymentFailedNotification } from '@/lib/email/resend';
 
 // Use service role for webhook (no user context) — lazy init
 function getSupabaseAdmin() {
@@ -48,9 +49,10 @@ export async function POST(request: NextRequest) {
         .select('id')
         .single();
 
+      // Retrieve line items to create entitlements
+      const lineItems = await getStripe().checkout.sessions.listLineItems(session.id, { expand: ['data.price.product'] });
+
       if (order) {
-        // Retrieve line items to create entitlements
-        const lineItems = await getStripe().checkout.sessions.listLineItems(session.id, { expand: ['data.price.product'] });
 
         for (const item of lineItems.data) {
           const product = item.price?.product as any;
@@ -89,6 +91,23 @@ export async function POST(request: NextRequest) {
         metadata: { stripe_session_id: session.id },
       });
 
+      // Send order confirmation email
+      try {
+        const email = session.customer_details?.email || session.customer_email;
+        const name = session.customer_details?.name || email?.split('@')[0] || 'Użytkownik';
+        const productName = lineItems.data.map(i => i.description).join(', ') || 'Sesja HTG';
+        if (email) {
+          await sendOrderConfirmation(email, {
+            name,
+            productName,
+            amount: session.amount_total || 0,
+            currency: session.currency || 'pln',
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to send order email:', emailErr);
+      }
+
       break;
     }
 
@@ -107,7 +126,19 @@ export async function POST(request: NextRequest) {
     case 'invoice.payment_failed': {
       const invoice = event.data.object;
       console.error('Payment failed for invoice:', invoice.id);
-      // TODO: Send notification email via Resend
+
+      // Send payment failed email
+      try {
+        const customerEmail = typeof invoice.customer_email === 'string' ? invoice.customer_email : null;
+        if (customerEmail) {
+          await sendPaymentFailedNotification(customerEmail, {
+            name: typeof invoice.customer_name === 'string' ? invoice.customer_name : customerEmail.split('@')[0],
+            productName: 'Subskrypcja HTG',
+          });
+        }
+      } catch (emailErr) {
+        console.error('Failed to send payment failed email:', emailErr);
+      }
       break;
     }
   }

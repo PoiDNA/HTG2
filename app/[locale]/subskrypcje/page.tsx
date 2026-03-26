@@ -11,7 +11,15 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'Subscriptions' });
-  return { title: t('title') };
+  return {
+    title: t('title'),
+    description: t('subtitle'),
+    openGraph: {
+      title: t('title'),
+      description: t('subtitle'),
+      url: `https://htg.cyou/${locale}/subskrypcje`,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------

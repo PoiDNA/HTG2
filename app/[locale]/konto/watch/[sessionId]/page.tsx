@@ -1,0 +1,145 @@
+import { setRequestLocale, getTranslations } from 'next-intl/server';
+import { locales, Link } from '@/i18n-config';
+import { createSupabaseServer } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import { ArrowLeft, Lock } from 'lucide-react';
+import VideoPlayer from '@/components/video/VideoPlayer';
+
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'Account' });
+  return { title: t('watch') };
+}
+
+export default async function WatchPage({
+  params,
+}: {
+  params: Promise<{ locale: string; sessionId: string }>;
+}) {
+  const { locale, sessionId } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'Account' });
+
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect(`/${locale}/login`);
+  }
+
+  // Fetch session template
+  const { data: session } = await supabase
+    .from('session_templates')
+    .select('id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id')
+    .eq('id', sessionId)
+    .single();
+
+  if (!session) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-htg-fg-muted">Nie znaleziono sesji.</p>
+        <Link
+          href="/konto"
+          className="inline-block mt-4 text-htg-sage hover:underline"
+        >
+          {t('my_sessions')}
+        </Link>
+      </div>
+    );
+  }
+
+  // Check entitlement
+  const { data: entitlement } = await supabase
+    .from('entitlements')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('session_id', sessionId)
+    .eq('is_active', true)
+    .gt('valid_until', new Date().toISOString())
+    .limit(1)
+    .single();
+
+  // Also check yearly entitlement (full catalog access)
+  let hasYearlyAccess = false;
+  if (!entitlement) {
+    const { data: yearly } = await supabase
+      .from('entitlements')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('type', 'yearly')
+      .eq('is_active', true)
+      .gt('valid_until', new Date().toISOString())
+      .limit(1)
+      .single();
+    hasYearlyAccess = !!yearly;
+  }
+
+  const hasAccess = !!entitlement || hasYearlyAccess;
+
+  // Fetch monthly set info if session belongs to one
+  const { data: setSession } = await supabase
+    .from('set_sessions')
+    .select('monthly_set:monthly_sets ( title )')
+    .eq('session_id', sessionId)
+    .limit(1)
+    .single();
+
+  const setTitle = (setSession as any)?.monthly_set?.title || null;
+
+  return (
+    <div>
+      <Link
+        href="/konto"
+        className="inline-flex items-center gap-2 text-sm text-htg-fg-muted hover:text-htg-fg transition-colors mb-6"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        {t('my_sessions')}
+      </Link>
+
+      <div className="mb-6">
+        {setTitle && (
+          <p className="text-sm text-htg-sage font-medium mb-1">{setTitle}</p>
+        )}
+        <h2 className="text-2xl font-serif font-bold text-htg-fg">
+          {session.title}
+        </h2>
+        {session.description && (
+          <p className="text-htg-fg-muted mt-2">{session.description}</p>
+        )}
+        {session.duration_minutes && (
+          <p className="text-sm text-htg-fg-muted mt-1">
+            {session.duration_minutes} min
+          </p>
+        )}
+      </div>
+
+      {hasAccess ? (
+        <VideoPlayer
+          sessionId={session.id}
+          userEmail={user.email || ''}
+          userId={user.id}
+        />
+      ) : (
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-8 text-center">
+          <Lock className="w-12 h-12 text-htg-fg-muted mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-htg-fg mb-2">
+            Brak dostępu
+          </h3>
+          <p className="text-htg-fg-muted mb-6">
+            Nie masz aktywnego dostępu do tej sesji. Wykup subskrypcję, aby oglądać.
+          </p>
+          <Link
+            href="/subskrypcje"
+            className="inline-block bg-htg-sage text-white px-6 py-3 rounded-lg font-medium hover:bg-htg-sage-dark transition-colors"
+          >
+            Zobacz plany
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}

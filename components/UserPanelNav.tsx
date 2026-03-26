@@ -97,13 +97,13 @@ export default function UserPanelNav() {
             <>
               <div className="border-t border-htg-card-border my-1" />
               <div className="py-1">
-                <DropdownLink href="/admin" icon={LayoutDashboard} label={t('admin_panel')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/admin/kalendarz" icon={Calendar} label={t('admin_calendar')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/admin/kolejka" icon={Users} label={t('admin_queue')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/admin/sloty" icon={Clock} label={t('admin_slots')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/admin/uzytkownicy" icon={Users} label={t('admin_users')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/admin/subskrypcje" icon={CreditCard} label={t('admin_subscriptions')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/admin/sesje" icon={BookOpen} label={t('admin_sessions')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/admin" icon={LayoutDashboard} label={t('admin_panel')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/admin/kalendarz" icon={Calendar} label={t('admin_calendar')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/admin/kolejka" icon={Users} label={t('admin_queue')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/admin/sloty" icon={Clock} label={t('admin_slots')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/admin/uzytkownicy" icon={Users} label={t('admin_users')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/admin/subskrypcje" icon={CreditCard} label={t('admin_subscriptions')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/admin/sesje" icon={BookOpen} label={t('admin_sessions')} onClick={() => setOpen(false)} />
               </div>
             </>
           )}

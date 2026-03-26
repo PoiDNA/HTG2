@@ -5,6 +5,8 @@ import { TrackList } from '@/components/publikacja/TrackList';
 import { TrackUploader } from '@/components/publikacja/TrackUploader';
 import { StatusWorkflow } from '@/components/publikacja/StatusWorkflow';
 import type { SessionPublication, PublicationStatus, TrackInfo } from '@/lib/publication/types';
+import { Link } from '@/i18n-config';
+import { Headphones } from 'lucide-react';
 
 interface SessionDetailClientProps {
   session: SessionPublication;
@@ -33,6 +35,7 @@ interface SessionDetailClientProps {
     status_mastering: string;
     status_published: string;
     workflow: string;
+    open_editor: string;
   };
 }
 
@@ -85,7 +88,18 @@ export function SessionDetailClient({ session: initialSession, isAdmin, userId, 
     <div className="space-y-8">
       {/* Source tracks */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-        <h3 className="text-lg font-serif font-bold text-htg-fg mb-4">{labels.source_tracks}</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-serif font-bold text-htg-fg">{labels.source_tracks}</h3>
+          {((session.source_tracks || []) as TrackInfo[]).length > 0 && (
+            <Link
+              href={`/publikacja/edytor/${session.id}`}
+              className="flex items-center gap-2 px-4 py-2 bg-htg-sage text-white text-sm font-medium rounded-lg hover:bg-htg-sage/90 transition-colors"
+            >
+              <Headphones className="w-4 h-4" />
+              {labels.open_editor}
+            </Link>
+          )}
+        </div>
         <TrackList
           tracks={(session.source_tracks || []) as TrackInfo[]}
           publicationId={session.id}

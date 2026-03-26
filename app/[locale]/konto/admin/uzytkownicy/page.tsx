@@ -171,13 +171,13 @@ export default async function AdminUsersPage({ params, searchParams }: {
             </p>
             <div className="flex gap-1">
               {page > 1 && (
-                <Link href={`/admin/uzytkownicy?page=${page - 1}${sp.q ? '&q=' + sp.q : ''}${sp.role ? '&role=' + sp.role : ''}`}
+                <Link href={`/konto/admin/uzytkownicy?page=${page - 1}${sp.q ? '&q=' + sp.q : ''}${sp.role ? '&role=' + sp.role : ''}`}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border">
                   ← Poprz.
                 </Link>
               )}
               {page < totalPages && (
-                <Link href={`/admin/uzytkownicy?page=${page + 1}${sp.q ? '&q=' + sp.q : ''}${sp.role ? '&role=' + sp.role : ''}`}
+                <Link href={`/konto/admin/uzytkownicy?page=${page + 1}${sp.q ? '&q=' + sp.q : ''}${sp.role ? '&role=' + sp.role : ''}`}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border">
                   Nast. →
                 </Link>

@@ -13,6 +13,7 @@ export default async function SessionDetailPage({
   const { locale, id } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Publikacja' });
+  const tDaw = await getTranslations({ locale, namespace: 'Daw' });
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -114,6 +115,7 @@ export default async function SessionDetailPage({
           status_mastering: t('status_mastering'),
           status_published: t('status_published'),
           workflow: t('workflow'),
+          open_editor: tDaw('open_editor'),
         }}
       />
     </div>

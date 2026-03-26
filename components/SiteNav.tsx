@@ -112,11 +112,11 @@ export default function SiteNav() {
               <>
                 <div className="border-t border-htg-card-border my-2" />
                 <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">Admin</p>
-                <MobileLink href="/admin" label={tPanel('admin_panel')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/admin/kalendarz" label={tPanel('admin_calendar')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/admin/kolejka" label={tPanel('admin_queue')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/admin/sloty" label={tPanel('admin_slots')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/admin/uzytkownicy" label={tPanel('admin_users')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/admin" label={tPanel('admin_panel')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/admin/kalendarz" label={tPanel('admin_calendar')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/admin/kolejka" label={tPanel('admin_queue')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/admin/sloty" label={tPanel('admin_slots')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/admin/uzytkownicy" label={tPanel('admin_users')} pathname={pathname} onClick={() => setOpen(false)} />
                 <div className="border-t border-htg-card-border my-2" />
                 <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{tPanel('staff_panel')}</p>
                 <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />

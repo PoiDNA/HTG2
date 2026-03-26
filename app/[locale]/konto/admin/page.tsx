@@ -49,9 +49,9 @@ export default async function AdminDashboard({
   const staffMembers = staffRes.data ?? [];
 
   const quickLinks = [
-    { href: '/admin/kalendarz', label: t('go_to_calendar'), icon: Calendar },
-    { href: '/admin/kolejka', label: t('go_to_queue'), icon: Users },
-    { href: '/admin/sloty', label: t('go_to_slots'), icon: Clock },
+    { href: '/konto/admin/kalendarz', label: t('go_to_calendar'), icon: Calendar },
+    { href: '/konto/admin/kolejka', label: t('go_to_queue'), icon: Users },
+    { href: '/konto/admin/sloty', label: t('go_to_slots'), icon: Clock },
   ];
 
   return (
@@ -71,17 +71,17 @@ export default async function AdminDashboard({
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
           <p className="text-sm text-htg-fg-muted">Użytkownicy</p>
           <p className="text-3xl font-serif font-bold text-htg-fg mt-1">{usersRes.count ?? 0}</p>
-          <Link href="/admin/uzytkownicy" className="text-sm text-htg-sage hover:underline mt-2 inline-block">Zarządzaj →</Link>
+          <Link href="/konto/admin/uzytkownicy" className="text-sm text-htg-sage hover:underline mt-2 inline-block">Zarządzaj →</Link>
         </div>
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
           <p className="text-sm text-htg-fg-muted">Aktywne entitlements</p>
           <p className="text-3xl font-serif font-bold text-htg-fg mt-1">{entsRes.count ?? 0}</p>
-          <Link href="/admin/subskrypcje" className="text-sm text-htg-sage hover:underline mt-2 inline-block">Przegląd →</Link>
+          <Link href="/konto/admin/subskrypcje" className="text-sm text-htg-sage hover:underline mt-2 inline-block">Przegląd →</Link>
         </div>
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
           <p className="text-sm text-htg-fg-muted">Zestawy miesięczne</p>
           <p className="text-3xl font-serif font-bold text-htg-fg mt-1">33</p>
-          <Link href="/admin/zestawy" className="text-sm text-htg-sage hover:underline mt-2 inline-block">Zarządzaj →</Link>
+          <Link href="/konto/admin/zestawy" className="text-sm text-htg-sage hover:underline mt-2 inline-block">Zarządzaj →</Link>
         </div>
       </div>
 

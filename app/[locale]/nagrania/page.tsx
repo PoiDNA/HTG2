@@ -46,7 +46,7 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
             <div key={video.id} className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
               <div className="aspect-video">
                 <iframe
-                  src={`https://www.youtube.com/embed/${video.youtube_id}`}
+                  src={`https://www.youtube-nocookie.com/embed/${video.youtube_id}?modestbranding=1&rel=0&showinfo=0&iv_load_policy=3`}
                   title={video.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen

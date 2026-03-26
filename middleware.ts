@@ -26,6 +26,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Skip auth callback from i18n (no locale prefix needed)
+  if (pathname.startsWith('/auth/')) {
+    return NextResponse.next();
+  }
+
   // Run i18n middleware first
   const response = intlMiddleware(request);
 

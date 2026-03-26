@@ -62,7 +62,6 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   });
-  const [topics, setTopics] = useState('');
   const [loading, setLoading] = useState(false);
   const [wantAcceleration, setWantAcceleration] = useState(false);
   const router = useRouter();
@@ -137,7 +136,6 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             type: 'individual',
             session_type: selectedSession.sessionType,
             slot_id: selectedSlotId || '',
-            topics: topics.slice(0, 500),
             want_acceleration: wantAcceleration ? 'true' : 'false',
           },
         }),
@@ -386,22 +384,6 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
               </>
             )}
           </div>
-
-          {/* Topics */}
-          <label className="block">
-            <span className="flex items-center gap-2 text-sm font-medium text-htg-fg mb-1">
-              <MessageSquare className="w-4 h-4 text-htg-sage" />
-              {labels.topics_label}
-            </span>
-            <textarea
-              value={topics}
-              onChange={(e) => setTopics(e.target.value)}
-              rows={4}
-              maxLength={500}
-              className="w-full px-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg text-base resize-none"
-              placeholder={labels.topics_placeholder}
-            />
-          </label>
 
           {/* Buy button */}
           <div>

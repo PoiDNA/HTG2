@@ -9,11 +9,15 @@ import type { SessionType } from '@/lib/booking/types';
 
 const DAY_KEYS = ['day_sun', 'day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat'] as const;
 
-// Generate time options from CALENDAR_START_HOUR to CALENDAR_END_HOUR
+// Generate time options every 15 minutes from CALENDAR_START_HOUR to CALENDAR_END_HOUR
 const TIME_OPTIONS: string[] = [];
 for (let h = CALENDAR_START_HOUR; h <= CALENDAR_END_HOUR; h++) {
-  TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:00`);
+  for (const m of [0, 15, 30, 45]) {
+    if (h === CALENDAR_END_HOUR && m > 0) break;
+    TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+  }
 }
+const MAX_SLOTS_PER_DAY = 4;
 
 interface SlotData {
   id: string;
@@ -71,32 +75,33 @@ function PractitionerEditor() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Weekly rules: toggle start times per day ──
-  const toggleTimeForDay = async (dayOfWeek: number, time: string) => {
-    // Check if this rule already exists
-    const existing = rules.find(
-      r => r.day_of_week === dayOfWeek && r.start_time.slice(0, 5) === time
-    );
+  // ── Weekly rules: 4 slot selectors per day ──
+  const getRulesForDay = (dayOfWeek: number) => {
+    return rules
+      .filter(r => r.day_of_week === dayOfWeek)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  };
 
-    if (existing) {
-      // Delete it
-      await fetch(`/api/staff/availability?id=${existing.id}`, { method: 'DELETE' });
-    } else {
-      // Compute end_time = start + 2h (natalia_solo default)
-      const [h, m] = time.split(':').map(Number);
-      const endMin = h * 60 + m + 120;
-      const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
-      await fetch('/api/staff/availability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ day_of_week: dayOfWeek, start_time: time, end_time: endTime }),
-      });
-    }
+  const addRuleForDay = async (dayOfWeek: number, time: string) => {
+    if (!time) return;
+    const dayRules = getRulesForDay(dayOfWeek);
+    if (dayRules.length >= MAX_SLOTS_PER_DAY) return;
+    // Check duplicate
+    if (dayRules.some(r => r.start_time.slice(0, 5) === time)) return;
+    const [h, m] = time.split(':').map(Number);
+    const endMin = h * 60 + m + 120;
+    const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
+    await fetch('/api/staff/availability', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ day_of_week: dayOfWeek, start_time: time, end_time: endTime }),
+    });
     fetchData();
   };
 
-  const isTimeActive = (dayOfWeek: number, time: string) => {
-    return rules.some(r => r.day_of_week === dayOfWeek && r.start_time.slice(0, 5) === time);
+  const deleteRule = async (id: string) => {
+    await fetch(`/api/staff/availability?id=${id}`, { method: 'DELETE' });
+    fetchData();
   };
 
   // ── Specific date slot ──
@@ -179,32 +184,53 @@ function PractitionerEditor() {
           {t('weekly_schedule')}
         </h3>
         <p className="text-sm text-htg-fg-muted mb-4">
-          Kliknij godzinę, aby dodać lub usunąć termin startowy. Każdy termin to domyślnie sesja solo (2h).
+          Max 4 sesje dziennie. Wybierz godzinę rozpoczęcia (co 15 min). Każdy termin = sesja solo 2h.
         </p>
         <div className="space-y-3">
-          {[1, 2, 3, 4, 5, 6, 0].map(dayIdx => (
-            <div key={dayIdx} className="border border-htg-card-border rounded-lg p-3">
-              <h4 className="text-sm font-medium text-htg-fg mb-2">{t(DAY_KEYS[dayIdx])}</h4>
-              <div className="flex flex-wrap gap-1.5">
-                {TIME_OPTIONS.map(time => {
-                  const active = isTimeActive(dayIdx, time);
-                  return (
-                    <button
-                      key={time}
-                      onClick={() => toggleTimeForDay(dayIdx, time)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        active
-                          ? 'bg-htg-sage text-white'
-                          : 'bg-htg-surface text-htg-fg-muted hover:bg-htg-sage/20 hover:text-htg-fg'
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  );
-                })}
+          {[1, 2, 3, 4, 5, 6, 0].map(dayIdx => {
+            const dayRules = getRulesForDay(dayIdx);
+            return (
+              <div key={dayIdx} className="border border-htg-card-border rounded-lg p-4">
+                <h4 className="text-sm font-medium text-htg-fg mb-3">{t(DAY_KEYS[dayIdx])}</h4>
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Active slots */}
+                  {dayRules.map((rule, idx) => (
+                    <div key={rule.id} className="flex items-center gap-1.5 bg-htg-sage/15 border border-htg-sage/30 rounded-lg px-3 py-2">
+                      <span className="text-xs text-htg-fg-muted">Sesja {idx + 1}:</span>
+                      <span className="text-sm font-semibold text-htg-sage">{rule.start_time.slice(0, 5)}</span>
+                      <button onClick={() => deleteRule(rule.id)} className="text-red-400 hover:text-red-600 ml-1">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {/* Add slot button (if < 4) */}
+                  {dayRules.length < MAX_SLOTS_PER_DAY && (
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        id={`day-${dayIdx}-new`}
+                        defaultValue=""
+                        onChange={e => {
+                          if (e.target.value) {
+                            addRuleForDay(dayIdx, e.target.value);
+                            e.target.value = '';
+                          }
+                        }}
+                        className="bg-htg-surface border border-htg-card-border rounded-lg px-2 py-2 text-sm text-htg-fg"
+                      >
+                        <option value="" disabled>+ dodaj</option>
+                        {TIME_OPTIONS.filter(t => !dayRules.some(r => r.start_time.slice(0,5) === t)).map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {dayRules.length === 0 && (
+                    <span className="text-xs text-htg-fg-muted italic">Brak terminów</span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

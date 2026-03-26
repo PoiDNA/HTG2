@@ -70,8 +70,8 @@ export default async function StaffLayout({
 
   const navItems = [
     { href: '/prowadzacy', label: t('dashboard'), icon: LayoutDashboard },
-    { href: '/prowadzacy/grafik', label: t('schedule'), icon: Calendar },
     { href: '/prowadzacy/sesje', label: t('sessions'), icon: Presentation },
+    { href: '/prowadzacy/grafik', label: t('schedule'), icon: Calendar },
     { href: '/prowadzacy/klienci', label: t('clients'), icon: Users },
   ] as const;
 

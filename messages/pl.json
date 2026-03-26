@@ -242,10 +242,10 @@
     "sets_desc": "Zarządzanie zestawami miesięcznymi — tworzenie, edycja, przypisywanie sesji."
   },
   "Staff": {
-    "title": "Panel prowadzącego",
+    "title": "Panel",
     "dashboard": "Dashboard",
     "schedule": "Grafik",
-    "schedule_title": "Twój grafik dostępności",
+    "schedule_title": "Grafik",
     "role_practitioner": "Prowadząca",
     "role_assistant": "Asystentka",
     "role_admin": "Administrator",
@@ -292,8 +292,8 @@
     "my_subscriptions": "Moje subskrypcje",
     "orders": "Zamówienia",
     "profile": "Profil",
-    "staff_panel": "Panel prowadzącego",
-    "staff_schedule": "Mój grafik",
+    "staff_panel": "Panel",
+    "staff_schedule": "Grafik",
     "staff_sessions": "Moje sesje",
     "staff_clients": "Moi klienci",
     "admin_panel": "Panel admina",

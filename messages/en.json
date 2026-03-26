@@ -242,10 +242,10 @@
     "sets_desc": "Monthly sets management — create, edit, assign sessions."
   },
   "Staff": {
-    "title": "Staff Panel",
+    "title": "Panel",
     "dashboard": "Dashboard",
     "schedule": "Schedule",
-    "schedule_title": "Your availability schedule",
+    "schedule_title": "Schedule",
     "role_practitioner": "Practitioner",
     "role_assistant": "Assistant",
     "role_admin": "Administrator",

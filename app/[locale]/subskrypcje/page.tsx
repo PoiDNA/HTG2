@@ -4,6 +4,8 @@ import { Star, Check } from 'lucide-react';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { CheckoutButton } from '@/components/CheckoutButton';
 
+export const dynamic = 'force-dynamic';
+
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }

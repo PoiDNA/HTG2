@@ -1,6 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
-import { Film, CreditCard, FileText, UserCircle } from 'lucide-react';
+import { Film, CreditCard, FileText, UserCircle, CalendarDays } from 'lucide-react';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -16,9 +16,11 @@ export default async function AccountLayout({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Account' });
+  const tBooking = await getTranslations({ locale, namespace: 'Booking' });
 
   const navItems = [
     { href: '/konto', label: t('my_sessions'), icon: Film },
+    { href: '/konto/sesje-indywidualne', label: tBooking('nav_label'), icon: CalendarDays },
     { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
     { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
     { href: '/konto/profil', label: t('profile'), icon: UserCircle },

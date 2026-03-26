@@ -3,7 +3,7 @@ import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 import {
-  Film, CreditCard, FileText, UserCircle, CalendarDays,
+  Film, CreditCard, FileText, UserCircle, CalendarDays, Heart,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye,
 } from 'lucide-react';
@@ -87,6 +87,7 @@ export default async function AccountLayout({
     { href: '/konto/sesje-indywidualne', label: tPanel('individual_sessions'), icon: CalendarDays },
     { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
     { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
+    { href: '/konto/polubieni', label: 'Polubieni', icon: Heart },
     { href: '/konto/profil', label: t('profile'), icon: UserCircle },
   ] as const;
 

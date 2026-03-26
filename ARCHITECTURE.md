@@ -1,582 +1,242 @@
-# HTG — Hacking The Game | Architektura Systemu v1.0
+# HTG Platform — Architektura v1
 
-> Platforma sesji rozwoju duchowego prowadzonych przez Natalię HTG.
-> VOD, sesje live 1:1, system rezerwacji, edycja audio, AI pipeline.
+## Przegląd
+Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesje live + system rezerwacji + pipeline publikacji audio.
+
+**URL:** htgcyou.com | **Repo:** github.com/PoiDNA/HTG2
 
 ---
 
-## Tech Stack
+## Stack technologiczny
 
 | Warstwa | Technologia |
 |---------|-------------|
-| Frontend | Next.js 15, React 19, TypeScript, Tailwind 4 |
-| Auth + DB | Supabase (Email OTP, PostgreSQL, Realtime, RLS) |
-| Payments | Stripe (Checkout, Webhooks, Invoicing) |
-| Live Sessions | LiveKit Cloud (WebRTC, Egress recording) |
-| VOD | Bunny Stream (HLS, Token Auth) |
-| Storage | Bunny Storage (WAV, MP3, assets) |
-| Email | Resend (SMTP via sesje@htgcyou.com) |
-| AI | OpenAI Whisper (transkrypcja), Anthropic Claude (analiza) |
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS 4 |
+| Backend | Next.js API Routes (serverless) |
+| Baza danych | Supabase (PostgreSQL + Auth + Realtime + RLS) |
+| Płatności | Stripe (Checkout + Webhooks + Invoicing) |
+| Wideo live | LiveKit Cloud (WebRTC, Egress recording) |
+| VOD streaming | Bunny Stream (HLS + Token Auth) |
+| Storage plików | Bunny Storage (WAV, MP3, assety) |
+| Email | Resend (SMTP via Supabase Auth) |
+| CDN/DNS | Cloudflare |
 | Hosting | Vercel (serverless, Edge) |
-| DNS | Cloudflare |
+| AI | OpenAI Whisper (transkrypcja), Claude (analiza) |
 
 ---
 
-## Infrastructure
+## Baza danych — 23 tabele
 
-```
-                          ┌──────────────┐
-                          │   Klient     │
-                          │  (Browser)   │
-                          └──────┬───────┘
-                                 │
-                          ┌──────▼───────┐
-                          │   Vercel     │
-                          │  (Next.js)   │
-                          │  htgcyou.com │
-                          └──┬──┬──┬──┬──┘
-                             │  │  │  │
-              ┌──────────────┘  │  │  └──────────────┐
-              │                 │  │                  │
-       ┌──────▼──────┐  ┌──────▼──▼──────┐   ┌──────▼──────┐
-       │  Supabase   │  │   LiveKit      │   │   Bunny     │
-       │ auth.htg.cyou│  │   Cloud        │   │  CDN/Stream │
-       │ Auth + DB   │  │   WebRTC       │   │  Storage    │
-       │ Realtime    │  │   Egress       │   │             │
-       └─────────────┘  └───────────────┘   └─────────────┘
-              │
-       ┌──────┴──────────────────┐
-       │                         │
-┌──────▼──────┐          ┌──────▼──────┐
-│   Stripe    │          │   Resend    │
-│  Payments   │          │   Email     │
-└─────────────┘          └─────────────┘
-       │
-┌──────▼──────────────────┐
-│   OpenAI + Anthropic    │
-│   Whisper + Claude      │
-│   (Auto-edit pipeline)  │
-└─────────────────────────┘
-```
+### Core
+| Tabela | Opis |
+|--------|------|
+| `profiles` | Użytkownicy (role: user/admin/moderator/publikacja) |
+| `products` | Produkty (sesja, pakiet miesięczny, roczny, indywidualne) |
+| `prices` | Ceny Stripe (stripe_price_id, amount, currency) |
+| `orders` | Zamówienia (stripe/wix/manual) |
+| `entitlements` | Uprawnienia VOD (session/monthly/yearly, valid_from/until) |
 
----
+### Sesje VOD
+| Tabela | Opis |
+|--------|------|
+| `session_templates` | Szablony sesji (95 sesji z blogów WIX) |
+| `monthly_sets` | Zestawy miesięczne (33: Maj 2024 — Sty 2027) |
+| `set_sessions` | Junction: zestaw <-> sesja |
+| `youtube_videos` | 30 publicznych filmów YouTube |
 
-## Database Schema (Supabase PostgreSQL)
+### Rezerwacje
+| Tabela | Opis |
+|--------|------|
+| `staff_members` | Natalia, Agata, Justyna (role, session_types) |
+| `availability_rules` | Harmonogram tygodniowy (dzień + godziny) |
+| `availability_exceptions` | Zablokowane dni |
+| `booking_slots` | Konkretne sloty (data, czas, status, solo_locked) |
+| `bookings` | Rezerwacje klientów (24h hold, confirm, transfer) |
+| `acceleration_queue` | Kolejka przyspieszenia terminów |
 
-### Users & Roles
+### Sesje Live
+| Tabela | Opis |
+|--------|------|
+| `live_sessions` | Pokoje LiveKit (8 faz, 3 egress ID, nagrania WAV) |
+| `active_streams` | Concurrent stream limiter (1 urządzenie) |
 
-```
-profiles
-├── id (UUID, FK → auth.users)
-├── email, display_name
-├── role: 'user' | 'admin' | 'moderator' | 'publikacja'
-├── wix_member_id, wix_migrated_at
-└── phone, avatar_url
-```
+### Publikacja
+| Tabela | Opis |
+|--------|------|
+| `session_publications` | Pipeline: raw -> editing -> edited -> mastering -> published |
 
-### Products & Pricing
+### Społeczność
+| Tabela | Opis |
+|--------|------|
+| `user_favorites` | Polubieni (user <-> user) |
+| `session_sharing` | Udostępnianie sesji (open/favorites/invited) |
+| `session_listeners` | Słuchacze towarzyszący (listen-only) |
 
-```
-products (6 records)
-├── id, name, slug, description, type
-├── stripe_product_id
-└── is_active
-
-prices (6 records)
-├── id, product_id (FK → products)
-├── stripe_price_id
-├── amount (grosze), currency, interval
-└── is_active
-```
-
-**Produkty:**
-| Slug | Cena | Typ |
-|------|------|-----|
-| sesja-pojedyncza | 30 PLN | one-time |
-| pakiet-miesieczny | 99 PLN | one-time |
-| pakiet-roczny | 999 PLN/rok | subscription |
-| sesja-natalia | 1 200 PLN | one-time |
-| sesja-natalia-agata | 1 600 PLN | one-time |
-| sesja-natalia-justyna | 1 600 PLN | one-time |
-
-### Content
-
-```
-monthly_sets (33 records: Maj 2024 → Sty 2027)
-├── id, product_id, title, slug
-├── month_label (YYYY-MM), description
-├── cover_image_url
-└── is_published
-
-session_templates (95 records)
-├── id, title, slug, description
-├── bunny_video_id, bunny_library_id
-├── is_published, sort_order
-└── duration_seconds
-
-set_sessions (95 records — junction)
-├── set_id (FK → monthly_sets)
-├── session_id (FK → session_templates)
-└── sort_order
-
-youtube_videos (30 records)
-├── id, youtube_id, title
-├── is_visible, sort_order
-```
-
-### Orders & Access
-
-```
-orders (~2000 records)
-├── id, user_id
-├── status, total_amount, currency
-├── stripe_session_id, stripe_subscription_id
-├── wix_order_id, wix_plan_name
-└── source: 'stripe' | 'wix' | 'manual' | 'migration'
-
-entitlements (~2500 records)
-├── id, user_id, product_id
-├── type: 'session' | 'monthly' | 'yearly'
-├── scope_month, monthly_set_id, session_id
-├── valid_from, valid_until, is_active
-├── stripe_subscription_id
-└── source: 'stripe' | 'wix' | 'manual' | 'migration'
-
-active_streams
-├── id, user_id, device_id
-├── session_id, started_at, last_heartbeat
-```
-
-### Booking System
-
-```
-staff_members (3 records)
-├── id, user_id (FK → auth.users)
-├── name, slug, role: 'practitioner' | 'assistant'
-├── session_types[], email, is_active
-
-availability_rules (11 records)
-├── id, staff_id
-├── day_of_week (0-6), start_time, end_time
-├── solo_only, is_active
-
-availability_exceptions
-├── id, staff_id, exception_date
-├── all_day, start_time, end_time
-
-booking_slots (88 records, 8 tygodni)
-├── id, session_type, slot_date
-├── start_time, end_time
-├── status: 'available' | 'held' | 'booked' | 'completed' | 'cancelled'
-├── held_for_user, held_until
-├── assistant_id (FK → staff_members)
-├── solo_locked, is_extra, is_private
-
-bookings
-├── id, user_id, slot_id
-├── session_type, status
-├── topics, assigned_at, confirmed_at, expires_at
-├── live_session_id
-
-acceleration_queue
-├── id, user_id, session_type
-├── booking_id, priority, status
-├── offered_slot_id, offered_at
-```
-
-### Live Sessions
-
-```
-live_sessions
-├── id, booking_id, slot_id
-├── room_name (unique), room_sid
-├── phase: 'poczekalnia' | 'wstep' | 'przejscie_1' | 'sesja' |
-│          'przejscie_2' | 'podsumowanie' | 'outro' | 'ended'
-├── phase_changed_at
-├── egress_wstep_id, egress_sesja_id, egress_podsumowanie_id
-├── recording_wstep_url (MP4, admin)
-├── recording_sesja_url (MP4, klient + admin)
-├── recording_sesja_tracks (JSONB: WAV per uczestnik, admin)
-├── recording_podsumowanie_url (MP4, admin)
-├── bunny_sesja_video_id
-└── notes, metadata
-```
-
-### Publication
-
-```
-session_publications
-├── id, live_session_id, session_template_id, monthly_set_id
-├── status: 'raw' | 'editing' | 'edited' | 'mastering' | 'published'
-├── source_composite_url, source_tracks (JSONB)
-├── edited_tracks (JSONB), edited_composite_url
-├── mastered_url, mastered_bunny_video_id
-├── auto_cleaned_tracks (JSONB), auto_mixed_url
-├── auto_edit_status: 'none' | 'processing' | 'done' | 'failed'
-├── assigned_editor_id
-├── marked_ready_at/by, published_at/by
-└── editor_notes, admin_notes
-```
-
-### GDPR
-
-```
-consent_records
-├── id, user_id, consent_type, granted
-└── ip_address, user_agent
-
-audit_logs
-├── id, user_id, action, entity_type
-├── entity_id, metadata
-```
+### RODO
+| Tabela | Opis |
+|--------|------|
+| `consent_records` | Zgody RODO |
+| `audit_logs` | Logi audytowe |
 
 ---
 
-## Roles & Permissions
+## Role i uprawnienia
 
-| Rola | Konta | Dostęp |
-|------|-------|--------|
-| **admin** | htg@htg.cyou | Wszystko: panele, użytkownicy, kalendarz, sloty, publikacja, podgląd |
-| **moderator** | natalia@, agata@, justyna@htg.cyou | Panel prowadzącego, grafik, moje sesje, klienci |
-| **publikacja** | marta@, ania@, dominika@htg.cyou | Panel publikacji, edytor DAW, auto-edit AI |
-| **user** | 2150+ kont | Panel klienta, VOD, rezerwacje, profil |
-
----
-
-## Authentication
-
-```
-Email OTP Flow:
-1. User wpisuje email → POST signInWithOtp()
-2. Supabase wysyła 6-cyfrowy kod przez Resend SMTP
-3. User wpisuje kod → verifyOtp() → PKCE code
-4. Redirect /auth/callback?code=xxx
-5. Middleware: exchangeCodeForSession() → cookies set
-6. Redirect → /konto (lub /prowadzacy, /admin)
-```
-
-Custom domain: `auth.htg.cyou`
+| Rola | Panel | Opis |
+|------|-------|------|
+| `user` | /konto | Klient: VOD, rezerwacje, polubieni |
+| `moderator` | /prowadzacy | Natalia/Asystentki: grafik, sesje, klienci |
+| `admin` | /konto/admin | Pelna kontrola: uzytkownicy, sloty, sesje, zestawy |
+| `publikacja` | /publikacja | Edytorzy audio: DAW, upload WAV, pipeline AI |
 
 ---
 
-## Pages & Routes
+## Sesje Live — 8 faz
 
-### Publiczne (bez auth)
-| Route | Opis |
-|-------|------|
-| `/` | Landing page (hero, sesje, CTA) |
-| `/sesje` | Katalog sesji grupowych |
-| `/sesje-indywidualne` | Sesje 1:1 z Natalią |
-| `/subskrypcje` | Plany cenowe (30/99/999 PLN) |
-| `/nagrania` | YouTube publiczne (30 filmów) |
-| `/login` | Email OTP login |
-| `/regulamin` | Regulamin |
-| `/prywatnosc` | Polityka prywatności |
+```
+poczekalnia -> wstep -> przejscie_1 -> sesja -> przejscie_2 -> podsumowanie -> outro -> ended
+```
 
-### Panel klienta (`/konto`, auth: user)
-| Route | Opis |
-|-------|------|
-| `/konto` | Moje sesje VOD |
-| `/konto/sesje-indywidualne` | Sesje indywidualne + kalendarz |
-| `/konto/subskrypcje` | Moje aktywne subskrypcje |
-| `/konto/zamowienia` | Zamówienia i faktury |
-| `/konto/profil` | Profil + dane |
+| Faza | Kamera | Mikrofon | Nagrywanie | Opis |
+|------|--------|----------|------------|------|
+| Poczekalnia | -- | -- | -- | Klient czeka, animacja + muzyka |
+| Wstep | ON | ON | MP4 | Video call, powitanie |
+| Przejscie 1 | OFF | OFF | -- | Animacja #1 + muzyka (15s fade) |
+| **Sesja** | OFF | ON | MP4 + WAV | Audio-only, animacja czasteczki |
+| Przejscie 2 | ON | ON | -- | Animacja #2 + muzyka (15s fade) |
+| Podsumowanie | ON | ON | MP4 | Video call, dyskusja |
+| Outro | -- | -- | -- | Klient sam, 15 min, animacja + muzyka |
 
-### Panel admina (`/konto/admin`, auth: admin)
-| Route | Opis |
-|-------|------|
-| `/konto/admin` | Dashboard |
-| `/konto/admin/kalendarz` | Kalendarz sesji |
-| `/konto/admin/kolejka` | Kolejka przyspieszenia |
-| `/konto/admin/sloty` | Zarządzanie slotami |
-| `/konto/admin/uzytkownicy` | Lista użytkowników |
-| `/konto/admin/subskrypcje` | Wszystkie subskrypcje |
-| `/konto/admin/sesje` | Szablony sesji |
-| `/konto/admin/zestawy` | Zestawy miesięczne |
-
-### Panel prowadzącego (`/prowadzacy`, auth: moderator)
-| Route | Opis |
-|-------|------|
-| `/prowadzacy` | Dashboard |
-| `/prowadzacy/grafik` | Harmonogram + wyjątki + terminy prywatne |
-| `/prowadzacy/sesje` | Moje sesje (upcoming + history) |
-| `/prowadzacy/klienci` | Moi klienci |
-
-### Panel publikacji (`/publikacja`, auth: publikacja/admin)
-| Route | Opis |
-|-------|------|
-| `/publikacja` | Dashboard (statystyki) |
-| `/publikacja/sesje` | Sesje do edycji (grouped by month) |
-| `/publikacja/sesje/[id]` | Szczegóły sesji + upload/download |
-| `/publikacja/moje` | Moje przypisane sesje |
-| `/publikacja/archiwum` | Opublikowane |
-| `/publikacja/dodaj` | Dodaj sesję ręcznie (upload WAV) |
-| `/publikacja/edytor/[id]` | Edytor DAW (wielośćieżkowy) |
-
-### Sesje live (`/live`, auth: booking participant)
-| Route | Opis |
-|-------|------|
-| `/live/[sessionId]` | Pokój sesji WebRTC (8 faz) |
+### Specjalne funkcje:
+- **Rozmowa prywatna** — prowadzacy rozmawiaja bez klienta
+- **Przerwa** — klient sygnalizuje przerwe (dzwiek + banner)
+- **Suwak glosnosci** — klient reguluje glosnosc prowadzacych
+- **Udostepnianie** — klient moze udostepnic faze Sesja innym (listen-only)
 
 ---
 
-## API Routes (25+ endpoints)
+## Zabezpieczenia VOD
 
-### Stripe (`/api/stripe/`)
-| Method | Route | Opis |
-|--------|-------|------|
-| POST | `/api/stripe/checkout` | Tworzenie Stripe Checkout session |
-| POST | `/api/stripe/webhook` | Webhook: payment → order → entitlement |
-
-### Video VOD (`/api/video/`)
-| Method | Route | Opis |
-|--------|-------|------|
-| POST | `/api/video/token` | Signed Bunny URL + concurrent check |
-| POST | `/api/video/heartbeat` | 30s keepalive (1 device limit) |
-| POST | `/api/video/stop` | Cleanup on unload |
-
-### Booking (`/api/booking/`)
-| Method | Route | Opis |
-|--------|-------|------|
-| GET | `/api/booking/slots` | Available slots |
-| POST | `/api/booking/reserve` | Reserve slot (24h hold) |
-| POST | `/api/booking/confirm` | Confirm booking |
-
-### Live Sessions (`/api/live/`)
-| Method | Route | Opis |
-|--------|-------|------|
-| POST | `/api/live/token` | LiveKit JWT |
-| POST | `/api/live/create` | Create room from booking |
-| POST | `/api/live/phase` | Phase transition (staff only) |
-| POST | `/api/live/admit` | Admit client from waiting room |
-| POST | `/api/live/webhook` | LiveKit Egress webhook |
-
-### Publikacja (`/api/publikacja/`)
-| Method | Route | Opis |
-|--------|-------|------|
-| GET | `/api/publikacja/sessions` | List with filters |
-| GET/PATCH | `/api/publikacja/sessions/[id]` | Detail + update |
-| POST | `/api/publikacja/upload` | Upload WAV to Bunny Storage |
-| GET | `/api/publikacja/download/[...path]` | Proxy download (auth) |
-| POST | `/api/publikacja/create` | Manual session creation |
-| POST | `/api/publikacja/auto-edit` | Trigger AI pipeline |
-| GET | `/api/publikacja/auto-edit/status` | Pipeline progress |
+1. HLS streaming (brak jednego linka do pobrania)
+2. Signed URLs (wygasaja po 15 min, HMAC-SHA256)
+3. Concurrent stream limit (1 urzadzenie, heartbeat 30s)
+4. Canvas watermark (email + userId na obrazie)
+5. Web Audio API routing (utrudnia audio capture)
+6. disablePictureInPicture, nodownload, noplaybackrate
+7. Blokada PrintScreen
 
 ---
 
-## Key Systems
-
-### 1. System rezerwacji
+## Pipeline publikacji audio
 
 ```
-Natalia ustawia godziny (co 15min, max 4/dzień)
-  → Oznacza: 1:1 (solo_locked) vs Otwarta
-    → Asystentki dołączają do otwartych slotów
-      → System generuje booking_slots na 8 tygodni
-        → Klient rezerwuje (24h hold → confirm)
-          → Kolejka przyspieszenia (wcześniejsze terminy)
-            → Transfer na wolny termin
+Surowe WAV -> Transkrypcja (Whisper) -> Analiza (Claude) -> Czyszczenie -> Mix -> Mastering -> Publikacja
 ```
 
-### 2. Sesje live (LiveKit WebRTC)
+### Etapy AI:
+1. **Whisper** — transkrypcja z word-level timestamps (PL)
+2. **Claude haiku** — identyfikacja fillerow, artefaktow, ciszy
+3. **Clean** — usuniecie segmentow, noise gate, normalizacja
+4. **Mix** — stereo + intro/outro muzyczne z crossfade
+5. **Master** — normalizacja -1dB, kompresja, limiter -0.5dB
 
-```
-8 faz sesji:
-
-poczekalnia    → Klient czeka (animacja #0 + muzyka #0)
-                 Prowadzący wpuszczają klienta
-wstep          → Wideo + audio (nagrywanie MP4)
-przejscie_1   → Auto: wideo off, muzyka #1 + animacja #1, fade 15s
-sesja          → Audio only (nagrywanie MP4 + WAV per uczestnik)
-                 Animacja cząsteczki, break request, prywatna rozmowa
-przejscie_2   → Muzyka #2 + animacja #2, auto wideo on, fade 15s
-podsumowanie   → Wideo + audio (nagrywanie MP4)
-outro          → Po wyjściu prowadzących: animacja #3 + muzyka #3, 15 min
-ended          → Sesja zakończona
-```
-
-### 3. Zabezpieczenia VOD
-
-| Warstwa | Mechanizm |
-|---------|-----------|
-| Transport | HLS streaming (brak jednego linka) |
-| Autoryzacja | Signed URLs (wygasają po 15 min) |
-| Limit | 1 urządzenie na raz (heartbeat 30s) |
-| Identyfikacja | Canvas watermark (email + userId) |
-| Anti-capture | Web Audio API routing (loopback → cisza) |
-| UI | No download, no PiP, no context menu |
-
-### 4. Pipeline publikacji
-
-```
-Status flow: raw → editing → edited → mastering → published
-
-Ścieżka ręczna:
-  Editor pobiera WAV → edytuje w DAW (browser) → upload → mark ready
-
-Ścieżka AI (auto-edit):
-  1. Whisper → transkrypcja PL z timestampami
-  2. Claude → plan edycji (co wyciąć/skrócić/zostawić)
-  3. Clean → usuwanie fillerów, noise gate, normalizacja
-  4. Mix → łączenie ścieżek + intro/outro muzyczne
-  5. Master → normalize -1dB, compression, limiter
-```
-
-### 5. Edytor DAW (browser)
-
-- Wielośćieżkowy timeline z waveformami (Web Audio API)
-- Synchronized cut — przycięcie jednego = przycięcie wszystkich
-- Solo/Mute/Volume per ścieżka
+### Edytor DAW (przegladarka):
+- Wielosciezkowy timeline z waveformami (Canvas)
+- Synchronized cut — przyciecie = przyciecie wszystkich sciezek
+- Solo/Mute/Volume per track
 - Fade in/out, Undo/Redo (Ctrl+Z)
-- Export: WAV indywidualny lub mixed
-- Upload do Bunny Storage
-
-### 6. Migracja WIX
-
-- 2150 użytkowników z WIX Contacts + Members API
-- ~2500 entitlements z subskrypcji (monthly + yearly)
-- 95 sesji z opisami z WIX Blog
-- 33 zestawy miesięczne (Maj 2024 → Sty 2027)
-- Mapowanie: `member_id` → `customer.memberId`
+- Export WAV (individual + mixed)
+- Skroty: Space, Delete, Ctrl+X, Home/End, +/-
 
 ---
 
-## Environment Variables
+## API Routes (40+)
 
-### Supabase
-```
-NEXT_PUBLIC_SUPABASE_URL=https://auth.htg.cyou
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-```
+### Auth
+- POST /auth/callback — PKCE code exchange
 
 ### Stripe
-```
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-```
+- POST /api/stripe/checkout — tworzenie checkout session (quantity + metadata)
+- POST /api/stripe/webhook — obsluga: checkout.completed, subscription.deleted
 
-### LiveKit
-```
-LIVEKIT_URL=wss://deeplab-staging-ksoldpu1.livekit.cloud
-LIVEKIT_API_KEY=API5MB9syqQY4yn
-LIVEKIT_API_SECRET=WYHLrnbftES...
-```
+### Video VOD
+- POST /api/video/token — signed Bunny URL + concurrent check
+- POST /api/video/heartbeat — keepalive (30s)
+- POST /api/video/stop — cleanup stream
 
-### Bunny
-```
-BUNNY_TOKEN_KEY=...          # Stream token auth
-BUNNY_API_KEY=...            # Stream API
-BUNNY_LIBRARY_ID=...         # Stream library
-BUNNY_STORAGE_API_KEY=...    # Storage zone key
-BUNNY_STORAGE_HOSTNAME=storage.bunnycdn.com
-BUNNY_STORAGE_ZONE=htg2
-NEXT_PUBLIC_BUNNY_CDN_URL=https://htg2-cdn.b-cdn.net
-```
+### Booking
+- GET /api/booking/slots — dostepne sloty
+- POST /api/booking/reserve — rezerwacja (24h hold)
+- POST /api/booking/confirm — potwierdzenie
+- POST /api/booking/transfer — przeniesienie na inny termin
 
-### AI
-```
-OPENAI_API_KEY=sk-proj-...   # Whisper
-ANTHROPIC_API_KEY=sk-ant-... # Claude (auto-edit analysis)
-```
+### Live Sessions
+- POST /api/live/token — LiveKit JWT
+- POST /api/live/create — utworz room
+- POST /api/live/phase — zmiana fazy (+ egress start/stop)
+- POST /api/live/admit — wpusc klienta
+- POST /api/live/webhook — LiveKit egress events
 
----
+### Publikacja
+- GET/PATCH /api/publikacja/sessions — lista + update
+- POST /api/publikacja/upload — WAV -> Bunny Storage
+- GET /api/publikacja/download/[...path] — proxy download
+- POST /api/publikacja/auto-edit — uruchom pipeline AI
+- GET /api/publikacja/auto-edit/status — status pipeline
 
-## File Structure
-
-```
-HTG2/
-├── app/
-│   ├── [locale]/
-│   │   ├── page.tsx                    # Landing
-│   │   ├── login/                      # Email OTP
-│   │   ├── sesje/                      # Katalog
-│   │   ├── sesje-indywidualne/         # 1:1
-│   │   ├── subskrypcje/               # Pricing
-│   │   ├── nagrania/                   # YouTube
-│   │   ├── konto/                      # User panel (6 stron)
-│   │   │   └── admin/                  # Admin panel (8 stron)
-│   │   ├── prowadzacy/                 # Staff panel (4 strony)
-│   │   ├── publikacja/                 # Publication (8 stron)
-│   │   │   └── edytor/[id]/           # DAW editor
-│   │   ├── live/[sessionId]/          # Live session
-│   │   └── auth/callback/             # PKCE callback
-│   ├── api/
-│   │   ├── stripe/                     # checkout, webhook
-│   │   ├── video/                      # token, heartbeat, stop
-│   │   ├── booking/                    # slots, reserve, confirm
-│   │   ├── live/                       # token, phase, admit, create, webhook
-│   │   └── publikacja/                 # sessions, upload, download, auto-edit
-│   └── robots.ts, sitemap.ts
-├── components/
-│   ├── live/          (13)             # Sesje live WebRTC
-│   ├── video/         (2)              # VOD player + watermark
-│   ├── daw/           (9)              # DAW editor
-│   ├── publikacja/    (11)             # Publication panel
-│   ├── SiteNav.tsx                     # Main navigation
-│   ├── ThemeToggle.tsx                 # Dark/light mode
-│   └── CheckoutButton.tsx              # Stripe checkout
-├── lib/
-│   ├── live/          (3)              # LiveKit helpers
-│   ├── daw/           (2)              # Editor state + WAV encoder
-│   ├── auto-edit/     (8)              # AI pipeline
-│   ├── booking/       (2)              # Types + constants
-│   ├── publication/   (2)              # Types + auth
-│   ├── supabase/      (2)              # Server + browser clients
-│   ├── bunny.ts                        # Stream URL signing
-│   └── bunny-storage.ts               # Storage upload/download
-├── supabase/migrations/
-│   ├── 001_htg_schema.sql              # Core tables
-│   ├── 002_roles_wix_migration.sql     # Roles + WIX fields
-│   ├── 003_booking_system.sql          # Booking + staff
-│   ├── 004_slot_model.sql              # Slot generation
-│   └── 005_live_sessions.sql           # Live + publications
-├── messages/
-│   ├── pl.json                         # Polski (primary)
-│   └── en.json                         # English
-├── ARCHITECTURE.md                     # Ten plik
-└── CLAUDE.md                           # AI assistant context
-```
+### Sharing & Favorites
+- POST /api/sharing/configure — ustaw tryb udostepniania
+- GET /api/sharing/available — lista sesji do odsluchu
+- POST /api/sharing/join — dolacz jako listener
+- POST /api/favorites/add — dodaj do polubionych
+- DELETE /api/favorites/remove — usun
+- GET /api/favorites/list — lista polubionych + followers
 
 ---
 
-## Deployment
+## Migracja WIX
 
-| Element | Serwis | URL |
-|---------|--------|-----|
-| Frontend | Vercel | htgcyou.com (staging) |
-| Database | Supabase | auth.htg.cyou |
-| DNS | Cloudflare | htgcyou.com |
-| Repo | GitHub | github.com/PoiDNA/HTG2 |
-
-**Staging:** `htgcyou.com` | **Produkcja (docelowo):** `htg.cyou`
-
-Indexing zablokowany (`robots.txt: Disallow /`) do czasu produkcji.
+- 2150 uzytkownikow zmigrowanych do Supabase Auth (Email OTP)
+- 2425 entitlements (bezterminowy dostep do sesji)
+- 1973 orders (audit trail z WIX)
+- 95 session_templates z blogow WIX
+- 33 monthly_sets (Maj 2024 — Sty 2027)
+- 30 YouTube videos (publiczne)
 
 ---
 
-## Known Limitations & Future Work
+## Env vars (18)
 
-### Blokery przed produkcją
-- [ ] Bunny Stream — upload prawdziwych nagrań sesji
-- [ ] Stripe live mode (obecnie test)
-- [ ] Domena htg.cyou (czekamy na przeniesienie z WIX)
-- [ ] Regulamin + Polityka prywatności (treść gotowa)
-- [ ] Pliki audio sesji (muzyka #0-#3)
-- [ ] Vercel Cron (expire_held_slots)
-- [ ] Test E2E: zakup → VOD playback
-- [ ] Test E2E: sesja live z 2 urządzeniami
-
-### Faza 2 (po uruchomieniu)
-- [ ] PWA / Mobile app
-- [ ] DRM Widevine/FairPlay (Bunny add-on)
-- [ ] Formularz zagadnień przed sesją
-- [ ] Feedback po sesji
-- [ ] Email: przypomnienia 24h przed sesją
-- [ ] Retencja nagrań (kasowanie po 24 mies.)
-- [ ] Cal.com integracja (Collective Routing)
+| Zmienna | Serwis |
+|---------|--------|
+| NEXT_PUBLIC_SUPABASE_URL | Supabase (auth.htg.cyou) |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase |
+| SUPABASE_SERVICE_ROLE_KEY | Supabase (server) |
+| STRIPE_SECRET_KEY | Stripe (sk_live_) |
+| STRIPE_WEBHOOK_SECRET | Stripe (whsec_) |
+| NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY | Stripe (pk_live_) |
+| BUNNY_TOKEN_KEY | Bunny Stream |
+| BUNNY_API_KEY | Bunny Stream |
+| BUNNY_LIBRARY_ID | Bunny Stream |
+| BUNNY_STORAGE_API_KEY | Bunny Storage |
+| BUNNY_STORAGE_HOSTNAME | Bunny Storage |
+| BUNNY_STORAGE_ZONE | Bunny Storage |
+| NEXT_PUBLIC_BUNNY_CDN_URL | Bunny CDN |
+| LIVEKIT_URL | LiveKit Cloud |
+| LIVEKIT_API_KEY | LiveKit |
+| LIVEKIT_API_SECRET | LiveKit |
+| OPENAI_API_KEY | Whisper |
+| ANTHROPIC_API_KEY | Claude |
 
 ---
 
-*Dokument wygenerowany: 2026-03-26 | Wersja: 1.0*
+## Deploy
+
+- Vercel — auto-deploy z main branch
+- robots.txt — Disallow: / (staging)
+- Domeny: htgcyou.com (prod), www -> redirect, htg-2.vercel.app
+- Supabase Auth: auth.htg.cyou (custom domain)
+
+---
+
+*Ostatnia aktualizacja: 2026-03-26*

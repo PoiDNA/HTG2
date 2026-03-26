@@ -44,7 +44,7 @@ interface Prices {
 
 const CATEGORIES = [
   { value: 'all', label: 'Wszystkie', icon: Grid3X3 },
-  { value: 'grupowa', label: 'Sesje grupowe', icon: Play },
+  { value: 'grupowa', label: 'Sesje', icon: Play },
   { value: 'solo_1_1', label: 'Sesje 1:1', icon: Mic },
   { value: 'slowo_natalii', label: 'Słowo od Natalii', icon: Heart },
   { value: 'specjalna', label: 'Specjalne', icon: Star },
@@ -545,15 +545,40 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
                 </div>
               </div>
               <div className="space-y-2 mb-6">
-                {spotlightSet.sessions.map((s, i) => (
-                  <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg border border-htg-card-border hover:border-htg-sage/30 transition-colors">
-                    <span className="text-htg-sage font-mono text-xs font-bold w-6 shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                    <p className="font-medium text-htg-fg text-sm flex-1">{s.title}</p>
-                    {s.category === 'slowo_natalii' && (
-                      <span className="text-xs bg-htg-warm/20 text-htg-warm px-2 py-0.5 rounded-full shrink-0">Słowo od Natalii</span>
-                    )}
-                  </div>
-                ))}
+                {spotlightSet.sessions.map((s, i) => {
+                  const isExp = expandedSession === s.id;
+                  return (
+                    <div key={s.id} className={`rounded-xl border transition-all ${isExp ? 'border-htg-sage/40 bg-htg-sage/5' : 'border-htg-card-border hover:border-htg-sage/30'}`}>
+                      <button
+                        onClick={() => setExpandedSession(isExp ? null : s.id)}
+                        className="w-full flex items-center gap-3 p-4 text-left"
+                      >
+                        <span className="text-htg-sage font-mono text-xs font-bold w-6 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                        <p className="font-medium text-htg-fg text-sm flex-1">{s.title}</p>
+                        {s.category === 'slowo_natalii' && (
+                          <span className="text-xs bg-htg-warm/20 text-htg-warm px-2 py-0.5 rounded-full shrink-0">Słowo od Natalii</span>
+                        )}
+                        {s.description && (
+                          <ChevronDown className={`w-4 h-4 text-htg-fg-muted shrink-0 transition-transform ${isExp ? 'rotate-180' : ''}`} />
+                        )}
+                      </button>
+                      {isExp && s.description && (
+                        <div className="px-4 pb-4 pl-14">
+                          <p className="text-htg-fg-muted text-sm leading-relaxed whitespace-pre-line">
+                            {s.description.slice(0, 800)}{s.description.length > 800 && '...'}
+                          </p>
+                          {s.tags && s.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-3">
+                              {s.tags.map((tag: string) => (
+                                <span key={tag} className="text-xs bg-htg-surface text-htg-fg-muted px-2 py-0.5 rounded-full">{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               <button
                 onClick={() => toggleMonthSet(spotlightSet.id)}

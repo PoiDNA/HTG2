@@ -14,6 +14,7 @@ export default async function SessionDetailPage({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Publikacja' });
   const tDaw = await getTranslations({ locale, namespace: 'Daw' });
+  const tAe = await getTranslations({ locale, namespace: 'AutoEdit' });
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -116,6 +117,35 @@ export default async function SessionDetailPage({
           status_published: t('status_published'),
           workflow: t('workflow'),
           open_editor: tDaw('open_editor'),
+          auto_edit_title: tAe('title'),
+          auto_edit_start: tAe('start_pipeline'),
+          auto_edit_starting: tAe('starting'),
+          auto_edit_resume: tAe('resume'),
+          auto_edit_no_source: tAe('no_source_tracks'),
+          auto_edit_done: tAe('pipeline_done'),
+          auto_edit_failed: tAe('pipeline_failed'),
+          auto_edit_approve: tAe('approve'),
+          auto_edit_reject: tAe('reject'),
+          auto_edit_transcription: tAe('transcription'),
+          auto_edit_show_transcription: tAe('show_transcription'),
+          auto_edit_hide_transcription: tAe('hide_transcription'),
+          auto_edit_select_stages: tAe('select_stages'),
+          auto_edit_all_stages: tAe('all_stages'),
+          auto_edit_stage_transcribe: tAe('stage_transcribe'),
+          auto_edit_stage_analyze: tAe('stage_analyze'),
+          auto_edit_stage_clean: tAe('stage_clean'),
+          auto_edit_stage_mix: tAe('stage_mix'),
+          auto_edit_stage_master: tAe('stage_master'),
+          auto_edit_status_pending: tAe('status_pending'),
+          auto_edit_status_processing: tAe('status_processing'),
+          auto_edit_status_done: tAe('status_done'),
+          auto_edit_status_failed: tAe('status_failed'),
+          auto_edit_loading: tAe('loading'),
+          auto_edit_no_transcription: tAe('no_transcription'),
+          auto_edit_action_remove: tAe('action_remove'),
+          auto_edit_action_shorten: tAe('action_shorten'),
+          auto_edit_action_keep: tAe('action_keep'),
+          auto_edit_legend: tAe('legend'),
         }}
       />
     </div>

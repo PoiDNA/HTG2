@@ -106,6 +106,10 @@ export async function PATCH(
   if (body.edited_tracks !== undefined) update.edited_tracks = body.edited_tracks;
   if (body.edited_composite_url !== undefined) update.edited_composite_url = body.edited_composite_url;
   if (body.assigned_editor_id !== undefined && isAdmin) update.assigned_editor_id = body.assigned_editor_id;
+  if (body.auto_edit_status !== undefined) update.auto_edit_status = body.auto_edit_status;
+  if (body.auto_cleaned_tracks !== undefined) update.auto_cleaned_tracks = body.auto_cleaned_tracks;
+  if (body.auto_mixed_url !== undefined) update.auto_mixed_url = body.auto_mixed_url;
+  if (body.mastered_url !== undefined) update.mastered_url = body.mastered_url;
 
   update.updated_at = new Date().toISOString();
 

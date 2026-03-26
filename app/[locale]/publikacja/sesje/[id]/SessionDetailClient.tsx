@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { TrackList } from '@/components/publikacja/TrackList';
 import { TrackUploader } from '@/components/publikacja/TrackUploader';
 import { StatusWorkflow } from '@/components/publikacja/StatusWorkflow';
+import { AutoEditPanel } from '@/components/publikacja/AutoEditPanel';
 import type { SessionPublication, PublicationStatus, TrackInfo } from '@/lib/publication/types';
 import { Link } from '@/i18n-config';
 import { Headphones } from 'lucide-react';
@@ -36,6 +37,35 @@ interface SessionDetailClientProps {
     status_published: string;
     workflow: string;
     open_editor: string;
+    auto_edit_title: string;
+    auto_edit_start: string;
+    auto_edit_starting: string;
+    auto_edit_resume: string;
+    auto_edit_no_source: string;
+    auto_edit_done: string;
+    auto_edit_failed: string;
+    auto_edit_approve: string;
+    auto_edit_reject: string;
+    auto_edit_transcription: string;
+    auto_edit_show_transcription: string;
+    auto_edit_hide_transcription: string;
+    auto_edit_select_stages: string;
+    auto_edit_all_stages: string;
+    auto_edit_stage_transcribe: string;
+    auto_edit_stage_analyze: string;
+    auto_edit_stage_clean: string;
+    auto_edit_stage_mix: string;
+    auto_edit_stage_master: string;
+    auto_edit_status_pending: string;
+    auto_edit_status_processing: string;
+    auto_edit_status_done: string;
+    auto_edit_status_failed: string;
+    auto_edit_loading: string;
+    auto_edit_no_transcription: string;
+    auto_edit_action_remove: string;
+    auto_edit_action_shorten: string;
+    auto_edit_action_keep: string;
+    auto_edit_legend: string;
   };
 }
 
@@ -107,6 +137,44 @@ export function SessionDetailClient({ session: initialSession, isAdmin, userId, 
           labels={{ download: labels.download, no_tracks: labels.no_tracks }}
         />
       </div>
+
+      {/* Auto-edit panel */}
+      <AutoEditPanel
+        publicationId={session.id}
+        hasSourceTracks={((session.source_tracks || []) as TrackInfo[]).length > 0}
+        initialAutoEditStatus={session.auto_edit_status}
+        labels={{
+          title: labels.auto_edit_title,
+          start_pipeline: labels.auto_edit_start,
+          starting: labels.auto_edit_starting,
+          resume: labels.auto_edit_resume,
+          no_source_tracks: labels.auto_edit_no_source,
+          pipeline_done: labels.auto_edit_done,
+          pipeline_failed: labels.auto_edit_failed,
+          approve: labels.auto_edit_approve,
+          reject: labels.auto_edit_reject,
+          transcription: labels.auto_edit_transcription,
+          show_transcription: labels.auto_edit_show_transcription,
+          hide_transcription: labels.auto_edit_hide_transcription,
+          select_stages: labels.auto_edit_select_stages,
+          all_stages: labels.auto_edit_all_stages,
+          stage_transcribe: labels.auto_edit_stage_transcribe,
+          stage_analyze: labels.auto_edit_stage_analyze,
+          stage_clean: labels.auto_edit_stage_clean,
+          stage_mix: labels.auto_edit_stage_mix,
+          stage_master: labels.auto_edit_stage_master,
+          status_pending: labels.auto_edit_status_pending,
+          status_processing: labels.auto_edit_status_processing,
+          status_done: labels.auto_edit_status_done,
+          status_failed: labels.auto_edit_status_failed,
+          loading: labels.auto_edit_loading,
+          no_transcription: labels.auto_edit_no_transcription,
+          action_remove: labels.auto_edit_action_remove,
+          action_shorten: labels.auto_edit_action_shorten,
+          action_keep: labels.auto_edit_action_keep,
+          legend: labels.auto_edit_legend,
+        }}
+      />
 
       {/* Edited tracks */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">

@@ -22,6 +22,7 @@ export interface AvailabilityRule {
   start_time: string;  // HH:MM
   end_time: string;
   is_active: boolean;
+  solo_only: boolean;  // true = 1:1 only, assistants cannot join
 }
 
 export interface AvailabilityException {

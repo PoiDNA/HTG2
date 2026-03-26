@@ -33,12 +33,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ slots: slots ?? [] });
   }
 
-  // Assistant: get Natalia's available slots (no assistant assigned) + slots assigned to self
+  // Assistant: get Natalia's available slots (no assistant, not solo_locked) + own assigned slots
   const { data: availableSlots, error: availErr } = await supabase
     .from('booking_slots')
     .select('*')
     .is('assistant_id', null)
     .eq('status', 'available')
+    .eq('solo_locked', false)
     .gte('slot_date', today)
     .order('slot_date', { ascending: true })
     .order('start_time', { ascending: true });
@@ -77,14 +78,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Tylko prowadząca może tworzyć terminy' }, { status: 403 });
   }
 
-  const { date, start_time, session_type, private_for_email } = await request.json();
+  const { date, start_time, session_type, private_for_email, solo_locked, assistant_id: reqAssistantId } = await request.json();
 
   if (!date || !start_time) {
     return NextResponse.json({ error: 'date and start_time required' }, { status: 400 });
   }
 
-  // Default to natalia_solo unless explicitly set
-  const finalType: SessionType = session_type || 'natalia_solo';
+  // Determine session type based on assistant
+  let finalType: SessionType = session_type || 'natalia_solo';
+  let finalAssistantId: string | null = reqAssistantId || null;
+
+  if (finalAssistantId && !session_type) {
+    // Look up assistant slug to determine type
+    const { data: asst } = await supabase.from('staff_members').select('slug').eq('id', finalAssistantId).single();
+    if (asst?.slug === 'agata') finalType = 'natalia_agata';
+    else if (asst?.slug === 'justyna') finalType = 'natalia_justyna';
+  }
+
   const endTime = slotEndTime(start_time, finalType);
 
   // Check Natalia conflict
@@ -134,7 +144,8 @@ export async function POST(request: NextRequest) {
       held_until: heldUntil,
       is_extra: true,
       notes,
-      assistant_id: null,
+      assistant_id: finalAssistantId,
+      solo_locked: solo_locked ?? false,
     })
     .select()
     .single();

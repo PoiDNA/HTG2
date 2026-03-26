@@ -48,11 +48,13 @@ function PractitionerEditor() {
   // Specific date form
   const [specDate, setSpecDate] = useState('');
   const [specStart, setSpecStart] = useState('10:00');
+  const [specSoloOnly, setSpecSoloOnly] = useState(false);
 
   // Private slot form
   const [privDate, setPrivDate] = useState('');
   const [privStart, setPrivStart] = useState('10:00');
   const [privEmail, setPrivEmail] = useState('');
+  const [privAssistant, setPrivAssistant] = useState<string>(''); // '' = solo, assistant_id = with assistant
   const [privSaving, setPrivSaving] = useState(false);
 
   // Blocked date form
@@ -76,26 +78,32 @@ function PractitionerEditor() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // ── Weekly rules: 4 slot selectors per day ──
+  // Rules store is_active as boolean; we abuse end_time suffix to encode solo_only
+  // Better: use metadata. For now, rules with end_time ending in ':01' = solo_only
   const getRulesForDay = (dayOfWeek: number) => {
     return rules
       .filter(r => r.day_of_week === dayOfWeek)
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
   };
 
-  const addRuleForDay = async (dayOfWeek: number, time: string) => {
+  // New: track pending add with type selection
+  const [pendingAdd, setPendingAdd] = useState<{ day: number; time: string } | null>(null);
+
+  const addRuleForDay = async (dayOfWeek: number, time: string, soloOnly: boolean = false) => {
     if (!time) return;
     const dayRules = getRulesForDay(dayOfWeek);
     if (dayRules.length >= MAX_SLOTS_PER_DAY) return;
-    // Check duplicate
     if (dayRules.some(r => r.start_time.slice(0, 5) === time)) return;
     const [h, m] = time.split(':').map(Number);
-    const endMin = h * 60 + m + 120;
+    const dur = soloOnly ? 120 : 120; // duration same, but we pass solo flag
+    const endMin = h * 60 + m + dur;
     const endTime = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
     await fetch('/api/staff/availability', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ day_of_week: dayOfWeek, start_time: time, end_time: endTime }),
+      body: JSON.stringify({ day_of_week: dayOfWeek, start_time: time, end_time: endTime, solo_only: soloOnly }),
     });
+    setPendingAdd(null);
     fetchData();
   };
 
@@ -104,15 +112,19 @@ function PractitionerEditor() {
     fetchData();
   };
 
+  const isRuleSoloOnly = (rule: AvailabilityRule) => {
+    return rule.solo_only === true;
+  };
+
   // ── Specific date slot ──
   const addSpecificSlot = async () => {
     if (!specDate) return;
     const res = await fetch('/api/staff/slots', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: specDate, start_time: specStart }),
+      body: JSON.stringify({ date: specDate, start_time: specStart, solo_locked: specSoloOnly }),
     });
-    if (res.ok) { setSpecDate(''); fetchData(); }
+    if (res.ok) { setSpecDate(''); setSpecSoloOnly(false); fetchData(); }
   };
 
   // ── Private slot ──
@@ -126,10 +138,12 @@ function PractitionerEditor() {
         date: privDate,
         start_time: privStart,
         private_for_email: privEmail,
+        solo_locked: !privAssistant,
+        assistant_id: privAssistant || null,
       }),
     });
     setPrivSaving(false);
-    if (res.ok) { setPrivDate(''); setPrivEmail(''); fetchData(); }
+    if (res.ok) { setPrivDate(''); setPrivEmail(''); setPrivAssistant(''); fetchData(); }
     else {
       const data = await res.json();
       alert(data.error || 'Błąd');
@@ -184,7 +198,7 @@ function PractitionerEditor() {
           {t('weekly_schedule')}
         </h3>
         <p className="text-sm text-htg-fg-muted mb-4">
-          Max 4 sesje dziennie. Wybierz godzinę rozpoczęcia (co 15 min). Każdy termin = sesja solo 2h.
+          Max 4 sesje dziennie. Wybierz godzinę i typ: <span className="text-htg-warm font-medium">1:1</span> = tylko Natalia, <span className="text-htg-sage font-medium">Otwarta</span> = asystentka może dołączyć.
         </p>
         <div className="space-y-3">
           {[1, 2, 3, 4, 5, 6, 0].map(dayIdx => {
@@ -193,38 +207,66 @@ function PractitionerEditor() {
               <div key={dayIdx} className="border border-htg-card-border rounded-lg p-4">
                 <h4 className="text-sm font-medium text-htg-fg mb-3">{t(DAY_KEYS[dayIdx])}</h4>
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Active slots */}
-                  {dayRules.map((rule, idx) => (
-                    <div key={rule.id} className="flex items-center gap-1.5 bg-htg-sage/15 border border-htg-sage/30 rounded-lg px-3 py-2">
-                      <span className="text-xs text-htg-fg-muted">Sesja {idx + 1}:</span>
-                      <span className="text-sm font-semibold text-htg-sage">{rule.start_time.slice(0, 5)}</span>
-                      <button onClick={() => deleteRule(rule.id)} className="text-red-400 hover:text-red-600 ml-1">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                  {/* Add slot button (if < 4) */}
-                  {dayRules.length < MAX_SLOTS_PER_DAY && (
-                    <div className="flex items-center gap-1.5">
-                      <select
-                        id={`day-${dayIdx}-new`}
-                        defaultValue=""
-                        onChange={e => {
-                          if (e.target.value) {
-                            addRuleForDay(dayIdx, e.target.value);
-                            e.target.value = '';
-                          }
-                        }}
-                        className="bg-htg-surface border border-htg-card-border rounded-lg px-2 py-2 text-sm text-htg-fg"
+                  {dayRules.map((rule, idx) => {
+                    const solo = isRuleSoloOnly(rule);
+                    return (
+                      <div key={rule.id} className={`flex items-center gap-1.5 rounded-lg px-3 py-2 border ${
+                        solo
+                          ? 'bg-htg-warm/10 border-htg-warm/30'
+                          : 'bg-htg-sage/15 border-htg-sage/30'
+                      }`}>
+                        <span className="text-xs text-htg-fg-muted">Sesja {idx + 1}:</span>
+                        <span className={`text-sm font-semibold ${solo ? 'text-htg-warm' : 'text-htg-sage'}`}>
+                          {rule.start_time.slice(0, 5)}
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          solo ? 'bg-htg-warm/20 text-htg-warm' : 'bg-htg-sage/20 text-htg-sage'
+                        }`}>
+                          {solo ? '1:1' : 'Otwarta'}
+                        </span>
+                        <button onClick={() => deleteRule(rule.id)} className="text-red-400 hover:text-red-600 ml-1">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {/* Add new slot */}
+                  {dayRules.length < MAX_SLOTS_PER_DAY && !pendingAdd && (
+                    <select
+                      defaultValue=""
+                      onChange={e => {
+                        if (e.target.value) {
+                          setPendingAdd({ day: dayIdx, time: e.target.value });
+                        }
+                      }}
+                      className="bg-htg-surface border border-htg-card-border rounded-lg px-2 py-2 text-sm text-htg-fg"
+                    >
+                      <option value="" disabled>+ dodaj</option>
+                      {TIME_OPTIONS.filter(t => !dayRules.some(r => r.start_time.slice(0,5) === t)).map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  )}
+                  {/* Type picker after selecting time */}
+                  {pendingAdd?.day === dayIdx && (
+                    <div className="flex items-center gap-1.5 bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2">
+                      <span className="text-sm font-medium text-htg-fg">{pendingAdd.time}</span>
+                      <button
+                        onClick={() => addRuleForDay(dayIdx, pendingAdd.time, true)}
+                        className="px-2 py-1 rounded text-xs font-bold bg-htg-warm/20 text-htg-warm hover:bg-htg-warm/30 transition-colors"
                       >
-                        <option value="" disabled>+ dodaj</option>
-                        {TIME_OPTIONS.filter(t => !dayRules.some(r => r.start_time.slice(0,5) === t)).map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
+                        1:1
+                      </button>
+                      <button
+                        onClick={() => addRuleForDay(dayIdx, pendingAdd.time, false)}
+                        className="px-2 py-1 rounded text-xs font-bold bg-htg-sage/20 text-htg-sage hover:bg-htg-sage/30 transition-colors"
+                      >
+                        Otwarta
+                      </button>
+                      <button onClick={() => setPendingAdd(null)} className="text-htg-fg-muted hover:text-htg-fg text-xs ml-1">✕</button>
                     </div>
                   )}
-                  {dayRules.length === 0 && (
+                  {dayRules.length === 0 && !pendingAdd && (
                     <span className="text-xs text-htg-fg-muted italic">Brak terminów</span>
                   )}
                 </div>
@@ -287,6 +329,25 @@ function PractitionerEditor() {
               className="bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg">
               {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="block text-xs text-htg-fg-muted mb-1">Typ</label>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => setSpecSoloOnly(true)}
+                className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  specSoloOnly ? 'bg-htg-warm text-white' : 'bg-htg-surface text-htg-fg-muted hover:bg-htg-warm/20'
+                }`}
+              >1:1</button>
+              <button
+                type="button"
+                onClick={() => setSpecSoloOnly(false)}
+                className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  !specSoloOnly ? 'bg-htg-sage text-white' : 'bg-htg-surface text-htg-fg-muted hover:bg-htg-sage/20'
+                }`}
+              >Otwarta</button>
+            </div>
           </div>
           <button onClick={addSpecificSlot}
             className="flex items-center gap-1 bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors">
@@ -352,6 +413,16 @@ function PractitionerEditor() {
             <select value={privStart} onChange={e => setPrivStart(e.target.value)}
               className="bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg">
               {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-htg-fg-muted mb-1">Sesja z</label>
+            <select value={privAssistant} onChange={e => setPrivAssistant(e.target.value)}
+              className="bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg">
+              <option value="">Sama — 1:1 (2h)</option>
+              {assistants.map(a => (
+                <option key={a.id} value={a.id}>z {a.name} (1.5h)</option>
+              ))}
             </select>
           </div>
           <button onClick={addPrivateSlot} disabled={privSaving || !privEmail || !privDate}

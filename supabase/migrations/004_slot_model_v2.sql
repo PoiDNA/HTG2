@@ -4,9 +4,15 @@
 -- Only Natalia defines start times; assistants "join" her slots.
 -- booking_slots gains assistant_id to track which assistant joined.
 
--- Add assistant tracking to booking_slots
+-- Add assistant tracking + solo lock to booking_slots
 ALTER TABLE public.booking_slots
   ADD COLUMN IF NOT EXISTS assistant_id UUID REFERENCES public.staff_members(id);
+ALTER TABLE public.booking_slots
+  ADD COLUMN IF NOT EXISTS solo_locked BOOLEAN DEFAULT false;
+
+-- Add solo_only flag to availability_rules (weekly schedule)
+ALTER TABLE public.availability_rules
+  ADD COLUMN IF NOT EXISTS solo_only BOOLEAN DEFAULT false;
 
 -- Index for assistant lookups
 CREATE INDEX IF NOT EXISTS idx_slots_assistant ON public.booking_slots(assistant_id)

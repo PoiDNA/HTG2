@@ -7,6 +7,7 @@ import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { Menu, X, LogOut } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
 import UserPanelNav from './UserPanelNav';
 
@@ -53,7 +54,8 @@ export default function SiteNav() {
         </div>
       </div>
       {/* Desktop: ThemeToggle + auth — po prawej */}
-      <div className="hidden md:flex items-center gap-3">
+      <div className="hidden md:flex items-center gap-2">
+        <FontSizeToggle />
         <ThemeToggle />
         {!loading && isLoggedIn ? <UserPanelNav /> : <HeaderAuthButton />}
       </div>
@@ -147,7 +149,8 @@ export default function SiteNav() {
               </>
             )}
 
-            <div className="flex items-center gap-2 pt-2 border-t border-htg-card-border mt-2">
+            <div className="flex items-center gap-3 pt-2 border-t border-htg-card-border mt-2">
+              <FontSizeToggle />
               <ThemeToggle />
             </div>
           </div>

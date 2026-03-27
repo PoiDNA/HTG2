@@ -69,6 +69,19 @@ export interface Booking {
   // Joined data
   slot?: BookingSlot;
   user?: { email: string; display_name: string };
+  // Payment info (from orders)
+  orders?: {
+    id: string;
+    total_amount: number;
+    status: string;
+    created_at: string;
+    metadata?: {
+      payment_mode?: string;
+      installment_number?: string;
+      installments_total?: string;
+      total_amount?: string;
+    };
+  }[];
 }
 
 export interface AccelerationEntry {

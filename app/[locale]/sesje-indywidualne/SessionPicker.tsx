@@ -64,6 +64,8 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   });
   const [loading, setLoading] = useState(false);
   const [wantAcceleration, setWantAcceleration] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<'full' | 'installments' | 'custom'>('full');
+  const [customAmount, setCustomAmount] = useState('');
   const router = useRouter();
 
   const selectedSession = sessions.find((s) => s.slug === selected);
@@ -164,8 +166,18 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 
+  const totalAmount = selectedSession ? selectedSession.amount / 100 : 0;
+  const installmentAmount = Math.ceil(totalAmount / 3);
+  const customAmountNum = parseInt(customAmount) || 0;
+
+  const payAmount = paymentMode === 'full'
+    ? totalAmount
+    : paymentMode === 'installments'
+      ? installmentAmount
+      : customAmountNum;
+
   async function handleCheckout() {
-    if (!selectedSession) return;
+    if (!selectedSession || payAmount <= 0) return;
     setLoading(true);
 
     try {
@@ -175,11 +187,17 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
         body: JSON.stringify({
           priceId: selectedSession.priceId,
           mode: 'payment',
+          // For installments/custom: override amount
+          ...(paymentMode !== 'full' && { amountOverride: payAmount * 100 }),
           metadata: {
             type: 'individual',
             session_type: selectedSession.sessionType,
             slot_id: selectedSlotId || '',
             want_acceleration: wantAcceleration ? 'true' : 'false',
+            payment_mode: paymentMode,
+            total_amount: String(totalAmount * 100),
+            installment_number: paymentMode === 'installments' ? '1' : undefined,
+            installments_total: paymentMode === 'installments' ? '3' : undefined,
           },
         }),
       });
@@ -428,12 +446,105 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             )}
           </div>
 
+          {/* Payment mode selector */}
+          <div className="space-y-3">
+            <span className="text-sm font-medium text-htg-fg block">Sposób płatności</span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Full payment */}
+              <button
+                onClick={() => setPaymentMode('full')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  paymentMode === 'full'
+                    ? 'border-htg-sage bg-htg-sage/5'
+                    : 'border-htg-card-border hover:border-htg-sage/40'
+                }`}
+              >
+                <p className="font-medium text-htg-fg text-sm">Pełna płatność</p>
+                <p className="text-htg-sage font-bold text-lg mt-1">{totalAmount} PLN</p>
+                <p className="text-htg-fg-muted text-xs">jednorazowo</p>
+              </button>
+
+              {/* 3 installments */}
+              <button
+                onClick={() => setPaymentMode('installments')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  paymentMode === 'installments'
+                    ? 'border-htg-sage bg-htg-sage/5'
+                    : 'border-htg-card-border hover:border-htg-sage/40'
+                }`}
+              >
+                <p className="font-medium text-htg-fg text-sm">3 raty miesięczne</p>
+                <p className="text-htg-sage font-bold text-lg mt-1">3 × {installmentAmount} PLN</p>
+                <p className="text-htg-fg-muted text-xs">pierwsza rata teraz</p>
+              </button>
+
+              {/* Custom amount */}
+              <button
+                onClick={() => setPaymentMode('custom')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                  paymentMode === 'custom'
+                    ? 'border-htg-sage bg-htg-sage/5'
+                    : 'border-htg-card-border hover:border-htg-sage/40'
+                }`}
+              >
+                <p className="font-medium text-htg-fg text-sm">Dopłata</p>
+                <p className="text-htg-fg-muted text-xs mt-1">Wpisz kwotę wpłaty</p>
+              </button>
+            </div>
+
+            {/* Installments detail */}
+            {paymentMode === 'installments' && (
+              <div className="bg-htg-surface rounded-xl p-4 text-sm text-htg-fg-muted space-y-2">
+                <div className="flex justify-between">
+                  <span>Rata 1 (teraz)</span>
+                  <span className="font-bold text-htg-fg">{installmentAmount} PLN</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Rata 2 (za 30 dni)</span>
+                  <span>{installmentAmount} PLN</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Rata 3 (za 60 dni)</span>
+                  <span>{totalAmount - 2 * installmentAmount} PLN</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-htg-card-border font-medium text-htg-fg">
+                  <span>Łącznie</span>
+                  <span>{totalAmount} PLN</span>
+                </div>
+              </div>
+            )}
+
+            {/* Custom amount input */}
+            {paymentMode === 'custom' && (
+              <div className="bg-htg-surface rounded-xl p-4">
+                <label className="block">
+                  <span className="text-sm text-htg-fg-muted mb-1 block">Kwota wpłaty (PLN)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalAmount}
+                    value={customAmount}
+                    onChange={e => setCustomAmount(e.target.value)}
+                    placeholder={`min. 1 PLN, max. ${totalAmount} PLN`}
+                    className="w-full px-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg text-lg font-bold"
+                  />
+                </label>
+                {customAmountNum > 0 && customAmountNum < totalAmount && (
+                  <p className="text-xs text-htg-fg-muted mt-2">
+                    Pozostało do zapłaty: <span className="font-bold text-htg-fg">{totalAmount - customAmountNum} PLN</span>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Buy button */}
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration)}
-              className={`w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed`}
+              disabled={loading || (!selectedSlotId && !wantAcceleration) || payAmount <= 0}
+              className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <span className="inline-flex items-center gap-2">
@@ -445,7 +556,9 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
                 </span>
               ) : (
                 <>
-                  {labels.buy} — {((selectedSession?.amount || 0) / 100).toLocaleString('pl-PL')} PLN
+                  {paymentMode === 'full' && `${labels.buy} — ${totalAmount} PLN`}
+                  {paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount} PLN`}
+                  {paymentMode === 'custom' && `Wpłać — ${customAmountNum > 0 ? customAmountNum : '...'} PLN`}
                 </>
               )}
             </button>

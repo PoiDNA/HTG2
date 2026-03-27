@@ -109,6 +109,66 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
         </div>
       )}
 
+      {/* Payment status */}
+      {booking.orders && booking.orders.length > 0 && isActive && (() => {
+        const orders = booking.orders!;
+        const paidTotal = orders.filter(o => o.status === 'paid').reduce((sum, o) => sum + o.total_amount, 0);
+        const firstOrder = orders[0];
+        const meta = firstOrder?.metadata;
+        const isInstallment = meta?.payment_mode === 'installments';
+        const fullAmount = meta?.total_amount ? parseInt(meta.total_amount) : 0;
+        const installmentsPaid = orders.filter(o => o.status === 'paid').length;
+        const installmentsTotal = meta?.installments_total ? parseInt(meta.installments_total) : 1;
+        const remaining = fullAmount > 0 ? fullAmount - paidTotal : 0;
+
+        if (!isInstallment && paidTotal > 0) {
+          return (
+            <div className="bg-green-900/20 border border-green-800/30 rounded-lg px-3 py-2 mb-3 text-xs">
+              <span className="text-green-400 font-medium">✓ Zapłacono {(paidTotal / 100).toLocaleString('pl-PL')} PLN</span>
+            </div>
+          );
+        }
+
+        if (isInstallment) {
+          const nextInstallmentDate = new Date(firstOrder.created_at);
+          nextInstallmentDate.setDate(nextInstallmentDate.getDate() + 30 * installmentsPaid);
+          const nextDateStr = nextInstallmentDate.toLocaleDateString('pl-PL');
+
+          return (
+            <div className="bg-htg-surface rounded-lg px-3 py-2.5 mb-3 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-htg-fg-muted">Wpłacono</span>
+                <span className="text-green-400 font-medium">{(paidTotal / 100).toLocaleString('pl-PL')} PLN</span>
+              </div>
+              {remaining > 0 && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-htg-fg-muted">Pozostało</span>
+                    <span className="text-htg-warm font-medium">{(remaining / 100).toLocaleString('pl-PL')} PLN</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-htg-fg-muted">Rata {installmentsPaid + 1}/{installmentsTotal}</span>
+                    <span className="text-htg-fg-muted">termin: {nextDateStr}</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full bg-htg-card-border rounded-full h-1.5 mt-1">
+                    <div
+                      className="bg-htg-sage h-1.5 rounded-full transition-all"
+                      style={{ width: `${fullAmount > 0 ? (paidTotal / fullAmount) * 100 : 0}%` }}
+                    />
+                  </div>
+                </>
+              )}
+              {remaining <= 0 && (
+                <span className="text-green-400 font-medium">✓ Wszystkie raty zapłacone</span>
+              )}
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+
       {isPending && booking.expires_at && (
         <div className="mb-3">
           <BookingCountdown expiresAt={booking.expires_at} />

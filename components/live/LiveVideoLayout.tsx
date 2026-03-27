@@ -42,7 +42,7 @@ function MainTile({
 }) {
   return (
     <div
-      className={`relative flex-1 h-full overflow-hidden bg-htg-indigo/80
+      className={`relative flex-1 h-full overflow-hidden bg-black/40
         ${clickable ? 'cursor-pointer group' : ''}
         ${p.isSpeaking ? 'ring-4 ring-htg-sage ring-inset' : ''}`}
       onClick={clickable ? onClick : undefined}
@@ -201,7 +201,7 @@ export default function LiveVideoLayout({
       <div className="absolute inset-x-0 top-0 flex justify-center" style={{ height: '67%' }}>
         <div className="h-full flex gap-px overflow-hidden rounded-b-2xl" style={{ width: '70%' }}>
           {mainParticipants.length === 0 ? (
-            <div className="flex-1 bg-htg-indigo/40 flex items-center justify-center">
+            <div className="flex-1 bg-black/30 flex items-center justify-center">
               <p className="text-htg-cream/30 text-sm">Oczekiwanie na uczestników...</p>
             </div>
           ) : (

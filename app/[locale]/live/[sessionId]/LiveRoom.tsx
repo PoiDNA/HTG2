@@ -24,6 +24,7 @@ import VolumeSlider from '@/components/live/VolumeSlider';
 import OutroScreen from '@/components/live/OutroScreen';
 import ZoomBackupButton from '@/components/live/ZoomBackupButton';
 import ZoomBackupOverlay from '@/components/live/ZoomBackupOverlay';
+import SessionAnimation from '@/components/live/SessionAnimation';
 
 interface LiveRoomProps {
   session: LiveSession;
@@ -147,8 +148,19 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const isVideoPhase = phase === 'wstep' || phase === 'podsumowanie';
   const backUrl = `/${locale}/konto`;
 
+  // Pick animation variant based on phase
+  const animVariant = phase === 'sesja' || phase === 'przejscie_1' ? 1
+    : phase === 'przejscie_2' ? 2
+    : phase === 'outro' ? 3
+    : 0;
+
   return (
-    <div className="relative w-full h-screen bg-htg-indigo flex flex-col">
+    <div className="relative w-full h-screen bg-[#0a0e1a] flex flex-col">
+
+      {/* Persistent ambient particle animation — behind all content */}
+      {phase !== 'wstep' && phase !== 'podsumowanie' && phase !== 'poczekalnia' && (
+        <SessionAnimation variant={animVariant} opacity={0.45} active />
+      )}
 
       {/* LiveControls: Back ← + Fullscreen — top overlay for all non-waiting phases */}
       {phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (

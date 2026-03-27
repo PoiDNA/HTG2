@@ -5,8 +5,36 @@ import {
   WebhookReceiver,
   EncodedFileOutput,
   EncodedFileType,
+  S3Upload,
 } from 'livekit-server-sdk';
 import type { VideoGrant } from 'livekit-server-sdk';
+
+// ============================================================
+// R2 / S3 egress output helper
+// ============================================================
+
+function makeS3Output(filepath: string): EncodedFileOutput {
+  const R2_ACCESS_KEY = (process.env.R2_ACCESS_KEY ?? '').trim();
+  const R2_SECRET_KEY = (process.env.R2_SECRET_KEY ?? '').trim();
+  const R2_BUCKET = (process.env.R2_BUCKET ?? 'htg-rec').trim();
+  const R2_ENDPOINT = (process.env.R2_ENDPOINT ?? '').trim();
+
+  return new EncodedFileOutput({
+    fileType: EncodedFileType.MP4,
+    filepath,
+    output: {
+      case: 's3',
+      value: new S3Upload({
+        bucket: R2_BUCKET,
+        region: 'auto',
+        endpoint: R2_ENDPOINT,
+        accessKey: R2_ACCESS_KEY,
+        secret: R2_SECRET_KEY,
+        forcePathStyle: true,
+      }),
+    },
+  });
+}
 
 // ============================================================
 // Environment — graceful fallbacks for missing keys
@@ -126,27 +154,21 @@ export async function startRoomCompositeEgress(
   options?: { audioOnly?: boolean },
 ) {
   const client = getEgressClient();
-  const output = new EncodedFileOutput({
-    fileType: EncodedFileType.MP4,
-    filepath: `recordings/${roomName}/{time}.mp4`,
-  });
+  const output = makeS3Output(`recordings/${roomName}/{time}.mp4`);
   return client.startRoomCompositeEgress(roomName, { file: output }, {
     audioOnly: options?.audioOnly ?? false,
   });
 }
 
 /**
- * Start a participant egress to capture individual participant audio as WAV.
+ * Start a participant egress — individual audio track per participant → R2.
  */
 export async function startParticipantEgress(
   roomName: string,
   participantIdentity: string,
 ) {
   const client = getEgressClient();
-  const output = new EncodedFileOutput({
-    fileType: EncodedFileType.MP4,
-    filepath: `recordings/${roomName}/tracks/${participantIdentity}-{time}.mp4`,
-  });
+  const output = makeS3Output(`recordings/${roomName}/tracks/${participantIdentity}-{time}.mp4`);
   return client.startParticipantEgress(roomName, participantIdentity, {
     file: output,
   });

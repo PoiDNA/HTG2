@@ -86,6 +86,71 @@ async function getStandaloneSessions(): Promise<SessionTemplate[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Purchased sessions helper
+// ---------------------------------------------------------------------------
+
+async function getUserPurchased(supabase: Awaited<ReturnType<typeof createSupabaseServer>>, userId: string) {
+  // Check yearly (full-catalog) subscription
+  const { data: yearlyEnt } = await supabase
+    .from('entitlements')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('type', 'yearly')
+    .eq('is_active', true)
+    .gt('valid_until', new Date().toISOString())
+    .maybeSingle();
+
+  if (yearlyEnt) return { purchasedSessionIds: [] as string[], purchasedMonthSetIds: [] as string[], hasYearly: true };
+
+  // Individual session entitlements
+  const { data: sessionEnts } = await supabase
+    .from('entitlements')
+    .select('session_id')
+    .eq('user_id', userId)
+    .eq('type', 'session')
+    .eq('is_active', true)
+    .gt('valid_until', new Date().toISOString())
+    .not('session_id', 'is', null);
+
+  const sessionIds: string[] = (sessionEnts || []).map((e: any) => e.session_id);
+
+  // Monthly package entitlements → resolve which sets + their sessions
+  const { data: monthlyEnts } = await supabase
+    .from('entitlements')
+    .select('product_id')
+    .eq('user_id', userId)
+    .eq('type', 'monthly')
+    .eq('is_active', true)
+    .gt('valid_until', new Date().toISOString())
+    .not('product_id', 'is', null);
+
+  const productIds: string[] = (monthlyEnts || []).map((e: any) => e.product_id).filter(Boolean);
+
+  let monthSetIds: string[] = [];
+  let monthSessionIds: string[] = [];
+
+  if (productIds.length > 0) {
+    const { data: sets } = await supabase
+      .from('monthly_sets')
+      .select('id, set_sessions(session_id)')
+      .in('product_id', productIds);
+
+    for (const set of (sets || []) as any[]) {
+      monthSetIds.push(set.id);
+      for (const ss of (set.set_sessions || [])) {
+        if (ss.session_id) monthSessionIds.push(ss.session_id);
+      }
+    }
+  }
+
+  return {
+    purchasedSessionIds: [...new Set([...sessionIds, ...monthSessionIds])],
+    purchasedMonthSetIds: monthSetIds,
+    hasYearly: false,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -105,6 +170,12 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
     .eq('product_id', sessionProduct?.id || '').eq('is_active', true).single();
   const { data: monthlyPrice } = await supabase2.from('prices').select('stripe_price_id, amount')
     .eq('product_id', monthlyProduct?.id || '').eq('is_active', true).single();
+
+  // Purchased sessions for logged-in user
+  const { data: { user } } = await supabase2.auth.getUser();
+  const purchased = user
+    ? await getUserPurchased(supabase2, user.id)
+    : { purchasedSessionIds: [], purchasedMonthSetIds: [], hasYearly: false };
 
   const catalogData = monthlySets.map(ms => ({
     id: ms.id,
@@ -135,6 +206,9 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
           monthlyPriceId: monthlyPrice?.stripe_price_id || '',
           monthlyAmount: (monthlyPrice?.amount || 9900) / 100,
         }}
+        purchasedSessionIds={purchased.purchasedSessionIds}
+        purchasedMonthSetIds={purchased.purchasedMonthSetIds}
+        hasYearly={purchased.hasYearly}
       />
     </div>
   );

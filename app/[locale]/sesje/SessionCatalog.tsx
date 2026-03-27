@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   X, Play, ShoppingCart, Check, ChevronDown, Calendar, Search,
   Grid3X3, List, SlidersHorizontal, Eye, Heart, Mic, Star, Tag, Clock,
-  ArrowUpDown, Sparkles,
+  ArrowUpDown, Sparkles, CheckCircle, Headphones, EyeOff,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -61,7 +61,19 @@ const SORT_OPTIONS = [
 // Component
 // ---------------------------------------------------------------------------
 
-export default function SessionCatalog({ monthSets, prices }: { monthSets: MonthSetInfo[]; prices: Prices }) {
+export default function SessionCatalog({
+  monthSets,
+  prices,
+  purchasedSessionIds = [],
+  purchasedMonthSetIds = [],
+  hasYearly = false,
+}: {
+  monthSets: MonthSetInfo[];
+  prices: Prices;
+  purchasedSessionIds?: string[];
+  purchasedMonthSetIds?: string[];
+  hasYearly?: boolean;
+}) {
   // View mode
   const [view, setView] = useState<'sessions' | 'months'>('sessions');
 
@@ -72,6 +84,7 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sort, setSort] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [hideOwned, setHideOwned] = useState(false);
 
   // Selection
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
@@ -84,6 +97,13 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
 
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Purchased sets for fast lookup
+  const purchasedSet = useMemo(() => new Set(purchasedSessionIds), [purchasedSessionIds]);
+  const purchasedMonthSet = useMemo(() => new Set(purchasedMonthSetIds), [purchasedMonthSetIds]);
+
+  const isPurchasedSession = useCallback((id: string) => hasYearly || purchasedSet.has(id), [hasYearly, purchasedSet]);
+  const isPurchasedMonth = useCallback((id: string) => hasYearly || purchasedMonthSet.has(id), [hasYearly, purchasedMonthSet]);
 
   // Flatten all sessions with month context
   const allSessions: SessionInfo[] = useMemo(() => {
@@ -110,9 +130,20 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
     [monthSets]
   );
 
+  // Count owned
+  const ownedCount = useMemo(() =>
+    hasYearly ? allSessions.length : allSessions.filter(s => purchasedSet.has(s.id)).length,
+    [allSessions, purchasedSet, hasYearly]
+  );
+
   // Filter + sort sessions
   const filteredSessions = useMemo(() => {
     let result = [...allSessions];
+
+    // Hide owned
+    if (hideOwned) {
+      result = result.filter(s => !isPurchasedSession(s.id));
+    }
 
     // Category
     if (category !== 'all') {
@@ -160,7 +191,7 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
     }
 
     return result;
-  }, [allSessions, category, searchQuery, selectedMonth, selectedTag, sort]);
+  }, [allSessions, category, searchQuery, selectedMonth, selectedTag, sort, hideOwned, isPurchasedSession]);
 
   // Spotlight scroll
   useEffect(() => {
@@ -176,20 +207,22 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
   }, []);
 
   const toggleSession = useCallback((id: string) => {
+    if (isPurchasedSession(id)) return; // can't select purchased
     setSelectedSessions(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  }, []);
+  }, [isPurchasedSession]);
 
   const toggleMonthSet = useCallback((id: string) => {
+    if (isPurchasedMonth(id)) return; // can't select purchased
     setSelectedMonthSets(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  }, []);
+  }, [isPurchasedMonth]);
 
   async function handleCheckout() {
     setLoading(true);
@@ -225,6 +258,8 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
   const totalPrice = view === 'months'
     ? selectedMonthSets.size * prices.monthlyAmount
     : selectedSessions.size * prices.sessionAmount;
+
+  const hasActiveFilters = category !== 'all' || selectedMonth || selectedTag || hideOwned;
 
   // ---------------------------------------------------------------------------
   // Render
@@ -277,7 +312,7 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
             >
               <SlidersHorizontal className="w-4 h-4" />
               Filtry
-              {(category !== 'all' || selectedMonth || selectedTag) && (
+              {hasActiveFilters && (
                 <span className="w-2 h-2 bg-htg-sage rounded-full" />
               )}
             </button>
@@ -288,6 +323,26 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
       {/* ── Filters panel (sessions view only) ── */}
       {showFilters && view === 'sessions' && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+
+          {/* Hide owned toggle — only show if user has any purchased sessions */}
+          {ownedCount > 0 && (
+            <div className="flex items-center justify-between pb-3 border-b border-htg-card-border">
+              <div className="flex items-center gap-2">
+                <EyeOff className="w-4 h-4 text-htg-fg-muted" />
+                <span className="text-sm font-medium text-htg-fg">
+                  Ukryj kupione
+                  <span className="ml-1.5 text-xs text-htg-fg-muted">({ownedCount})</span>
+                </span>
+              </div>
+              <button
+                onClick={() => setHideOwned(!hideOwned)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${hideOwned ? 'bg-htg-sage' : 'bg-htg-surface border border-htg-card-border'}`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${hideOwned ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+          )}
+
           {/* Categories */}
           <div>
             <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-2">Kategoria</p>
@@ -367,9 +422,9 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
           </div>
 
           {/* Clear filters */}
-          {(category !== 'all' || selectedMonth || selectedTag || searchQuery) && (
+          {(hasActiveFilters || searchQuery) && (
             <button
-              onClick={() => { setCategory('all'); setSelectedMonth(null); setSelectedTag(null); setSearchQuery(''); }}
+              onClick={() => { setCategory('all'); setSelectedMonth(null); setSelectedTag(null); setSearchQuery(''); setHideOwned(false); }}
               className="text-xs text-red-400 hover:text-red-300"
             >
               Wyczyść filtry
@@ -385,8 +440,11 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
             ? `${filteredSessions.length} sesji`
             : `${monthSets.length} miesięcy`
           }
-          {view === 'sessions' && <span className="ml-2">· {prices.sessionAmount} PLN / sesja</span>}
+          {view === 'sessions' && !hideOwned && <span className="ml-2">· {prices.sessionAmount} PLN / sesja</span>}
           {view === 'months' && <span className="ml-2">· {prices.monthlyAmount} PLN / miesiąc</span>}
+          {hideOwned && filteredSessions.length < allSessions.length && (
+            <span className="ml-2 text-emerald-400/70">· {ownedCount} w kolekcji ukrytych</span>
+          )}
         </span>
       </div>
 
@@ -395,43 +453,59 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
       {/* ══════════════════════════════════════════════════ */}
       {view === 'sessions' && (
         <div className="space-y-2">
-          {filteredSessions.map((s, i) => {
+          {filteredSessions.map((s) => {
             const isSelected = selectedSessions.has(s.id);
             const isExpanded = expandedSession === s.id;
+            const isPurchased = isPurchasedSession(s.id);
 
             return (
               <div
                 key={s.id}
                 className={`rounded-xl border-2 transition-all ${
-                  isExpanded
-                    ? 'border-htg-sage/40 bg-htg-card shadow-lg shadow-htg-sage/5'
-                    : isSelected
-                      ? 'border-htg-sage/30 bg-htg-sage/5'
-                      : 'border-htg-card-border bg-htg-card hover:border-htg-sage/20'
+                  isPurchased
+                    ? 'border-emerald-500/40 bg-emerald-500/5'
+                    : isExpanded
+                      ? 'border-htg-sage/40 bg-htg-card shadow-lg shadow-htg-sage/5'
+                      : isSelected
+                        ? 'border-htg-sage/30 bg-htg-sage/5'
+                        : 'border-htg-card-border bg-htg-card hover:border-htg-sage/20'
                 }`}
               >
                 {/* Main row */}
                 <div className="flex items-center gap-3 p-4">
-                  {/* Checkbox */}
-                  <button
-                    onClick={() => toggleSession(s.id)}
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected ? 'bg-htg-sage border-htg-sage' : 'border-htg-fg-muted/30 hover:border-htg-sage'
-                    }`}
-                  >
-                    {isSelected && <Check className="w-3 h-3 text-white" />}
-                  </button>
+                  {/* Purchased indicator OR checkbox */}
+                  {isPurchased ? (
+                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                      <Check className="w-3 h-3 text-emerald-400" />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => toggleSession(s.id)}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected ? 'bg-htg-sage border-htg-sage' : 'border-htg-fg-muted/30 hover:border-htg-sage'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                  )}
 
                   {/* Title + meta */}
                   <button
                     onClick={() => setExpandedSession(isExpanded ? null : s.id)}
                     className="flex-1 text-left min-w-0"
                   >
-                    <p className="font-medium text-htg-fg text-sm leading-snug">{s.title}</p>
+                    <p className={`font-medium text-sm leading-snug ${isPurchased ? 'text-htg-fg' : 'text-htg-fg'}`}>
+                      {s.title}
+                    </p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className="text-xs text-htg-fg-muted flex items-center gap-1">
                         <Calendar className="w-3 h-3" />{s.monthTitle.replace('Sesje ', '')}
                       </span>
+                      {isPurchased && (
+                        <span className="text-xs bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />W kolekcji
+                        </span>
+                      )}
                       {s.category === 'slowo_natalii' && (
                         <span className="text-xs bg-htg-warm/20 text-htg-warm px-2 py-0.5 rounded-full">Słowo od Natalii</span>
                       )}
@@ -451,8 +525,19 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
                     </div>
                   </button>
 
-                  {/* Price + expand */}
-                  <span className="text-htg-sage font-bold text-sm shrink-0">{prices.sessionAmount} PLN</span>
+                  {/* Price (hidden if purchased) OR listen button */}
+                  {isPurchased ? (
+                    <a
+                      href="/pl/konto/sesje"
+                      className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium shrink-0 hover:text-emerald-300 transition-colors"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <Headphones className="w-4 h-4" />
+                      Odsłuchaj
+                    </a>
+                  ) : (
+                    <span className="text-htg-sage font-bold text-sm shrink-0">{prices.sessionAmount} PLN</span>
+                  )}
                   <ChevronDown className={`w-4 h-4 text-htg-fg-muted transition-transform shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
                 </div>
 
@@ -468,16 +553,26 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
                       <p className="text-htg-fg-muted/50 text-sm mt-3 italic">Brak opisu sesji.</p>
                     )}
                     <div className="flex items-center gap-3 mt-4">
-                      <button
-                        onClick={() => toggleSession(s.id)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          isSelected
-                            ? 'bg-htg-sage text-white'
-                            : 'bg-htg-sage/10 border border-htg-sage text-htg-sage hover:bg-htg-sage hover:text-white'
-                        }`}
-                      >
-                        {isSelected ? '✓ W koszyku' : `Dodaj — ${prices.sessionAmount} PLN`}
-                      </button>
+                      {isPurchased ? (
+                        <a
+                          href="/pl/konto/sesje"
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
+                        >
+                          <Headphones className="w-4 h-4" />
+                          Przejdź do sesji
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => toggleSession(s.id)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isSelected
+                              ? 'bg-htg-sage text-white'
+                              : 'bg-htg-sage/10 border border-htg-sage text-htg-sage hover:bg-htg-sage hover:text-white'
+                          }`}
+                        >
+                          {isSelected ? '✓ W koszyku' : `Dodaj — ${prices.sessionAmount} PLN`}
+                        </button>
+                      )}
                       <span className="text-xs text-htg-fg-muted">z pakietu {s.monthTitle}</span>
                     </div>
                   </div>
@@ -505,25 +600,39 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
             {monthSets.map(ms => {
               const isSpotlight = spotlightId === ms.id;
               const isSelected = selectedMonthSets.has(ms.id);
+              const isPurchased = isPurchasedMonth(ms.id);
               return (
                 <button
                   key={ms.id}
                   onClick={() => setSpotlightId(isSpotlight ? null : ms.id)}
                   className={`relative p-3 rounded-xl border-2 text-left transition-all ${
-                    isSpotlight
-                      ? 'border-htg-sage bg-htg-sage/20 ring-2 ring-htg-sage/40 scale-105 z-10'
-                      : isSelected
-                        ? 'border-htg-sage/60 bg-htg-sage/10'
-                        : 'border-htg-card-border bg-htg-card hover:border-htg-sage/40 hover:scale-[1.02]'
+                    isPurchased
+                      ? 'border-emerald-500/40 bg-emerald-500/5'
+                      : isSpotlight
+                        ? 'border-htg-sage bg-htg-sage/20 ring-2 ring-htg-sage/40 scale-105 z-10'
+                        : isSelected
+                          ? 'border-htg-sage/60 bg-htg-sage/10'
+                          : 'border-htg-card-border bg-htg-card hover:border-htg-sage/40 hover:scale-[1.02]'
                   }`}
                 >
                   <p className="font-serif font-bold text-sm text-htg-fg leading-tight">
                     {ms.title.replace('Sesje ', '')}
                   </p>
                   <p className="text-htg-fg-muted text-xs mt-1">{ms.sessions.length} sesji</p>
-                  <p className="text-htg-sage font-bold text-xs mt-1">{prices.monthlyAmount} PLN</p>
-                  {isSelected && (
+                  {isPurchased ? (
+                    <p className="text-emerald-400 text-xs mt-1 font-medium flex items-center gap-0.5">
+                      <CheckCircle className="w-3 h-3" />Kupiony
+                    </p>
+                  ) : (
+                    <p className="text-htg-sage font-bold text-xs mt-1">{prices.monthlyAmount} PLN</p>
+                  )}
+                  {isSelected && !isPurchased && (
                     <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-htg-sage rounded-full flex items-center justify-center">
+                      <Check className="w-3 h-3 text-white" />
+                    </span>
+                  )}
+                  {isPurchased && (
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
                       <Check className="w-3 h-3 text-white" />
                     </span>
                   )}
@@ -534,31 +643,48 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
 
           {/* Spotlight */}
           {spotlightSet && (
-            <div ref={spotlightRef} className="relative bg-htg-card border-2 border-htg-sage/30 rounded-2xl p-6 md:p-8 mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div ref={spotlightRef} className={`relative bg-htg-card border-2 rounded-2xl p-6 md:p-8 mb-8 animate-in fade-in slide-in-from-top-4 duration-300 ${isPurchasedMonth(spotlightSet.id) ? 'border-emerald-500/40' : 'border-htg-sage/30'}`}>
               <button onClick={() => setSpotlightId(null)} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-htg-surface text-htg-fg-muted hover:text-htg-fg">
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-htg-sage/20 flex items-center justify-center shrink-0">
-                  <Calendar className="w-6 h-6 text-htg-sage" />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isPurchasedMonth(spotlightSet.id) ? 'bg-emerald-500/20' : 'bg-htg-sage/20'}`}>
+                  <Calendar className={`w-6 h-6 ${isPurchasedMonth(spotlightSet.id) ? 'text-emerald-400' : 'text-htg-sage'}`} />
                 </div>
                 <div>
                   <h2 className="font-serif font-bold text-2xl text-htg-fg">{spotlightSet.title}</h2>
-                  <p className="text-htg-fg-muted mt-1">{spotlightSet.sessions.length} sesji · <span className="text-htg-sage font-bold">{prices.monthlyAmount} PLN</span></p>
+                  <p className="text-htg-fg-muted mt-1">
+                    {spotlightSet.sessions.length} sesji
+                    {isPurchasedMonth(spotlightSet.id) ? (
+                      <span className="ml-2 text-emerald-400 font-medium text-sm flex items-center gap-1 inline-flex">
+                        <CheckCircle className="w-3.5 h-3.5" />W kolekcji
+                      </span>
+                    ) : (
+                      <span className="text-htg-sage font-bold"> · {prices.monthlyAmount} PLN</span>
+                    )}
+                  </p>
                 </div>
               </div>
               <div className="space-y-2 mb-6">
                 {spotlightSet.sessions.map((s, i) => {
                   const isExp = expandedSession === s.id;
+                  const sessionPurchased = isPurchasedSession(s.id);
                   return (
-                    <div key={s.id} className={`rounded-xl border transition-all ${isExp ? 'border-htg-sage/40 bg-htg-sage/5' : 'border-htg-card-border hover:border-htg-sage/30'}`}>
+                    <div key={s.id} className={`rounded-xl border transition-all ${
+                      sessionPurchased ? 'border-emerald-500/30 bg-emerald-500/5' : isExp ? 'border-htg-sage/40 bg-htg-sage/5' : 'border-htg-card-border hover:border-htg-sage/30'
+                    }`}>
                       <button
                         onClick={() => setExpandedSession(isExp ? null : s.id)}
                         className="w-full flex items-center gap-3 p-4 text-left"
                       >
                         <span className="text-htg-sage font-mono text-xs font-bold w-6 shrink-0">{String(i + 1).padStart(2, '0')}</span>
                         <p className="font-medium text-htg-fg text-sm flex-1">{s.title}</p>
-                        {s.category === 'slowo_natalii' && (
+                        {sessionPurchased && (
+                          <span className="text-xs bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1 shrink-0">
+                            <CheckCircle className="w-3 h-3" />W kolekcji
+                          </span>
+                        )}
+                        {s.category === 'slowo_natalii' && !sessionPurchased && (
                           <span className="text-xs bg-htg-warm/20 text-htg-warm px-2 py-0.5 rounded-full shrink-0">Słowo od Natalii</span>
                         )}
                         {s.description && (
@@ -583,19 +709,30 @@ export default function SessionCatalog({ monthSets, prices }: { monthSets: Month
                   );
                 })}
               </div>
-              <button
-                onClick={() => toggleMonthSet(spotlightSet.id)}
-                className={`px-6 py-3 rounded-xl font-medium text-sm transition-all ${
-                  selectedMonthSets.has(spotlightSet.id)
-                    ? 'bg-htg-sage text-white'
-                    : 'bg-htg-sage/10 border border-htg-sage text-htg-sage hover:bg-htg-sage hover:text-white'
-                }`}
-              >
-                {selectedMonthSets.has(spotlightSet.id)
-                  ? <span className="flex items-center gap-2"><Check className="w-4 h-4" /> W koszyku</span>
-                  : `Dodaj pakiet — ${prices.monthlyAmount} PLN`
-                }
-              </button>
+              {!isPurchasedMonth(spotlightSet.id) && (
+                <button
+                  onClick={() => toggleMonthSet(spotlightSet.id)}
+                  className={`px-6 py-3 rounded-xl font-medium text-sm transition-all ${
+                    selectedMonthSets.has(spotlightSet.id)
+                      ? 'bg-htg-sage text-white'
+                      : 'bg-htg-sage/10 border border-htg-sage text-htg-sage hover:bg-htg-sage hover:text-white'
+                  }`}
+                >
+                  {selectedMonthSets.has(spotlightSet.id)
+                    ? <span className="flex items-center gap-2"><Check className="w-4 h-4" /> W koszyku</span>
+                    : `Dodaj pakiet — ${prices.monthlyAmount} PLN`
+                  }
+                </button>
+              )}
+              {isPurchasedMonth(spotlightSet.id) && (
+                <a
+                  href="/pl/konto/sesje"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
+                >
+                  <Headphones className="w-4 h-4" />
+                  Odsłuchaj sesje z pakietu
+                </a>
+              )}
             </div>
           )}
 

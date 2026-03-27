@@ -282,8 +282,8 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
       {selected && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
-          {/* Slot selector */}
-          <div>
+          {/* Slot selector — hidden in custom/dopłata mode */}
+          <div className={paymentMode === 'custom' ? 'hidden' : ''}>
             <span className="flex items-center gap-2 text-sm font-medium text-htg-fg mb-3">
               <Calendar className="w-4 h-4 text-htg-sage" />
               Wybierz termin
@@ -455,49 +455,54 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
               </>
             )}
 
-            {/* Acceleration checkbox */}
-            <label className={`flex items-center gap-3 text-sm cursor-pointer mt-3 p-4 rounded-xl border-2 transition-all ${
-              wantAcceleration
-                ? 'border-htg-warm/60 bg-htg-warm/10'
-                : 'border-htg-card-border bg-htg-surface hover:border-htg-warm/30'
-            }`}>
-              <input
-                type="checkbox"
-                checked={wantAcceleration}
-                onChange={e => setWantAcceleration(e.target.checked)}
-                className="rounded border-htg-card-border accent-htg-warm w-4 h-4 shrink-0"
-              />
-              <Zap className={`w-4 h-4 shrink-0 ${wantAcceleration ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
-              <div className="flex-1">
-                <p className="font-medium text-htg-fg">Chcę przyspieszenie</p>
-                <p className="text-xs text-htg-fg-muted">Powiadom gdy zwolni się wcześniejszy termin</p>
-              </div>
-            </label>
+            {/* Acceleration + pre-session — hidden in custom/dopłata mode */}
+            {paymentMode !== 'custom' && (
+              <>
+                {/* Acceleration checkbox */}
+                <label className={`flex items-center gap-3 text-sm cursor-pointer mt-3 p-4 rounded-xl border-2 transition-all ${
+                  wantAcceleration
+                    ? 'border-htg-warm/60 bg-htg-warm/10'
+                    : 'border-htg-card-border bg-htg-surface hover:border-htg-warm/30'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={wantAcceleration}
+                    onChange={e => setWantAcceleration(e.target.checked)}
+                    className="rounded border-htg-card-border accent-htg-warm w-4 h-4 shrink-0"
+                  />
+                  <Zap className={`w-4 h-4 shrink-0 ${wantAcceleration ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
+                  <div className="flex-1">
+                    <p className="font-medium text-htg-fg">Chcę przyspieszenie</p>
+                    <p className="text-xs text-htg-fg-muted">Powiadom gdy zwolni się wcześniejszy termin</p>
+                  </div>
+                </label>
 
-            {/* Pre-session add-on */}
-            {activePreSessionOption && (
-              <label className={`flex items-center gap-3 text-sm cursor-pointer mt-2 p-4 rounded-xl border-2 transition-all ${
-                addPreSession
-                  ? 'border-purple-500/60 bg-purple-900/10'
-                  : 'border-htg-card-border bg-htg-surface hover:border-purple-400/40'
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={addPreSession}
-                  onChange={e => setAddPreSession(e.target.checked)}
-                  className="rounded border-htg-card-border accent-purple-500 w-4 h-4 shrink-0"
-                />
-                <Video className={`w-4 h-4 shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`} />
-                <div className="flex-1">
-                  <p className="font-medium text-htg-fg">
-                    Dodaj spotkanie wstępne z {activePreSessionOption.staffNameWith}
-                  </p>
-                  <p className="text-xs text-htg-fg-muted">15 min online przed Twoją sesją — termin wybierzesz później</p>
-                </div>
-                <span className={`font-bold text-sm shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`}>
-                  +{activePreSessionOption.pricePln} PLN
-                </span>
-              </label>
+                {/* Pre-session add-on */}
+                {activePreSessionOption && (
+                  <label className={`flex items-center gap-3 text-sm cursor-pointer mt-2 p-4 rounded-xl border-2 transition-all ${
+                    addPreSession
+                      ? 'border-purple-500/60 bg-purple-900/10'
+                      : 'border-htg-card-border bg-htg-surface hover:border-purple-400/40'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={addPreSession}
+                      onChange={e => setAddPreSession(e.target.checked)}
+                      className="rounded border-htg-card-border accent-purple-500 w-4 h-4 shrink-0"
+                    />
+                    <Video className={`w-4 h-4 shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`} />
+                    <div className="flex-1">
+                      <p className="font-medium text-htg-fg">
+                        Dodaj spotkanie wstępne z {activePreSessionOption.staffNameWith}
+                      </p>
+                      <p className="text-xs text-htg-fg-muted">15 min online przed Twoją sesją — termin wybierzesz później</p>
+                    </div>
+                    <span className={`font-bold text-sm shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`}>
+                      +{activePreSessionOption.pricePln} PLN
+                    </span>
+                  </label>
+                )}
+              </>
             )}
           </div>
 

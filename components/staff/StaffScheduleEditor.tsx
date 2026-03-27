@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Trash2, CalendarPlus, Lock, UserCheck, UserPlus, UserMinus, Clock } from 'lucide-react';
+import { PreSessionGrafikSection } from '@/components/prowadzacy/PreSessionGrafikSection';
 import type { AvailabilityRule, AvailabilityException, StaffMember } from '@/lib/booking/types';
 import { SESSION_CONFIG, CALENDAR_START_HOUR, CALENDAR_END_HOUR } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
@@ -743,6 +744,9 @@ function AssistantEditor() {
           </div>
         )}
       </div>
+
+      {/* 3. Pre-session meetings */}
+      <PreSessionGrafikSection />
     </div>
   );
 }

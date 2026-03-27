@@ -47,7 +47,6 @@ export default async function StaffLayout({
     { href: '/prowadzacy/sesje', label: t('sessions'), icon: Presentation },
     { href: '/prowadzacy/grafik', label: t('schedule'), icon: Calendar },
     { href: '/prowadzacy/klienci', label: t('clients'), icon: Users },
-    ...(isAssistant ? [{ href: '/prowadzacy/spotkania', label: 'Spotkania wstępne', icon: Video }] : []),
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Video },
   ];
 

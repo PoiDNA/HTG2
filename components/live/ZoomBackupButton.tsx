@@ -8,9 +8,11 @@ interface ZoomBackupButtonProps {
   room: Room;
   /** Icon-only compact variant for tight layouts */
   compact?: boolean;
+  /** Called with the URL after successful broadcast — lets the sender also see the overlay */
+  onUrlSent?: (url: string) => void;
 }
 
-export default function ZoomBackupButton({ room, compact = false }: ZoomBackupButtonProps) {
+export default function ZoomBackupButton({ room, compact = false, onUrlSent }: ZoomBackupButtonProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -39,6 +41,7 @@ export default function ZoomBackupButton({ room, compact = false }: ZoomBackupBu
       await room.localParticipant.publishData(payload, { reliable: true });
 
       setSent(true);
+      onUrlSent?.(url);
       // Auto-reset after 10 s so staff can re-send if needed
       setTimeout(() => setSent(false), 10_000);
     } catch (err) {

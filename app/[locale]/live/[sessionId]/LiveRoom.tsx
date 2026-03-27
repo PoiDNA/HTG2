@@ -234,7 +234,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             showVideo={true}
             staffRight={isStaff ? (
               <div className="flex flex-col items-end gap-2">
-                <ZoomBackupButton room={room} compact />
+                <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
                 <PhaseControls
                   sessionId={sessionId}
                   currentPhase={phase}
@@ -275,7 +275,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             showVideo={true}
             staffRight={isStaff ? (
               <div className="flex flex-col items-end gap-2">
-                <ZoomBackupButton room={room} compact />
+                <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
                 <PhaseControls
                   sessionId={sessionId}
                   currentPhase={phase}
@@ -324,7 +324,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
           {/* Staff controls */}
           {isStaff && (
             <div className="flex items-center gap-2 order-3">
-              <ZoomBackupButton room={room} />
+              <ZoomBackupButton room={room} onUrlSent={setZoomBackupUrl} />
               {phase === 'sesja' && (
                 <PrivateTalkButton room={room} isStaff={isStaff} />
               )}

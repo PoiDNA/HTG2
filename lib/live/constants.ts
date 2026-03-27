@@ -16,7 +16,7 @@ export const PHASE_CONFIG: Record<Phase, PhaseConfig> = {
     hasAudio: false,
     hasRecording: false,
     animationVariant: 0,
-    musicAsset: `${CDN}/audio/live/music-0.mp3`,
+    musicAsset: `${CDN}/music-sessions/music-0.mp3`,
     autoDuration: null,
   },
   wstep: {
@@ -34,7 +34,7 @@ export const PHASE_CONFIG: Record<Phase, PhaseConfig> = {
     hasAudio: false,
     hasRecording: false,
     animationVariant: 1,
-    musicAsset: `${CDN}/audio/live/music-1.mp3`,
+    musicAsset: `${CDN}/music-sessions/music-1.mp3`,
     autoDuration: null, // manual — staff clicks "Rozpocznij sesję"
   },
   sesja: {
@@ -52,7 +52,7 @@ export const PHASE_CONFIG: Record<Phase, PhaseConfig> = {
     hasAudio: false,
     hasRecording: false,
     animationVariant: 2,
-    musicAsset: `${CDN}/audio/live/music-2.mp3`,
+    musicAsset: `${CDN}/music-sessions/music-2.mp3`,
     autoDuration: 15_000, // auto fade-out 15s then proceed
   },
   podsumowanie: {
@@ -70,7 +70,7 @@ export const PHASE_CONFIG: Record<Phase, PhaseConfig> = {
     hasAudio: false,
     hasRecording: false,
     animationVariant: 3,
-    musicAsset: `${CDN}/audio/live/music-3.mp3`,
+    musicAsset: `${CDN}/music-sessions/music-3.mp3`,
     autoDuration: null,
   },
   ended: {
@@ -119,7 +119,7 @@ export const MUSIC_FADE_DURATION = 15_000;
 export const OUTRO_TIMER_DURATION = 15 * 60 * 1000;
 
 /** Notification sound path */
-export const BREAK_NOTIFICATION_SOUND = `${CDN}/audio/live/notification.mp3`;
+export const BREAK_NOTIFICATION_SOUND = `${CDN}/music-sessions/notification.mp3.mp3`;
 
 // ============================================================
 // LiveKit room name generation

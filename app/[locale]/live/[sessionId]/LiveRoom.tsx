@@ -260,7 +260,7 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
                 {phase === 'przejscie_1' && (
                   <PhaseTransition
                     variant={1}
-                    musicSrc="/audio/live/music-1.mp3"
+                    musicSrc="https://htg2-cdn.b-cdn.net/music-sessions/music-1.mp3"
                     autoFade={transitionAutoFade}
                     onComplete={handleTransitionComplete}
                   />
@@ -271,7 +271,7 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
                 {phase === 'przejscie_2' && (
                   <PhaseTransition
                     variant={2}
-                    musicSrc="/audio/live/music-2.mp3"
+                    musicSrc="https://htg2-cdn.b-cdn.net/music-sessions/music-2.mp3"
                     autoFade={transitionAutoFade}
                     onComplete={handleTransitionComplete}
                   />

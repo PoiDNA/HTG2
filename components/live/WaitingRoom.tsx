@@ -14,7 +14,7 @@ export default function WaitingRoom({ onAdmitted }: WaitingRoomProps) {
 
   useEffect(() => {
     // Auto-play looped waiting music
-    const audio = new Audio('/audio/live/music-0.mp3');
+    const audio = new Audio('https://htg2-cdn.b-cdn.net/music-sessions/music-0.mp3');
     audio.loop = true;
     audio.volume = 0.3;
     audioRef.current = audio;
@@ -38,7 +38,7 @@ export default function WaitingRoom({ onAdmitted }: WaitingRoomProps) {
 
   return (
     <div
-      className="relative flex items-end justify-center w-full h-screen bg-[#0a0e1a] overflow-hidden cursor-pointer"
+      className="relative flex flex-col items-center justify-between w-full h-screen bg-[#0a0e1a] overflow-hidden cursor-pointer"
       onClick={handleClick}
     >
       {/* Controls: Back + Fullscreen */}
@@ -47,14 +47,20 @@ export default function WaitingRoom({ onAdmitted }: WaitingRoomProps) {
       {/* Full-screen particle animation */}
       <SessionAnimation variant={0} opacity={0.8} active />
 
-      {/* Subtle bottom info — no spinner, no big text */}
-      <div className="relative z-10 pb-12 text-center">
-        <p className="text-white/30 text-sm font-light tracking-widest animate-pulse">
-          Oczekiwanie na rozpoczęcie sesji...
+      {/* Top centered info */}
+      <div className="relative z-10 pt-24 text-center">
+        <p className="text-white/40 text-sm font-light tracking-[0.3em] animate-pulse">
+          Oczekiwanie na rozpoczęcie sesji
         </p>
+      </div>
 
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Bottom: music hint */}
+      <div className="relative z-10 pb-8 text-center">
         {!musicPlaying && (
-          <p className="text-white/20 text-xs mt-3">
+          <p className="text-white/20 text-xs">
             Kliknij aby włączyć muzykę
           </p>
         )}

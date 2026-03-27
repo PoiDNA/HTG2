@@ -17,7 +17,7 @@ export default function OutroScreen({ onClose }: OutroScreenProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const audio = new Audio('/audio/live/music-3.mp3');
+    const audio = new Audio('https://htg2-cdn.b-cdn.net/music-sessions/music-3.mp3');
     audio.loop = true;
     audio.volume = 0.3;
     audio.play().catch(() => {});

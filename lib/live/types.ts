@@ -59,7 +59,8 @@ export type DataMessageType =
   | 'break_dismiss'
   | 'private_talk_start'
   | 'private_talk_stop'
-  | 'phase_changed';
+  | 'phase_changed'
+  | 'zoom_backup';
 
 export interface DataMessage {
   type: DataMessageType;

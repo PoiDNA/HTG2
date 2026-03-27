@@ -22,6 +22,8 @@ import BreakRequestButton from '@/components/live/BreakRequestButton';
 import BreakNotification from '@/components/live/BreakNotification';
 import VolumeSlider from '@/components/live/VolumeSlider';
 import OutroScreen from '@/components/live/OutroScreen';
+import ZoomBackupButton from '@/components/live/ZoomBackupButton';
+import ZoomBackupOverlay from '@/components/live/ZoomBackupOverlay';
 
 interface LiveRoomProps {
   session: LiveSession;
@@ -47,6 +49,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const [breakRequested, setBreakRequested] = useState(false);
   const [transitionAutoFade, setTransitionAutoFade] = useState(false);
   const [volumeNodes] = useState<Map<string, GainNode>>(new Map());
+  const [zoomBackupUrl, setZoomBackupUrl] = useState<string | null>(null);
 
   const sessionId = initialSession.id;
 
@@ -92,6 +95,12 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
               }
             }
             break;
+
+          case 'zoom_backup': {
+            const url = msg.payload?.url as string | undefined;
+            if (url) setZoomBackupUrl(url);
+            break;
+          }
         }
       } catch {
         // Ignore malformed messages
@@ -270,6 +279,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
 
           {/* Right: staff controls */}
           <div className="flex items-center gap-3">
+            {isStaff && <ZoomBackupButton room={room} />}
             {isStaff && phase === 'sesja' && (
               <PrivateTalkButton room={room} isStaff={isStaff} />
             )}
@@ -286,6 +296,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
       {/* Staff PhaseControls for video phases — floating bottom-right */}
       {isVideoPhase && isStaff && (
         <div className="absolute bottom-6 right-6 z-20 flex items-center gap-3">
+          <ZoomBackupButton room={room} />
           <PrivateTalkButton room={room} isStaff={isStaff} />
           <PhaseControls
             sessionId={sessionId}
@@ -299,6 +310,11 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
       <BreakNotification
         visible={breakRequested}
         onDismiss={() => setBreakRequested(false)}
+      />
+
+      <ZoomBackupOverlay
+        url={zoomBackupUrl}
+        onDismiss={() => setZoomBackupUrl(null)}
       />
     </div>
   );

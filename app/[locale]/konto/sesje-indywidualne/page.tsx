@@ -1,11 +1,19 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { ALL_SESSION_TYPES } from '@/lib/booking/constants';
 import type { Booking, AccelerationEntry } from '@/lib/booking/types';
 import BookingCalendar from '@/components/booking/BookingCalendar';
 import BookingCard from '@/components/booking/BookingCard';
 import AccelerationRequest from '@/components/booking/AccelerationRequest';
+import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
+
+// Session type → assistant slug mapping
+const SESSION_TYPE_TO_SLUG: Record<string, string> = {
+  natalia_agata: 'agata',
+  natalia_justyna: 'justyna',
+};
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -60,6 +68,52 @@ export default async function IndividualSessionsPage({
     unbookedCount = count ?? 0;
   }
 
+  // Fetch pre-session upsell data for active bookings with assistant session types
+  const preSessionUpsellMap: Record<string, { staffId: string; staffName: string; priceId: string; pricePln: number }> = {};
+  if (user) {
+    // Find active bookings with assistants
+    const assistantBookings = bookings.filter(
+      b => (b.status === 'pending_confirmation' || b.status === 'confirmed')
+        && (b.session_type === 'natalia_agata' || b.session_type === 'natalia_justyna')
+    );
+
+    if (assistantBookings.length > 0) {
+      const db = createSupabaseServiceRole();
+      const assistantSlugs = [...new Set(assistantBookings.map(b => SESSION_TYPE_TO_SLUG[b.session_type]).filter(Boolean))];
+
+      // Fetch paid pre-session settings for these assistants
+      const { data: psSettings } = await db
+        .from('pre_session_settings')
+        .select('staff_member_id, stripe_price_id, price_pln, staff_members!inner(id, name, slug)')
+        .eq('is_enabled', true)
+        .not('stripe_price_id', 'is', null)
+        .not('price_pln', 'is', null);
+
+      // Fetch existing active eligibilities for this user
+      const { data: existingElig } = await db
+        .from('pre_session_eligibility')
+        .select('staff_member_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      const alreadyEligibleIds = new Set((existingElig || []).map((e: any) => e.staff_member_id));
+
+      for (const s of (psSettings || []) as any[]) {
+        const staff = s.staff_members;
+        if (!assistantSlugs.includes(staff.slug)) continue;
+        if (alreadyEligibleIds.has(s.staff_member_id)) continue;
+        const sessionType = Object.keys(SESSION_TYPE_TO_SLUG).find(k => SESSION_TYPE_TO_SLUG[k] === staff.slug);
+        if (!sessionType) continue;
+        preSessionUpsellMap[sessionType] = {
+          staffId: s.staff_member_id,
+          staffName: staff.name,
+          priceId: s.stripe_price_id,
+          pricePln: Math.round(s.price_pln / 100),
+        };
+      }
+    }
+  }
+
   // Fetch user's acceleration queue entries
   let accelerationEntries: AccelerationEntry[] = [];
   if (user) {
@@ -105,14 +159,28 @@ export default async function IndividualSessionsPage({
         <div>
           <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('your_bookings')}</h3>
           <div className="grid grid-cols-1 gap-4">
-            {activeBookings.map((booking) => (
-              <BookingCard
-                key={booking.id}
-                booking={booking}
-                locale={locale}
-                hasEarlierSlots={booking.status === 'confirmed'}
-              />
-            ))}
+            {activeBookings.map((booking) => {
+              const upsell = preSessionUpsellMap[booking.session_type];
+              return (
+                <div key={booking.id}>
+                  <BookingCard
+                    booking={booking}
+                    locale={locale}
+                    hasEarlierSlots={booking.status === 'confirmed'}
+                  />
+                  {upsell && (
+                    <PreSessionUpsell
+                      staffId={upsell.staffId}
+                      staffName={upsell.staffName}
+                      priceId={upsell.priceId}
+                      pricePln={upsell.pricePln}
+                      sourceBookingId={booking.id}
+                      locale={locale}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

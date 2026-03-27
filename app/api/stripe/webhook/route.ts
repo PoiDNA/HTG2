@@ -53,10 +53,32 @@ export async function POST(request: NextRequest) {
       const lineItems = await getStripe().checkout.sessions.listLineItems(session.id, { expand: ['data.price.product'] });
 
       if (order) {
+        // Handle pre-session meeting add-on (paid eligibility grant)
+        const preSessionStaffId = session.metadata?.pre_session_staff_id;
+        if (preSessionStaffId) {
+          await getSupabaseAdmin()
+            .from('pre_session_eligibility')
+            .insert({
+              user_id: userId,
+              staff_member_id: preSessionStaffId,
+              source_booking_id: session.metadata?.pre_session_source_booking_id || null,
+              granted_by: null, // system-granted via payment
+              is_active: true,
+              meeting_booked: false,
+              payment_type: 'paid',
+              order_id: order.id,
+            })
+            .select()
+            .single();
+          // Note: unique index pre_eligibility_paid_order_unique handles webhook retries
+        }
 
         for (const item of lineItems.data) {
           const product = item.price?.product as any;
           const productMetadata = product?.metadata || {};
+
+          // Skip pre-session line items — eligibility already granted above
+          if (productMetadata.type === 'pre_session') continue;
 
           // Determine entitlement type and validity
           const entitlementType = productMetadata.entitlement_type || 'purchase';

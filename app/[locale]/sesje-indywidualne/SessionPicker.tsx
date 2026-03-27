@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from '@/i18n-config';
-import { User, Users, Calendar, MessageSquare, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap } from 'lucide-react';
+import { User, Users, Calendar, MessageSquare, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap, Video } from 'lucide-react';
 
 interface SessionOption {
   slug: string;
@@ -23,8 +23,16 @@ interface SlotInfo {
   status: string;
 }
 
+interface PreSessionOption {
+  staffId: string;
+  staffName: string;
+  priceId: string;
+  pricePln: number;
+}
+
 interface SessionPickerProps {
   sessions: SessionOption[];
+  preSessionOptions?: Record<string, PreSessionOption>; // keyed by session type, e.g. 'natalia_agata'
   labels: {
     choose: string;
     date_label: string;
@@ -52,7 +60,7 @@ const SESSION_PEOPLE: Record<string, string[]> = {
 const DAYS_PL = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 const MONTHS_PL = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
 
-export function SessionPicker({ sessions, labels }: SessionPickerProps) {
+export function SessionPicker({ sessions, preSessionOptions = {}, labels }: SessionPickerProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const [slots, setSlots] = useState<SlotInfo[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -64,12 +72,14 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   });
   const [loading, setLoading] = useState(false);
   const [wantAcceleration, setWantAcceleration] = useState(false);
+  const [addPreSession, setAddPreSession] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'full' | 'installments' | 'custom'>('full');
   const [customAmount, setCustomAmount] = useState('');
   const router = useRouter();
 
   const selectedSession = sessions.find((s) => s.slug === selected);
   const selectedSlot = slots.find(s => s.id === selectedSlotId);
+  const activePreSessionOption = selectedSession ? preSessionOptions[selectedSession.sessionType] : null;
 
   // Load available slots when session type changes — fetch next 3 months
   useEffect(() => {
@@ -166,6 +176,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 
+  const preSessionAmount = addPreSession && activePreSessionOption ? activePreSessionOption.pricePln : 0;
   const totalAmount = selectedSession ? selectedSession.amount / 100 : 0;
   // Installments: 1200 PLN = 3×400, 1600 PLN = 4×400
   const isWithAssistant = selectedSession?.sessionType === 'natalia_agata' || selectedSession?.sessionType === 'natalia_justyna';
@@ -173,11 +184,11 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   const installmentAmount = 400; // always 400 PLN per installment
   const customAmountNum = parseInt(customAmount) || 0;
 
-  const payAmount = paymentMode === 'full'
+  const payAmount = (paymentMode === 'full'
     ? totalAmount
     : paymentMode === 'installments'
       ? installmentAmount
-      : customAmountNum;
+      : customAmountNum) + preSessionAmount;
 
   async function handleCheckout() {
     if (!selectedSession || payAmount <= 0) return;
@@ -190,8 +201,12 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
         body: JSON.stringify({
           priceId: selectedSession.priceId,
           mode: 'payment',
-          // For installments/custom: override amount
-          ...(paymentMode !== 'full' && { amountOverride: payAmount * 100 }),
+          // For installments/custom: override amount (session only — pre-session added via addOns)
+          ...(paymentMode !== 'full' && { amountOverride: (payAmount - preSessionAmount) * 100 }),
+          // Pre-session add-on: separate line item at fixed Stripe price
+          ...(addPreSession && activePreSessionOption && {
+            addOns: [{ priceId: activePreSessionOption.priceId }],
+          }),
           metadata: {
             type: 'individual',
             session_type: selectedSession.sessionType,
@@ -201,6 +216,10 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             total_amount: String(totalAmount * 100),
             installment_number: paymentMode === 'installments' ? '1' : undefined,
             installments_total: paymentMode === 'installments' ? String(installmentsCount) : undefined,
+            // Pre-session metadata for webhook
+            ...(addPreSession && activePreSessionOption && {
+              pre_session_staff_id: activePreSessionOption.staffId,
+            }),
           },
         }),
       });
@@ -446,6 +465,32 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
               <Zap className="w-4 h-4 text-htg-warm shrink-0" />
               <span>Chcę przyspieszenie — powiadom gdy zwolni się wcześniejszy termin</span>
             </label>
+
+            {/* Pre-session add-on */}
+            {activePreSessionOption && (
+              <label className={`flex items-center gap-3 text-sm cursor-pointer mt-2 p-4 rounded-xl border-2 transition-all ${
+                addPreSession
+                  ? 'border-purple-500/60 bg-purple-900/10'
+                  : 'border-htg-card-border bg-htg-surface hover:border-purple-400/40'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={addPreSession}
+                  onChange={e => setAddPreSession(e.target.checked)}
+                  className="rounded border-htg-card-border accent-purple-500 w-4 h-4 shrink-0"
+                />
+                <Video className={`w-4 h-4 shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`} />
+                <div className="flex-1">
+                  <p className={`font-medium ${addPreSession ? 'text-htg-fg' : 'text-htg-fg'}`}>
+                    Dodaj spotkanie wstępne z {activePreSessionOption.staffName}
+                  </p>
+                  <p className="text-xs text-htg-fg-muted">15 min online przed Twoją sesją</p>
+                </div>
+                <span className={`font-bold text-sm shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`}>
+                  +{activePreSessionOption.pricePln} PLN
+                </span>
+              </label>
+            )}
           </div>
 
           {/* Payment mode selector */}
@@ -552,9 +597,9 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
                 </span>
               ) : (
                 <>
-                  {paymentMode === 'full' && `${labels.buy} — ${totalAmount} PLN`}
-                  {paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount} PLN`}
-                  {paymentMode === 'custom' && `Wpłać — ${customAmountNum > 0 ? customAmountNum : '...'} PLN`}
+                  {paymentMode === 'full' && `${labels.buy} — ${totalAmount + preSessionAmount} PLN`}
+                  {paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount + preSessionAmount} PLN`}
+                  {paymentMode === 'custom' && `Wpłać — ${customAmountNum > 0 ? customAmountNum + preSessionAmount : '...'} PLN`}
                 </>
               )}
             </button>

@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       quantity = 1,
       metadata = {},
       amountOverride, // For installments / custom payments (in grosz)
+      addOns = [],    // Additional line items: [{ priceId: string, name: string }]
     } = await request.json();
 
     if (!priceId && !amountOverride) {
@@ -79,6 +80,13 @@ export async function POST(request: NextRequest) {
       lineItems = [{ price: priceId, quantity: Math.max(1, Math.min(quantity, 100)) }];
     }
 
+    // Add optional add-on line items (e.g. paid pre-session meeting)
+    for (const addOn of addOns) {
+      if (addOn.priceId) {
+        lineItems.push({ price: addOn.priceId, quantity: 1 });
+      }
+    }
+
     const sessionParams: any = {
       customer: customerId,
       line_items: lineItems,
@@ -98,6 +106,9 @@ export async function POST(request: NextRequest) {
         installments_total: metadata.installments_total || '',
         session_type: metadata.session_type || '',
         slot_id: metadata.slot_id || '',
+        // Pre-session meeting add-on
+        pre_session_staff_id: metadata.pre_session_staff_id || '',
+        pre_session_source_booking_id: metadata.pre_session_source_booking_id || '',
       },
     };
 

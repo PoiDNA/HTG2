@@ -124,12 +124,20 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
       </p>
 
       {!testing ? (
-        <button
-          onClick={startTest}
-          className="w-full bg-htg-sage text-white py-3 rounded-xl font-medium hover:bg-htg-sage/90 transition-colors"
-        >
-          Sprawdź urządzenia
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={startTest}
+            className="w-full bg-htg-sage text-white py-3 rounded-xl font-medium hover:bg-htg-sage/90 transition-colors"
+          >
+            Sprawdź urządzenia
+          </button>
+          <button
+            onClick={onReady}
+            className="w-full text-white/40 text-xs hover:text-white/60 transition-colors py-2"
+          >
+            Pomiń test →
+          </button>
+        </div>
       ) : (
         <div className="space-y-4">
           {/* Camera preview */}
@@ -188,7 +196,12 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
           </div>
 
           {errorMsg && (
-            <p className="text-yellow-400/70 text-xs bg-yellow-900/20 rounded-lg p-2">{errorMsg}</p>
+            <div className="bg-yellow-900/20 rounded-lg p-3 space-y-2">
+              <p className="text-yellow-400/70 text-xs">{errorMsg}</p>
+              <p className="text-white/50 text-xs">
+                💡 Kliknij ikonę 🔒 obok adresu strony → zezwól na kamerę i mikrofon → odśwież stronę.
+              </p>
+            </div>
           )}
 
           {allTested && (

@@ -26,6 +26,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showDelayOptions, setShowDelayOptions] = useState(false);
   const [topics, setTopics] = useState(booking.topics || '');
   const [topicsSaved, setTopicsSaved] = useState(false);
   const [savingTopics, setSavingTopics] = useState(false);
@@ -249,6 +250,16 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
               </span>
             )}
 
+            {/* Delay / late notice — 1h before session, max 15 min */}
+            {isConfirmed && sessionDateTime && hoursUntilSession <= 1 && hoursUntilSession > -0.5 && !showDelayOptions && (
+              <button
+                onClick={() => setShowDelayOptions(true)}
+                className="bg-htg-warm/20 text-htg-warm px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-warm/30 transition-colors"
+              >
+                ⏰ Zgłoś spóźnienie
+              </button>
+            )}
+
             {/* Reschedule — always available */}
             {canReschedule && (
               <button
@@ -261,6 +272,43 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
               </button>
             )}
           </div>
+
+          {/* Delay options */}
+          {showDelayOptions && (
+            <div className="bg-htg-surface rounded-xl p-4 space-y-3">
+              <p className="text-sm text-htg-fg font-medium">O ile minut się spóźnisz?</p>
+              <div className="flex gap-2">
+                {[5, 10, 15].map(mins => (
+                  <button
+                    key={mins}
+                    onClick={async () => {
+                      setLoading('delay');
+                      const res = await fetch('/api/booking/delay', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ bookingId: booking.id, delayMinutes: mins }),
+                      });
+                      if (res.ok) {
+                        setShowDelayOptions(false);
+                        router.refresh();
+                      }
+                      setLoading(null);
+                    }}
+                    disabled={loading === 'delay'}
+                    className="flex-1 py-2.5 rounded-lg bg-htg-warm/20 text-htg-warm text-sm font-medium hover:bg-htg-warm/30 transition-colors disabled:opacity-50"
+                  >
+                    {mins} min
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowDelayOptions(false)}
+                className="text-xs text-htg-fg-muted hover:text-htg-fg"
+              >
+                Anuluj
+              </button>
+            </div>
+          )}
 
           {/* Reschedule info — shown only when clicking "Zmień termin" (at calendar section) */}
         </div>

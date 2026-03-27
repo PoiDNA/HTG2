@@ -10,63 +10,12 @@ interface PreJoinCheckProps {
 export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
   const [micOk, setMicOk] = useState<boolean | null>(null);
   const [camOk, setCamOk] = useState<boolean | null>(null);
-  const [speakerOk, setSpeakerOk] = useState<boolean | null>(null);
   const [micLevel, setMicLevel] = useState(0);
   const [testing, setTesting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
   const animRef = useRef<number>(0);
-
-  async function startTest() {
-    setTesting(true);
-
-    // Test microphone
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setMicOk(true);
-      streamRef.current = stream;
-
-      // Audio level meter
-      const ctx = new AudioContext();
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const updateLevel = () => {
-        analyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        setMicLevel(avg / 128);
-        animRef.current = requestAnimationFrame(updateLevel);
-      };
-      updateLevel();
-    } catch {
-      setMicOk(false);
-    }
-
-    // Test camera
-    try {
-      const vidStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      setCamOk(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = vidStream;
-      }
-      // Merge with existing stream
-      if (streamRef.current) {
-        vidStream.getVideoTracks().forEach(t => streamRef.current!.addTrack(t));
-      } else {
-        streamRef.current = vidStream;
-      }
-    } catch {
-      setCamOk(false);
-    }
-
-    // Speaker test — just mark as OK (user confirms by hearing music in waiting room)
-    setSpeakerOk(true);
-  }
 
   useEffect(() => {
     return () => {
@@ -75,8 +24,95 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
     };
   }, []);
 
-  const allOk = micOk === true && camOk !== null;
+  async function startTest() {
+    setTesting(true);
+    setErrorMsg('');
+
+    // Try camera + mic together first
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      streamRef.current = stream;
+      setMicOk(true);
+      setCamOk(true);
+
+      // Show camera preview
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      // Audio level meter
+      try {
+        const ctx = new AudioContext();
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const updateLevel = () => {
+          analyser.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          setMicLevel(avg / 128);
+          animRef.current = requestAnimationFrame(updateLevel);
+        };
+        updateLevel();
+      } catch {}
+
+      return;
+    } catch (err: any) {
+      // Both failed — try individually
+      console.log('Combined getUserMedia failed:', err.name, err.message);
+    }
+
+    // Try mic only
+    try {
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicOk(true);
+      if (streamRef.current) {
+        audioStream.getAudioTracks().forEach(t => streamRef.current!.addTrack(t));
+      } else {
+        streamRef.current = audioStream;
+      }
+
+      try {
+        const ctx = new AudioContext();
+        const source = ctx.createMediaStreamSource(audioStream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const updateLevel = () => {
+          analyser.getByteFrequencyData(dataArray);
+          const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+          setMicLevel(avg / 128);
+          animRef.current = requestAnimationFrame(updateLevel);
+        };
+        updateLevel();
+      } catch {}
+    } catch (err: any) {
+      setMicOk(false);
+      setErrorMsg(prev => prev + `Mikrofon: ${err.name} — ${err.message}. `);
+    }
+
+    // Try camera only
+    try {
+      const vidStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setCamOk(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = vidStream;
+      }
+      if (streamRef.current) {
+        vidStream.getVideoTracks().forEach(t => streamRef.current!.addTrack(t));
+      } else {
+        streamRef.current = vidStream;
+      }
+    } catch (err: any) {
+      setCamOk(false);
+      setErrorMsg(prev => prev + `Kamera: ${err.name} — ${err.message}. `);
+    }
+  }
+
   const allTested = micOk !== null && camOk !== null;
+  const allOk = micOk === true;
 
   return (
     <div className="relative z-20 bg-black/60 backdrop-blur-xl rounded-2xl border border-white/10 p-8 max-w-md w-full mx-4">
@@ -106,8 +142,9 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
               className="w-full h-full object-cover"
             />
             {camOk === false && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                <CameraOff className="w-8 h-8 text-red-400" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-2">
+                <CameraOff className="w-8 h-8 text-yellow-400" />
+                <span className="text-yellow-400/80 text-xs">Kamera niedostępna (opcjonalna)</span>
               </div>
             )}
             {camOk === null && (
@@ -119,7 +156,6 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
 
           {/* Status items */}
           <div className="space-y-3">
-            {/* Microphone */}
             <div className="flex items-center gap-3">
               {micOk === true ? <CheckCircle className="w-5 h-5 text-green-400" /> :
                micOk === false ? <XCircle className="w-5 h-5 text-red-400" /> :
@@ -129,15 +165,12 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
               </span>
               {micOk && (
                 <div className="w-20 h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-400 rounded-full transition-all duration-75"
-                    style={{ width: `${Math.min(100, micLevel * 100)}%` }}
-                  />
+                  <div className="h-full bg-green-400 rounded-full transition-all duration-75"
+                    style={{ width: `${Math.min(100, micLevel * 100)}%` }} />
                 </div>
               )}
             </div>
 
-            {/* Camera */}
             <div className="flex items-center gap-3">
               {camOk === true ? <CheckCircle className="w-5 h-5 text-green-400" /> :
                camOk === false ? <XCircle className="w-5 h-5 text-yellow-400" /> :
@@ -147,7 +180,6 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
               </span>
             </div>
 
-            {/* Speaker */}
             <div className="flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-green-400" />
               <span className="text-white text-sm">Głośniki / słuchawki</span>
@@ -155,7 +187,10 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
             </div>
           </div>
 
-          {/* Continue button */}
+          {errorMsg && (
+            <p className="text-yellow-400/70 text-xs bg-yellow-900/20 rounded-lg p-2">{errorMsg}</p>
+          )}
+
           {allTested && (
             <button
               onClick={() => {

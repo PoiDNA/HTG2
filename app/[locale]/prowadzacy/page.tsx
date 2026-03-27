@@ -1,6 +1,14 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
+import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { Calendar, Clock, Users } from 'lucide-react';
+import { Calendar, Clock, Users, Mic, ArrowRight } from 'lucide-react';
+import { Link } from '@/i18n-config';
+
+const SESSION_LABELS: Record<string, string> = {
+  natalia_solo: 'Sesja 1:1 z Natalią',
+  natalia_agata: 'Sesja z Natalią i Agatą',
+  natalia_justyna: 'Sesja z Natalią i Justyną',
+};
 
 export default async function StaffDashboard({
   params
@@ -14,10 +22,16 @@ export default async function StaffDashboard({
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Use service role for queries (bypass RLS)
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
   // Find staff member
-  let staffMember = null;
+  let staffMember: any = null;
   if (user) {
-    const { data: byUserId } = await supabase
+    const { data: byUserId } = await admin
       .from('staff_members')
       .select('id, name, role, session_types')
       .eq('user_id', user.id)
@@ -27,7 +41,7 @@ export default async function StaffDashboard({
     if (byUserId) {
       staffMember = byUserId;
     } else if (user.email) {
-      const { data: byEmail } = await supabase
+      const { data: byEmail } = await admin
         .from('staff_members')
         .select('id, name, role, session_types')
         .eq('email', user.email)
@@ -37,125 +51,233 @@ export default async function StaffDashboard({
     }
   }
 
-  // Get upcoming bookings for this staff member's session types
-  const now = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
   const sessionTypes = staffMember?.session_types || [];
+  const isPractitioner = staffMember?.role === 'practitioner';
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Fetch upcoming confirmed bookings with live session info
   let upcomingBookings: any[] = [];
+  let todaySessions: any[] = [];
   let sessionsThisWeek = 0;
-  let nextSessionDate: string | null = null;
 
   if (staffMember && sessionTypes.length > 0) {
-    const { data: bookings } = await supabase
+    // All upcoming bookings (sorted by slot date)
+    const { data: bookings } = await admin
       .from('bookings')
-      .select('id, session_type, status, slot:booking_slots(slot_date, start_time, end_time), user:profiles!bookings_user_id_fkey(email, display_name)')
-      .in('session_type', sessionTypes)
-      .in('status', ['pending_confirmation', 'confirmed'])
-      .order('assigned_at', { ascending: true })
-      .limit(10);
+      .select(`
+        id, session_type, status, topics, live_session_id,
+        slot:booking_slots!inner(slot_date, start_time, end_time),
+        client:profiles!bookings_user_id_fkey(email, display_name)
+      `)
+      .in('session_type', isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna'] : sessionTypes)
+      .in('status', ['confirmed', 'pending_confirmation'])
+      .gte('booking_slots.slot_date', todayStr)
+      .order('booking_slots(slot_date)', { ascending: true })
+      .limit(20);
 
-    if (bookings) {
-      upcomingBookings = bookings;
-    }
+    upcomingBookings = (bookings || []).sort((a: any, b: any) => {
+      const sa = a.slot; const sb = b.slot;
+      const da = (sa?.slot_date || '') + 'T' + (sa?.start_time || '');
+      const db = (sb?.slot_date || '') + 'T' + (sb?.start_time || '');
+      return da.localeCompare(db);
+    });
 
-    // Count sessions this week
-    const weekEnd = new Date();
-    weekEnd.setDate(weekEnd.getDate() + (7 - weekEnd.getDay()));
-    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    // Today's sessions
+    todaySessions = upcomingBookings.filter((b: any) => {
+      const slot = Array.isArray(b.slot) ? b.slot[0] : b.slot;
+      return slot?.slot_date === todayStr;
+    });
 
-    const { count } = await supabase
-      .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .in('session_type', sessionTypes)
-      .eq('status', 'confirmed');
+    // Count this week
+    const weekEnd = new Date(now);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    sessionsThisWeek = upcomingBookings.filter((b: any) => {
+      const slot = Array.isArray(b.slot) ? b.slot[0] : b.slot;
+      return slot?.slot_date && slot.slot_date <= weekEnd.toISOString().split('T')[0];
+    }).length;
+  }
 
-    sessionsThisWeek = count || 0;
-
-    // Next session
-    const { data: nextSlot } = await supabase
-      .from('booking_slots')
-      .select('slot_date, start_time')
-      .in('session_type', sessionTypes)
-      .eq('status', 'booked')
-      .gte('slot_date', now)
-      .order('slot_date')
-      .order('start_time')
-      .limit(1)
-      .single();
-
-    if (nextSlot) {
-      nextSessionDate = `${nextSlot.slot_date} ${nextSlot.start_time}`;
-    }
+  function getSlot(booking: any) {
+    return Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
+  }
+  function getClient(booking: any) {
+    return Array.isArray(booking.client) ? booking.client[0] : booking.client;
   }
 
   return (
     <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-serif font-bold text-htg-fg">
+          {staffMember ? `Witaj, ${staffMember.name}` : 'Panel prowadzącego'}
+        </h1>
+        <p className="text-htg-fg-muted text-sm mt-1">
+          {staffMember?.role === 'practitioner' ? 'Prowadząca' : 'Asystentka'} · {todayStr}
+        </p>
+      </div>
+
       {/* Quick stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
           <div className="flex items-center gap-3 mb-2">
-            <Users className="w-5 h-5 text-htg-sage" />
-            <span className="text-sm text-htg-fg-muted">{t('stats_sessions_week')}</span>
+            <Calendar className="w-5 h-5 text-htg-sage" />
+            <span className="text-sm text-htg-fg-muted">Dziś</span>
+          </div>
+          <p className="text-2xl font-serif font-bold text-htg-fg">{todaySessions.length}</p>
+          <p className="text-xs text-htg-fg-muted">sesji na dziś</p>
+        </div>
+
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
+          <div className="flex items-center gap-3 mb-2">
+            <Users className="w-5 h-5 text-htg-indigo" />
+            <span className="text-sm text-htg-fg-muted">Ten tydzień</span>
           </div>
           <p className="text-2xl font-serif font-bold text-htg-fg">{sessionsThisWeek}</p>
+          <p className="text-xs text-htg-fg-muted">zaplanowanych sesji</p>
         </div>
 
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
           <div className="flex items-center gap-3 mb-2">
-            <Calendar className="w-5 h-5 text-htg-indigo" />
-            <span className="text-sm text-htg-fg-muted">{t('stats_next_session')}</span>
+            <Clock className="w-5 h-5 text-htg-warm" />
+            <span className="text-sm text-htg-fg-muted">Łącznie</span>
           </div>
-          <p className="text-lg font-medium text-htg-fg">
-            {nextSessionDate || t('no_upcoming')}
-          </p>
-        </div>
-
-        <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <Clock className="w-5 h-5 text-htg-mauve" />
-            <span className="text-sm text-htg-fg-muted">{t('stats_session_types')}</span>
-          </div>
-          <p className="text-lg font-medium text-htg-fg">{sessionTypes.length}</p>
+          <p className="text-2xl font-serif font-bold text-htg-fg">{upcomingBookings.length}</p>
+          <p className="text-xs text-htg-fg-muted">nadchodzących sesji</p>
         </div>
       </div>
 
-      {/* Upcoming bookings */}
+      {/* TODAY'S SESSIONS — prominent */}
+      {todaySessions.length > 0 && (
+        <div className="bg-htg-sage/10 border-2 border-htg-sage/30 rounded-2xl p-6">
+          <h2 className="text-lg font-serif font-bold text-htg-fg mb-4 flex items-center gap-2">
+            <Mic className="w-5 h-5 text-htg-sage" />
+            Dzisiejsze sesje
+          </h2>
+          <div className="space-y-3">
+            {todaySessions.map((booking: any) => {
+              const slot = getSlot(booking);
+              const client = getClient(booking);
+              const sessionStart = slot ? new Date(slot.slot_date + 'T' + slot.start_time) : null;
+              const hoursUntil = sessionStart ? (sessionStart.getTime() - Date.now()) / (1000 * 60 * 60) : Infinity;
+              const canJoin = hoursUntil <= 0.5 && hoursUntil > -3;
+              const isNow = hoursUntil <= 0 && hoursUntil > -3;
+
+              return (
+                <div key={booking.id} className={`flex items-center gap-4 p-4 rounded-xl border ${
+                  isNow ? 'bg-htg-warm/10 border-htg-warm/40 animate-pulse' :
+                  canJoin ? 'bg-htg-sage/10 border-htg-sage/40' :
+                  'bg-htg-card border-htg-card-border'
+                }`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-htg-fg">
+                        {slot?.start_time?.slice(0, 5)}–{slot?.end_time?.slice(0, 5)}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
+                        {SESSION_LABELS[booking.session_type] || booking.session_type}
+                      </span>
+                      {isNow && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-warm text-white font-bold">TERAZ</span>}
+                    </div>
+                    <p className="text-sm text-htg-fg-muted">
+                      Klient: <span className="text-htg-fg font-medium">{client?.display_name || client?.email || '—'}</span>
+                    </p>
+                    {booking.topics && (
+                      <p className="text-xs text-htg-fg-muted mt-1 line-clamp-1">
+                        Zagadnienia: {booking.topics}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Join button */}
+                  {booking.live_session_id && canJoin && (
+                    <Link
+                      href={`/live/${booking.live_session_id}` as any}
+                      className="bg-htg-warm text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-htg-warm/90 transition-colors flex items-center gap-2 shrink-0"
+                    >
+                      <Mic className="w-4 h-4" />
+                      {isNow ? 'Wejdź na sesję' : 'Dołącz'}
+                    </Link>
+                  )}
+
+                  {!booking.live_session_id && canJoin && (
+                    <span className="text-xs text-htg-fg-muted bg-htg-surface px-3 py-2 rounded-lg shrink-0">
+                      Poczekalnia za chwilę...
+                    </span>
+                  )}
+
+                  {!canJoin && (
+                    <span className="text-xs text-htg-fg-muted shrink-0">
+                      za {Math.ceil(hoursUntil)}h
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* UPCOMING SESSIONS — table */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-        <h2 className="text-lg font-serif font-bold text-htg-fg mb-4">{t('upcoming_sessions')}</h2>
+        <h2 className="text-lg font-serif font-bold text-htg-fg mb-4">Nadchodzące sesje</h2>
 
         {upcomingBookings.length === 0 ? (
-          <p className="text-sm text-htg-fg-muted">{t('no_upcoming')}</p>
+          <p className="text-sm text-htg-fg-muted">Brak zaplanowanych sesji.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-htg-fg-muted border-b border-htg-card-border">
-                  <th className="pb-2 pr-4">{t('col_date')}</th>
-                  <th className="pb-2 pr-4">{t('col_time')}</th>
-                  <th className="pb-2 pr-4">{t('col_user')}</th>
-                  <th className="pb-2 pr-4">{t('col_type')}</th>
-                  <th className="pb-2">{t('col_status')}</th>
+                  <th className="pb-2 pr-4">Data</th>
+                  <th className="pb-2 pr-4">Godzina</th>
+                  <th className="pb-2 pr-4">Klient</th>
+                  <th className="pb-2 pr-4">Typ</th>
+                  <th className="pb-2 pr-4">Zagadnienia</th>
+                  <th className="pb-2">Status</th>
+                  <th className="pb-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {upcomingBookings.map(booking => {
-                  const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
-                  const bookingUser = Array.isArray(booking.user) ? booking.user[0] : booking.user;
+                {upcomingBookings.map((booking: any) => {
+                  const slot = getSlot(booking);
+                  const client = getClient(booking);
+                  const isToday = slot?.slot_date === todayStr;
+
                   return (
-                    <tr key={booking.id} className="border-b border-htg-card-border last:border-0">
-                      <td className="py-3 pr-4 text-htg-fg">{slot?.slot_date || '—'}</td>
-                      <td className="py-3 pr-4 text-htg-fg">{slot ? `${slot.start_time}–${slot.end_time}` : '—'}</td>
-                      <td className="py-3 pr-4 text-htg-fg">{bookingUser?.display_name || bookingUser?.email || '—'}</td>
-                      <td className="py-3 pr-4 text-htg-fg-muted">{booking.session_type}</td>
-                      <td className="py-3">
+                    <tr key={booking.id} className={`border-b border-htg-card-border last:border-0 ${isToday ? 'bg-htg-sage/5' : ''}`}>
+                      <td className="py-3 pr-4 text-htg-fg font-medium">
+                        {isToday && <span className="text-htg-sage text-xs font-bold mr-1">DZIŚ</span>}
+                        {slot?.slot_date || '—'}
+                      </td>
+                      <td className="py-3 pr-4 text-htg-fg">{slot ? `${slot.start_time?.slice(0,5)}–${slot.end_time?.slice(0,5)}` : '—'}</td>
+                      <td className="py-3 pr-4 text-htg-fg">{client?.display_name || client?.email || '—'}</td>
+                      <td className="py-3 pr-4">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
+                          {SESSION_LABELS[booking.session_type] || booking.session_type}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-htg-fg-muted text-xs max-w-[200px] truncate">
+                        {booking.topics || '—'}
+                      </td>
+                      <td className="py-3 pr-4">
                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
                           booking.status === 'confirmed'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                         }`}>
-                          {booking.status === 'confirmed' ? t('status_confirmed') : t('status_pending')}
+                          {booking.status === 'confirmed' ? 'Potwierdzona' : 'Oczekuje'}
                         </span>
+                      </td>
+                      <td className="py-3">
+                        {booking.live_session_id && (
+                          <Link
+                            href={`/live/${booking.live_session_id}` as any}
+                            className="text-htg-sage hover:text-htg-sage-dark text-xs font-medium flex items-center gap-1"
+                          >
+                            Wejdź <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   );

@@ -547,12 +547,19 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
                 {Array.from({ length: installmentsCount }, (_, i) => (
                   <div key={i} className="flex justify-between">
                     <span>Rata {i + 1} {i === 0 ? '(teraz)' : `(za ${i * 30} dni)`}</span>
-                    <span className={i === 0 ? 'font-bold text-htg-fg' : ''}>{installmentAmount} PLN</span>
+                    {i === 0 && addPreSession && preSessionAmount > 0 ? (
+                      <span className="font-bold text-htg-fg">
+                        {installmentAmount} + {preSessionAmount} PLN
+                        <span className="text-htg-fg-muted font-normal text-xs ml-1">= {installmentAmount + preSessionAmount} PLN</span>
+                      </span>
+                    ) : (
+                      <span className={i === 0 ? 'font-bold text-htg-fg' : ''}>{installmentAmount} PLN</span>
+                    )}
                   </div>
                 ))}
                 <div className="flex justify-between pt-2 border-t border-htg-card-border font-medium text-htg-fg">
                   <span>Łącznie</span>
-                  <span>{installmentsCount * installmentAmount} PLN</span>
+                  <span>{installmentsCount * installmentAmount + (addPreSession ? preSessionAmount : 0)} PLN</span>
                 </div>
               </div>
             )}

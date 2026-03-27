@@ -2,8 +2,9 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import {
-  LayoutDashboard, ListMusic, Headphones, Archive, PlusCircle,
+  LayoutDashboard, ListMusic, Headphones, Archive, PlusCircle, Video,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -21,14 +22,15 @@ export default async function PublikacjaLayout({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Publikacja' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
 
   if (!user) {
     redirect(`/${locale}/login`);
   }
 
-  // Check role
+  // Check role via service role (bypasses RLS on profiles)
+  const supabase = createSupabaseServiceRole();
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
@@ -53,6 +55,7 @@ export default async function PublikacjaLayout({
     { href: '/publikacja/sesje', label: t('sessions_to_edit'), icon: ListMusic },
     { href: '/publikacja/moje', label: t('my_sessions'), icon: Headphones },
     { href: '/publikacja/archiwum', label: t('archive'), icon: Archive },
+    { href: '/publikacja/nagrania', label: 'Nagrania LiveKit', icon: Video },
     { href: '/publikacja/dodaj', label: t('add_session'), icon: PlusCircle },
   ] as const;
 

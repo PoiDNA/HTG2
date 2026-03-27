@@ -1,5 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { redirect, notFound } from 'next/navigation';
 import { DawEditor } from '@/components/daw/DawEditor';
 import type { TrackInfo } from '@/lib/publication/types';
@@ -16,15 +17,14 @@ export default async function EditorPage({
   const t = await getTranslations({ locale, namespace: 'Daw' });
   const tPub = await getTranslations({ locale, namespace: 'Publikacja' });
 
-  const supabase = await createSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
 
   if (!user) {
     redirect(`/${locale}/login`);
   }
 
+  const supabase = createSupabaseServiceRole();
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')

@@ -1,5 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { redirect, notFound } from 'next/navigation';
 import { PublicationStatusBadge } from '@/components/publikacja/PublicationStatusBadge';
 import { SessionDetailClient } from './SessionDetailClient';
@@ -16,13 +17,14 @@ export default async function SessionDetailPage({
   const tDaw = await getTranslations({ locale, namespace: 'Daw' });
   const tAe = await getTranslations({ locale, namespace: 'AutoEdit' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
 
   if (!user) {
     redirect(`/${locale}/login`);
   }
 
+  const supabase = createSupabaseServiceRole();
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
@@ -64,7 +66,7 @@ export default async function SessionDetailPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-serif font-bold text-htg-fg">
-            {session.id.slice(0, 8)}
+            {session.title || session.id.slice(0, 8)}
           </h2>
           <div className="flex items-center gap-3 mt-2">
             <PublicationStatusBadge

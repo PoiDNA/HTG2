@@ -1,4 +1,4 @@
-export type SessionType = 'natalia_solo' | 'natalia_agata' | 'natalia_justyna';
+export type SessionType = 'natalia_solo' | 'natalia_agata' | 'natalia_justyna' | 'pre_session';
 export type StaffRole = 'practitioner' | 'assistant';
 export type SlotStatus = 'available' | 'held' | 'booked' | 'completed' | 'cancelled';
 export type BookingStatus = 'pending_confirmation' | 'confirmed' | 'completed' | 'cancelled' | 'transferred';

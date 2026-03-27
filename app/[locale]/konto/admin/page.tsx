@@ -1,7 +1,13 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { Calendar, Users, Clock } from 'lucide-react';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { isAdminEmail } from '@/lib/roles';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { startImpersonation, startUserImpersonation } from '@/lib/admin/impersonate';
+import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
+import { Calendar, Users, Clock, ExternalLink, Eye } from 'lucide-react';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
@@ -17,7 +23,16 @@ export default async function AdminDashboard({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Admin' });
-  const supabase = await createSupabaseServer();
+
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+
+  const supabase = createSupabaseServiceRole();
+
+  // Current staff impersonation
+  const cookieStore = await cookies();
+  const currentViewAs = cookieStore.get(IMPERSONATE_COOKIE)?.value ?? null;
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -87,48 +102,80 @@ export default async function AdminDashboard({
 
       {/* Role panels — View As */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-        <h2 className="text-xl font-serif font-bold text-htg-fg mb-4">Podgląd paneli</h2>
-        <p className="text-sm text-htg-fg-muted mb-4">Wejdź w widok panelu danej roli:</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* User panel */}
-          <Link
-            href="/konto"
-            className="flex flex-col gap-2 bg-htg-surface border border-htg-card-border rounded-xl p-5 hover:border-htg-sage transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-htg-indigo" />
-              <span className="font-medium text-htg-fg">Panel użytkownika</span>
-            </div>
-            <p className="text-xs text-htg-fg-muted">Moje sesje, subskrypcje, zamówienia, profil, rezerwacje sesji indywidualnych</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-serif font-bold text-htg-fg">Podgląd paneli</h2>
+            <p className="text-sm text-htg-fg-muted">Otwórz panel jako dowolny pracownik lub użytkownik</p>
+          </div>
+          <Link href={`/${locale}/konto/admin/podglad`} className="text-xs text-htg-sage hover:underline">
+            Zaawansowany podgląd →
           </Link>
+        </div>
 
-          {/* Natalia panel */}
-          <Link
-            href="/prowadzacy"
-            className="flex flex-col gap-2 bg-htg-surface border border-htg-card-border rounded-xl p-5 hover:border-htg-warm transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-htg-warm" />
-              <span className="font-medium text-htg-fg">Panel Natalii</span>
-            </div>
-            <p className="text-xs text-htg-fg-muted">Grafik, nadchodzące sesje, klienci — widok prowadzącej</p>
-          </Link>
+        {currentViewAs && (
+          <div className="flex items-center gap-2 px-3 py-2 mb-4 bg-htg-warm/10 border border-htg-warm/30 rounded-lg text-xs text-htg-warm">
+            <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>Aktywny podgląd pracownika. <a href={`/${locale}/prowadzacy`} className="underline font-medium">Otwórz panel →</a></span>
+          </div>
+        )}
 
-          {/* Assistants */}
-          <div className="flex flex-col gap-2 bg-htg-surface border border-htg-card-border rounded-xl p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {/* Staff impersonation buttons */}
+          {staffMembers.map(s => {
+            const isActive = s.id === currentViewAs;
+            const isPractitioner = s.role === 'practitioner';
+            return (
+              <form key={s.id} action={startImpersonation}>
+                <input type="hidden" name="staffId" value={s.id} />
+                <input type="hidden" name="locale" value={locale} />
+                <button
+                  type="submit"
+                  className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-colors
+                    ${isActive
+                      ? 'bg-htg-warm/10 border-htg-warm/50'
+                      : isPractitioner
+                        ? 'bg-htg-surface border-htg-card-border hover:border-htg-indigo/50'
+                        : 'bg-htg-surface border-htg-card-border hover:border-htg-sage/50'
+                    }`}
+                >
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0
+                    ${isPractitioner ? 'bg-htg-indigo' : 'bg-htg-sage'}`}>
+                    {s.name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-htg-fg text-sm">{s.name}</p>
+                    <p className="text-xs text-htg-fg-muted">{isPractitioner ? 'Prowadząca' : 'Asystentka'}</p>
+                  </div>
+                  <ExternalLink className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
+                </button>
+              </form>
+            );
+          })}
+
+          {/* User panel — search form */}
+          <div className="bg-htg-surface border border-htg-card-border rounded-xl p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-htg-sage" />
-              <span className="font-medium text-htg-fg">Asystentki</span>
+              <Users className="w-4 h-4 text-htg-indigo" />
+              <span className="font-medium text-htg-fg text-sm">Panel użytkownika</span>
             </div>
-            <div className="space-y-1 mt-1">
-              {staffMembers.filter(s => s.role === 'assistant').map(s => (
-                <div key={s.slug} className="flex items-center justify-between text-xs">
-                  <span className="text-htg-fg">{s.name}</span>
-                  <span className="text-htg-fg-muted">{s.email}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-htg-fg-muted mt-1">Grafik i sesje — każda widzi tylko swoje</p>
+            <p className="text-xs text-htg-fg-muted">Wejdź w widok konta dowolnego klienta</p>
+            <form action={startUserImpersonation} className="flex flex-col gap-2">
+              <input type="hidden" name="locale" value={locale} />
+              <input
+                name="email"
+                type="email"
+                placeholder="email użytkownika…"
+                required
+                className="w-full px-3 py-1.5 bg-htg-card border border-htg-card-border rounded-lg text-xs text-htg-fg placeholder:text-htg-fg-muted focus:outline-none focus:border-htg-indigo"
+              />
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-htg-indigo/20 hover:bg-htg-indigo/40 text-htg-cream/80 rounded-lg text-xs font-medium transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Otwórz jako użytkownik
+              </button>
+            </form>
           </div>
         </div>
       </div>

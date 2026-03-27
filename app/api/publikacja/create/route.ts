@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
   const { data: publication, error } = await supabase
     .from('session_publications')
     .insert({
+      title: title || null,
       status: 'raw',
       monthly_set_id: monthly_set_id || null,
       editor_notes: description || null,

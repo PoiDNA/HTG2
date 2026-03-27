@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { signBunnyUrl } from '@/lib/bunny';
 
 export async function POST(request: NextRequest) {
@@ -15,6 +16,21 @@ export async function POST(request: NextRequest) {
 
     if (!sessionId || !deviceId) {
       return NextResponse.json({ error: 'sessionId and deviceId required' }, { status: 400 });
+    }
+
+    // Check if user account is blocked
+    const db = createSupabaseServiceRole();
+    const { data: profile } = await db
+      .from('profiles')
+      .select('is_blocked, blocked_reason')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.is_blocked) {
+      return NextResponse.json({
+        allowed: false,
+        message: 'Dostęp do materiałów został zawieszony. Skontaktuj się z supportem.',
+      });
     }
 
     // Check entitlement

@@ -1,5 +1,5 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { SessionStats } from '@/components/publikacja/SessionStats';
 import { PublicationStatusBadge } from '@/components/publikacja/PublicationStatusBadge';
 import { Link } from '@/i18n-config';
@@ -14,7 +14,7 @@ export default async function PublikacjaDashboard({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Publikacja' });
 
-  const supabase = await createSupabaseServer();
+  const supabase = createSupabaseServiceRole();
 
   // Fetch stats
   const { data: allSessions } = await supabase

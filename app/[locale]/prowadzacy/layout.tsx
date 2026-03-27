@@ -40,13 +40,16 @@ export default async function StaffLayout({
       ? t('role_assistant')
       : t('role_admin');
 
+  const isAssistant = staffMember?.role === 'assistant';
+
   const navItems = [
     { href: '/prowadzacy', label: t('dashboard'), icon: LayoutDashboard },
     { href: '/prowadzacy/sesje', label: t('sessions'), icon: Presentation },
     { href: '/prowadzacy/grafik', label: t('schedule'), icon: Calendar },
     { href: '/prowadzacy/klienci', label: t('clients'), icon: Users },
+    ...(isAssistant ? [{ href: '/prowadzacy/spotkania', label: 'Spotkania wstępne', icon: Video }] : []),
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Video },
-  ] as const;
+  ];
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">

@@ -1,5 +1,5 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { SessionTable } from '@/components/publikacja/SessionTable';
 import { MonthFilter } from '@/components/publikacja/MonthFilter';
 import type { SessionPublication } from '@/lib/publication/types';
@@ -16,7 +16,7 @@ export default async function ArchiwumPage({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Publikacja' });
 
-  const supabase = await createSupabaseServer();
+  const supabase = createSupabaseServiceRole();
 
   let query = supabase
     .from('session_publications')

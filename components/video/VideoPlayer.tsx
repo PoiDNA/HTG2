@@ -119,13 +119,33 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
   const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioCleanupRef = useRef<(() => void) | null>(null);
 
+  const playEventIdRef = useRef<string | null>(null);
+  const playStartRef = useRef<number>(0);
+
   const [status, setStatus] = useState<'loading' | 'playing' | 'blocked' | 'error'>('loading');
   const [blockMessage, setBlockMessage] = useState('');
 
   const deviceId = typeof window !== 'undefined' ? getDeviceId() : '';
 
+  const stopPlayEvent = useCallback(async () => {
+    const eventId = playEventIdRef.current;
+    if (!eventId) return;
+    const duration = playStartRef.current
+      ? Math.round((Date.now() - playStartRef.current) / 1000)
+      : undefined;
+    playEventIdRef.current = null;
+    try {
+      await fetch('/api/video/play-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stop', sessionId, eventId, durationSeconds: duration }),
+      });
+    } catch {}
+  }, [sessionId]);
+
   const stopStream = useCallback(async () => {
     if (!deviceId) return;
+    await stopPlayEvent();
     try {
       await fetch('/api/video/stop', {
         method: 'POST',
@@ -133,7 +153,7 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
         body: JSON.stringify({ deviceId }),
       });
     } catch {}
-  }, [deviceId]);
+  }, [deviceId, stopPlayEvent]);
 
   const loadVideo = useCallback(async () => {
     setStatus('loading');
@@ -195,6 +215,17 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
       }
 
       setStatus('playing');
+
+      // Log play event for audit
+      playStartRef.current = Date.now();
+      fetch('/api/video/play-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start', sessionId, sessionType: 'vod', deviceId }),
+      })
+        .then((r) => r.json())
+        .then((d) => { if (d.eventId) playEventIdRef.current = d.eventId; })
+        .catch(() => {});
 
       // Start heartbeat every 30s
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);

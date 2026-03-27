@@ -1,5 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { SessionTable } from '@/components/publikacja/SessionTable';
 import { MonthFilter } from '@/components/publikacja/MonthFilter';
 import type { SessionPublication, PublicationStatus } from '@/lib/publication/types';
@@ -16,10 +17,10 @@ export default async function SesjeListPage({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Publikacja' });
 
-  const supabase = await createSupabaseServer();
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
 
-  // Check user role for visibility
-  const { data: { user } } = await supabase.auth.getUser();
+  const supabase = createSupabaseServiceRole();
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')

@@ -32,9 +32,18 @@ export const SESSION_CONFIG: Record<SessionType, {
     requiredStaff: ['natalia', 'justyna'],
     color: 'bg-htg-warm',
   },
+  pre_session: {
+    label: 'Spotkanie wstępne (15 min)',
+    labelShort: 'Spotkanie wstępne',
+    durationMinutes: 15,
+    pricePln: 0,
+    requiredStaff: [],  // only the specific assistant — set at slot level
+    color: 'bg-purple-600',
+  },
 };
 
 export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna'];
+export const PRE_SESSION_DURATION = 15;
 
 // Days of week (0=Sunday) — Polish labels
 export const DAY_LABELS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];

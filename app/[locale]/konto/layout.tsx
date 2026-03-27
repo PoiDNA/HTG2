@@ -1,11 +1,15 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
+import { cookies } from 'next/headers';
+import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
+import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
-  ListMusic, Archive, PlusCircle, Eye,
+  ListMusic, Archive, PlusCircle, Eye, ShieldAlert,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -28,6 +32,7 @@ export default async function AccountLayout({
   let isAdmin = false;
   let isStaff = false;
   let isPublikacja = false;
+  let viewAsUserEmail: string | null = null;
   try {
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
@@ -44,6 +49,24 @@ export default async function AccountLayout({
       if (profile?.role === 'admin') isAdmin = true;
       if (profile?.role === 'moderator' || profile?.role === 'admin') isStaff = true;
       if (profile?.role === 'publikacja') isPublikacja = true;
+    }
+    // Check user impersonation cookie (admin only)
+    if (isAdmin) {
+      const cookieStore = await cookies();
+      const viewAsUserId = cookieStore.get(IMPERSONATE_USER_COOKIE)?.value;
+      if (viewAsUserId) {
+        const db = createSupabaseServiceRole();
+        const { data: viewAsProfile } = await db
+          .from('profiles')
+          .select('email, display_name')
+          .eq('id', viewAsUserId)
+          .single();
+        if (viewAsProfile) {
+          viewAsUserEmail = viewAsProfile.display_name
+            ? `${viewAsProfile.display_name} (${viewAsProfile.email})`
+            : (viewAsProfile.email ?? viewAsUserId);
+        }
+      }
     }
   } catch {
     // fallback — just show user items
@@ -62,6 +85,7 @@ export default async function AccountLayout({
     { href: '/konto/admin/sesje', label: tPanel('admin_sessions'), icon: BookOpen },
     { href: '/konto/admin/zestawy', label: tPanel('admin_sets'), icon: Package },
     { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
+    { href: '/konto/admin/naruszenia', label: 'Naruszenia', icon: ShieldAlert },
   ] as const;
 
   // STAFF section (moderator/prowadzacy — NOT admin)
@@ -115,6 +139,18 @@ export default async function AccountLayout({
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
+      {viewAsUserEmail && (
+        <div className="flex items-center gap-3 px-4 py-3 mb-6 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm text-amber-600 dark:text-amber-400">
+          <Eye className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1">Przeglądasz konto jako: <strong>{viewAsUserEmail}</strong></span>
+          <form action={stopUserImpersonation}>
+            <input type="hidden" name="locale" value={locale} />
+            <button type="submit" className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
+              Wróć do admina
+            </button>
+          </form>
+        </div>
+      )}
       <h1 className="text-3xl font-serif font-bold text-htg-fg mb-8">{t('title')}</h1>
 
       <div className="flex flex-col md:flex-row gap-8">

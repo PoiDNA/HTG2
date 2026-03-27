@@ -24,6 +24,7 @@ import OutroScreen from '@/components/live/OutroScreen';
 import ZoomBackupButton from '@/components/live/ZoomBackupButton';
 import ZoomBackupOverlay from '@/components/live/ZoomBackupOverlay';
 import SessionAnimation from '@/components/live/SessionAnimation';
+import { SessionTimer } from '@/components/live/SessionTimer';
 
 interface LiveRoomProps {
   session: LiveSession;
@@ -50,6 +51,8 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const [transitionAutoFade, setTransitionAutoFade] = useState(false);
   const [volumeNodes] = useState<Map<string, GainNode>>(new Map());
   const [zoomBackupUrl, setZoomBackupUrl] = useState<string | null>(null);
+  // Timer: tracks when current phase started (updated locally on phase change)
+  const [phaseChangedAt, setPhaseChangedAt] = useState(initialSession.phase_changed_at);
 
   const sessionId = initialSession.id;
 
@@ -123,6 +126,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
 
   const handlePhaseChanged = useCallback((newPhase: Phase) => {
     setPhase(newPhase);
+    setPhaseChangedAt(new Date().toISOString());
     if (newPhase === 'sesja' || newPhase === 'podsumowanie') {
       setTransitionAutoFade(true);
       setTimeout(() => setTransitionAutoFade(false), 100);
@@ -187,6 +191,15 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
               bg-black/40 backdrop-blur-sm text-xs text-htg-cream/70 pointer-events-none">
               {isConnecting ? 'Łączenie...' : connectionState}
             </div>
+          )}
+
+          {/* Session timer — staff only */}
+          {isStaff && (
+            <SessionTimer
+              startedAt={initialSession.started_at}
+              phaseChangedAt={phaseChangedAt}
+              phase={phase}
+            />
           )}
         </div>
       )}

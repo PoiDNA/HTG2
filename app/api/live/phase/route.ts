@@ -68,9 +68,18 @@ export async function POST(request: NextRequest) {
       phase_changed_at: new Date().toISOString(),
     };
 
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    // ── Phase timer helpers ─────────────────────────────────────────────────
+    function secsBetween(from: string | null, to: Date): number | null {
+      if (!from) return null;
+      return Math.max(0, Math.floor((to.getTime() - new Date(from).getTime()) / 1000));
+    }
+
     // Phase-specific actions
     try {
-      // Stop recording from previous phase
+      // Stop recording from previous phase + compute phase durations
       if (currentPhase === 'wstep' && session.egress_wstep_id) {
         await stopEgress(session.egress_wstep_id);
       }
@@ -90,9 +99,26 @@ export async function POST(request: NextRequest) {
         await stopEgress(session.egress_podsumowanie_id);
       }
 
-      // Start recording for new phase
+      // ── Save phase end timestamps / durations ─────────────────────────────
+      if (newPhase === 'przejscie_1') {
+        // Wstep ended — compute wstep duration
+        const dur = secsBetween(session.started_at, now);
+        if (dur !== null) update.wstep_duration_seconds = dur;
+      }
+      if (newPhase === 'przejscie_2') {
+        // Sesja ended — compute sesja duration
+        const dur = secsBetween(session.sesja_started_at, now);
+        if (dur !== null) update.sesja_duration_seconds = dur;
+      }
+      if (newPhase === 'outro') {
+        // Podsumowanie ended — compute podsumowanie duration
+        const dur = secsBetween(session.podsumowanie_started_at, now);
+        if (dur !== null) update.podsumowanie_duration_seconds = dur;
+      }
+
+      // Start recording for new phase + set phase start timestamps
       if (newPhase === 'wstep') {
-        update.started_at = new Date().toISOString();
+        update.started_at = nowIso;
         try {
           const egress = await startRoomCompositeEgress(session.room_name);
           update.egress_wstep_id = egress.egressId;
@@ -102,6 +128,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (newPhase === 'sesja') {
+        update.sesja_started_at = nowIso;
         try {
           // Start composite audio for the room (mixed, for client playback)
           const compositeEgress = await startRoomCompositeEgress(session.room_name, { audioOnly: true });
@@ -135,6 +162,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (newPhase === 'podsumowanie') {
+        update.podsumowanie_started_at = nowIso;
         try {
           const egress = await startRoomCompositeEgress(session.room_name);
           update.egress_podsumowanie_id = egress.egressId;
@@ -144,7 +172,9 @@ export async function POST(request: NextRequest) {
       }
 
       if (newPhase === 'ended') {
-        update.ended_at = new Date().toISOString();
+        update.ended_at = nowIso;
+        const totalDur = secsBetween(session.started_at, now);
+        if (totalDur !== null) update.total_duration_seconds = totalDur;
 
         // Auto-settle: trigger transfer to assistant after session ends
         try {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -115,6 +116,32 @@ export async function POST(request: NextRequest) {
     // Enable automatic invoicing for one-time payments
     if (mode === 'payment') {
       sessionParams.invoice_creation = { enabled: true };
+    }
+
+    // ── Stripe Connect: pre-session transfer to assistant ─────────────────
+    const preSessionStaffId = metadata.pre_session_staff_id;
+    if (preSessionStaffId) {
+      const db = createSupabaseServiceRole();
+      const { data: psData } = await db
+        .from('pre_session_settings')
+        .select('price_pln, staff_members!inner(stripe_connect_account_id)')
+        .eq('staff_member_id', preSessionStaffId)
+        .maybeSingle();
+
+      const connectAccountId = (psData?.staff_members as any)?.stripe_connect_account_id;
+      const pricePln = psData?.price_pln || 0; // grosz
+
+      if (connectAccountId && pricePln > 0) {
+        // 60% to assistant, 40% to platform
+        const transferAmount = Math.floor(pricePln * 0.60);
+        sessionParams.payment_intent_data = {
+          ...(sessionParams.payment_intent_data || {}),
+          transfer_data: {
+            destination: connectAccountId,
+            amount: transferAmount,
+          },
+        };
+      }
     }
 
     const session = await getStripe().checkout.sessions.create(sessionParams);

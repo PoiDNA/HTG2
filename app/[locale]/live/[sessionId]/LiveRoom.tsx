@@ -235,11 +235,13 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
 
           return (
             <div className="relative w-full h-screen bg-htg-indigo flex flex-col">
-              {/* Phase label */}
-              <div className="absolute top-4 left-4 z-20 px-3 py-1
-                rounded-full bg-black/30 backdrop-blur-sm text-sm text-htg-cream/80">
-                {phaseConfig.label}
-              </div>
+              {/* Phase label — hidden during poczekalnia */}
+              {phase !== 'poczekalnia' && (
+                <div className="absolute top-4 left-4 z-20 px-3 py-1
+                  rounded-full bg-black/30 backdrop-blur-sm text-sm text-htg-cream/80">
+                  {phaseConfig.label}
+                </div>
+              )}
 
               {/* Main content area */}
               <div className="flex-1 relative overflow-hidden">

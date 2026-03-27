@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       token,
-      url: process.env.LIVEKIT_URL ?? '',
+      url: (process.env.LIVEKIT_URL ?? '').trim(),
       roomName: session.room_name,
       isStaff: staff,
     });

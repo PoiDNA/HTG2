@@ -8,6 +8,7 @@ import BookingCalendar from '@/components/booking/BookingCalendar';
 import BookingCard from '@/components/booking/BookingCard';
 import AccelerationRequest from '@/components/booking/AccelerationRequest';
 import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
+import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 
 // Session type → assistant slug mapping
 const SESSION_TYPE_TO_SLUG: Record<string, string> = {
@@ -178,6 +179,11 @@ export default async function IndividualSessionsPage({
                       locale={locale}
                     />
                   )}
+                  <CustomPaymentCard
+                    sessionType={booking.session_type}
+                    slotId={booking.slot?.id}
+                    locale={locale}
+                  />
                 </div>
               );
             })}

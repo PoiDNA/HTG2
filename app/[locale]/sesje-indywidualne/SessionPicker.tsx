@@ -74,8 +74,7 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
   const [loading, setLoading] = useState(false);
   const [wantAcceleration, setWantAcceleration] = useState(false);
   const [addPreSession, setAddPreSession] = useState(false);
-  const [paymentMode, setPaymentMode] = useState<'full' | 'installments' | 'custom'>('full');
-  const [customAmount, setCustomAmount] = useState('');
+  const [paymentMode, setPaymentMode] = useState<'full' | 'installments'>('full');
   const router = useRouter();
 
   const selectedSession = sessions.find((s) => s.slug === selected);
@@ -183,13 +182,7 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
   const isWithAssistant = selectedSession?.sessionType === 'natalia_agata' || selectedSession?.sessionType === 'natalia_justyna';
   const installmentsCount = isWithAssistant ? 4 : 3;
   const installmentAmount = 400; // always 400 PLN per installment
-  const customAmountNum = parseInt(customAmount) || 0;
-
-  const payAmount = (paymentMode === 'full'
-    ? totalAmount
-    : paymentMode === 'installments'
-      ? installmentAmount
-      : customAmountNum) + preSessionAmount;
+  const payAmount = (paymentMode === 'full' ? totalAmount : installmentAmount) + preSessionAmount;
 
   async function handleCheckout() {
     if (!selectedSession || payAmount <= 0) return;
@@ -282,8 +275,8 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
       {selected && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
-          {/* Slot selector — hidden in custom/dopłata mode */}
-          <div className={paymentMode === 'custom' ? 'hidden' : ''}>
+          {/* Slot selector */}
+          <div>
             <span className="flex items-center gap-2 text-sm font-medium text-htg-fg mb-3">
               <Calendar className="w-4 h-4 text-htg-sage" />
               Wybierz termin
@@ -455,54 +448,49 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
               </>
             )}
 
-            {/* Acceleration + pre-session — hidden in custom/dopłata mode */}
-            {paymentMode !== 'custom' && (
-              <>
-                {/* Acceleration checkbox */}
-                <label className={`flex items-center gap-3 text-sm cursor-pointer mt-3 p-4 rounded-xl border-2 transition-all ${
-                  wantAcceleration
-                    ? 'border-htg-warm/60 bg-htg-warm/10'
-                    : 'border-htg-card-border bg-htg-surface hover:border-htg-warm/30'
-                }`}>
-                  <input
-                    type="checkbox"
-                    checked={wantAcceleration}
-                    onChange={e => setWantAcceleration(e.target.checked)}
-                    className="rounded border-htg-card-border accent-htg-warm w-4 h-4 shrink-0"
-                  />
-                  <Zap className={`w-4 h-4 shrink-0 ${wantAcceleration ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
-                  <div className="flex-1">
-                    <p className="font-medium text-htg-fg">Chcę przyspieszenie</p>
-                    <p className="text-xs text-htg-fg-muted">Powiadom gdy zwolni się wcześniejszy termin</p>
-                  </div>
-                </label>
+            {/* Acceleration checkbox */}
+            <label className={`flex items-center gap-3 text-sm cursor-pointer mt-3 p-4 rounded-xl border-2 transition-all ${
+              wantAcceleration
+                ? 'border-htg-warm/60 bg-htg-warm/10'
+                : 'border-htg-card-border bg-htg-surface hover:border-htg-warm/30'
+            }`}>
+              <input
+                type="checkbox"
+                checked={wantAcceleration}
+                onChange={e => setWantAcceleration(e.target.checked)}
+                className="rounded border-htg-card-border accent-htg-warm w-4 h-4 shrink-0"
+              />
+              <Zap className={`w-4 h-4 shrink-0 ${wantAcceleration ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
+              <div className="flex-1">
+                <p className="font-medium text-htg-fg">Chcę przyspieszenie</p>
+                <p className="text-xs text-htg-fg-muted">Powiadom gdy zwolni się wcześniejszy termin</p>
+              </div>
+            </label>
 
-                {/* Pre-session add-on */}
-                {activePreSessionOption && (
-                  <label className={`flex items-center gap-3 text-sm cursor-pointer mt-2 p-4 rounded-xl border-2 transition-all ${
-                    addPreSession
-                      ? 'border-purple-500/60 bg-purple-900/10'
-                      : 'border-htg-card-border bg-htg-surface hover:border-purple-400/40'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      checked={addPreSession}
-                      onChange={e => setAddPreSession(e.target.checked)}
-                      className="rounded border-htg-card-border accent-purple-500 w-4 h-4 shrink-0"
-                    />
-                    <Video className={`w-4 h-4 shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`} />
-                    <div className="flex-1">
-                      <p className="font-medium text-htg-fg">
-                        Dodaj spotkanie wstępne z {activePreSessionOption.staffNameWith}
-                      </p>
-                      <p className="text-xs text-htg-fg-muted">15 min online przed Twoją sesją — termin wybierzesz później</p>
-                    </div>
-                    <span className={`font-bold text-sm shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`}>
-                      +{activePreSessionOption.pricePln} PLN
-                    </span>
-                  </label>
-                )}
-              </>
+            {/* Pre-session add-on */}
+            {activePreSessionOption && (
+              <label className={`flex items-center gap-3 text-sm cursor-pointer mt-2 p-4 rounded-xl border-2 transition-all ${
+                addPreSession
+                  ? 'border-purple-500/60 bg-purple-900/10'
+                  : 'border-htg-card-border bg-htg-surface hover:border-purple-400/40'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={addPreSession}
+                  onChange={e => setAddPreSession(e.target.checked)}
+                  className="rounded border-htg-card-border accent-purple-500 w-4 h-4 shrink-0"
+                />
+                <Video className={`w-4 h-4 shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`} />
+                <div className="flex-1">
+                  <p className="font-medium text-htg-fg">
+                    Dodaj spotkanie wstępne z {activePreSessionOption.staffNameWith}
+                  </p>
+                  <p className="text-xs text-htg-fg-muted">15 min online przed Twoją sesją — termin wybierzesz później</p>
+                </div>
+                <span className={`font-bold text-sm shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`}>
+                  +{activePreSessionOption.pricePln} PLN
+                </span>
+              </label>
             )}
           </div>
 
@@ -539,18 +527,6 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
                 <p className="text-htg-fg-muted text-xs">pierwsza rata teraz</p>
               </button>
 
-              {/* Custom amount */}
-              <button
-                onClick={() => setPaymentMode('custom')}
-                className={`p-4 rounded-xl border-2 text-left transition-all ${
-                  paymentMode === 'custom'
-                    ? 'border-htg-sage bg-htg-sage/5'
-                    : 'border-htg-card-border hover:border-htg-sage/40'
-                }`}
-              >
-                <p className="font-medium text-htg-fg text-sm">Dopłata</p>
-                <p className="text-htg-fg-muted text-xs mt-1">Wpisz kwotę wpłaty</p>
-              </button>
             </div>
 
             {/* Installments detail */}
@@ -576,35 +552,13 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
               </div>
             )}
 
-            {/* Custom amount input */}
-            {paymentMode === 'custom' && (
-              <div className="bg-htg-surface rounded-xl p-4">
-                <label className="block">
-                  <span className="text-sm text-htg-fg-muted mb-1 block">Kwota wpłaty (PLN)</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max={totalAmount}
-                    value={customAmount}
-                    onChange={e => setCustomAmount(e.target.value)}
-                    placeholder={`min. 1 PLN, max. ${totalAmount} PLN`}
-                    className="w-full px-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg text-lg font-bold"
-                  />
-                </label>
-                {customAmountNum > 0 && customAmountNum < totalAmount && (
-                  <p className="text-xs text-htg-fg-muted mt-2">
-                    Pozostało do zapłaty: <span className="font-bold text-htg-fg">{totalAmount - customAmountNum} PLN</span>
-                  </p>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Buy button */}
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration) || payAmount <= 0}
+              disabled={loading || (!selectedSlotId && !wantAcceleration)}
               className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -619,7 +573,6 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
                 <>
                   {paymentMode === 'full' && `${labels.buy} — ${totalAmount + preSessionAmount} PLN`}
                   {paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount + preSessionAmount} PLN`}
-                  {paymentMode === 'custom' && `Wpłać — ${customAmountNum > 0 ? customAmountNum + preSessionAmount : '...'} PLN`}
                 </>
               )}
             </button>

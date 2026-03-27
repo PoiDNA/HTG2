@@ -222,7 +222,17 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
       serverUrl={livekitUrl}
       token={livekitToken}
       connect={true}
+      audio={phase !== 'poczekalnia'}
+      video={phase === 'wstep' || phase === 'podsumowanie'}
       onConnected={() => {}}
+      options={{
+        publishDefaults: {
+          videoSimulcastLayers: [],
+        },
+        videoCaptureDefaults: {
+          resolution: { width: 640, height: 480, frameRate: 24 },
+        },
+      }}
       className="w-full h-screen"
     >
       <RoomContext.Consumer>

@@ -28,11 +28,19 @@ function ensureConfig() {
 // Lazy singletons — created only when env vars are present
 // ============================================================
 
+// RoomServiceClient / EgressClient need https://, but LIVEKIT_URL is wss:// (for client SDK).
+// Convert wss:// → https:// and strip trailing whitespace/newlines.
+function getHttpHost(): string {
+  return LIVEKIT_URL.trim()
+    .replace(/^wss:\/\//, 'https://')
+    .replace(/^ws:\/\//, 'http://');
+}
+
 let _roomService: RoomServiceClient | null = null;
 function getRoomService(): RoomServiceClient {
   ensureConfig();
   if (!_roomService) {
-    _roomService = new RoomServiceClient(LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
+    _roomService = new RoomServiceClient(getHttpHost(), LIVEKIT_API_KEY.trim(), LIVEKIT_API_SECRET.trim());
   }
   return _roomService;
 }
@@ -41,7 +49,7 @@ let _egressClient: EgressClient | null = null;
 function getEgressClient(): EgressClient {
   ensureConfig();
   if (!_egressClient) {
-    _egressClient = new EgressClient(LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
+    _egressClient = new EgressClient(getHttpHost(), LIVEKIT_API_KEY.trim(), LIVEKIT_API_SECRET.trim());
   }
   return _egressClient;
 }

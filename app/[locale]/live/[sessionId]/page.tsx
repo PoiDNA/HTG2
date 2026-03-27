@@ -21,10 +21,10 @@ export default async function LiveSessionPage({ params }: PageProps) {
     redirect(`/${locale}/login`);
   }
 
-  // Fetch live session
+  // Fetch live session with its booking (use FK hint to resolve ambiguity)
   const { data: session, error } = await supabase
     .from('live_sessions')
-    .select('*, bookings!inner(user_id)')
+    .select('*, booking:bookings!live_sessions_booking_id_fkey(user_id)')
     .eq('id', sessionId)
     .single();
 
@@ -34,7 +34,7 @@ export default async function LiveSessionPage({ params }: PageProps) {
 
   // Verify access: must be staff or booking owner
   const staff = isStaffEmail(user.email ?? '');
-  const isBookingOwner = session.bookings?.user_id === user.id;
+  const isBookingOwner = (session as any).booking?.user_id === user.id;
 
   if (!staff && !isBookingOwner) {
     redirect(`/${locale}/konto`);
@@ -45,8 +45,8 @@ export default async function LiveSessionPage({ params }: PageProps) {
     redirect(`/${locale}/konto`);
   }
 
-  // Strip the joined bookings data before passing to client
-  const { bookings: _, ...sessionData } = session;
+  // Strip the joined booking data before passing to client
+  const { booking: _, ...sessionData } = session as any;
 
   return (
     <LiveRoom

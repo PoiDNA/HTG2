@@ -70,12 +70,16 @@ export default function SessionAnimation({
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return; // Not mounted yet
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       initParticles(rect.width, rect.height);
     };
 
+    // Use ResizeObserver for reliable sizing
+    const observer = new ResizeObserver(() => resize());
+    observer.observe(canvas);
     resize();
     window.addEventListener('resize', resize);
 
@@ -140,6 +144,7 @@ export default function SessionAnimation({
 
     return () => {
       cancelAnimationFrame(animFrameRef.current);
+      observer.disconnect();
       window.removeEventListener('resize', resize);
     };
   }, [variant, opacity, active, initParticles]);

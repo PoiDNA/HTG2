@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createLiveKitToken } from '@/lib/live/livekit';
 import { isStaffEmail } from '@/lib/roles';
@@ -6,6 +7,7 @@ import type { TokenRequest } from '@/lib/live/types';
 
 export async function POST(request: NextRequest) {
   try {
+    // Get authenticated user
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -19,10 +21,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
     }
 
-    // Fetch live session
-    const { data: session, error: sessionError } = await supabase
+    // Use service role to bypass RLS (we verify access manually)
+    const adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+
+    // Fetch live session with explicit FK hint
+    const { data: session, error: sessionError } = await adminClient
       .from('live_sessions')
-      .select('*, bookings!inner(user_id)')
+      .select('*, booking:bookings!live_sessions_booking_id_fkey(user_id)')
       .eq('id', sessionId)
       .single();
 
@@ -32,16 +40,16 @@ export async function POST(request: NextRequest) {
 
     // Verify user is participant or staff
     const staff = isStaffEmail(user.email ?? '');
-    const isBookingOwner = session.bookings?.user_id === user.id;
+    const isBookingOwner = (session as any).booking?.user_id === user.id;
 
     if (!staff && !isBookingOwner) {
       return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
     }
 
     // Fetch display name from profile
-    const { data: profile } = await supabase
+    const { data: profile } = await adminClient
       .from('profiles')
-      .select('full_name')
+      .select('display_name')
       .eq('id', user.id)
       .single();
 
@@ -49,7 +57,7 @@ export async function POST(request: NextRequest) {
       user.id,
       session.room_name,
       staff,
-      profile?.full_name ?? user.email ?? 'Uczestnik',
+      profile?.display_name ?? user.email ?? 'Uczestnik',
     );
 
     return NextResponse.json({

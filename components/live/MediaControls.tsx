@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import type { Room } from 'livekit-client';
@@ -12,14 +12,14 @@ interface MediaControlsProps {
 
 export default function MediaControls({ room, showVideo = true }: MediaControlsProps) {
   const t = useTranslations('Live');
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [camEnabled, setCamEnabled] = useState(true);
+
+  const micEnabled = room?.localParticipant.isMicrophoneEnabled ?? true;
+  const camEnabled = room?.localParticipant.isCameraEnabled ?? true;
 
   const toggleMic = useCallback(async () => {
     if (!room) return;
     try {
       await room.localParticipant.setMicrophoneEnabled(!micEnabled);
-      setMicEnabled(!micEnabled);
     } catch (err) {
       console.error('Failed to toggle mic:', err);
     }
@@ -29,7 +29,6 @@ export default function MediaControls({ room, showVideo = true }: MediaControlsP
     if (!room) return;
     try {
       await room.localParticipant.setCameraEnabled(!camEnabled);
-      setCamEnabled(!camEnabled);
     } catch (err) {
       console.error('Failed to toggle camera:', err);
     }
@@ -42,7 +41,7 @@ export default function MediaControls({ room, showVideo = true }: MediaControlsP
         title={micEnabled ? t('mic_off') : t('mic_on')}
         className={`flex items-center justify-center w-12 h-12 rounded-full transition-colors ${
           micEnabled
-            ? 'bg-htg-surface text-htg-fg hover:bg-htg-surface/80'
+            ? 'bg-white/20 text-white hover:bg-white/30'
             : 'bg-red-600 text-white hover:bg-red-700'
         }`}
       >
@@ -55,7 +54,7 @@ export default function MediaControls({ room, showVideo = true }: MediaControlsP
           title={camEnabled ? t('cam_off') : t('cam_on')}
           className={`flex items-center justify-center w-12 h-12 rounded-full transition-colors ${
             camEnabled
-              ? 'bg-htg-surface text-htg-fg hover:bg-htg-surface/80'
+              ? 'bg-white/20 text-white hover:bg-white/30'
               : 'bg-red-600 text-white hover:bg-red-700'
           }`}
         >

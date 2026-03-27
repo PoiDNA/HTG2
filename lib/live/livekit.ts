@@ -108,6 +108,11 @@ export async function createRoom(roomName: string) {
   });
 }
 
+export async function listRoomParticipants(roomName: string) {
+  const svc = getRoomService();
+  return svc.listParticipants(roomName);
+}
+
 // ============================================================
 // Egress — recording
 // ============================================================

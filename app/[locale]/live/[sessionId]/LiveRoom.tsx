@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { LiveKitRoom, RoomAudioRenderer, useRoomContext, useConnectionState } from '@livekit/components-react';
 import { Room, RoomEvent, DataPacket_Kind, ConnectionState } from 'livekit-client';
+import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import type { Phase, LiveSession, DataMessage } from '@/lib/live/types';
 import { PHASE_CONFIG } from '@/lib/live/constants';
@@ -46,6 +47,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const [breakRequested, setBreakRequested] = useState(false);
   const [transitionAutoFade, setTransitionAutoFade] = useState(false);
   const [volumeNodes] = useState<Map<string, GainNode>>(new Map());
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const sessionId = initialSession.id;
 
@@ -127,6 +129,14 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
     [volumeNodes],
   );
 
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     if (phase === 'ended') router.push(`/${locale}/konto`);
   }, [phase, router, locale]);
@@ -155,6 +165,14 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
 
       {/* Main content area */}
       <div className="flex-1 relative overflow-hidden">
+        {/* REC indicator — centered top, staff only during sesja */}
+        {isStaff && phase === 'sesja' && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 backdrop-blur-sm">
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            <span className="text-white text-xs font-bold tracking-wide">REC</span>
+          </div>
+        )}
+
         {phase === 'poczekalnia' && !isStaff && (
           <WaitingRoom bookingId={initialSession.booking_id} liveSessionId={sessionId} />
         )}
@@ -213,13 +231,20 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
       {phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
         <div className="relative z-20 flex items-center justify-between
           px-6 py-4 bg-black/40 backdrop-blur-sm border-t border-white/10">
-          {/* Left: media controls */}
+          {/* Left: back button + media controls */}
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push(`/${locale}/konto`)}
+              title="Wróć"
+              className="bg-white/10 hover:bg-white/20 text-white/70 rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
             <MediaControls
               room={room}
               showVideo={phaseConfig.hasVideo}
             />
-            {!isStaff && phase === 'sesja' && (
+            {!isStaff && (
               <BreakRequestButton room={room} isStaff={isStaff} />
             )}
           </div>
@@ -237,7 +262,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             </div>
           )}
 
-          {/* Right: staff controls */}
+          {/* Right: staff controls + fullscreen */}
           <div className="flex items-center gap-3">
             {isStaff && (phase === 'sesja' || phase === 'wstep' || phase === 'podsumowanie') && (
               <PrivateTalkButton room={room} isStaff={isStaff} />
@@ -248,6 +273,13 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
               isStaff={isStaff}
               onPhaseChanged={handlePhaseChanged}
             />
+            <button
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Wyjdź z pełnego ekranu' : 'Pełny ekran'}
+              className="bg-white/10 hover:bg-white/20 text-white/70 rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
           </div>
         </div>
       )}

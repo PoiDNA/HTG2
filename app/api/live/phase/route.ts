@@ -102,15 +102,36 @@ export async function POST(request: NextRequest) {
       }
 
       if (newPhase === 'sesja') {
-        // Start composite MP4 for client
         try {
-          const egress = await startRoomCompositeEgress(session.room_name, { audioOnly: true });
-          update.egress_sesja_id = egress.egressId;
+          // Start composite audio for the room (mixed, for client playback)
+          const compositeEgress = await startRoomCompositeEgress(session.room_name, { audioOnly: true });
+          update.egress_sesja_id = compositeEgress.egressId;
         } catch (e) {
           console.warn('Failed to start sesja composite egress:', e);
         }
-        // Individual track egresses would be started here
-        // (requires knowing participant identities from LiveKit room)
+
+        // Start per-participant track egresses
+        try {
+          const { listRoomParticipants, startParticipantEgress } = await import('@/lib/live/livekit');
+          const participants = await listRoomParticipants(session.room_name);
+          const trackEgressIds: Record<string, string> = {};
+
+          for (const participant of participants) {
+            if (!participant.identity) continue;
+            try {
+              const egress = await startParticipantEgress(session.room_name, participant.identity);
+              trackEgressIds[participant.identity] = egress.egressId;
+            } catch (e) {
+              console.warn(`Failed to start track egress for ${participant.identity}:`, e);
+            }
+          }
+
+          if (Object.keys(trackEgressIds).length > 0) {
+            update.egress_sesja_tracks_ids = trackEgressIds;
+          }
+        } catch (e) {
+          console.warn('Failed to start participant egresses:', e);
+        }
       }
 
       if (newPhase === 'podsumowanie') {

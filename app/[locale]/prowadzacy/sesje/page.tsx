@@ -50,14 +50,20 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
     .select(`
       id, session_type, status, topics, live_session_id, created_at,
       slot:booking_slots!inner(slot_date, start_time, end_time),
-      client:profiles!bookings_user_id_fkey(email, display_name)
+      user_id
     `)
     .in('session_type', sessionTypes)
     .in('status', ['confirmed', 'completed', 'pending_confirmation'])
     .order('created_at', { ascending: false })
     .limit(100);
 
-  const allBookings = (bookings || []).sort((a: any, b: any) => {
+  // Fetch profiles separately
+  const userIds = [...new Set((bookings || []).map((b: any) => b.user_id).filter(Boolean))];
+  const { data: profiles } = userIds.length > 0 ? await admin.from('profiles').select('id, email, display_name').in('id', userIds) : { data: [] };
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+  const enrichedBookings = (bookings || []).map((b: any) => ({ ...b, client: profileMap.get(b.user_id) || null }));
+
+  const allBookings = enrichedBookings.sort((a: any, b: any) => {
     const sa = Array.isArray(a.slot) ? a.slot[0] : a.slot;
     const sb = Array.isArray(b.slot) ? b.slot[0] : b.slot;
     return (sb?.slot_date + sb?.start_time).localeCompare(sa?.slot_date + sa?.start_time);

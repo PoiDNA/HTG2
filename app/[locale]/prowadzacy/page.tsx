@@ -62,17 +62,28 @@ export default async function StaffDashboard({
   let sessionsThisWeek = 0;
 
   if (staffMember && sessionTypes.length > 0) {
-    // All bookings — filter date in JS (Supabase gte on joined table is unreliable)
-    const { data: bookings } = await admin
+    // All bookings — no FK join on profiles (FK goes to auth.users, not profiles)
+    const { data: rawBookings } = await admin
       .from('bookings')
       .select(`
-        id, session_type, status, topics, live_session_id,
-        slot:booking_slots(slot_date, start_time, end_time),
-        client:profiles!bookings_user_id_fkey(email, display_name)
+        id, session_type, status, topics, live_session_id, user_id,
+        slot:booking_slots(slot_date, start_time, end_time)
       `)
       .in('session_type', isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna'] : sessionTypes)
       .in('status', ['confirmed', 'pending_confirmation'])
       .limit(50);
+
+    // Fetch client profiles separately
+    const userIds = [...new Set((rawBookings || []).map((b: any) => b.user_id).filter(Boolean))];
+    const { data: profiles } = userIds.length > 0
+      ? await admin.from('profiles').select('id, email, display_name').in('id', userIds)
+      : { data: [] };
+    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+    const bookings = (rawBookings || []).map((b: any) => ({
+      ...b,
+      client: profileMap.get(b.user_id) || null,
+    }));
 
     // Filter to today+ and sort by date
     upcomingBookings = (bookings || [])

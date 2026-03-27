@@ -37,13 +37,18 @@ export default async function StaffClientsPage({ params }: { params: Promise<{ l
   const todayStr = new Date().toISOString().split('T')[0];
 
   const { data: bookings } = await admin.from('bookings')
-    .select(`id, session_type, status, topics, created_at, slot:booking_slots!inner(slot_date, start_time), client:profiles!bookings_user_id_fkey(id, email, display_name)`)
+    .select(`id, session_type, status, topics, created_at, user_id, slot:booking_slots(slot_date, start_time)`)
     .in('session_type', sessionTypes).in('status', ['confirmed', 'completed', 'pending_confirmation']).order('created_at', { ascending: false });
+
+  // Fetch profiles separately
+  const userIds = [...new Set((bookings || []).map((b: any) => b.user_id).filter(Boolean))];
+  const { data: profiles } = userIds.length > 0 ? await admin.from('profiles').select('id, email, display_name').in('id', userIds) : { data: [] };
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
 
   const clientMap = new Map<string, { id: string; email: string; name: string; sessions: { date: string; time: string; type: string; status: string; topics: string | null }[]; totalSessions: number; lastSession: string; nextSession: string | null }>();
 
   for (const b of (bookings || [])) {
-    const client: any = Array.isArray(b.client) ? b.client[0] : b.client;
+    const client: any = profileMap.get(b.user_id) || null;
     const slot: any = Array.isArray(b.slot) ? b.slot[0] : b.slot;
     if (!client?.id) continue;
     if (!clientMap.has(client.id)) clientMap.set(client.id, { id: client.id, email: client.email || '', name: client.display_name || client.email || '—', sessions: [], totalSessions: 0, lastSession: '', nextSession: null });

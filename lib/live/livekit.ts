@@ -107,6 +107,7 @@ export async function createLiveKitToken(
   const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
     identity,
     name: displayName ?? identity,
+    metadata: JSON.stringify({ isStaff }),
     ttl: '4h',
   });
 

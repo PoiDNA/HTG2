@@ -12,7 +12,7 @@ import { PHASE_CONFIG } from '@/lib/live/constants';
 
 // Components
 import WaitingRoom from '@/components/live/WaitingRoom';
-import LiveVideoGrid from '@/components/live/LiveVideoGrid';
+import LiveVideoLayout from '@/components/live/LiveVideoLayout';
 import AudioOnlyView from '@/components/live/AudioOnlyView';
 import PhaseTransition from '@/components/live/PhaseTransition';
 import PhaseControls from '@/components/live/PhaseControls';
@@ -194,7 +194,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
           </div>
         )}
 
-        {phase === 'wstep' && <LiveVideoGrid />}
+        {phase === 'wstep' && <LiveVideoLayout viewerIsStaff={isStaff} />}
 
         {phase === 'przejscie_1' && (
           <PhaseTransition
@@ -216,7 +216,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
           />
         )}
 
-        {phase === 'podsumowanie' && <LiveVideoGrid />}
+        {phase === 'podsumowanie' && <LiveVideoLayout viewerIsStaff={isStaff} />}
 
         {phase === 'outro' && (
           <OutroScreen

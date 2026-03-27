@@ -87,6 +87,7 @@ export default async function AccountLayout({
     { href: '/konto/sesje-indywidualne', label: tPanel('individual_sessions'), icon: CalendarDays },
     { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
     { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
+    { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Film },
     { href: '/konto/polubieni', label: 'Polubieni', icon: Heart },
     { href: '/konto/profil', label: t('profile'), icon: UserCircle },
   ] as const;

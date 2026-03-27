@@ -212,7 +212,7 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
 
   // Show waiting room before token is fetched
   if (!livekitToken || !livekitUrl) {
-    return <WaitingRoom />;
+    return <WaitingRoom bookingId={initialSession.booking_id} liveSessionId={sessionId} />;
   }
 
   const phaseConfig = PHASE_CONFIG[phase];
@@ -246,7 +246,7 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
               {/* Main content area */}
               <div className="flex-1 relative overflow-hidden">
                 {phase === 'poczekalnia' && !isStaff && (
-                  <WaitingRoom />
+                  <WaitingRoom bookingId={initialSession.booking_id} liveSessionId={sessionId} />
                 )}
 
                 {phase === 'poczekalnia' && isStaff && (
@@ -290,7 +290,7 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
 
                 {phase === 'podsumowanie' && <LiveVideoGrid />}
 
-                {phase === 'outro' && <OutroScreen onClose={handleOutroClose} />}
+                {phase === 'outro' && <OutroScreen bookingId={initialSession.booking_id} liveSessionId={sessionId} onClose={handleOutroClose} />}
               </div>
 
               {/* Bottom controls bar */}

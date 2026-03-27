@@ -2,7 +2,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { LayoutDashboard, Calendar, Presentation, Users } from 'lucide-react';
+import { LayoutDashboard, Calendar, Presentation, Users, Video } from 'lucide-react';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -73,6 +73,7 @@ export default async function StaffLayout({
     { href: '/prowadzacy/sesje', label: t('sessions'), icon: Presentation },
     { href: '/prowadzacy/grafik', label: t('schedule'), icon: Calendar },
     { href: '/prowadzacy/klienci', label: t('clients'), icon: Users },
+    { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Video },
   ] as const;
 
   return (

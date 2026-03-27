@@ -4,13 +4,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { LogOut } from 'lucide-react';
 import SessionAnimation from './SessionAnimation';
+import ClientRecorder from './ClientRecorder';
 import { OUTRO_TIMER_DURATION } from '@/lib/live/constants';
 
 interface OutroScreenProps {
+  bookingId?: string;
+  liveSessionId?: string;
   onClose: () => void;
 }
 
-export default function OutroScreen({ onClose }: OutroScreenProps) {
+export default function OutroScreen({ bookingId, liveSessionId, onClose }: OutroScreenProps) {
   const t = useTranslations('Live');
   const [remainingMs, setRemainingMs] = useState(OUTRO_TIMER_DURATION);
   const startTimeRef = useRef(Date.now());
@@ -22,11 +25,7 @@ export default function OutroScreen({ onClose }: OutroScreenProps) {
     audio.volume = 0.3;
     audio.play().catch(() => {});
     audioRef.current = audio;
-
-    return () => {
-      audio.pause();
-      audio.src = '';
-    };
+    return () => { audio.pause(); audio.src = ''; };
   }, []);
 
   useEffect(() => {
@@ -34,13 +33,8 @@ export default function OutroScreen({ onClose }: OutroScreenProps) {
       const elapsed = Date.now() - startTimeRef.current;
       const remaining = Math.max(0, OUTRO_TIMER_DURATION - elapsed);
       setRemainingMs(remaining);
-
-      if (remaining <= 0) {
-        clearInterval(interval);
-        onClose();
-      }
+      if (remaining <= 0) { clearInterval(interval); onClose(); }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [onClose]);
 
@@ -52,24 +46,33 @@ export default function OutroScreen({ onClose }: OutroScreenProps) {
   }, []);
 
   return (
-    <div className="relative flex flex-col items-center justify-center w-full h-screen bg-htg-indigo overflow-hidden">
+    <div className="relative flex flex-col items-center w-full h-screen bg-htg-indigo overflow-auto">
       <SessionAnimation variant={3} opacity={0.5} active />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 text-center px-6">
-        <h1 className="text-3xl font-serif text-htg-cream">
+      <div className="relative z-10 flex flex-col items-center gap-6 text-center px-6 pt-16 pb-8 max-w-lg w-full">
+        <h1 className="text-2xl font-serif text-htg-cream">
           {t('outro_title')}
         </h1>
-        <p className="text-htg-cream/70 text-lg max-w-md">
+        <p className="text-htg-cream/60 text-sm max-w-md">
           {t('outro_message')}
         </p>
 
         {/* Countdown */}
-        <div className="flex items-center justify-center w-24 h-24 rounded-full
+        <div className="flex items-center justify-center w-20 h-20 rounded-full
           bg-white/10 backdrop-blur-sm border border-white/20">
-          <span className="text-2xl font-mono text-htg-cream">
+          <span className="text-xl font-mono text-htg-cream">
             {formatTime(remainingMs)}
           </span>
         </div>
+
+        {/* After-session recorder */}
+        {bookingId && liveSessionId && (
+          <ClientRecorder
+            bookingId={bookingId}
+            liveSessionId={liveSessionId}
+            type="after"
+          />
+        )}
 
         <button
           onClick={onClose}

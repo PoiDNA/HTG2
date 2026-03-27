@@ -69,15 +69,58 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   const selectedSession = sessions.find((s) => s.slug === selected);
   const selectedSlot = slots.find(s => s.id === selectedSlotId);
 
-  // Load available slots when session type changes
+  // Load available slots when session type changes — fetch next 3 months
   useEffect(() => {
     if (!selectedSession) { setSlots([]); setSelectedSlotId(null); return; }
 
     setLoadingSlots(true);
-    fetch(`/api/booking/slots?sessionType=${selectedSession.sessionType}`)
-      .then(r => r.json())
-      .then(data => {
-        setSlots(data.slots || []);
+
+    // Fetch slots for next 3 months
+    const now = new Date();
+    const monthPromises = [];
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthPromises.push(
+        fetch(`/api/booking/slots?month=${m}`).then(r => r.json())
+      );
+    }
+
+    Promise.all(monthPromises)
+      .then(results => {
+        const allSlots: SlotInfo[] = [];
+        for (const data of results) {
+          if (data.slots) {
+            // API returns grouped by date: { "2026-03-30": [...] }
+            for (const dateSlots of Object.values(data.slots)) {
+              for (const slot of dateSlots as SlotInfo[]) {
+                // Show slots matching this session type, OR natalia_solo (user can book solo with Natalia)
+                if (
+                  slot.session_type === selectedSession.sessionType ||
+                  (selectedSession.sessionType === 'natalia_solo' && slot.session_type === 'natalia_solo') ||
+                  // For natalia_agata/natalia_justyna, also show natalia_solo slots (they are compatible)
+                  slot.session_type === 'natalia_solo'
+                ) {
+                  allSlots.push(slot);
+                }
+              }
+            }
+          }
+        }
+        // Sort by date + time
+        allSlots.sort((a, b) => {
+          const cmp = a.slot_date.localeCompare(b.slot_date);
+          return cmp !== 0 ? cmp : a.start_time.localeCompare(b.start_time);
+        });
+        // Remove duplicates
+        const seen = new Set<string>();
+        const unique = allSlots.filter(s => {
+          const key = s.id;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setSlots(unique);
         setSelectedSlotId(null);
         setLoadingSlots(false);
       })

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isStaffEmail } from '@/lib/roles';
 import type { LiveSession } from '@/lib/live/types';
@@ -21,8 +22,14 @@ export default async function LiveSessionPage({ params }: PageProps) {
     redirect(`/${locale}/login`);
   }
 
+  // Use service role to bypass RLS — we verify access manually below
+  const adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
   // Fetch live session with its booking (use FK hint to resolve ambiguity)
-  const { data: session, error } = await supabase
+  const { data: session, error } = await adminClient
     .from('live_sessions')
     .select('*, booking:bookings!live_sessions_booking_id_fkey(user_id)')
     .eq('id', sessionId)

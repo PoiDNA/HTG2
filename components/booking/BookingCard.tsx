@@ -281,12 +281,6 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
             {isConditionalReschedule && (
               <p className="text-htg-warm">⚠ Zmiana terminu poniżej 48h — uzależniona od przejęcia terminu przez inną osobę</p>
             )}
-            {canCancel && (
-              <p>Anulowanie: jeszcze {daysLeftToCancel} {daysLeftToCancel === 1 ? 'dzień' : 'dni'} (14 dni od zakupu)</p>
-            )}
-            {!canCancel && (
-              <p>Okres anulowania minął (14 dni od zakupu).</p>
-            )}
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import SessionAnimation from './SessionAnimation';
+import LiveControls from './LiveControls';
 
 interface WaitingRoomProps {
   onAdmitted?: () => void;
@@ -40,6 +41,9 @@ export default function WaitingRoom({ onAdmitted }: WaitingRoomProps) {
       className="relative flex items-end justify-center w-full h-screen bg-[#0a0e1a] overflow-hidden cursor-pointer"
       onClick={handleClick}
     >
+      {/* Controls: Back + Fullscreen */}
+      <LiveControls />
+
       {/* Full-screen particle animation */}
       <SessionAnimation variant={0} opacity={0.8} active />
 

@@ -455,16 +455,23 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
               </>
             )}
 
-            {/* Acceleration checkbox — always visible under slot selector */}
-            <label className="flex items-center gap-2 text-sm text-htg-fg cursor-pointer mt-3 p-3 rounded-xl bg-htg-surface border border-htg-card-border hover:border-htg-warm/30 transition-colors">
+            {/* Acceleration checkbox */}
+            <label className={`flex items-center gap-3 text-sm cursor-pointer mt-3 p-4 rounded-xl border-2 transition-all ${
+              wantAcceleration
+                ? 'border-htg-warm/60 bg-htg-warm/10'
+                : 'border-htg-card-border bg-htg-surface hover:border-htg-warm/30'
+            }`}>
               <input
                 type="checkbox"
                 checked={wantAcceleration}
                 onChange={e => setWantAcceleration(e.target.checked)}
-                className="rounded border-htg-card-border accent-htg-warm"
+                className="rounded border-htg-card-border accent-htg-warm w-4 h-4 shrink-0"
               />
-              <Zap className="w-4 h-4 text-htg-warm shrink-0" />
-              <span>Chcę przyspieszenie — powiadom gdy zwolni się wcześniejszy termin</span>
+              <Zap className={`w-4 h-4 shrink-0 ${wantAcceleration ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
+              <div className="flex-1">
+                <p className="font-medium text-htg-fg">Chcę przyspieszenie</p>
+                <p className="text-xs text-htg-fg-muted">Powiadom gdy zwolni się wcześniejszy termin</p>
+              </div>
             </label>
 
             {/* Pre-session add-on */}
@@ -482,7 +489,7 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
                 />
                 <Video className={`w-4 h-4 shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`} />
                 <div className="flex-1">
-                  <p className={`font-medium ${addPreSession ? 'text-htg-fg' : 'text-htg-fg'}`}>
+                  <p className="font-medium text-htg-fg">
                     Dodaj spotkanie wstępne z {activePreSessionOption.staffNameWith}
                   </p>
                   <p className="text-xs text-htg-fg-muted">15 min online przed Twoją sesją — termin wybierzesz później</p>

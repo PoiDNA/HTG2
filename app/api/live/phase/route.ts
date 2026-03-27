@@ -6,6 +6,20 @@ import { VALID_TRANSITIONS } from '@/lib/live/constants';
 import { startRoomCompositeEgress, startParticipantEgress, stopEgress } from '@/lib/live/livekit';
 import type { Phase, PhaseChangeRequest } from '@/lib/live/types';
 
+// GET — poll current phase
+export async function GET(request: NextRequest) {
+  try {
+    const sessionId = request.nextUrl.searchParams.get('sessionId');
+    if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
+
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const { data } = await admin.from('live_sessions').select('phase').eq('id', sessionId).single();
+    return NextResponse.json({ phase: data?.phase || 'ended' });
+  } catch {
+    return NextResponse.json({ phase: 'ended' });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServer();

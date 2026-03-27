@@ -43,6 +43,27 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
   const sessionId = initialSession.id;
   const supabase = useRef(createSupabaseBrowser());
 
+  const [tokenError, setTokenError] = useState<string | null>(null);
+
+  // Sync phase from DB on mount (in case SSR data is stale)
+  useEffect(() => {
+    async function syncPhase() {
+      try {
+        const res = await fetch(`/api/live/phase?sessionId=${sessionId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.phase && data.phase !== phase) {
+            setPhase(data.phase);
+          }
+        }
+      } catch {}
+    }
+    syncPhase();
+    // Re-check every 5 seconds as fallback for Realtime
+    const interval = setInterval(syncPhase, 5000);
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
   // Fetch LiveKit token
   useEffect(() => {
     async function fetchToken() {
@@ -52,13 +73,18 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId }),
         });
-        if (res.ok) {
-          const data = await res.json();
+        const data = await res.json();
+        if (res.ok && data.token) {
           setLivekitToken(data.token);
           setLivekitUrl(data.url);
+          setTokenError(null);
+        } else {
+          console.error('Token API error:', res.status, data);
+          setTokenError(data.error || `HTTP ${res.status}`);
         }
       } catch (err) {
         console.error('Failed to fetch LiveKit token:', err);
+        setTokenError(err instanceof Error ? err.message : 'Network error');
       }
     }
     fetchToken();
@@ -210,9 +236,18 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
     }
   }, [phase, router, locale]);
 
-  // Show waiting room before token is fetched
+  // Show waiting room before token is fetched (or on error)
   if (!livekitToken || !livekitUrl) {
-    return <WaitingRoom bookingId={initialSession.booking_id} liveSessionId={sessionId} />;
+    return (
+      <div className="relative w-full h-screen">
+        <WaitingRoom bookingId={initialSession.booking_id} liveSessionId={sessionId} />
+        {tokenError && (
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 bg-red-900/80 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-xs max-w-md text-center">
+            Błąd połączenia: {tokenError}
+          </div>
+        )}
+      </div>
+    );
   }
 
   const phaseConfig = PHASE_CONFIG[phase];

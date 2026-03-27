@@ -275,16 +275,18 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
 
       {/* Bottom bar — audio/transition phases only (video phases have inline controls) */}
       {!isVideoPhase && phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
-        <div className="relative z-20 flex items-center justify-between
-          px-6 py-4 bg-black/40 backdrop-blur-sm border-t border-white/10">
-          {/* Left: media controls (+ break for clients) */}
-          <div className="flex items-center gap-3">
+        <div className="relative z-20 flex flex-wrap items-center justify-center gap-3
+          px-4 py-3 bg-black/40 backdrop-blur-sm border-t border-white/10
+          sm:justify-between sm:px-6 sm:py-4">
+
+          {/* Media controls (mic + pause for clients) — always visible */}
+          <div className="flex items-center gap-3 order-1">
             <MediaControls room={room} showVideo={false} showBreak={!isStaff} />
           </div>
 
-          {/* Center: volume sliders (sesja phase) */}
+          {/* Volume sliders — hidden on mobile, visible sm+ */}
           {!isStaff && phase === 'sesja' && (
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 order-2">
               {Array.from(room.remoteParticipants.values()).map((p) => (
                 <VolumeSlider
                   key={p.identity}
@@ -295,19 +297,21 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             </div>
           )}
 
-          {/* Right: staff controls */}
-          <div className="flex items-center gap-3">
-            {isStaff && <ZoomBackupButton room={room} />}
-            {isStaff && phase === 'sesja' && (
-              <PrivateTalkButton room={room} isStaff={isStaff} />
-            )}
-            <PhaseControls
-              sessionId={sessionId}
-              currentPhase={phase}
-              isStaff={isStaff}
-              onPhaseChanged={handlePhaseChanged}
-            />
-          </div>
+          {/* Staff controls */}
+          {isStaff && (
+            <div className="flex items-center gap-2 order-3">
+              <ZoomBackupButton room={room} />
+              {phase === 'sesja' && (
+                <PrivateTalkButton room={room} isStaff={isStaff} />
+              )}
+              <PhaseControls
+                sessionId={sessionId}
+                currentPhase={phase}
+                isStaff={isStaff}
+                onPhaseChanged={handlePhaseChanged}
+              />
+            </div>
+          )}
         </div>
       )}
 

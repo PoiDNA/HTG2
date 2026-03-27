@@ -232,8 +232,8 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
               </button>
             )}
 
-            {/* Join live session — shown when session is soon (within 15 min) or in progress */}
-            {isConfirmed && sessionDateTime && hoursUntilSession <= 0.25 && hoursUntilSession > -3 && booking.live_session_id && (
+            {/* Join live session — active 30 min before session and during session */}
+            {isConfirmed && sessionDateTime && hoursUntilSession <= 0.5 && hoursUntilSession > -3 && booking.live_session_id && (
               <a
                 href={`/pl/live/${booking.live_session_id}`}
                 className="bg-htg-warm text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-htg-warm/90 transition-colors animate-pulse"
@@ -242,10 +242,10 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
               </a>
             )}
 
-            {/* Join — session is today but not yet within 15 min */}
-            {isConfirmed && sessionDateTime && hoursUntilSession > 0.25 && hoursUntilSession <= 24 && (
+            {/* Session today but not yet 30 min before */}
+            {isConfirmed && sessionDateTime && hoursUntilSession > 0.5 && hoursUntilSession <= 24 && (
               <span className="text-xs text-htg-fg-muted bg-htg-surface px-3 py-2 rounded-lg">
-                Sesja dziś — link do dołączenia pojawi się 15 min przed rozpoczęciem
+                Sesja dziś — poczekalnia otworzy się 30 min przed sesją
               </span>
             )}
 

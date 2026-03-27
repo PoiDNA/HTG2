@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { LiveKitRoom, RoomAudioRenderer, useRoomContext, useConnectionState } from '@livekit/components-react';
 import { Room, RoomEvent, DataPacket_Kind, ConnectionState } from 'livekit-client';
-import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import type { Phase, LiveSession, DataMessage } from '@/lib/live/types';
 import { PHASE_CONFIG } from '@/lib/live/constants';
@@ -13,6 +12,7 @@ import { PHASE_CONFIG } from '@/lib/live/constants';
 // Components
 import WaitingRoom from '@/components/live/WaitingRoom';
 import LiveVideoLayout from '@/components/live/LiveVideoLayout';
+import LiveControls from '@/components/live/LiveControls';
 import AudioOnlyView from '@/components/live/AudioOnlyView';
 import PhaseTransition from '@/components/live/PhaseTransition';
 import PhaseControls from '@/components/live/PhaseControls';
@@ -47,7 +47,6 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const [breakRequested, setBreakRequested] = useState(false);
   const [transitionAutoFade, setTransitionAutoFade] = useState(false);
   const [volumeNodes] = useState<Map<string, GainNode>>(new Map());
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const sessionId = initialSession.id;
 
@@ -129,14 +128,6 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
     [volumeNodes],
   );
 
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
-    } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
-    }
-  }, []);
-
   useEffect(() => {
     if (phase === 'ended') router.push(`/${locale}/konto`);
   }, [phase, router, locale]);
@@ -144,34 +135,43 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const phaseConfig = PHASE_CONFIG[phase];
   const isConnected = connectionState === ConnectionState.Connected;
   const isConnecting = connectionState === ConnectionState.Connecting;
+  const isVideoPhase = phase === 'wstep' || phase === 'podsumowanie';
+  const backUrl = `/${locale}/konto`;
 
   return (
     <div className="relative w-full h-screen bg-htg-indigo flex flex-col">
-      {/* Connection state badge — visible until connected */}
+
+      {/* LiveControls: Back ← + Fullscreen — top overlay for all non-waiting phases */}
+      {phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
+        <LiveControls backUrl={backUrl} />
+      )}
+
+      {/* Connection state badge */}
       {!isConnected && (
-        <div className="absolute top-4 right-4 z-30 px-3 py-1 rounded-full
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full
           bg-black/40 backdrop-blur-sm text-xs text-htg-cream/70">
           {isConnecting ? 'Łączenie...' : connectionState}
         </div>
       )}
 
-      {/* Phase label */}
-      {phase !== 'poczekalnia' && (
-        <div className="absolute top-4 left-4 z-20 px-3 py-1
-          rounded-full bg-black/30 backdrop-blur-sm text-sm text-htg-cream/80">
+      {/* Phase label — only for non-video non-waiting phases */}
+      {phase !== 'poczekalnia' && !isVideoPhase && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 px-3 py-1
+          rounded-full bg-black/30 backdrop-blur-sm text-sm text-htg-cream/70">
           {phaseConfig.label}
+        </div>
+      )}
+
+      {/* REC indicator — staff only during sesja */}
+      {isStaff && phase === 'sesja' && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 backdrop-blur-sm">
+          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          <span className="text-white text-xs font-bold tracking-wide">REC</span>
         </div>
       )}
 
       {/* Main content area */}
       <div className="flex-1 relative overflow-hidden">
-        {/* REC indicator — centered top, staff only during sesja */}
-        {isStaff && phase === 'sesja' && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 backdrop-blur-sm">
-            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-            <span className="text-white text-xs font-bold tracking-wide">REC</span>
-          </div>
-        )}
 
         {phase === 'poczekalnia' && !isStaff && (
           <WaitingRoom bookingId={initialSession.booking_id} liveSessionId={sessionId} />
@@ -179,6 +179,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
 
         {phase === 'poczekalnia' && isStaff && (
           <div className="flex items-center justify-center h-full">
+            <LiveControls backUrl={backUrl} />
             <div className="text-center space-y-6">
               <div className="w-16 h-16 rounded-full bg-htg-warm/20 flex items-center justify-center mx-auto animate-pulse">
                 <span className="text-3xl">👤</span>
@@ -194,7 +195,15 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
           </div>
         )}
 
-        {phase === 'wstep' && <LiveVideoLayout viewerIsStaff={isStaff} />}
+        {/* Video phases — LiveVideoLayout handles media controls internally */}
+        {phase === 'wstep' && (
+          <LiveVideoLayout
+            viewerIsStaff={isStaff}
+            room={room}
+            phase={phase}
+            showVideo={true}
+          />
+        )}
 
         {phase === 'przejscie_1' && (
           <PhaseTransition
@@ -216,7 +225,14 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
           />
         )}
 
-        {phase === 'podsumowanie' && <LiveVideoLayout viewerIsStaff={isStaff} />}
+        {phase === 'podsumowanie' && (
+          <LiveVideoLayout
+            viewerIsStaff={isStaff}
+            room={room}
+            phase={phase}
+            showVideo={true}
+          />
+        )}
 
         {phase === 'outro' && (
           <OutroScreen
@@ -227,29 +243,19 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         )}
       </div>
 
-      {/* Bottom controls bar */}
-      {phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
+      {/* Bottom bar — audio/transition phases only (video phases have inline controls) */}
+      {!isVideoPhase && phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
         <div className="relative z-20 flex items-center justify-between
           px-6 py-4 bg-black/40 backdrop-blur-sm border-t border-white/10">
-          {/* Left: back button + media controls */}
+          {/* Left: media + break */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push(`/${locale}/konto`)}
-              title="Wróć"
-              className="bg-white/10 hover:bg-white/20 text-white/70 rounded-full w-10 h-10 flex items-center justify-center transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <MediaControls
-              room={room}
-              showVideo={phaseConfig.hasVideo}
-            />
+            <MediaControls room={room} showVideo={false} />
             {!isStaff && (
               <BreakRequestButton room={room} isStaff={isStaff} />
             )}
           </div>
 
-          {/* Center: volume sliders */}
+          {/* Center: volume sliders (sesja phase) */}
           {!isStaff && phase === 'sesja' && (
             <div className="flex items-center gap-2">
               {Array.from(room.remoteParticipants.values()).map((p) => (
@@ -262,9 +268,9 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             </div>
           )}
 
-          {/* Right: staff controls + fullscreen */}
+          {/* Right: staff controls */}
           <div className="flex items-center gap-3">
-            {isStaff && (phase === 'sesja' || phase === 'wstep' || phase === 'podsumowanie') && (
+            {isStaff && phase === 'sesja' && (
               <PrivateTalkButton room={room} isStaff={isStaff} />
             )}
             <PhaseControls
@@ -273,14 +279,20 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
               isStaff={isStaff}
               onPhaseChanged={handlePhaseChanged}
             />
-            <button
-              onClick={toggleFullscreen}
-              title={isFullscreen ? 'Wyjdź z pełnego ekranu' : 'Pełny ekran'}
-              className="bg-white/10 hover:bg-white/20 text-white/70 rounded-full w-10 h-10 flex items-center justify-center transition-colors"
-            >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
           </div>
+        </div>
+      )}
+
+      {/* Staff PhaseControls for video phases — floating bottom-right */}
+      {isVideoPhase && isStaff && (
+        <div className="absolute bottom-6 right-6 z-20 flex items-center gap-3">
+          <PrivateTalkButton room={room} isStaff={isStaff} />
+          <PhaseControls
+            sessionId={sessionId}
+            currentPhase={phase}
+            isStaff={isStaff}
+            onPhaseChanged={handlePhaseChanged}
+          />
         </div>
       )}
 

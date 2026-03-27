@@ -62,26 +62,31 @@ export default async function StaffDashboard({
   let sessionsThisWeek = 0;
 
   if (staffMember && sessionTypes.length > 0) {
-    // All upcoming bookings (sorted by slot date)
+    // All bookings — filter date in JS (Supabase gte on joined table is unreliable)
     const { data: bookings } = await admin
       .from('bookings')
       .select(`
         id, session_type, status, topics, live_session_id,
-        slot:booking_slots!inner(slot_date, start_time, end_time),
+        slot:booking_slots(slot_date, start_time, end_time),
         client:profiles!bookings_user_id_fkey(email, display_name)
       `)
       .in('session_type', isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna'] : sessionTypes)
       .in('status', ['confirmed', 'pending_confirmation'])
-      .gte('booking_slots.slot_date', todayStr)
-      .order('booking_slots(slot_date)', { ascending: true })
-      .limit(20);
+      .limit(50);
 
-    upcomingBookings = (bookings || []).sort((a: any, b: any) => {
-      const sa = a.slot; const sb = b.slot;
-      const da = (sa?.slot_date || '') + 'T' + (sa?.start_time || '');
-      const db = (sb?.slot_date || '') + 'T' + (sb?.start_time || '');
-      return da.localeCompare(db);
-    });
+    // Filter to today+ and sort by date
+    upcomingBookings = (bookings || [])
+      .filter((b: any) => {
+        const slot = Array.isArray(b.slot) ? b.slot[0] : b.slot;
+        return slot?.slot_date >= todayStr;
+      })
+      .sort((a: any, b: any) => {
+        const sa = Array.isArray(a.slot) ? a.slot[0] : a.slot;
+        const sb = Array.isArray(b.slot) ? b.slot[0] : b.slot;
+        const da = (sa?.slot_date || '') + 'T' + (sa?.start_time || '');
+        const db = (sb?.slot_date || '') + 'T' + (sb?.start_time || '');
+        return da.localeCompare(db);
+      });
 
     // Today's sessions
     todaySessions = upcomingBookings.filter((b: any) => {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isStaffEmail } from '@/lib/roles';
 import { VALID_TRANSITIONS } from '@/lib/live/constants';
@@ -9,6 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch current session
-    const { data: session, error: fetchError } = await supabase
+    const { data: session, error: fetchError } = await admin
       .from('live_sessions')
       .select('*')
       .eq('id', sessionId)
@@ -114,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update database
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await admin
       .from('live_sessions')
       .update(update)
       .eq('id', sessionId)

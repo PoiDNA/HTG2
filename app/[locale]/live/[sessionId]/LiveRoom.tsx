@@ -251,8 +251,17 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
 
                 {phase === 'poczekalnia' && isStaff && (
                   <div className="flex items-center justify-center h-full">
-                    <div className="text-center text-htg-cream">
-                      <p className="text-lg mb-4">{t('staff_waiting')}</p>
+                    <div className="text-center space-y-6">
+                      <div className="w-16 h-16 rounded-full bg-htg-warm/20 flex items-center justify-center mx-auto animate-pulse">
+                        <span className="text-3xl">👤</span>
+                      </div>
+                      <p className="text-htg-cream/80 text-lg">Klient czeka w poczekalni</p>
+                      <PhaseControls
+                        sessionId={sessionId}
+                        currentPhase={phase}
+                        isStaff={isStaff}
+                        onPhaseChanged={handlePhaseChanged}
+                      />
                     </div>
                   </div>
                 )}
@@ -327,18 +336,7 @@ export default function LiveRoom({ session: initialSession, isStaff }: LiveRoomP
                 </div>
               )}
 
-              {/* Poczekalnia controls for staff */}
-              {phase === 'poczekalnia' && isStaff && (
-                <div className="relative z-20 flex items-center justify-center
-                  px-6 py-4 bg-black/40 backdrop-blur-sm border-t border-white/10">
-                  <PhaseControls
-                    sessionId={sessionId}
-                    currentPhase={phase}
-                    isStaff={isStaff}
-                    onPhaseChanged={handlePhaseChanged}
-                  />
-                </div>
-              )}
+              {/* Poczekalnia controls moved to center of screen (inline above) */}
 
               {/* Break notification for staff */}
               <BreakNotification

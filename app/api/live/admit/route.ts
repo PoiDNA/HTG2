@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isStaffEmail } from '@/lib/roles';
 import type { AdmitRequest } from '@/lib/live/types';
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth check
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -22,8 +24,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
     }
 
+    // Use service role to bypass RLS
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+
     // Fetch session — must be in poczekalnia phase
-    const { data: session, error: fetchError } = await supabase
+    const { data: session, error: fetchError } = await admin
       .from('live_sessions')
       .select('*')
       .eq('id', sessionId)
@@ -41,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Transition to wstep
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await admin
       .from('live_sessions')
       .update({
         phase: 'wstep',

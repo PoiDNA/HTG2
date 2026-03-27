@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useTranslations } from 'next-intl';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import SessionAnimation from './SessionAnimation';
 
 interface WaitingRoomProps {
@@ -10,8 +8,8 @@ interface WaitingRoomProps {
 }
 
 export default function WaitingRoom({ onAdmitted }: WaitingRoomProps) {
-  const t = useTranslations('Live');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [musicPlaying, setMusicPlaying] = useState(false);
 
   useEffect(() => {
     // Auto-play looped waiting music
@@ -20,9 +18,8 @@ export default function WaitingRoom({ onAdmitted }: WaitingRoomProps) {
     audio.volume = 0.3;
     audioRef.current = audio;
 
-    // Attempt autoplay — may be blocked by browser
-    audio.play().catch(() => {
-      // Autoplay blocked — user will hear music after interaction
+    audio.play().then(() => setMusicPlaying(true)).catch(() => {
+      // Autoplay blocked — will play after click
     });
 
     return () => {
@@ -32,24 +29,31 @@ export default function WaitingRoom({ onAdmitted }: WaitingRoomProps) {
     };
   }, []);
 
-  // onAdmitted is called externally when phase changes
-  useEffect(() => {
-    if (onAdmitted) {
-      // This is a prop — the parent component triggers it
+  function handleClick() {
+    if (!musicPlaying && audioRef.current) {
+      audioRef.current.play().then(() => setMusicPlaying(true)).catch(() => {});
     }
-  }, [onAdmitted]);
+  }
 
   return (
-    <div className="relative flex items-center justify-center w-full h-screen bg-htg-indigo overflow-hidden">
-      <SessionAnimation variant={0} opacity={0.6} active />
-      <div className="relative z-10 flex flex-col items-center gap-6 text-center px-6">
-        <Loader2 className="w-12 h-12 text-htg-warm animate-spin" />
-        <h1 className="text-2xl font-serif text-htg-cream">
-          {t('waiting_title')}
-        </h1>
-        <p className="text-htg-cream/70 text-lg max-w-md">
-          {t('waiting_message')}
+    <div
+      className="relative flex items-end justify-center w-full h-screen bg-[#0a0e1a] overflow-hidden cursor-pointer"
+      onClick={handleClick}
+    >
+      {/* Full-screen particle animation */}
+      <SessionAnimation variant={0} opacity={0.8} active />
+
+      {/* Subtle bottom info — no spinner, no big text */}
+      <div className="relative z-10 pb-12 text-center">
+        <p className="text-white/30 text-sm font-light tracking-widest animate-pulse">
+          Oczekiwanie na rozpoczęcie sesji...
         </p>
+
+        {!musicPlaying && (
+          <p className="text-white/20 text-xs mt-3">
+            Kliknij aby włączyć muzykę
+          </p>
+        )}
       </div>
     </div>
   );

@@ -190,10 +190,6 @@ export default function LiveVideoLayout({
   const circleSize = circleCount <= 1 ? CIRCLE_BASE + 8 : circleCount === 2 ? CIRCLE_BASE : circleCount === 3 ? CIRCLE_BASE - 16 : CIRCLE_BASE - 28;
   const overlapPx = Math.round(circleSize / 3);
 
-  // Height of controls area below circles
-  const controlsGap = 14;
-  const controlsH = 52; // approximate height of MediaControls buttons
-
   return (
     <div className="relative w-full h-full overflow-hidden">
 
@@ -239,30 +235,25 @@ export default function LiveVideoLayout({
           )}
         </div>
 
-        {/* Center: circle tiles */}
-        <div className="flex items-start justify-center gap-4">
-          {circleParticipants.map((p) => (
-            <CircleTile
-              key={p.identity}
-              participant={p}
-              videoTrack={getVideoTrack(videoTracks, p.identity)}
-              size={circleSize}
-              clickable={!p.isLocal}
-              onClick={() => handleSwap(p.identity)}
-            />
-          ))}
+        {/* Center: circle tiles + controls below — always aligned together */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-start justify-center gap-4">
+            {circleParticipants.map((p) => (
+              <CircleTile
+                key={p.identity}
+                participant={p}
+                videoTrack={getVideoTrack(videoTracks, p.identity)}
+                size={circleSize}
+                clickable={!p.isLocal}
+                onClick={() => handleSwap(p.identity)}
+              />
+            ))}
+          </div>
+          <MediaControls room={room} showVideo={showVideo} />
         </div>
 
         {/* Right: spacer (mirror of left for centering) */}
         <div style={{ minWidth: 120 }} />
-      </div>
-
-      {/* ── MediaControls centered below circles ─────────────────────────── */}
-      <div
-        className="absolute inset-x-0 flex justify-center"
-        style={{ top: `calc(67% - ${overlapPx}px + ${circleSize + controlsGap}px)` }}
-      >
-        <MediaControls room={room} showVideo={showVideo} />
       </div>
     </div>
   );

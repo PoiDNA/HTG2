@@ -1,6 +1,9 @@
 import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { isAdminEmail } from '@/lib/roles';
+import { redirect } from 'next/navigation';
 import { CreditCard, User, CheckCircle, XCircle } from 'lucide-react';
 import SubscriptionsClient from './SubscriptionsClient';
 
@@ -121,7 +124,11 @@ export default async function AdminSubscriptionsPage({
   const sp = await searchParams;
   setRequestLocale(locale);
 
-  const supabase = await createSupabaseServer();
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+
+  const supabase = createSupabaseServiceRole();
 
   const pageSize = 50;
   const page = Math.max(1, parseInt(sp.page ?? '1'));

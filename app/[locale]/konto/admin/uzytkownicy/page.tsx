@@ -1,6 +1,9 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { isAdminEmail } from '@/lib/roles';
+import { redirect } from 'next/navigation';
 import { Users, Search, Crown, Shield, User } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -15,7 +18,13 @@ export default async function AdminUsersPage({ params, searchParams }: {
   const sp = await searchParams;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Admin' });
-  const supabase = await createSupabaseServer();
+
+  // Verify admin via session (server client), then use service role for data
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+
+  const supabase = createSupabaseServiceRole();
 
   const pageSize = 50;
   const page = parseInt(sp.page || '1');

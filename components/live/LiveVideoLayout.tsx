@@ -10,7 +10,6 @@ import {
 import { Track, type Participant, type Room } from 'livekit-client';
 import type { Phase } from '@/lib/live/types';
 import MediaControls from '@/components/live/MediaControls';
-import BreakRequestButton from '@/components/live/BreakRequestButton';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -225,15 +224,8 @@ export default function LiveVideoLayout({
         className="absolute inset-x-0 flex items-start justify-between px-6"
         style={{ top: `calc(67% - ${overlapPx}px)` }}
       >
-        {/* Left: break request (centered vertically with circle) */}
-        <div
-          className="flex items-center flex-shrink-0"
-          style={{ height: circleSize, minWidth: 120 }}
-        >
-          {!viewerIsStaff && (
-            <BreakRequestButton room={room} isStaff={false} />
-          )}
-        </div>
+        {/* Left: spacer */}
+        <div style={{ minWidth: 48 }} />
 
         {/* Center: circle tiles + controls below — always aligned together */}
         <div className="flex flex-col items-center gap-3">
@@ -249,11 +241,11 @@ export default function LiveVideoLayout({
               />
             ))}
           </div>
-          <MediaControls room={room} showVideo={showVideo} />
+          <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />
         </div>
 
-        {/* Right: spacer (mirror of left for centering) */}
-        <div style={{ minWidth: 120 }} />
+        {/* Right: spacer */}
+        <div style={{ minWidth: 48 }} />
       </div>
     </div>
   );

@@ -18,7 +18,6 @@ import PhaseTransition from '@/components/live/PhaseTransition';
 import PhaseControls from '@/components/live/PhaseControls';
 import MediaControls from '@/components/live/MediaControls';
 import PrivateTalkButton from '@/components/live/PrivateTalkButton';
-import BreakRequestButton from '@/components/live/BreakRequestButton';
 import BreakNotification from '@/components/live/BreakNotification';
 import VolumeSlider from '@/components/live/VolumeSlider';
 import OutroScreen from '@/components/live/OutroScreen';
@@ -268,12 +267,9 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
       {!isVideoPhase && phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
         <div className="relative z-20 flex items-center justify-between
           px-6 py-4 bg-black/40 backdrop-blur-sm border-t border-white/10">
-          {/* Left: media + break */}
+          {/* Left: media controls (+ break for clients) */}
           <div className="flex items-center gap-3">
-            <MediaControls room={room} showVideo={false} />
-            {!isStaff && (
-              <BreakRequestButton room={room} isStaff={isStaff} />
-            )}
+            <MediaControls room={room} showVideo={false} showBreak={!isStaff} />
           </div>
 
           {/* Center: volume sliders (sesja phase) */}

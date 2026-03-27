@@ -262,15 +262,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
             )}
           </div>
 
-          {/* Cancellation + reschedule info */}
-          <div className="text-xs text-htg-fg-muted space-y-1">
-            {isGuaranteedReschedule && (
-              <p className="text-htg-sage">✓ Gwarantowana zmiana terminu (ponad 48h do sesji)</p>
-            )}
-            {isConditionalReschedule && (
-              <p className="text-htg-warm">⚠ Zmiana terminu poniżej 48h — uzależniona od przejęcia terminu przez inną osobę</p>
-            )}
-          </div>
+          {/* Reschedule info — shown only when clicking "Zmień termin" (at calendar section) */}
         </div>
       )}
     </div>

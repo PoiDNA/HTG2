@@ -136,7 +136,13 @@ export default async function IndividualSessionsPage({
       )}
 
       {/* Calendar for booking new slots */}
-      <BookingCalendar sessionTypes={ALL_SESSION_TYPES} locale={locale} />
+      <div id="booking-calendar">
+        <h3 className="text-lg font-serif font-semibold text-htg-fg mb-2">Wybierz termin</h3>
+        <p className="text-xs text-htg-warm mb-4">
+          ⚠ Zmiana terminu poniżej 48h przed sesją uzależniona jest od przejęcia terminu przez inną osobę. Wolny termin jest ogłaszany w panelach osób oczekujących.
+        </p>
+        <BookingCalendar sessionTypes={ALL_SESSION_TYPES} locale={locale} />
+      </div>
 
       {/* Acceleration request for users without one */}
       {activeBookings.length > 0 && accelerationEntries.length === 0 && (

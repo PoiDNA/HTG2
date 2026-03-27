@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 import { Video } from 'lucide-react';
 import type { Room } from 'livekit-client';
-import { DataPacket_Kind } from 'livekit-client';
 
 interface ZoomBackupButtonProps {
   room: Room;
@@ -35,7 +34,7 @@ export default function ZoomBackupButton({ room }: ZoomBackupButtonProps) {
       // Broadcast to all participants via LiveKit data channel
       const encoder = new TextEncoder();
       const payload = encoder.encode(JSON.stringify({ type: 'zoom_backup', payload: { url } }));
-      await room.localParticipant.publishData(payload, { reliable: true, kind: DataPacket_Kind.RELIABLE });
+      await room.localParticipant.publishData(payload, { reliable: true });
 
       setSent(true);
       // Auto-reset after 10 s so staff can re-send if needed

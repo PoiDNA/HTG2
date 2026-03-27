@@ -167,7 +167,10 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   }
 
   const totalAmount = selectedSession ? selectedSession.amount / 100 : 0;
-  const installmentAmount = Math.ceil(totalAmount / 3);
+  // Installments: 1200 PLN = 3×400, 1600 PLN = 4×400
+  const isWithAssistant = selectedSession?.sessionType === 'natalia_agata' || selectedSession?.sessionType === 'natalia_justyna';
+  const installmentsCount = isWithAssistant ? 4 : 3;
+  const installmentAmount = 400; // always 400 PLN per installment
   const customAmountNum = parseInt(customAmount) || 0;
 
   const payAmount = paymentMode === 'full'
@@ -197,7 +200,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             payment_mode: paymentMode,
             total_amount: String(totalAmount * 100),
             installment_number: paymentMode === 'installments' ? '1' : undefined,
-            installments_total: paymentMode === 'installments' ? '3' : undefined,
+            installments_total: paymentMode === 'installments' ? String(installmentsCount) : undefined,
           },
         }),
       });
@@ -473,8 +476,8 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
                     : 'border-htg-card-border hover:border-htg-sage/40'
                 }`}
               >
-                <p className="font-medium text-htg-fg text-sm">3 raty miesięczne</p>
-                <p className="text-htg-sage font-bold text-lg mt-1">3 × {installmentAmount} PLN</p>
+                <p className="font-medium text-htg-fg text-sm">{installmentsCount} raty miesięczne</p>
+                <p className="text-htg-sage font-bold text-lg mt-1">{installmentsCount} × {installmentAmount} PLN</p>
                 <p className="text-htg-fg-muted text-xs">pierwsza rata teraz</p>
               </button>
 
@@ -495,21 +498,15 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             {/* Installments detail */}
             {paymentMode === 'installments' && (
               <div className="bg-htg-surface rounded-xl p-4 text-sm text-htg-fg-muted space-y-2">
-                <div className="flex justify-between">
-                  <span>Rata 1 (teraz)</span>
-                  <span className="font-bold text-htg-fg">{installmentAmount} PLN</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Rata 2 (za 30 dni)</span>
-                  <span>{installmentAmount} PLN</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Rata 3 (za 60 dni)</span>
-                  <span>{totalAmount - 2 * installmentAmount} PLN</span>
-                </div>
+                {Array.from({ length: installmentsCount }, (_, i) => (
+                  <div key={i} className="flex justify-between">
+                    <span>Rata {i + 1} {i === 0 ? '(teraz)' : `(za ${i * 30} dni)`}</span>
+                    <span className={i === 0 ? 'font-bold text-htg-fg' : ''}>{installmentAmount} PLN</span>
+                  </div>
+                ))}
                 <div className="flex justify-between pt-2 border-t border-htg-card-border font-medium text-htg-fg">
                   <span>Łącznie</span>
-                  <span>{totalAmount} PLN</span>
+                  <span>{installmentsCount * installmentAmount} PLN</span>
                 </div>
               </div>
             )}

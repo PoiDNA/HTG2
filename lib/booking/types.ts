@@ -66,6 +66,7 @@ export interface Booking {
   expires_at: string | null;
   cancelled_at: string | null;
   created_at: string;
+  live_session_id: string | null;
   // Joined data
   slot?: BookingSlot;
   user?: { email: string; display_name: string };

@@ -232,6 +232,23 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
               </button>
             )}
 
+            {/* Join live session — shown when session is soon (within 15 min) or in progress */}
+            {isConfirmed && sessionDateTime && hoursUntilSession <= 0.25 && hoursUntilSession > -3 && booking.live_session_id && (
+              <a
+                href={`/pl/live/${booking.live_session_id}`}
+                className="bg-htg-warm text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-htg-warm/90 transition-colors animate-pulse"
+              >
+                🎙️ Dołącz do sesji
+              </a>
+            )}
+
+            {/* Join — session is today but not yet within 15 min */}
+            {isConfirmed && sessionDateTime && hoursUntilSession > 0.25 && hoursUntilSession <= 24 && (
+              <span className="text-xs text-htg-fg-muted bg-htg-surface px-3 py-2 rounded-lg">
+                Sesja dziś — link do dołączenia pojawi się 15 min przed rozpoczęciem
+              </span>
+            )}
+
             {/* Reschedule — always available */}
             {canReschedule && (
               <button
@@ -242,34 +259,6 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
               >
                 Zmień termin
               </button>
-            )}
-
-          {/* Cancel — only within 14 days of purchase */}
-            {canCancel && !showCancelDialog && (
-              <button
-                onClick={() => setShowCancelDialog(true)}
-                className="text-red-600 hover:text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
-              >
-                Anuluj sesję
-              </button>
-            )}
-            {canCancel && showCancelDialog && (
-              <div className="flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg">
-                <span className="text-sm text-red-700">Na pewno anulować?</span>
-                <button
-                  onClick={handleCancel}
-                  disabled={loading === 'cancel'}
-                  className="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
-                >
-                  {loading === 'cancel' ? '...' : 'Tak, anuluj'}
-                </button>
-                <button
-                  onClick={() => setShowCancelDialog(false)}
-                  className="text-red-600 px-3 py-1.5 rounded text-xs font-medium hover:bg-red-100 transition-colors"
-                >
-                  Nie
-                </button>
-              </div>
             )}
           </div>
 

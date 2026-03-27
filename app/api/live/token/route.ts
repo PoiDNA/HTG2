@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { createLiveKitToken } from '@/lib/live/livekit';
+import { createLiveKitToken, createRoom } from '@/lib/live/livekit';
 import { isStaffEmail } from '@/lib/roles';
 import type { TokenRequest } from '@/lib/live/types';
 
@@ -52,6 +52,14 @@ export async function POST(request: NextRequest) {
       .select('display_name')
       .eq('id', user.id)
       .single();
+
+    // Ensure LiveKit room exists (auto-creates if not)
+    try {
+      await createRoom(session.room_name);
+    } catch (e) {
+      // Room may already exist — that's fine
+      console.log('Room create (may already exist):', (e as Error)?.message);
+    }
 
     const token = await createLiveKitToken(
       user.id,

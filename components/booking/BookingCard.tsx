@@ -91,7 +91,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
 
   // Reschedule: guaranteed >48h before, conditional <48h
   const canReschedule = isActive;
-  const sessionDateTime = slot ? new Date(slot.slot_date + 'T' + slot.start_time) : null;
+  const sessionDateTime = slot ? new Date(slot.slot_date + 'T' + slot.start_time + '+02:00') : null; // CEST
   const hoursUntilSession = sessionDateTime ? (sessionDateTime.getTime() - Date.now()) / (1000 * 60 * 60) : Infinity;
   const isGuaranteedReschedule = hoursUntilSession > 48;
   const isConditionalReschedule = hoursUntilSession <= 48 && hoursUntilSession > 0;

@@ -174,7 +174,7 @@ export default async function StaffDashboard({
             {todaySessions.map((booking: any) => {
               const slot = getSlot(booking);
               const client = getClient(booking);
-              const sessionStart = slot ? new Date(slot.slot_date + 'T' + slot.start_time) : null;
+              const sessionStart = slot ? new Date(slot.slot_date + 'T' + slot.start_time + '+02:00') : null; // CEST
               const hoursUntil = sessionStart ? (sessionStart.getTime() - Date.now()) / (1000 * 60 * 60) : Infinity;
               const canJoin = hoursUntil <= 0.5 && hoursUntil > -3;
               const isNow = hoursUntil <= 0 && hoursUntil > -3;

@@ -232,6 +232,18 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             room={room}
             phase={phase}
             showVideo={true}
+            staffRight={isStaff ? (
+              <div className="flex flex-col items-end gap-2">
+                <ZoomBackupButton room={room} compact />
+                <PhaseControls
+                  sessionId={sessionId}
+                  currentPhase={phase}
+                  isStaff={isStaff}
+                  onPhaseChanged={handlePhaseChanged}
+                  compact
+                />
+              </div>
+            ) : undefined}
           />
         )}
 
@@ -261,6 +273,18 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             room={room}
             phase={phase}
             showVideo={true}
+            staffRight={isStaff ? (
+              <div className="flex flex-col items-end gap-2">
+                <ZoomBackupButton room={room} compact />
+                <PhaseControls
+                  sessionId={sessionId}
+                  currentPhase={phase}
+                  isStaff={isStaff}
+                  onPhaseChanged={handlePhaseChanged}
+                  compact
+                />
+              </div>
+            ) : undefined}
           />
         )}
 
@@ -315,19 +339,6 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         </div>
       )}
 
-      {/* Staff PhaseControls for video phases — floating bottom-right */}
-      {isVideoPhase && isStaff && (
-        <div className="absolute bottom-6 right-6 z-20 flex items-center gap-3">
-          <ZoomBackupButton room={room} />
-          <PrivateTalkButton room={room} isStaff={isStaff} />
-          <PhaseControls
-            sessionId={sessionId}
-            currentPhase={phase}
-            isStaff={isStaff}
-            onPhaseChanged={handlePhaseChanged}
-          />
-        </div>
-      )}
 
       <BreakNotification
         visible={breakRequested}

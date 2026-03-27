@@ -6,9 +6,11 @@ import type { Room } from 'livekit-client';
 
 interface ZoomBackupButtonProps {
   room: Room;
+  /** Icon-only compact variant for tight layouts */
+  compact?: boolean;
 }
 
-export default function ZoomBackupButton({ room }: ZoomBackupButtonProps) {
+export default function ZoomBackupButton({ room, compact = false }: ZoomBackupButtonProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -46,6 +48,24 @@ export default function ZoomBackupButton({ room }: ZoomBackupButtonProps) {
       setSending(false);
     }
   }, [room, sending, sent]);
+
+  if (compact) {
+    return (
+      <button
+        onClick={handleActivate}
+        disabled={sending}
+        title={sent ? 'Zoom wysłany ✓' : 'Awaryjny link Zoom — wyświetl wszystkim uczestnikom'}
+        className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors active:scale-95
+          ${sent
+            ? 'bg-green-700/80 text-white cursor-default'
+            : 'bg-amber-600/80 text-white hover:bg-amber-500/90'
+          }
+          disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        {sent ? <span className="text-base">✓</span> : <Video className="w-5 h-5" />}
+      </button>
+    );
+  }
 
   return (
     <button

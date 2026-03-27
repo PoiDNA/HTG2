@@ -11,6 +11,8 @@ interface PhaseControlsProps {
   currentPhase: Phase;
   isStaff: boolean;
   onPhaseChanged?: (newPhase: Phase) => void;
+  /** Compact single-column variant for circle row */
+  compact?: boolean;
 }
 
 const PHASE_ICONS: Partial<Record<Phase, React.ReactNode>> = {
@@ -26,6 +28,7 @@ export default function PhaseControls({
   currentPhase,
   isStaff,
   onPhaseChanged,
+  compact = false,
 }: PhaseControlsProps) {
   const t = useTranslations('Live');
   const [loading, setLoading] = useState(false);
@@ -67,6 +70,22 @@ export default function PhaseControls({
       setLoading(false);
     }
   };
+
+  if (compact) {
+    return (
+      <button
+        onClick={handleAdvance}
+        disabled={loading}
+        className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl
+          bg-htg-warm text-white font-medium text-xs
+          hover:bg-htg-warm/90 transition-colors active:scale-95
+          disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {PHASE_ICONS[currentPhase]}
+        <span className="whitespace-nowrap">{loading ? '...' : t(buttonLabel)}</span>
+      </button>
+    );
+  }
 
   return (
     <div className="flex items-center gap-3">

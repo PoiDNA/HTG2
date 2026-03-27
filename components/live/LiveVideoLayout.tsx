@@ -129,6 +129,8 @@ interface LiveVideoLayoutProps {
   room: Room;
   phase: Phase;
   showVideo: boolean;
+  /** Optional staff controls rendered at the right side of the circle row */
+  staffRight?: React.ReactNode;
 }
 
 const CIRCLE_BASE = 132;      // px — bottom self-view circles
@@ -141,6 +143,7 @@ export default function LiveVideoLayout({
   room,
   phase,
   showVideo,
+  staffRight,
 }: LiveVideoLayoutProps) {
   const participants = useParticipants();
   const videoTracks = useTracks(
@@ -293,8 +296,10 @@ export default function LiveVideoLayout({
           <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />
         </div>
 
-        {/* Right spacer */}
-        <div style={{ minWidth: 48 }} />
+        {/* Right: staff controls (Zoom + PhaseControls) at circle height */}
+        <div className="flex flex-col items-end gap-2 self-center" style={{ minWidth: 48 }}>
+          {staffRight}
+        </div>
       </div>
     </div>
   );

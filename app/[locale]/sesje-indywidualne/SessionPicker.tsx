@@ -427,23 +427,22 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
                       })}
                     </div>
 
-                    {/* Acceleration option */}
-                    <div className="mt-4 pt-4 border-t border-htg-card-border">
-                      <label className="flex items-center gap-2 text-sm text-htg-fg cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={wantAcceleration}
-                          onChange={e => setWantAcceleration(e.target.checked)}
-                          className="rounded border-htg-card-border"
-                        />
-                        <Zap className="w-4 h-4 text-htg-warm" />
-                        Chcę przyspieszenie — powiadom gdy zwolni się wcześniejszy termin
-                      </label>
-                    </div>
                   </div>
                 )}
               </>
             )}
+
+            {/* Acceleration checkbox — always visible under slot selector */}
+            <label className="flex items-center gap-2 text-sm text-htg-fg cursor-pointer mt-3 p-3 rounded-xl bg-htg-surface border border-htg-card-border hover:border-htg-warm/30 transition-colors">
+              <input
+                type="checkbox"
+                checked={wantAcceleration}
+                onChange={e => setWantAcceleration(e.target.checked)}
+                className="rounded border-htg-card-border accent-htg-warm"
+              />
+              <Zap className="w-4 h-4 text-htg-warm shrink-0" />
+              <span>Chcę przyspieszenie — powiadom gdy zwolni się wcześniejszy termin</span>
+            </label>
           </div>
 
           {/* Payment mode selector */}

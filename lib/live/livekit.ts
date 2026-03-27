@@ -12,9 +12,10 @@ import type { VideoGrant } from 'livekit-server-sdk';
 // Environment — graceful fallbacks for missing keys
 // ============================================================
 
-const LIVEKIT_URL = process.env.LIVEKIT_URL ?? '';
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY ?? '';
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET ?? '';
+// Trim all env vars — Vercel sometimes includes trailing newlines when pasted
+const LIVEKIT_URL = (process.env.LIVEKIT_URL ?? '').trim();
+const LIVEKIT_API_KEY = (process.env.LIVEKIT_API_KEY ?? '').trim();
+const LIVEKIT_API_SECRET = (process.env.LIVEKIT_API_SECRET ?? '').trim();
 
 function ensureConfig() {
   if (!LIVEKIT_URL || !LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
@@ -40,7 +41,7 @@ let _roomService: RoomServiceClient | null = null;
 function getRoomService(): RoomServiceClient {
   ensureConfig();
   if (!_roomService) {
-    _roomService = new RoomServiceClient(getHttpHost(), LIVEKIT_API_KEY.trim(), LIVEKIT_API_SECRET.trim());
+    _roomService = new RoomServiceClient(getHttpHost(), LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
   }
   return _roomService;
 }
@@ -49,7 +50,7 @@ let _egressClient: EgressClient | null = null;
 function getEgressClient(): EgressClient {
   ensureConfig();
   if (!_egressClient) {
-    _egressClient = new EgressClient(getHttpHost(), LIVEKIT_API_KEY.trim(), LIVEKIT_API_SECRET.trim());
+    _egressClient = new EgressClient(getHttpHost(), LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
   }
   return _egressClient;
 }

@@ -124,6 +124,63 @@ export async function POST(request: NextRequest) {
 
       if (newPhase === 'ended') {
         update.ended_at = new Date().toISOString();
+
+        // Auto-settle: trigger transfer to assistant after session ends
+        try {
+          const { SESSION_PAYOUT_CONFIG } = await import('@/lib/stripe-connect');
+          const config = SESSION_PAYOUT_CONFIG[session.session_type || ''];
+
+          // Get booking to find payment info
+          const { data: booking } = await admin
+            .from('bookings')
+            .select('id, session_type, order_id')
+            .eq('id', session.booking_id)
+            .single();
+
+          if (booking && config) {
+            // Find assistant for this session
+            const { data: slot } = await admin
+              .from('booking_slots')
+              .select('assistant_id')
+              .eq('id', session.slot_id)
+              .single();
+
+            const idempotencyKey = `settle-${booking.id}-${Date.now()}`;
+
+            // Create settlement record
+            await admin.from('session_settlements').insert({
+              booking_id: booking.id,
+              live_session_id: sessionId,
+              payment_intent_id: booking.order_id || 'manual',
+              total_amount: config.totalAmount,
+              currency: 'pln',
+              platform_amount: config.platformAmount,
+              assistant_amount: config.assistantAmount,
+              assistant_staff_id: slot?.assistant_id || null,
+              session_type: booking.session_type,
+              idempotency_key: idempotencyKey,
+              status: 'session_completed',
+              transfer_status: config.assistantAmount === 0 ? 'not_applicable' : 'pending',
+            });
+
+            // If assistant amount > 0, auto-trigger settlement
+            if (config.assistantAmount > 0 && slot?.assistant_id) {
+              // Fire and forget — settle endpoint will handle
+              fetch(new URL('/api/stripe/settle', request.url).href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Cookie': request.headers.get('cookie') || '' },
+                body: JSON.stringify({ bookingId: booking.id }),
+              }).catch(e => console.warn('Auto-settle failed:', e));
+            } else {
+              // Solo session — mark as settled immediately
+              await admin.from('session_settlements').update({
+                status: 'settled',
+              }).eq('idempotency_key', idempotencyKey);
+            }
+          }
+        } catch (settleErr) {
+          console.warn('Auto-settle creation failed (non-blocking):', settleErr);
+        }
       }
     } catch (egressError) {
       console.warn('Egress operation failed (non-blocking):', egressError);

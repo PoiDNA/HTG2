@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { Calendar, Clock, Users, Mic, ArrowRight } from 'lucide-react';
 import { Link } from '@/i18n-config';
+import StripeConnectCard from '@/components/staff/StripeConnectCard';
 
 const SESSION_LABELS: Record<string, string> = {
   natalia_solo: 'Sesja 1:1 z Natalią',
@@ -303,6 +304,11 @@ export default async function StaffDashboard({
           </div>
         )}
       </div>
+
+      {/* Stripe Connect — for assistants only (not practitioner) */}
+      {!isPractitioner && (
+        <StripeConnectCard />
+      )}
     </div>
   );
 }

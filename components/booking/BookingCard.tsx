@@ -82,6 +82,14 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
   const isConfirmed = booking.status === 'confirmed';
   const isActive = isPending || isConfirmed;
 
+  // 14-day cancellation window from purchase date (created_at)
+  const purchaseDate = booking.created_at ? new Date(booking.created_at) : new Date();
+  const cancelDeadline = new Date(purchaseDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const canCancel = isActive && new Date() < cancelDeadline;
+  const daysLeftToCancel = Math.max(0, Math.ceil((cancelDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+  // Reschedule is always possible
+  const canReschedule = isActive;
+
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -147,54 +155,66 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
       )}
 
       {isActive && (
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-htg-card-border">
-          {isPending && (
-            <button
-              onClick={handleConfirm}
-              disabled={loading === 'confirm'}
-              className="bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50"
-            >
-              {loading === 'confirm' ? t('loading') : t('confirm_btn')}
-            </button>
-          )}
-
-          {isConfirmed && hasEarlierSlots && (
-            <button
-              onClick={() => {
-                // Scroll to calendar section
-                document.getElementById('booking-calendar')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="bg-htg-surface text-htg-fg px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-card-border transition-colors"
-            >
-              {t('transfer_btn')}
-            </button>
-          )}
-
-          {!showCancelDialog ? (
-            <button
-              onClick={() => setShowCancelDialog(true)}
-              className="text-red-600 hover:text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
-            >
-              {t('cancel_btn')}
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg">
-              <span className="text-sm text-red-700">{t('cancel_confirm')}</span>
+        <div className="space-y-3 pt-3 border-t border-htg-card-border">
+          <div className="flex flex-wrap gap-2">
+            {isPending && (
               <button
-                onClick={handleCancel}
-                disabled={loading === 'cancel'}
-                className="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                onClick={handleConfirm}
+                disabled={loading === 'confirm'}
+                className="bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50"
               >
-                {loading === 'cancel' ? '...' : t('cancel_yes')}
+                {loading === 'confirm' ? t('loading') : t('confirm_btn')}
               </button>
+            )}
+
+            {/* Reschedule — always available */}
+            {canReschedule && (
               <button
-                onClick={() => setShowCancelDialog(false)}
-                className="text-red-600 px-3 py-1.5 rounded text-xs font-medium hover:bg-red-100 transition-colors"
+                onClick={() => {
+                  document.getElementById('booking-calendar')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="bg-htg-surface text-htg-fg px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-card-border transition-colors"
               >
-                {t('cancel_no')}
+                Zmień termin
               </button>
-            </div>
-          )}
+            )}
+
+          {/* Cancel — only within 14 days of purchase */}
+            {canCancel && !showCancelDialog && (
+              <button
+                onClick={() => setShowCancelDialog(true)}
+                className="text-red-600 hover:text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
+              >
+                Anuluj sesję
+              </button>
+            )}
+            {canCancel && showCancelDialog && (
+              <div className="flex items-center gap-2 bg-red-50 px-3 py-2 rounded-lg">
+                <span className="text-sm text-red-700">Na pewno anulować?</span>
+                <button
+                  onClick={handleCancel}
+                  disabled={loading === 'cancel'}
+                  className="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {loading === 'cancel' ? '...' : 'Tak, anuluj'}
+                </button>
+                <button
+                  onClick={() => setShowCancelDialog(false)}
+                  className="text-red-600 px-3 py-1.5 rounded text-xs font-medium hover:bg-red-100 transition-colors"
+                >
+                  Nie
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Cancellation info */}
+          <p className="text-xs text-htg-fg-muted">
+            {canCancel
+              ? `Możesz anulować sesję jeszcze przez ${daysLeftToCancel} ${daysLeftToCancel === 1 ? 'dzień' : daysLeftToCancel < 5 ? 'dni' : 'dni'} (do 14 dni od zakupu). Zmiana terminu możliwa w każdym momencie.`
+              : 'Okres anulowania minął. Zmiana terminu możliwa w każdym momencie.'
+            }
+          </p>
         </div>
       )}
     </div>

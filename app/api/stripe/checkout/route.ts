@@ -51,13 +51,19 @@ export async function POST(request: NextRequest) {
     let lineItems: any[];
 
     if (amountOverride && amountOverride > 0) {
-      // Custom amount — use price_data instead of priceId
-      // Look up the product name from the price
+      // Human-readable session type names
+      const SESSION_TYPE_NAMES: Record<string, string> = {
+        natalia_solo: 'Sesja 1:1 z Natalią',
+        natalia_agata: 'Sesja z Natalią i Agatą',
+        natalia_justyna: 'Sesja z Natalią i Justyną',
+      };
+      const sessionName = SESSION_TYPE_NAMES[metadata.session_type] || 'Sesja indywidualna HTG';
+
       const productName = metadata.payment_mode === 'installments'
-        ? `Rata ${metadata.installment_number || 1}/3 — Sesja indywidualna HTG`
+        ? `Rata ${metadata.installment_number || 1}/3 — ${sessionName}`
         : metadata.payment_mode === 'custom'
-          ? 'Dopłata — Sesja indywidualna HTG'
-          : 'Sesja indywidualna HTG';
+          ? `Dopłata — ${sessionName}`
+          : sessionName;
 
       lineItems = [{
         price_data: {
@@ -65,9 +71,6 @@ export async function POST(request: NextRequest) {
           unit_amount: Math.round(amountOverride),
           product_data: {
             name: productName,
-            description: metadata.session_type
-              ? `Typ: ${metadata.session_type}`
-              : undefined,
           },
         },
         quantity: 1,

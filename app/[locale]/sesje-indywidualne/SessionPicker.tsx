@@ -26,6 +26,7 @@ interface SlotInfo {
 interface PreSessionOption {
   staffId: string;
   staffName: string;
+  staffNameWith: string; // odmiana narzędnikowa: "z Agatą"
   priceId: string;
   pricePln: number;
 }
@@ -482,9 +483,9 @@ export function SessionPicker({ sessions, preSessionOptions = {}, labels }: Sess
                 <Video className={`w-4 h-4 shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`} />
                 <div className="flex-1">
                   <p className={`font-medium ${addPreSession ? 'text-htg-fg' : 'text-htg-fg'}`}>
-                    Dodaj spotkanie wstępne z {activePreSessionOption.staffName}
+                    Dodaj spotkanie wstępne z {activePreSessionOption.staffNameWith}
                   </p>
-                  <p className="text-xs text-htg-fg-muted">15 min online przed Twoją sesją</p>
+                  <p className="text-xs text-htg-fg-muted">15 min online przed Twoją sesją — termin wybierzesz później</p>
                 </div>
                 <span className={`font-bold text-sm shrink-0 ${addPreSession ? 'text-purple-400' : 'text-htg-fg-muted'}`}>
                   +{activePreSessionOption.pricePln} PLN

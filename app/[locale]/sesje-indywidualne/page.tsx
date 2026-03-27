@@ -64,7 +64,12 @@ async function getPreSessionOptions(userId: string | null) {
     justyna: 'natalia_justyna',
   };
 
-  const result: Record<string, { staffId: string; staffName: string; priceId: string; pricePln: number }> = {};
+  const STAFF_NAME_WITH: Record<string, string> = {
+    agata: 'Agatą',
+    justyna: 'Justyną',
+  };
+
+  const result: Record<string, { staffId: string; staffName: string; staffNameWith: string; priceId: string; pricePln: number }> = {};
   for (const s of settings as any[]) {
     const staff = s.staff_members;
     const sessionType = SESSION_TYPE_BY_SLUG[staff.slug];
@@ -74,6 +79,7 @@ async function getPreSessionOptions(userId: string | null) {
     result[sessionType] = {
       staffId: s.staff_member_id,
       staffName: staff.name,
+      staffNameWith: STAFF_NAME_WITH[staff.slug] || staff.name,
       priceId: s.stripe_price_id,
       pricePln: Math.round(s.price_pln / 100), // convert grosz → PLN for display
     };

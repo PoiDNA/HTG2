@@ -161,32 +161,42 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         <SessionAnimation variant={animVariant} opacity={0.45} active />
       )}
 
-      {/* LiveControls: Back ← + Fullscreen — top overlay for all non-waiting phases */}
+      {/* ── Top header bar — 60px ─────────────────────────────────────────── */}
       {phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
-        <LiveControls backUrl={backUrl} />
-      )}
+        <div className="relative z-30 flex-shrink-0 h-[60px] flex items-center justify-between px-4">
+          <LiveControls backUrl={backUrl} standalone={false} />
 
-      {/* Connection state badge */}
-      {!isConnected && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full
-          bg-black/40 backdrop-blur-sm text-xs text-htg-cream/70">
-          {isConnecting ? 'Łączenie...' : connectionState}
+          {/* Centered branding */}
+          <div className="absolute inset-x-0 flex justify-center pointer-events-none">
+            <span className="text-white/25 text-xs font-light tracking-[0.35em] uppercase select-none">
+              Hacking The Game
+            </span>
+          </div>
+
+          {/* REC indicator — staff only during sesja */}
+          {isStaff && phase === 'sesja' && (
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 backdrop-blur-sm pointer-events-none">
+              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              <span className="text-white text-xs font-bold tracking-wide">REC</span>
+            </div>
+          )}
+
+          {/* Connection state badge */}
+          {!isConnected && (
+            <div className="absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full
+              bg-black/40 backdrop-blur-sm text-xs text-htg-cream/70 pointer-events-none">
+              {isConnecting ? 'Łączenie...' : connectionState}
+            </div>
+          )}
         </div>
       )}
 
       {/* Phase label — only for non-video non-waiting phases */}
-      {phase !== 'poczekalnia' && !isVideoPhase && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 px-3 py-1
-          rounded-full bg-black/30 backdrop-blur-sm text-sm text-htg-cream/70">
-          {phaseConfig.label}
-        </div>
-      )}
-
-      {/* REC indicator — staff only during sesja */}
-      {isStaff && phase === 'sesja' && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 backdrop-blur-sm">
-          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-          <span className="text-white text-xs font-bold tracking-wide">REC</span>
+      {phase !== 'poczekalnia' && !isVideoPhase && phase !== 'outro' && phase !== 'ended' && (
+        <div className="relative z-20 flex justify-center pb-1 pointer-events-none">
+          <div className="px-3 py-0.5 rounded-full bg-black/30 backdrop-blur-sm text-xs text-htg-cream/50">
+            {phaseConfig.label}
+          </div>
         </div>
       )}
 

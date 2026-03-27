@@ -87,8 +87,13 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
   const cancelDeadline = new Date(purchaseDate.getTime() + 14 * 24 * 60 * 60 * 1000);
   const canCancel = isActive && new Date() < cancelDeadline;
   const daysLeftToCancel = Math.max(0, Math.ceil((cancelDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-  // Reschedule is always possible
+
+  // Reschedule: guaranteed >48h before, conditional <48h
   const canReschedule = isActive;
+  const sessionDateTime = slot ? new Date(slot.slot_date + 'T' + slot.start_time) : null;
+  const hoursUntilSession = sessionDateTime ? (sessionDateTime.getTime() - Date.now()) / (1000 * 60 * 60) : Infinity;
+  const isGuaranteedReschedule = hoursUntilSession > 48;
+  const isConditionalReschedule = hoursUntilSession <= 48 && hoursUntilSession > 0;
 
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
@@ -268,13 +273,21 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
             )}
           </div>
 
-          {/* Cancellation info */}
-          <p className="text-xs text-htg-fg-muted">
-            {canCancel
-              ? `Możesz anulować sesję jeszcze przez ${daysLeftToCancel} ${daysLeftToCancel === 1 ? 'dzień' : daysLeftToCancel < 5 ? 'dni' : 'dni'} (do 14 dni od zakupu). Zmiana terminu możliwa w każdym momencie.`
-              : 'Okres anulowania minął. Zmiana terminu możliwa w każdym momencie.'
-            }
-          </p>
+          {/* Cancellation + reschedule info */}
+          <div className="text-xs text-htg-fg-muted space-y-1">
+            {isGuaranteedReschedule && (
+              <p className="text-htg-sage">✓ Gwarantowana zmiana terminu (ponad 48h do sesji)</p>
+            )}
+            {isConditionalReschedule && (
+              <p className="text-htg-warm">⚠ Zmiana terminu poniżej 48h — uzależniona od przejęcia terminu przez inną osobę</p>
+            )}
+            {canCancel && (
+              <p>Anulowanie: jeszcze {daysLeftToCancel} {daysLeftToCancel === 1 ? 'dzień' : 'dni'} (14 dni od zakupu)</p>
+            )}
+            {!canCancel && (
+              <p>Okres anulowania minął (14 dni od zakupu).</p>
+            )}
+          </div>
         </div>
       )}
     </div>

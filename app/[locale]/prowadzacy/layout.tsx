@@ -2,7 +2,10 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { LayoutDashboard, Calendar, Presentation, Users, Video } from 'lucide-react';
+import { isAdminEmail } from '@/lib/roles';
+import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
+import { stopImpersonation } from '@/lib/admin/impersonate';
+import { LayoutDashboard, Calendar, Presentation, Users, Video, ArrowLeft, Eye } from 'lucide-react';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -19,49 +22,18 @@ export default async function StaffLayout({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Staff' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user, staffMember, isAdminViewAs, viewAsName } = await getEffectiveStaffMember();
 
-  if (!user) {
-    redirect(`/${locale}/login`);
-  }
+  if (!user) redirect(`/${locale}/login`);
 
-  // Check if user is admin/moderator
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  const isAdminOrMod = profile?.role === 'admin' || profile?.role === 'moderator';
-
-  // Check if user is a staff member (by user_id or email)
-  let staffMember = null;
-
-  const { data: byUserId } = await supabase
-    .from('staff_members')
-    .select('id, name, role')
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .single();
-
-  if (byUserId) {
-    staffMember = byUserId;
-  } else if (user.email) {
-    const { data: byEmail } = await supabase
-      .from('staff_members')
-      .select('id, name, role')
-      .eq('email', user.email)
-      .eq('is_active', true)
-      .single();
-    staffMember = byEmail;
-  }
+  const isAdmin = isAdminEmail(user.email ?? '');
+  const isAdminOrMod = isAdmin || false; // admin always allowed
 
   if (!staffMember && !isAdminOrMod) {
     redirect(`/${locale}/konto`);
   }
 
-  const displayName = staffMember?.name || user.email || '';
+  const displayName = viewAsName ?? staffMember?.name ?? user.email ?? '';
   const displayRole = staffMember?.role === 'practitioner'
     ? t('role_practitioner')
     : staffMember?.role === 'assistant'
@@ -78,6 +50,23 @@ export default async function StaffLayout({
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
+      {/* Admin impersonation banner */}
+      {isAdminViewAs && (
+        <div className="flex items-center justify-between mb-4 px-4 py-3 bg-htg-warm/10 border border-htg-warm/40 rounded-xl">
+          <div className="flex items-center gap-2 text-sm text-htg-warm">
+            <Eye className="w-4 h-4" />
+            <span>Przeglądasz panel jako: <strong>{viewAsName}</strong></span>
+          </div>
+          <form action={stopImpersonation}>
+            <input type="hidden" name="locale" value={locale} />
+            <button type="submit" className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-htg-warm/20 hover:bg-htg-warm/30 text-htg-warm rounded-lg transition-colors font-medium">
+              <ArrowLeft className="w-3 h-3" />
+              Wróć do admina
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="flex items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-serif font-bold text-htg-fg">{t('title')}</h1>

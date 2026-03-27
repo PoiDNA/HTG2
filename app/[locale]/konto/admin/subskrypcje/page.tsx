@@ -336,7 +336,7 @@ export default async function AdminSubscriptionsPage({
             <div className="flex gap-1">
               {page > 1 && (
                 <a
-                  href={`/pl/konto/admin/subskrypcje?page=${page - 1}${q ? '&q=' + q : ''}${filter !== 'all' ? '&filter=' + filter : ''}`}
+                  href={`/${locale}/konto/admin/subskrypcje?page=${page - 1}${q ? '&q=' + q : ''}${filter !== 'all' ? '&filter=' + filter : ''}`}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border"
                 >
                   ← Poprz.
@@ -344,7 +344,7 @@ export default async function AdminSubscriptionsPage({
               )}
               {page < totalPages && (
                 <a
-                  href={`/pl/konto/admin/subskrypcje?page=${page + 1}${q ? '&q=' + q : ''}${filter !== 'all' ? '&filter=' + filter : ''}`}
+                  href={`/${locale}/konto/admin/subskrypcje?page=${page + 1}${q ? '&q=' + q : ''}${filter !== 'all' ? '&filter=' + filter : ''}`}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border"
                 >
                   Nast. →

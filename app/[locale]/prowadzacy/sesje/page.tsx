@@ -1,7 +1,7 @@
 import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { createClient } from '@supabase/supabase-js';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Link } from '@/i18n-config';
 import { Presentation, ArrowRight, Mic, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
@@ -19,25 +19,8 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-
-  // Find staff member
-  let staffMember: any = null;
-  if (user) {
-    const { data } = await admin.from('staff_members').select('*').eq('user_id', user.id).single();
-    if (!data && user.email) {
-      const { data: byEmail } = await admin.from('staff_members').select('*').eq('email', user.email).single();
-      staffMember = byEmail;
-    } else {
-      staffMember = data;
-    }
-  }
+  const { staffMember } = await getEffectiveStaffMember();
+  const admin = createSupabaseServiceRole();
 
   const isPractitioner = staffMember?.role === 'practitioner';
   const sessionTypes = isPractitioner

@@ -1,6 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { createClient } from '@supabase/supabase-js';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Calendar, Clock, Users, Mic, ArrowRight } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import StripeConnectCard from '@/components/staff/StripeConnectCard';
@@ -20,37 +20,8 @@ export default async function StaffDashboard({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Staff' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Use service role for queries (bypass RLS)
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-
-  // Find staff member
-  let staffMember: any = null;
-  if (user) {
-    const { data: byUserId } = await admin
-      .from('staff_members')
-      .select('id, name, role, session_types')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .single();
-
-    if (byUserId) {
-      staffMember = byUserId;
-    } else if (user.email) {
-      const { data: byEmail } = await admin
-        .from('staff_members')
-        .select('id, name, role, session_types')
-        .eq('email', user.email)
-        .eq('is_active', true)
-        .single();
-      staffMember = byEmail;
-    }
-  }
+  const { staffMember } = await getEffectiveStaffMember();
+  const admin = createSupabaseServiceRole();
 
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];

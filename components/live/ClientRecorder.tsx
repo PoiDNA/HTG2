@@ -7,9 +7,11 @@ interface ClientRecorderProps {
   bookingId: string;
   liveSessionId: string;
   type: 'before' | 'after';
+  onRecordingStart?: () => void;
+  onRecordingStop?: () => void;
 }
 
-export default function ClientRecorder({ bookingId, liveSessionId, type }: ClientRecorderProps) {
+export default function ClientRecorder({ bookingId, liveSessionId, type, onRecordingStart, onRecordingStop }: ClientRecorderProps) {
   const [mode, setMode] = useState<'idle' | 'choosing' | 'recording' | 'preview' | 'uploading' | 'done'>('idle');
   const [format, setFormat] = useState<'video' | 'audio'>('video');
   const [duration, setDuration] = useState(0);
@@ -71,10 +73,12 @@ export default function ClientRecorder({ bookingId, liveSessionId, type }: Clien
 
         streamRef.current?.getTracks().forEach(t => t.stop());
         setMode('preview');
+        onRecordingStop?.();
       };
 
       recorder.start(1000); // collect data every second
       setMode('recording');
+      onRecordingStart?.();
       setDuration(0);
 
       timerRef.current = setInterval(() => {
@@ -98,6 +102,7 @@ export default function ClientRecorder({ bookingId, liveSessionId, type }: Clien
     }
     setMode('choosing');
     setDuration(0);
+    // Music already restored on stop — no extra call needed
   }
 
   async function uploadRecording() {

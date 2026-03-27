@@ -18,6 +18,7 @@ export default function OutroScreen({ bookingId, liveSessionId, onClose }: Outro
   const [remainingMs, setRemainingMs] = useState(OUTRO_TIMER_DURATION);
   const startTimeRef = useRef(Date.now());
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const audio = new Audio('https://htg2-cdn.b-cdn.net/music-sessions/music-3.mp3');
@@ -38,6 +39,32 @@ export default function OutroScreen({ bookingId, liveSessionId, onClose }: Outro
     return () => clearInterval(interval);
   }, [onClose]);
 
+  const fadeTo = useCallback((target: number, durationMs = 2000) => {
+    if (fadeRef.current) clearInterval(fadeRef.current);
+    const audio = audioRef.current;
+    if (!audio) return;
+    const steps = 30;
+    const stepMs = durationMs / steps;
+    const startVol = audio.volume;
+    const delta = (target - startVol) / steps;
+    let step = 0;
+    fadeRef.current = setInterval(() => {
+      step++;
+      audio.volume = Math.max(0, Math.min(1, startVol + delta * step));
+      if (step >= steps) {
+        if (fadeRef.current) clearInterval(fadeRef.current);
+        audio.volume = Math.max(0, Math.min(1, target));
+        if (target === 0) audio.pause();
+      }
+    }, stepMs);
+  }, []);
+
+  const handleRecordingStart = useCallback(() => fadeTo(0, 2000), [fadeTo]);
+  const handleRecordingStop = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) { audio.volume = 0; audio.play().catch(() => {}); fadeTo(0.3, 2000); }
+  }, [fadeTo]);
+
   const formatTime = useCallback((ms: number) => {
     const totalSec = Math.ceil(ms / 1000);
     const min = Math.floor(totalSec / 60);
@@ -57,7 +84,6 @@ export default function OutroScreen({ bookingId, liveSessionId, onClose }: Outro
           {t('outro_message')}
         </p>
 
-        {/* Countdown */}
         <div className="flex items-center justify-center w-20 h-20 rounded-full
           bg-white/10 backdrop-blur-sm border border-white/20">
           <span className="text-xl font-mono text-htg-cream">
@@ -65,12 +91,13 @@ export default function OutroScreen({ bookingId, liveSessionId, onClose }: Outro
           </span>
         </div>
 
-        {/* After-session recorder */}
         {bookingId && liveSessionId && (
           <ClientRecorder
             bookingId={bookingId}
             liveSessionId={liveSessionId}
             type="after"
+            onRecordingStart={handleRecordingStart}
+            onRecordingStop={handleRecordingStop}
           />
         )}
 

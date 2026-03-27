@@ -5,7 +5,8 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { IMPERSONATE_COOKIE, startImpersonation } from '@/lib/admin/impersonate';
+import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
+import { startImpersonation } from '@/lib/admin/impersonate';
 import { Eye, ExternalLink, Calendar, Users, Presentation } from 'lucide-react';
 
 export function generateStaticParams() {

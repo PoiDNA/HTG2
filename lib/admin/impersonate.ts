@@ -4,8 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
-
-export const IMPERSONATE_COOKIE = 'admin_view_as';
+import { IMPERSONATE_COOKIE } from './impersonate-const';
 
 export async function startImpersonation(formData: FormData) {
   const staffId = formData.get('staffId') as string;

@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { IMPERSONATE_COOKIE } from './impersonate';
+import { IMPERSONATE_COOKIE } from './impersonate-const';
 
 /**
  * Returns the effective staff member for the current request.

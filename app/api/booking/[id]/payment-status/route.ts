@@ -21,7 +21,7 @@ export async function PUT(
   const body = await request.json();
   const { payment_status, payment_comment, session_type } = body;
 
-  if (payment_status && !['confirmed_paid', 'installments', 'pending_verification'].includes(payment_status)) {
+  if (payment_status && !['confirmed_paid', 'installments', 'partial_payment', 'pending_verification'].includes(payment_status)) {
     return NextResponse.json({ error: 'Invalid payment_status' }, { status: 400 });
   }
 

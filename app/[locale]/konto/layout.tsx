@@ -9,7 +9,7 @@ import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
-  ListMusic, Archive, PlusCircle, Eye, ShieldAlert,
+  ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -113,6 +113,8 @@ export default async function AccountLayout({
     { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Film },
     { href: '/konto/polubieni', label: 'Polubieni', icon: Heart },
+    { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
+    { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     { href: '/konto/profil', label: t('profile'), icon: UserCircle },
   ] as const;
 

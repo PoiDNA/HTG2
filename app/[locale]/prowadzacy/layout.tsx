@@ -41,6 +41,8 @@ export default async function StaffLayout({
       : t('role_admin');
 
   const isAssistant = staffMember?.role === 'assistant';
+  // Stats visible only to admin and practitioner (Natalia), not assistants
+  const canSeeStats = isAdmin || staffMember?.role === 'practitioner';
 
   const navItems = [
     { href: '/prowadzacy', label: t('dashboard'), icon: LayoutDashboard },
@@ -50,7 +52,7 @@ export default async function StaffLayout({
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Video },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
-    { href: '/prowadzacy/statystyki', label: 'Statystyki odtworzeń', icon: BarChart2 },
+    ...(canSeeStats ? [{ href: '/prowadzacy/statystyki', label: 'Statystyki odtworzeń', icon: BarChart2 }] : []),
   ];
 
   return (

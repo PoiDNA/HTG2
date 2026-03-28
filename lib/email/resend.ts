@@ -150,6 +150,70 @@ export async function sendEarlierSlotNotification(to: string, data: {
   });
 }
 
+export async function sendGiftNotification(to: string, data: {
+  recipientName: string;
+  senderName: string;
+  productName: string;
+  message?: string;
+  claimUrl: string;
+}) {
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    replyTo: REPLY_TO,
+    subject: `Masz prezent od ${data.senderName} — sesja HTG`,
+    html: `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; color: #1a1a2e;">
+        <div style="background: #1a1a2e; padding: 32px; text-align: center;">
+          <h1 style="color: #c9b97a; margin: 0; font-size: 28px;">HTG</h1>
+          <p style="color: #a0a0b0; margin: 8px 0 0;">Hacking The Game</p>
+        </div>
+        <div style="padding: 32px; background: #f8f6f0;">
+          <h2 style="color: #1a1a2e; margin-top: 0;">🎁 Masz prezent!</h2>
+          <p>Cześć ${data.recipientName},</p>
+          <p><strong>${data.senderName}</strong> kupił(a) dla Ciebie sesję HTG.</p>
+          ${data.message ? `<div style="background: white; border-left: 4px solid #CC9544; padding: 16px 20px; margin: 20px 0; border-radius: 4px;"><p style="margin: 0; font-style: italic; color: #444;">"${data.message}"</p></div>` : ''}
+          <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold; color: #1a1a2e;">${data.productName}</p>
+          </div>
+          <p>Kliknij poniżej, aby odebrać sesję na swoje konto:</p>
+          <a href="${data.claimUrl}" style="display: inline-block; background: #CC9544; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Odbierz sesję →</a>
+          <p style="margin-top: 20px; color: #666; font-size: 13px;">Jeśli nie masz jeszcze konta HTG — link przeniesie Cię do rejestracji. Sesja zostanie automatycznie przypisana do Twojego konta po zalogowaniu.</p>
+        </div>
+        <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
+          <p>HTG Operator PSA | htg@htg.cyou</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
+export async function sendWelcomeEmail(to: string, data: { name: string }) {
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    replyTo: REPLY_TO,
+    subject: 'Witaj w HTG — Hacking The Game',
+    html: `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; color: #1a1a2e;">
+        <div style="background: #1a1a2e; padding: 32px; text-align: center;">
+          <h1 style="color: #c9b97a; margin: 0; font-size: 28px;">HTG</h1>
+          <p style="color: #a0a0b0; margin: 8px 0 0;">Hacking The Game</p>
+        </div>
+        <div style="padding: 32px; background: #f8f6f0;">
+          <h2 style="color: #1a1a2e; margin-top: 0;">Witaj, ${data.name}!</h2>
+          <p>Cieszę się, że dołączasz do społeczności HTG.</p>
+          <p>W swoim panelu znajdziesz wszystkie zakupione sesje, nagrania i harmonogram. Jeśli masz pytania — odpisz na tego maila lub napisz na <a href="mailto:htg@htg.cyou">htg@htg.cyou</a>.</p>
+          <a href="https://htgcyou.com/pl/konto" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Przejdź do konta →</a>
+        </div>
+        <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
+          <p>HTG Operator PSA | htg@htg.cyou</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
 export async function sendPaymentFailedNotification(to: string, data: {
   name: string;
   productName: string;

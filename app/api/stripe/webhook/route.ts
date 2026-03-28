@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { createClient } from '@supabase/supabase-js';
-import { sendOrderConfirmation, sendPaymentFailedNotification } from '@/lib/email/resend';
+import { sendOrderConfirmation, sendPaymentFailedNotification, sendGiftNotification } from '@/lib/email/resend';
 
 // Use service role for webhook (no user context) — lazy init
 function getSupabaseAdmin() {
@@ -105,14 +105,31 @@ export async function POST(request: NextRequest) {
               .eq('email', giftEmail.toLowerCase())
               .maybeSingle();
 
-            await getSupabaseAdmin().from('session_gifts').insert({
+            const { data: giftRecord } = await getSupabaseAdmin().from('session_gifts').insert({
               entitlement_id: newEntitlement.id,
               purchased_by: userId,
               recipient_email: giftEmail.toLowerCase(),
               recipient_user_id: recipientProfile?.id ?? null,
               message: session.metadata?.gift_message || null,
               status: 'pending',
-            }).select().single();
+            }).select('claim_token').single();
+
+            // Email recipient
+            if (giftRecord?.claim_token) {
+              const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://htgcyou.com';
+              const claimUrl = `${baseUrl}/pl/konto/odbierz-prezent/${giftRecord.claim_token}`;
+              const senderName = session.customer_details?.name || session.customer_details?.email?.split('@')[0] || 'Nadawca';
+              const productNameForGift = lineItems.data.map((i: any) => i.description).join(', ') || 'Sesja HTG';
+              try {
+                await sendGiftNotification(giftEmail.toLowerCase(), {
+                  recipientName: giftEmail.split('@')[0],
+                  senderName,
+                  productName: productNameForGift,
+                  message: session.metadata?.gift_message || undefined,
+                  claimUrl,
+                });
+              } catch (e) { console.error('Gift email failed:', e); }
+            }
           }
 
           // Order items

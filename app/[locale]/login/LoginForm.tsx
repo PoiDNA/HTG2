@@ -126,11 +126,20 @@ export default function LoginForm() {
     }
   }
 
-  async function finishLogin() {
+  async function finishLogin(name?: string) {
     // Link any pending gifts to this account
-    try {
-      await fetch('/api/gift/link-pending', { method: 'POST' });
-    } catch { /* Non-blocking */ }
+    try { await fetch('/api/gift/link-pending', { method: 'POST' }); } catch { /* Non-blocking */ }
+
+    // Welcome email for new users (server-side, non-blocking)
+    if (isNewUser) {
+      try {
+        await fetch('/api/auth/welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name || displayName || email.split('@')[0] }),
+        });
+      } catch { /* Non-blocking */ }
+    }
 
     const locale = window.location.pathname.split('/')[1] || 'pl';
     window.location.href = returnTo || `/${locale}/konto`;
@@ -143,13 +152,10 @@ export default function LoginForm() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase
-          .from('profiles')
-          .update({ display_name: displayName.trim() })
-          .eq('id', user.id);
+        await supabase.from('profiles').update({ display_name: displayName.trim() }).eq('id', user.id);
       }
     } catch { /* Non-blocking */ }
-    await finishLogin();
+    await finishLogin(displayName.trim());
   }
 
   return (

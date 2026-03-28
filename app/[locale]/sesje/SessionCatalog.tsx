@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   X, Play, ShoppingCart, Check, ChevronDown, Calendar, Search,
   Grid3X3, List, SlidersHorizontal, Eye, Heart, Mic, Star, Tag, Clock,
-  ArrowUpDown, Sparkles, CheckCircle, Headphones, EyeOff,
+  ArrowUpDown, Sparkles, CheckCircle, Headphones, EyeOff, Gift,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -96,6 +96,10 @@ export default function SessionCatalog({
   const spotlightRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(false);
+  const [isGift, setIsGift] = useState(false);
+  const [giftEmail, setGiftEmail] = useState('');
+  const [giftMessage, setGiftMessage] = useState('');
+  const [showGiftForm, setShowGiftForm] = useState(false);
   const router = useRouter();
 
   // Purchased sets for fast lookup
@@ -228,18 +232,21 @@ export default function SessionCatalog({
     setLoading(true);
     try {
       const isMonthMode = view === 'months' && selectedMonthSets.size > 0;
+      const giftMeta = isGift && giftEmail.trim()
+        ? { gift_for_email: giftEmail.trim().toLowerCase(), ...(giftMessage.trim() && { gift_message: giftMessage.trim() }) }
+        : {};
       const body = isMonthMode
         ? {
             priceId: prices.monthlyPriceId, mode: 'payment',
             quantity: selectedMonthSets.size,
             metadata: { type: 'monthly', monthLabels: JSON.stringify(
               Array.from(selectedMonthSets).map(id => monthSets.find(m => m.id === id)?.month_label).filter(Boolean)
-            )},
+            ), ...giftMeta },
           }
         : {
             priceId: prices.sessionPriceId, mode: 'payment',
             quantity: selectedSessions.size,
-            metadata: { type: 'sessions', sessionIds: JSON.stringify(Array.from(selectedSessions)) },
+            metadata: { type: 'sessions', sessionIds: JSON.stringify(Array.from(selectedSessions)), ...giftMeta },
           };
 
       const res = await fetch('/api/stripe/checkout', {
@@ -748,23 +755,61 @@ export default function SessionCatalog({
       {/* ── Floating cart ── */}
       {cartCount > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-htg-card/95 backdrop-blur-md border-t border-htg-card-border shadow-2xl">
+          {/* Gift form (expanded) */}
+          {showGiftForm && (
+            <div className="max-w-4xl mx-auto px-6 pt-4 pb-2 space-y-2 animate-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center gap-2 text-sm font-medium text-htg-fg">
+                <Gift className="w-4 h-4 text-htg-warm" />
+                Kup jako prezent
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={giftEmail}
+                  onChange={e => setGiftEmail(e.target.value)}
+                  placeholder="Email obdarowanej osoby *"
+                  className="flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-warm/40"
+                />
+                <input
+                  type="text"
+                  value={giftMessage}
+                  onChange={e => setGiftMessage(e.target.value)}
+                  placeholder="Wiadomość (opcjonalnie)"
+                  className="flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-warm/40"
+                />
+              </div>
+            </div>
+          )}
           <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <ShoppingCart className="w-5 h-5 text-htg-sage" />
               <span className="text-htg-fg font-medium">{cartCount} {view === 'sessions' ? 'sesji' : 'pakietów'}</span>
               <button
-                onClick={() => view === 'sessions' ? setSelectedSessions(new Set()) : setSelectedMonthSets(new Set())}
+                onClick={() => { view === 'sessions' ? setSelectedSessions(new Set()) : setSelectedMonthSets(new Set()); setIsGift(false); setShowGiftForm(false); setGiftEmail(''); setGiftMessage(''); }}
                 className="text-htg-fg-muted hover:text-red-400"
               >
                 <X className="w-4 h-4" />
+              </button>
+              {/* Gift toggle */}
+              <button
+                onClick={() => { setIsGift(!isGift); setShowGiftForm(!isGift); if (isGift) { setGiftEmail(''); setGiftMessage(''); } }}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                  isGift
+                    ? 'border-htg-warm/60 bg-htg-warm/10 text-htg-warm'
+                    : 'border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:border-htg-warm/30'
+                }`}
+              >
+                <Gift className="w-3.5 h-3.5" />
+                Prezent
               </button>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xl font-bold text-htg-fg">{totalPrice} PLN</span>
               <button
                 onClick={handleCheckout}
-                disabled={loading}
-                className="bg-htg-sage text-white px-6 py-3 rounded-xl font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50"
+                disabled={loading || (isGift && !giftEmail.trim())}
+                title={isGift && !giftEmail.trim() ? 'Podaj email obdarowanej osoby' : undefined}
+                className="bg-htg-sage text-white px-6 py-3 rounded-xl font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? '...' : 'Przejdź do płatności'}
               </button>

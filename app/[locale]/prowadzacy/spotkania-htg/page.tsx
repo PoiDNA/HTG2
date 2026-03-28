@@ -5,7 +5,7 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Link } from '@/i18n-config';
-import { Plus, Settings, Play, Users } from 'lucide-react';
+import { Plus, Settings, Play, Users, Eye, Radio } from 'lucide-react';
 
 export default async function SpotkaniasHTGPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -20,6 +20,21 @@ export default async function SpotkaniasHTGPage({ params }: { params: Promise<{ 
   if (!isAdmin && !staffMember) redirect(`/${locale}/konto`);
 
   const db = createSupabaseServiceRole();
+
+  // Active sessions — show peek buttons for admin/practitioner
+  const isPractitioner = staffMember?.role === 'practitioner';
+  const canPeek = isAdmin || isPractitioner;
+
+  const { data: activeSessions } = canPeek ? await db
+    .from('htg_meeting_sessions')
+    .select(`
+      id, status, started_at,
+      htg_meetings ( name ),
+      htg_meeting_participants ( count )
+    `)
+    .in('status', ['waiting', 'active', 'free_talk'])
+    .order('started_at', { ascending: false }) : { data: null };
+
   const { data: meetings } = await db
     .from('htg_meetings')
     .select('*, htg_meeting_stages(count)')
@@ -40,6 +55,39 @@ export default async function SpotkaniasHTGPage({ params }: { params: Promise<{ 
           Nowe spotkanie
         </Link>
       </div>
+
+      {/* ── Active sessions — peek section ────────────────────────────── */}
+      {canPeek && activeSessions && activeSessions.length > 0 && (
+        <div className="bg-htg-card border border-green-500/20 rounded-xl overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-green-500/10 bg-green-500/5">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <Radio className="w-4 h-4 text-green-400/70" />
+            <span className="text-sm font-semibold text-green-400/90">Spotkania trwające teraz</span>
+          </div>
+          <div className="divide-y divide-htg-card-border/50">
+            {(activeSessions as any[]).map(s => (
+              <div key={s.id} className="flex items-center justify-between px-5 py-4 gap-4">
+                <div>
+                  <p className="font-medium text-htg-fg text-sm">{s.htg_meetings?.name ?? 'Spotkanie'}</p>
+                  <p className="text-xs text-htg-fg-muted mt-0.5">
+                    {s.status === 'waiting' ? 'Oczekiwanie' : s.status === 'free_talk' ? 'Luźna rozmowa' : 'W trakcie'}
+                    {s.started_at && ` · od ${new Date(s.started_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`}
+                  </p>
+                </div>
+                <Link
+                  href={`/prowadzacy/spotkania-htg/peek/${s.id}`}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg
+                    bg-green-500/10 hover:bg-green-500/20 text-green-400
+                    ring-1 ring-green-500/20 text-sm font-medium transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                  Podgląd live
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {(!meetings || meetings.length === 0) ? (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-12 text-center">

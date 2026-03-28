@@ -124,6 +124,34 @@ export async function createLiveKitToken(
   return token.toJwt();
 }
 
+/** Observer token — hidden participant, subscribe-only. Admin/practitioner ghost peek. */
+export async function createObserverToken(
+  identity: string,
+  roomName: string,
+  displayName?: string,
+): Promise<string> {
+  ensureConfig();
+
+  const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+    identity,
+    name: displayName ?? identity,
+    metadata: JSON.stringify({ isObserver: true }),
+    ttl: '2h',
+  });
+
+  const grant: VideoGrant = {
+    room: roomName,
+    roomJoin: true,
+    canPublish: false,
+    canSubscribe: true,
+    canPublishData: false,
+    hidden: true,
+  };
+
+  token.addGrant(grant);
+  return token.toJwt();
+}
+
 // ============================================================
 // Room management
 // ============================================================

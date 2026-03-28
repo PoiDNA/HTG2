@@ -9,7 +9,7 @@ import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
-  ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, Users2,
+  ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, Users2, BarChart2,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -89,6 +89,7 @@ export default async function AccountLayout({
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
+    { href: '/prowadzacy/spotkania-htg/profile-uczestnikow', label: 'Profile uczestników', icon: BarChart2 },
     { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
   ] as const;

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Mail, Inbox, Clock, CheckCircle2, AlertTriangle, Ban,
   Search, Send, X, ChevronRight, Lightbulb, Paperclip,
-  MessageSquare, RefreshCw,
+  MessageSquare, RefreshCw, PenSquare, ChevronDown,
 } from 'lucide-react';
 import CustomerCard from './CustomerCard';
 
@@ -86,9 +86,18 @@ export default function EmailInbox() {
   const [detail, setDetail] = useState<ConversationDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  // Compose
+  // Compose (reply in thread)
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
+
+  // New message compose
+  const [showCompose, setShowCompose] = useState(false);
+  const [composeTo, setComposeTo] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+  const [composeFrom, setComposeFrom] = useState('');
+  const [composeSending, setComposeSending] = useState(false);
+  const [mailboxes, setMailboxes] = useState<{ id: string; name: string; address: string }[]>([]);
 
   // Fetch thread list
   const fetchThreads = useCallback(async () => {
@@ -103,6 +112,10 @@ export default function EmailInbox() {
       const data = await res.json();
       setThreads(data.threads || []);
       setTotalThreads(data.total || 0);
+      if (data.mailboxes?.length > 0 && mailboxes.length === 0) {
+        setMailboxes(data.mailboxes);
+        if (!composeFrom && data.mailboxes[0]) setComposeFrom(data.mailboxes[0].address);
+      }
     } catch { /* ignore */ }
     setLoading(false);
   }, [statusFilter, searchQuery]);
@@ -168,6 +181,37 @@ export default function EmailInbox() {
     const data = await res.json();
     if (data.sent) alert('Link weryfikacyjny wysłany!');
     else alert(data.error || 'Błąd');
+  };
+
+  // Send new message (compose)
+  const handleComposeSend = async () => {
+    if (!composeTo.trim() || !composeBody.trim()) return;
+    setComposeSending(true);
+    try {
+      const res = await fetch('/api/email/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: composeTo.trim(),
+          from: composeFrom || undefined,
+          subject: composeSubject.trim() || '(bez tematu)',
+          bodyText: composeBody,
+          bodyHtml: `<p>${composeBody.replace(/\n/g, '<br/>')}</p>`,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowCompose(false);
+        setComposeTo('');
+        setComposeSubject('');
+        setComposeBody('');
+        fetchThreads();
+        if (data.conversationId) setSelectedId(data.conversationId);
+      } else {
+        alert(data.error || 'Błąd wysyłki');
+      }
+    } catch { alert('Błąd sieci'); }
+    setComposeSending(false);
   };
 
   return (
@@ -256,9 +300,18 @@ export default function EmailInbox() {
         {/* Footer */}
         <div className="p-2 border-t border-htg-card-border flex items-center justify-between">
           <span className="text-xs text-htg-fg-muted">{totalThreads} wątków</span>
-          <button onClick={fetchThreads} className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted">
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowCompose(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-htg-sage text-white hover:bg-htg-sage-dark transition-colors"
+            >
+              <PenSquare className="w-3 h-3" />
+              Nowa
+            </button>
+            <button onClick={fetchThreads} className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted">
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -421,6 +474,89 @@ export default function EmailInbox() {
             }}
             onSendVerification={handleVerify}
           />
+        </div>
+      )}
+      {/* Compose modal */}
+      {showCompose && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-htg-card border border-htg-card-border rounded-xl w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-htg-card-border">
+              <h3 className="font-serif font-semibold text-htg-fg flex items-center gap-2">
+                <PenSquare className="w-4 h-4" />
+                Nowa wiadomość
+              </h3>
+              <button onClick={() => setShowCompose(false)} className="text-htg-fg-muted hover:text-htg-fg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              {/* From (mailbox selector) */}
+              {mailboxes.length > 0 && (
+                <div>
+                  <label className="text-xs font-medium text-htg-fg-muted block mb-1">Od</label>
+                  <select
+                    value={composeFrom}
+                    onChange={e => setComposeFrom(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
+                  >
+                    {mailboxes.map(mb => (
+                      <option key={mb.id} value={mb.address}>{mb.name} ({mb.address})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* To */}
+              <div>
+                <label className="text-xs font-medium text-htg-fg-muted block mb-1">Do *</label>
+                <input
+                  type="email"
+                  value={composeTo}
+                  onChange={e => setComposeTo(e.target.value)}
+                  placeholder="email@przyklad.pl"
+                  className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
+                  autoFocus
+                />
+              </div>
+              {/* Subject */}
+              <div>
+                <label className="text-xs font-medium text-htg-fg-muted block mb-1">Temat</label>
+                <input
+                  type="text"
+                  value={composeSubject}
+                  onChange={e => setComposeSubject(e.target.value)}
+                  placeholder="Temat wiadomości"
+                  className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
+                />
+              </div>
+              {/* Body */}
+              <div>
+                <label className="text-xs font-medium text-htg-fg-muted block mb-1">Treść *</label>
+                <textarea
+                  value={composeBody}
+                  onChange={e => setComposeBody(e.target.value)}
+                  rows={6}
+                  placeholder="Napisz wiadomość..."
+                  className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t border-htg-card-border">
+              <button
+                onClick={() => setShowCompose(false)}
+                className="px-4 py-2 text-sm rounded-lg border border-htg-card-border text-htg-fg-muted hover:text-htg-fg transition-colors"
+              >
+                Anuluj
+              </button>
+              <button
+                onClick={handleComposeSend}
+                disabled={composeSending || !composeTo.trim() || !composeBody.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-htg-sage text-white font-medium hover:bg-htg-sage-dark disabled:opacity-50 transition-colors"
+              >
+                <Send className="w-4 h-4" />
+                {composeSending ? 'Wysyłanie...' : 'Wyślij'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

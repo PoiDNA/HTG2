@@ -5,12 +5,12 @@ import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Link } from '@/i18n-config';
 import { Presentation, ArrowRight, Mic, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
-const SESSION_LABELS: Record<string, string> = {
-  natalia_solo: 'Sesja 1:1 z Natalią',
-  natalia_agata: 'Sesja z Natalią i Agatą',
-  natalia_justyna: 'Sesja z Natalią i Justyną',
-  natalia_para: 'Sesja dla par',
-  natalia_asysta: 'Sesja z Asystą',
+const SESSION_LABELS_SHORT: Record<string, string> = {
+  natalia_solo: '1:1',
+  natalia_agata: 'Agata',
+  natalia_justyna: 'Justyna',
+  natalia_para: 'Para',
+  natalia_asysta: 'Asysta',
 };
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -115,9 +115,9 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
                       <div className="flex items-center gap-2 flex-wrap">
                         {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
                         <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
-                        <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}–{slot?.end_time?.slice(0, 5)}</span>
+                        <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                          {SESSION_LABELS[b.session_type] || b.session_type}
+                          {SESSION_LABELS_SHORT[b.session_type] || b.session_type}
                         </span>
                       </div>
                       <p className="text-sm text-htg-fg-muted mt-1">
@@ -164,7 +164,7 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-htg-fg-muted">{slot?.slot_date}</span>
                         <span className="text-htg-fg-muted">{slot?.start_time?.slice(0, 5)}</span>
-                        <span className="text-xs text-htg-fg-muted">{SESSION_LABELS[b.session_type] || b.session_type}</span>
+                        <span className="text-xs text-htg-fg-muted">{SESSION_LABELS_SHORT[b.session_type] || b.session_type}</span>
                       </div>
                       <p className="text-xs text-htg-fg-muted">{client?.display_name || client?.email || '—'}</p>
                     </div>

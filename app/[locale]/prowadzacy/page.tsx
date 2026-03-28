@@ -8,12 +8,12 @@ import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 
-const SESSION_LABELS: Record<string, string> = {
-  natalia_solo: 'Sesja 1:1 z Natalią',
-  natalia_agata: 'Sesja z Natalią i Agatą',
-  natalia_justyna: 'Sesja z Natalią i Justyną',
-  natalia_para: 'Sesja dla par',
-  natalia_asysta: 'Sesja z Asystą',
+const SESSION_LABELS_SHORT: Record<string, string> = {
+  natalia_solo: '1:1',
+  natalia_agata: 'Agata',
+  natalia_justyna: 'Justyna',
+  natalia_para: 'Para',
+  natalia_asysta: 'Asysta',
 };
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -179,10 +179,10 @@ export default async function StaffDashboard({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-bold text-htg-fg">
-                        {slot?.start_time?.slice(0, 5)}–{slot?.end_time?.slice(0, 5)}
+                        {slot?.start_time?.slice(0, 5)}
                       </span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                        {SESSION_LABELS[booking.session_type] || booking.session_type}
+                        {SESSION_LABELS_SHORT[booking.session_type] || booking.session_type}
                       </span>
                       {isNow && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-warm text-white font-bold">TERAZ</span>}
                     </div>
@@ -259,7 +259,7 @@ export default async function StaffDashboard({
                           {slot?.slot_date || '—'}
                         </Link>
                       </td>
-                      <td className="py-3 pr-4 text-htg-fg">{slot ? `${slot.start_time?.slice(0,5)}–${slot.end_time?.slice(0,5)}` : '—'}</td>
+                      <td className="py-3 pr-4 text-htg-fg">{slot?.start_time?.slice(0,5) || '—'}</td>
                       <td className="py-3 pr-4 text-htg-fg">
                         <Link href={`/prowadzacy/sesje/${booking.id}` as any} className="hover:underline">
                           {client?.display_name || client?.email || '—'}
@@ -267,11 +267,11 @@ export default async function StaffDashboard({
                       </td>
                       <td className="py-3 pr-4">
                         <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                          {SESSION_LABELS[booking.session_type] || booking.session_type}
+                          {SESSION_LABELS_SHORT[booking.session_type] || booking.session_type}
                         </span>
                       </td>
-                      <td className="py-3 pr-4 text-htg-fg-muted text-xs max-w-[200px] truncate">
-                        {booking.topics || '—'}
+                      <td className="py-3 pr-4 text-xs">
+                        {booking.topics ? <span className="text-htg-sage">Jest</span> : ''}
                       </td>
                       <td className="py-3 pr-4">
                         <PaymentStatusBadge

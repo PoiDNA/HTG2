@@ -1,5 +1,7 @@
--- HTG Meeting Templates
-CREATE TABLE public.htg_meetings (
+-- 016: HTG Meetings — spotkania grupowe
+-- IDEMPOTENT — safe to run multiple times
+
+CREATE TABLE IF NOT EXISTS public.htg_meetings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   meeting_type TEXT DEFAULT 'group',
@@ -13,7 +15,7 @@ CREATE TABLE public.htg_meetings (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.htg_meeting_stages (
+CREATE TABLE IF NOT EXISTS public.htg_meeting_stages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   meeting_id UUID NOT NULL REFERENCES public.htg_meetings(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -21,7 +23,7 @@ CREATE TABLE public.htg_meeting_stages (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.htg_meeting_questions (
+CREATE TABLE IF NOT EXISTS public.htg_meeting_questions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   stage_id UUID NOT NULL REFERENCES public.htg_meeting_stages(id) ON DELETE CASCADE,
   question_text TEXT NOT NULL,
@@ -29,7 +31,7 @@ CREATE TABLE public.htg_meeting_questions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.htg_meeting_sessions (
+CREATE TABLE IF NOT EXISTS public.htg_meeting_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   meeting_id UUID NOT NULL REFERENCES public.htg_meetings(id),
   room_name TEXT NOT NULL UNIQUE,
@@ -46,7 +48,7 @@ CREATE TABLE public.htg_meeting_sessions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.htg_meeting_participants (
+CREATE TABLE IF NOT EXISTS public.htg_meeting_participants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID NOT NULL REFERENCES public.htg_meeting_sessions(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -62,8 +64,27 @@ CREATE TABLE public.htg_meeting_participants (
   UNIQUE(session_id, user_id)
 );
 
-CREATE INDEX idx_htg_meeting_stages_meeting ON public.htg_meeting_stages(meeting_id);
-CREATE INDEX idx_htg_meeting_questions_stage ON public.htg_meeting_questions(stage_id);
-CREATE INDEX idx_htg_meeting_sessions_meeting ON public.htg_meeting_sessions(meeting_id);
-CREATE INDEX idx_htg_meeting_participants_session ON public.htg_meeting_participants(session_id);
-CREATE INDEX idx_htg_meeting_participants_user ON public.htg_meeting_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_htg_meeting_stages_meeting      ON public.htg_meeting_stages(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_htg_meeting_questions_stage     ON public.htg_meeting_questions(stage_id);
+CREATE INDEX IF NOT EXISTS idx_htg_meeting_sessions_meeting    ON public.htg_meeting_sessions(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_htg_meeting_participants_session ON public.htg_meeting_participants(session_id);
+CREATE INDEX IF NOT EXISTS idx_htg_meeting_participants_user   ON public.htg_meeting_participants(user_id);
+
+ALTER TABLE public.htg_meetings             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.htg_meeting_stages       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.htg_meeting_questions    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.htg_meeting_sessions     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.htg_meeting_participants ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "service_all_meetings"      ON public.htg_meetings;
+DROP POLICY IF EXISTS "service_all_stages"        ON public.htg_meeting_stages;
+DROP POLICY IF EXISTS "service_all_questions"     ON public.htg_meeting_questions;
+DROP POLICY IF EXISTS "service_all_sessions"      ON public.htg_meeting_sessions;
+DROP POLICY IF EXISTS "service_all_participants"  ON public.htg_meeting_participants;
+
+-- Service role has full access (API uses service role)
+CREATE POLICY "service_all_meetings"     ON public.htg_meetings             FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "service_all_stages"       ON public.htg_meeting_stages       FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "service_all_questions"    ON public.htg_meeting_questions     FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "service_all_sessions"     ON public.htg_meeting_sessions      FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "service_all_participants" ON public.htg_meeting_participants   FOR ALL USING (true) WITH CHECK (true);

@@ -1,8 +1,5 @@
--- ============================================================
 -- 015: Quick Calls — bezpośrednie połączenia audio/video
--- Admin, Natalia i asystentki mogą inicjować połączenie
--- zapraszając dowolnych użytkowników HTG po emailu.
--- ============================================================
+-- IDEMPOTENT — safe to run multiple times
 
 CREATE TABLE IF NOT EXISTS public.quick_calls (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -25,17 +22,17 @@ CREATE TABLE IF NOT EXISTS public.quick_call_participants (
   UNIQUE (call_id, user_id)
 );
 
--- Indexes
 CREATE INDEX IF NOT EXISTS idx_quick_calls_created_by  ON public.quick_calls (created_by);
 CREATE INDEX IF NOT EXISTS idx_quick_calls_status      ON public.quick_calls (status);
 CREATE INDEX IF NOT EXISTS idx_qcp_call_id             ON public.quick_call_participants (call_id);
 CREATE INDEX IF NOT EXISTS idx_qcp_user_id             ON public.quick_call_participants (user_id);
 
--- RLS
-ALTER TABLE public.quick_calls            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.quick_calls             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quick_call_participants ENABLE ROW LEVEL SECURITY;
 
--- quick_calls: visible to creator and participants
+DROP POLICY IF EXISTS "qc_select"  ON public.quick_calls;
+DROP POLICY IF EXISTS "qcp_select" ON public.quick_call_participants;
+
 CREATE POLICY "qc_select" ON public.quick_calls FOR SELECT USING (
   auth.uid() = created_by
   OR EXISTS (
@@ -44,7 +41,6 @@ CREATE POLICY "qc_select" ON public.quick_calls FOR SELECT USING (
   )
 );
 
--- quick_call_participants: visible to own rows + participants of same call
 CREATE POLICY "qcp_select" ON public.quick_call_participants FOR SELECT USING (
   user_id = auth.uid()
   OR EXISTS (

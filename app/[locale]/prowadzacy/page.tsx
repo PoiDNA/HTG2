@@ -16,6 +16,13 @@ const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> =
   natalia_asysta: { label: 'Asysta', className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
 
+const SESSION_LABELS_SHORT: Record<string, string> = {
+  natalia_solo: "1:1",
+  natalia_agata: "Agata",
+  natalia_justyna: "Justyna",
+  natalia_para: "Para",
+  natalia_asysta: "Asysta",
+};
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   confirmed_paid: { label: 'Opłacona', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
   installments: { label: 'Raty', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },

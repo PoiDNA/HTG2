@@ -7,6 +7,7 @@ import {
   RoomAudioRenderer,
   useParticipants,
   useRoomContext,
+  useLocalParticipant,
 } from '@livekit/components-react';
 import type { Participant } from 'livekit-client';
 import SessionAnimation from '@/components/live/SessionAnimation';
@@ -29,6 +30,7 @@ interface QueueEntry {
 
 interface SessionState {
   status: string;
+  startedAt: string | null;
   moderatorId: string;
   currentSpeakerId: string | null;
   currentStage: { id: string; name: string; order_index: number } | null;
@@ -465,6 +467,7 @@ function MeetingRoomInner({
 }) {
   const participants  = useParticipants();
   const room          = useRoomContext();
+  const { localParticipant } = useLocalParticipant();
   const [micOn, setMicOn]             = useState(true);
   const [handRaised, setHandRaised]   = useState(false);
   const [inQueue, setInQueue]         = useState(false);
@@ -500,6 +503,19 @@ function MeetingRoomInner({
     const isInQueue = state.queue.some(q => q.userId === userId);
     setInQueue(isInQueue);
   }, [state, userId]);
+
+  // Track speaking events (start/end) for D2/D3 profile computation
+  const isSpeakingRef = useRef(false);
+  useEffect(() => {
+    if (!localParticipant || state?.status === 'ended' || state?.status === 'waiting') return;
+    const speaking = localParticipant.isSpeaking;
+    if (speaking === isSpeakingRef.current) return;
+    isSpeakingRef.current = speaking;
+    fetch(`/api/htg-meeting/session/${sessionId}/speaking-event`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: speaking ? 'start' : 'end' }),
+    }).catch(() => {});
+  }, [localParticipant?.isSpeaking, sessionId, state?.status]);
 
   // Apply all_muted
   useEffect(() => {

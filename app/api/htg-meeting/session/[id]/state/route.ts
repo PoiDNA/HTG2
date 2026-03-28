@@ -71,6 +71,7 @@ export async function GET(
 
   return NextResponse.json({
     status: session.status,
+    startedAt: session.started_at ?? null,
     moderatorId: session.moderator_id,
     currentSpeakerId: session.current_speaker_id,
     currentStage,

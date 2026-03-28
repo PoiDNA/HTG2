@@ -8,12 +8,12 @@ import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 
-const SESSION_LABELS_SHORT: Record<string, string> = {
-  natalia_solo: '1:1',
-  natalia_agata: 'Agata',
-  natalia_justyna: 'Justyna',
-  natalia_para: 'Para',
-  natalia_asysta: 'Asysta',
+const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> = {
+  natalia_solo: { label: '1:1', className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
+  natalia_agata: { label: 'Agata', className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
+  natalia_justyna: { label: 'Justyna', className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  natalia_para: { label: 'Para', className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
+  natalia_asysta: { label: 'Asysta', className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -253,7 +253,7 @@ export default async function StaffDashboard({
 
                   return (
                     <tr key={booking.id} className={`border-b border-htg-card-border last:border-0 hover:bg-htg-surface/50 cursor-pointer ${isToday ? 'bg-htg-sage/5' : ''}`}>
-                      <td className="py-3 pr-4 text-htg-fg font-medium">
+                      <td className="py-3 pr-4 text-htg-fg font-medium whitespace-nowrap">
                         <Link href={`/prowadzacy/sesje/${booking.id}` as any} className="hover:underline">
                           {isToday && <span className="text-htg-sage text-xs font-bold mr-1">DZIŚ</span>}
                           {slot?.slot_date || '—'}
@@ -266,9 +266,11 @@ export default async function StaffDashboard({
                         </Link>
                       </td>
                       <td className="py-3 pr-4">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                          {SESSION_LABELS_SHORT[booking.session_type] || booking.session_type}
-                        </span>
+                        {(() => { const tb = SESSION_TYPE_BADGE[booking.session_type]; return tb ? (
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{tb.label}</span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">{booking.session_type}</span>
+                        ); })()}
                       </td>
                       <td className="py-3 pr-4 text-xs">
                         {booking.topics ? <span className="text-htg-sage">Jest</span> : ''}

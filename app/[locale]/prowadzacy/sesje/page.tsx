@@ -24,7 +24,7 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
 
   const isPractitioner = staffMember?.role === 'practitioner';
   const sessionTypes = isPractitioner
-    ? ['natalia_solo', 'natalia_agata', 'natalia_justyna']
+    ? ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para']
     : (staffMember?.session_types || []);
 
   // Fetch all bookings (past + future)
@@ -38,7 +38,7 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
     .in('session_type', sessionTypes)
     .in('status', ['confirmed', 'completed', 'pending_confirmation'])
     .order('created_at', { ascending: false })
-    .limit(100);
+    .limit(500);
 
   // Fetch profiles separately
   const userIds = [...new Set((bookings || []).map((b: any) => b.user_id).filter(Boolean))];
@@ -46,21 +46,28 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
   const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
   const enrichedBookings = (bookings || []).map((b: any) => ({ ...b, client: profileMap.get(b.user_id) || null }));
 
-  const allBookings = enrichedBookings.sort((a: any, b: any) => {
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const sortBySlotAsc = (a: any, b: any) => {
     const sa = Array.isArray(a.slot) ? a.slot[0] : a.slot;
     const sb = Array.isArray(b.slot) ? b.slot[0] : b.slot;
-    return (sb?.slot_date + sb?.start_time).localeCompare(sa?.slot_date + sa?.start_time);
-  });
+    return (sa?.slot_date + sa?.start_time).localeCompare(sb?.slot_date + sb?.start_time);
+  };
+  const sortBySlotDesc = (a: any, b: any) => -sortBySlotAsc(a, b);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const upcoming = allBookings.filter((b: any) => {
-    const slot = Array.isArray(b.slot) ? b.slot[0] : b.slot;
-    return slot?.slot_date >= todayStr && b.status !== 'completed';
-  });
-  const past = allBookings.filter((b: any) => {
-    const slot = Array.isArray(b.slot) ? b.slot[0] : b.slot;
-    return slot?.slot_date < todayStr || b.status === 'completed';
-  });
+  const upcoming = enrichedBookings
+    .filter((b: any) => {
+      const slot = Array.isArray(b.slot) ? b.slot[0] : b.slot;
+      return slot?.slot_date >= todayStr && b.status !== 'completed';
+    })
+    .sort(sortBySlotAsc);
+
+  const past = enrichedBookings
+    .filter((b: any) => {
+      const slot = Array.isArray(b.slot) ? b.slot[0] : b.slot;
+      return slot?.slot_date < todayStr || b.status === 'completed';
+    })
+    .sort(sortBySlotDesc);
 
   function getSlot(b: any) { return Array.isArray(b.slot) ? b.slot[0] : b.slot; }
   function getClient(b: any) { return Array.isArray(b.client) ? b.client[0] : b.client; }

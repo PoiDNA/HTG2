@@ -41,11 +41,13 @@ export default async function StaffDashboard({
       .from('bookings')
       .select(`
         id, session_type, status, topics, live_session_id, user_id,
-        slot:booking_slots(slot_date, start_time, end_time)
+        slot:booking_slots!inner(slot_date, start_time, end_time)
       `)
-      .in('session_type', isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna'] : sessionTypes)
+      .in('session_type', isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para'] : sessionTypes)
       .in('status', ['confirmed', 'pending_confirmation'])
-      .limit(50);
+      .gte('slot.slot_date', todayStr)
+      .order('slot_date', { referencedTable: 'booking_slots', ascending: true })
+      .limit(500);
 
     // Fetch client profiles separately
     const userIds = [...new Set((rawBookings || []).map((b: any) => b.user_id).filter(Boolean))];

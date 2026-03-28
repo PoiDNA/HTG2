@@ -105,27 +105,42 @@ export const PHASE_POSTURES: Record<JointName, readonly number[]> = {
   elbowR:      [0,   -15,  -45, -40,  -15],
   neck:        [0,   -5,   12,  20,   8],
   head:        [-8,  -15,  10,  18,   5],
-  rootTX:      [0,   -35,  0,   0,    0],
-  rootTY:      [0,   -8,   8,   18,   0],
+  rootTX:      [0,   -55,  45,  -25,  0],   // flee left, then right, then stumble
+  rootTY:      [0,   -10,  6,   22,   0],  // spring up, then sink as knees buckle
 };
 
-// ─── Walk cycle amplitudes (max degrees per joint) ────────────────────────
-// Used by useWalkCycle. sign/phase handled in the hook.
-
-export const WALK_AMPS = {
-  hip: 25,
-  knee: 35,        // only bends on forward swing
-  ankle: 8,
-  shoulder: 15,    // opposite to hip
-  elbow: 12,       // only bends on forward swing
-  pelvis: 2,
-  spineLower: 1.5,
-  spineUpper: 1,   // counter-rotates
-  neck: 2,
-  rootBounce: 5,   // px, 2× frequency
+// ─── Idle sway amplitudes (phase 0 — confident stance) ──────────────────
+export const IDLE_AMPS = {
+  hip: 3,
+  knee: 0,
+  ankle: 1,
+  shoulder: 2,
+  elbow: 0,
+  pelvis: 1,
+  spineLower: 0.5,
+  spineUpper: 0.5,
+  neck: 1,
+  rootBounce: 1,     // px
+  rootSwayX: 4,      // px, subtle lateral sway
 } as const;
 
-export const WALK_PERIOD_MS = 1400;
+// ─── Flee cycle amplitudes (phases 1-2 — panicked escape) ────────────────
+export const FLEE_AMPS = {
+  hip: 32,
+  knee: 40,          // only on forward swing
+  ankle: 10,
+  shoulder: 20,
+  elbow: 15,
+  pelvis: 3,
+  spineLower: 2,
+  spineUpper: 1.5,
+  neck: 3,
+  rootBounce: 7,     // px, 2× frequency
+  rootSwayX: 55,     // px, big lateral escape movement
+} as const;
+
+export const IDLE_PERIOD_MS = 2400;   // slow confident sway
+export const FLEE_PERIOD_MS = 800;    // frantic sprint
 
 // ─── Head dimensions for ellipse rendering ────────────────────────────────
 export const HEAD = { rx: 55, ry: 65 } as const;

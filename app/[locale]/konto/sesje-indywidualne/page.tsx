@@ -10,6 +10,7 @@ import AccelerationRequest from '@/components/booking/AccelerationRequest';
 import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
 import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
+import CompanionInvite from '@/components/booking/CompanionInvite';
 
 // Session type → assistant slug mapping
 const SESSION_TYPE_TO_SLUG: Record<string, string> = {
@@ -139,6 +140,43 @@ export default async function IndividualSessionsPage({
     (b) => b.status === 'completed'
   );
 
+  // Fetch companions for natalia_para bookings
+  const paraBookingIds = activeBookings
+    .filter(b => b.session_type === 'natalia_para')
+    .map(b => b.id);
+
+  const companionMap: Record<string, { email: string; displayName: string | null; acceptedAt: string | null } | null> = {};
+  if (user && paraBookingIds.length > 0) {
+    const db = createSupabaseServiceRole();
+    const { data: companions } = await db
+      .from('booking_companions')
+      .select('booking_id, email, display_name, accepted_at')
+      .in('booking_id', paraBookingIds);
+    (companions ?? []).forEach((c: any) => {
+      companionMap[c.booking_id] = { email: c.email, displayName: c.display_name, acceptedAt: c.accepted_at };
+    });
+  }
+
+  // Fetch partner-joined sessions (user is a companion, not booking owner)
+  let partnerBookings: any[] = [];
+  if (user) {
+    const db = createSupabaseServiceRole();
+    const { data: companionRows } = await db
+      .from('booking_companions')
+      .select(`
+        accepted_at,
+        bookings!inner (
+          id, session_type, status, live_session_id,
+          booking_slots (slot_date, start_time, end_time)
+        )
+      `)
+      .eq('user_id', user.id)
+      .not('accepted_at', 'is', null);
+    partnerBookings = (companionRows ?? [])
+      .map((c: any) => c.bookings)
+      .filter((b: any) => ['pending_confirmation', 'confirmed'].includes(b?.status));
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -188,6 +226,48 @@ export default async function IndividualSessionsPage({
                     slotId={booking.slot?.id}
                     locale={locale}
                   />
+                  {booking.session_type === 'natalia_para' && (
+                    <CompanionInvite
+                      bookingId={booking.id}
+                      existingCompanion={companionMap[booking.id] ?? null}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Sessions where user is a partner (companion) */}
+      {partnerBookings.length > 0 && (
+        <div>
+          <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4 flex items-center gap-2">
+            <span>💑</span> Sesje partnerskie
+          </h3>
+          <div className="space-y-3">
+            {partnerBookings.map((b: any) => {
+              const slot = b.booking_slots;
+              const date = slot
+                ? new Date(slot.slot_date + 'T' + slot.start_time).toLocaleString('pl-PL', {
+                    weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit',
+                  })
+                : 'Termin nieznany';
+              return (
+                <div key={b.id} className="bg-htg-card border border-rose-500/20 rounded-xl p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-medium text-htg-fg text-sm">Sesja dla par — Natalia</p>
+                    <p className="text-xs text-htg-fg-muted mt-0.5 capitalize">{date}</p>
+                  </div>
+                  {b.live_session_id && (
+                    <a
+                      href={`/${locale}/live/${b.live_session_id}`}
+                      className="px-4 py-2 rounded-lg bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage/80 transition-colors"
+                    >
+                      Dołącz
+                    </a>
+                  )}
                 </div>
               );
             })}

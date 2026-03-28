@@ -7,6 +7,7 @@ export const SESSION_CONFIG: Record<SessionType, {
   pricePln: number;
   requiredStaff: string[];  // staff slugs
   color: string;            // tailwind color class
+  maxClients?: number;      // max clients per session (default 1)
 }> = {
   natalia_solo: {
     label: 'Sesja 1:1 z Natalią',
@@ -32,6 +33,15 @@ export const SESSION_CONFIG: Record<SessionType, {
     requiredStaff: ['natalia', 'justyna'],
     color: 'bg-htg-warm',
   },
+  natalia_para: {
+    label: 'Sesja dla par',
+    labelShort: 'Sesja dla par',
+    durationMinutes: 120,
+    pricePln: 1600,
+    requiredStaff: ['natalia'],
+    color: 'bg-rose-600',
+    maxClients: 2,
+  },
   pre_session: {
     label: 'Spotkanie wstępne (15 min)',
     labelShort: 'Spotkanie wstępne',
@@ -42,7 +52,7 @@ export const SESSION_CONFIG: Record<SessionType, {
   },
 };
 
-export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna'];
+export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para'];
 export const PRE_SESSION_DURATION = 15;
 
 // Days of week (0=Sunday) — Polish labels

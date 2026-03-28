@@ -24,7 +24,7 @@ async function getIndividualSessions() {
       id, name, slug, description, metadata,
       prices ( id, stripe_price_id, amount, currency )
     `)
-    .in('slug', ['sesja-natalia', 'sesja-natalia-agata', 'sesja-natalia-justyna'])
+    .in('slug', ['sesja-natalia', 'sesja-natalia-agata', 'sesja-natalia-justyna', 'sesja-natalia-para'])
     .eq('is_active', true);
 
   return products || [];

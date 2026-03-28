@@ -68,7 +68,7 @@ function CopyButton({ text }: { text: string }) {
 function TransferModal({ gift, onClose, onSuccess }: {
   gift: GiftItem;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (msg?: string) => void;
 }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -86,7 +86,8 @@ function TransferModal({ gift, onClose, onSuccess }: {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Błąd'); return; }
-      onSuccess();
+      // transferred: false → recipient doesn't have account yet, email updated
+      onSuccess(data.message);
     } catch {
       setError('Błąd sieci');
     } finally {
@@ -99,7 +100,7 @@ function TransferModal({ gift, onClose, onSuccess }: {
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
         <h3 className="font-serif font-semibold text-htg-fg">Przekaż sesję</h3>
         <p className="text-sm text-htg-fg-muted">
-          Podaj email osoby, której chcesz przekazać sesję. Musi mieć konto HTG.
+          Podaj email osoby. Jeśli nie ma konta HTG — zostanie powiadomiona i po rejestracji zobaczy sesję w swoim panelu.
         </p>
         <input
           type="email"
@@ -202,7 +203,7 @@ function SentGiftCard({ gift, baseUrl, onRefresh }: {
         <TransferModal
           gift={gift}
           onClose={() => setTransferring(false)}
-          onSuccess={() => { setTransferring(false); onRefresh(); }}
+          onSuccess={(msg) => { setTransferring(false); if (msg) alert(msg); onRefresh(); }}
         />
       )}
     </div>

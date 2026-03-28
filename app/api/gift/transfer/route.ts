@@ -37,10 +37,21 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (!recipientProfile) {
-    return NextResponse.json({ error: 'Nie znaleziono konta dla tego adresu email. Odbiorca musi najpierw założyć konto.' }, { status: 404 });
+    // Recipient doesn't have an account yet — store email only, entitlement stays on purchaser
+    // until recipient creates account and claims via token link
+    await db
+      .from('session_gifts')
+      .update({ recipient_email: recipientEmail.toLowerCase(), recipient_user_id: null })
+      .eq('id', gift.id);
+
+    return NextResponse.json({
+      transferred: false,
+      pendingEmail: recipientEmail.toLowerCase(),
+      message: 'Odbiorca nie ma jeszcze konta. Po rejestracji zobaczy sesję w swoim panelu.',
+    });
   }
 
-  // Transfer entitlement
+  // Transfer entitlement immediately (recipient has account)
   await db
     .from('entitlements')
     .update({ user_id: recipientProfile.id })

@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Mail, KeyRound, ArrowLeft, Loader2 } from 'lucide-react';
+import { Mail, KeyRound, ArrowLeft, Loader2, User } from 'lucide-react';
 import { getRoleForEmail } from '@/lib/roles';
 
-type Step = 'email' | 'code';
+type Step = 'email' | 'code' | 'name';
 
 export default function LoginForm() {
   const t = useTranslations('Auth');
@@ -18,8 +18,16 @@ export default function LoginForm() {
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [returnTo, setReturnTo] = useState('');
 
   const supabase = createSupabaseBrowser();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setReturnTo(params.get('returnTo') || '');
+  }, []);
 
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -75,7 +83,7 @@ export default function LoginForm() {
             }),
           });
         } catch {
-          // Non-blocking — worst case server cookies not set
+          // Non-blocking
         }
       }
 
@@ -86,9 +94,7 @@ export default function LoginForm() {
           granted: true,
           consent_text: t('consent_label'),
         });
-      } catch {
-        // Non-blocking — consent may fail if table not yet created
-      }
+      } catch { /* Non-blocking */ }
 
       // Auto-set role based on email
       try {
@@ -96,19 +102,54 @@ export default function LoginForm() {
         if (expectedRole) {
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
-            await supabase
-              .from('profiles')
-              .update({ role: expectedRole })
-              .eq('id', user.id);
+            await supabase.from('profiles').update({ role: expectedRole }).eq('id', user.id);
           }
         }
-      } catch {
-        // Non-blocking
-      }
+      } catch { /* Non-blocking */ }
 
-      // Force hard navigation to ensure cookies are sent with next request
-      window.location.href = `/${window.location.pathname.split('/')[1] || 'pl'}/konto`;
+      // Check if new user (no display_name set) — ask for name before redirect
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles').select('display_name').eq('id', user.id).single();
+          if (!profile?.display_name) {
+            setIsNewUser(true);
+            setLoading(false);
+            setStep('name');
+            return;
+          }
+        }
+      } catch { /* Non-blocking */ }
+
+      await finishLogin();
     }
+  }
+
+  async function finishLogin() {
+    // Link any pending gifts to this account
+    try {
+      await fetch('/api/gift/link-pending', { method: 'POST' });
+    } catch { /* Non-blocking */ }
+
+    const locale = window.location.pathname.split('/')[1] || 'pl';
+    window.location.href = returnTo || `/${locale}/konto`;
+  }
+
+  async function handleSaveName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!displayName.trim()) { await finishLogin(); return; }
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ display_name: displayName.trim() })
+          .eq('id', user.id);
+      }
+    } catch { /* Non-blocking */ }
+    await finishLogin();
   }
 
   return (
@@ -118,11 +159,43 @@ export default function LoginForm() {
           {t('login_title')}
         </h1>
         <p className="text-htg-fg-muted">
-          {step === 'email' ? t('login_subtitle') : t('code_subtitle', { email })}
+          {step === 'email' ? t('login_subtitle') : step === 'name' ? 'Powiedz nam jak masz na imię' : t('code_subtitle', { email })}
         </p>
       </div>
 
-      {step === 'email' ? (
+      {step === 'name' ? (
+        <form onSubmit={handleSaveName} className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-htg-fg">Imię i nazwisko</span>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-htg-fg-muted" />
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="np. Jan Kowalski"
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg placeholder:text-htg-fg-muted focus:ring-2 focus:ring-htg-sage focus:border-transparent text-base"
+                autoFocus
+              />
+            </div>
+          </label>
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-htg-sage text-white py-3 px-6 rounded-lg font-medium text-base hover:bg-htg-sage-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+            Przejdź do konta
+          </button>
+          <button
+            type="button"
+            onClick={() => finishLogin()}
+            className="text-htg-fg-muted text-sm hover:text-htg-fg transition-colors text-center"
+          >
+            Pomiń
+          </button>
+        </form>
+      ) : step === 'email' ? (
         <form onSubmit={handleSendOtp} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-htg-fg">{t('email_label')}</span>

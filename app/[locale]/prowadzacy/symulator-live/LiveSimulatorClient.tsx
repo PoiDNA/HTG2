@@ -1,14 +1,132 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import SessionAnimation from '@/components/live/SessionAnimation';
 import PhaseTransition from '@/components/live/PhaseTransition';
-import { VoiceWaveform } from '@/components/live/AudioWaveTile';
+// VoiceWaveform NOT imported — simulator uses its own static variant below
 import {
   Play, SkipForward, Coffee, Square, CoffeeIcon,
   Mic, MicOff, Video, VideoOff, Monitor,
   Eye, User, ChevronRight, Clock, CheckCircle2,
 } from 'lucide-react';
+
+// ─── SimVoiceWaveform — static waveform, only amplitude breathes ──────────────
+//
+// Shape is fully determined by `seed` (no phase scrolling).
+// Only the amplitude envelope pulses gently so the waveform feels alive
+// without moving left-to-right.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SIM_HARMONICS = [
+  { mult: 1.0, weight: 1.00, phaseOff: 0.00 },
+  { mult: 2.0, weight: 0.58, phaseOff: 1.10 },
+  { mult: 3.0, weight: 0.36, phaseOff: 2.30 },
+  { mult: 4.0, weight: 0.22, phaseOff: 0.70 },
+  { mult: 5.0, weight: 0.14, phaseOff: 3.50 },
+  { mult: 7.0, weight: 0.09, phaseOff: 1.80 },
+];
+const SIM_WEIGHT_SUM = SIM_HARMONICS.reduce((s, h) => s + h.weight, 0);
+
+function SimVoiceWaveform({
+  speaking,
+  muted,
+  height = 40,
+  width = 220,
+  seed = 0,
+}: {
+  speaking: boolean;
+  muted: boolean;
+  height?: number;
+  width?: number;
+  seed?: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = width  * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const cy     = height / 2;
+    const maxAmp = cy * 0.82;
+
+    // Pre-compute static shape from seed — never changes
+    const shape: number[] = new Array(width + 1);
+    for (let px = 0; px <= width; px++) {
+      const pos = (px / width) * Math.PI * 5.5;
+      let y = 0;
+      for (const h of SIM_HARMONICS) {
+        y += Math.sin(pos * h.mult + h.phaseOff + seed * 1.41) * h.weight;
+      }
+      shape[px] = y / SIM_WEIGHT_SUM; // –1 … +1
+    }
+
+    let raf: number;
+
+    const draw = (ts: number) => {
+      const t = ts * 0.001;
+      ctx.clearRect(0, 0, width, height);
+
+      // ── Muted: thin flat line ─────────────────────────────────────────────
+      if (muted) {
+        ctx.beginPath();
+        ctx.moveTo(0, cy);
+        ctx.lineTo(width, cy);
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        raf = requestAnimationFrame(draw);
+        return;
+      }
+
+      // ── Amplitude-only envelope — shape stays fixed ───────────────────────
+      const amp = speaking
+        ? maxAmp * (0.55 + 0.45 * Math.abs(Math.sin(t * 1.8 + seed * 0.9)))
+        : maxAmp * 0.05;
+
+      ctx.beginPath();
+      for (let px = 0; px <= width; px++) {
+        const y = cy + shape[px] * amp;
+        if (px === 0) ctx.moveTo(px, y);
+        else          ctx.lineTo(px, y);
+      }
+
+      // Edge-faded gradient stroke
+      const grad = ctx.createLinearGradient(0, 0, width, 0);
+      const a    = speaking ? 1.0 : 0.38;
+      const rgb  = speaking ? '74,222,128' : '190,195,220';
+      grad.addColorStop(0,    `rgba(${rgb},0)`);
+      grad.addColorStop(0.07, `rgba(${rgb},${a})`);
+      grad.addColorStop(0.93, `rgba(${rgb},${a})`);
+      grad.addColorStop(1,    `rgba(${rgb},0)`);
+
+      ctx.strokeStyle = grad;
+      ctx.lineWidth   = speaking ? 2 : 1.5;
+      ctx.lineJoin    = 'round';
+      ctx.stroke();
+
+      raf = requestAnimationFrame(draw);
+    };
+
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speaking, muted, height, width, seed]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width, height, display: 'block' }}
+      aria-hidden
+    />
+  );
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -166,7 +284,7 @@ function SimAudioMainTile({ p }: { p: MockParticipant }) {
         )}
       </div>
       <div className="relative z-10">
-        <VoiceWaveform
+        <SimVoiceWaveform
           speaking={p.isSpeaking}
           muted={!p.isMicrophoneEnabled}
           height={44}
@@ -240,7 +358,7 @@ function SimAudioCircleTile({ p, size }: { p: MockParticipant; size: number }) {
         </span>
       </div>
       <div className="mt-1 overflow-hidden" style={{ width: Math.round(size * 0.68) }}>
-        <VoiceWaveform
+        <SimVoiceWaveform
           speaking={p.isSpeaking}
           muted={!p.isMicrophoneEnabled}
           height={waveH}

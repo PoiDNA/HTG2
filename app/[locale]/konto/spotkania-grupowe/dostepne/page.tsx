@@ -5,6 +5,7 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Users2, ArrowLeft, CalendarDays, Clock } from 'lucide-react';
 import RegisterButton from '@/components/meeting/RegisterButton';
+import ActiveMeetingBanner from '@/components/meeting/ActiveMeetingBanner';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -64,6 +65,7 @@ export default async function DostepneSpotkania({ params }: { params: Promise<{ 
 
   return (
     <div>
+      <ActiveMeetingBanner locale={locale} />
       <Link
         href={`/${locale}/konto/spotkania-grupowe`}
         className="inline-flex items-center gap-2 text-sm text-htg-fg-muted hover:text-htg-fg transition-colors mb-6"

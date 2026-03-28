@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Users2, RefreshCw, Shuffle, ChevronUp, ChevronDown,
   ArrowLeft, Info, Star, BarChart2, Heart, Check,
-  AlertTriangle, Sparkles, Edit2, X,
+  AlertTriangle, Sparkles, Edit2, X, Download,
 } from 'lucide-react';
 import type { GroupingResult, GroupProposal } from '@/lib/meetings/grouping';
 
@@ -269,6 +269,27 @@ export default function ProfilesClient({ isAdmin }: { isAdmin: boolean }) {
     setGrouping(false);
   };
 
+  const exportGroupsCSV = () => {
+    if (!proposal) return;
+    const rows: string[] = ['Grupa,Imię,Email,D1,D2,D3,Composite'];
+    proposal.groups.forEach((g, gi) => {
+      g.members.forEach((m) => {
+        const d1 = m.d1.toFixed(2);
+        const d2 = m.d2.toFixed(2);
+        const d3 = m.d3.toFixed(2);
+        const comp = ((m.d1 + m.d2 + m.d3) / 3).toFixed(2);
+        rows.push(`${gi + 1},"${m.displayName}","${m.email ?? ''}",${d1},${d2},${d3},${comp}`);
+      });
+    });
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `grupy-htg-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Derived
   const filtered = profiles.filter(p =>
     !searchQ || p.display_name.toLowerCase().includes(searchQ.toLowerCase()) ||
@@ -313,13 +334,21 @@ export default function ProfilesClient({ isAdmin }: { isAdmin: boolean }) {
   if (mode === 'proposal' && proposal) {
     return (
       <div className="space-y-5">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3">
           <button
             onClick={() => setMode('table')}
             className="flex items-center gap-2 text-htg-fg-muted hover:text-htg-fg text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Powrót do profili
+          </button>
+          <button
+            onClick={exportGroupsCSV}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-htg-surface hover:bg-htg-card
+              text-htg-fg-muted text-sm transition-colors border border-htg-card-border"
+          >
+            <Download className="w-4 h-4" />
+            Eksportuj CSV
           </button>
         </div>
 

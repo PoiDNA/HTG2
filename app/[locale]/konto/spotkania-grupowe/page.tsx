@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { ArrowLeft, Users2, PlayCircle, Clock } from 'lucide-react';
+import ActiveMeetingBanner from '@/components/meeting/ActiveMeetingBanner';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -34,6 +35,7 @@ export default async function SpotkaniaDane({ params }: { params: Promise<{ loca
 
   return (
     <div>
+      <ActiveMeetingBanner locale={locale} />
       <Link
         href="/konto"
         className="inline-flex items-center gap-2 text-sm text-htg-fg-muted hover:text-htg-fg transition-colors mb-6"

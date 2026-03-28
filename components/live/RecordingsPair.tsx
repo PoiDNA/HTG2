@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useCallback } from 'react';
 import { Video, Mic, Globe, Users, Lock, UserPlus } from 'lucide-react';
 
 interface Recording {
@@ -34,6 +35,30 @@ function RecordingCard({ recording, label, showSharingControls, onSharingChange 
   showSharingControls?: boolean;
   onSharingChange?: (recordingId: string, mode: string) => void;
 }) {
+  const eventIdRef = useRef<string | null>(null);
+  const startTimeRef = useRef<number>(0);
+
+  const handlePlay = useCallback(() => {
+    if (!recording) return;
+    startTimeRef.current = Date.now();
+    fetch('/api/analytics/recording-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'start', recordingId: recording.id }),
+    }).then(r => r.json()).then(d => { if (d.eventId) eventIdRef.current = d.eventId; }).catch(() => {});
+  }, [recording]);
+
+  const handlePause = useCallback(() => {
+    const eventId = eventIdRef.current;
+    if (!eventId) return;
+    const duration = Math.round((Date.now() - startTimeRef.current) / 1000);
+    eventIdRef.current = null;
+    fetch('/api/analytics/recording-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'stop', eventId, durationSeconds: duration }),
+    }).catch(() => {});
+  }, []);
   if (!recording) {
     return (
       <div className="flex-1 bg-htg-surface/50 border border-htg-card-border rounded-xl p-4 flex items-center justify-center min-h-[120px]">
@@ -59,10 +84,21 @@ function RecordingCard({ recording, label, showSharingControls, onSharingChange 
             playsInline
             controlsList="nodownload"
             className="w-full aspect-video object-cover"
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onEnded={handlePause}
           />
         ) : (
           <div className="p-6 flex items-center justify-center">
-            <audio src={recording.storage_url} controls controlsList="nodownload" className="w-full" />
+            <audio
+              src={recording.storage_url}
+              controls
+              controlsList="nodownload"
+              className="w-full"
+              onPlay={handlePlay}
+              onPause={handlePause}
+              onEnded={handlePause}
+            />
           </div>
         )}
       </div>

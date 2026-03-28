@@ -227,10 +227,11 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
         .then((d) => { if (d.eventId) playEventIdRef.current = d.eventId; })
         .catch(() => {});
 
-      // Start heartbeat every 30s
+      // Start heartbeat every 30s — also records playback position for retention analytics
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       heartbeatRef.current = setInterval(async () => {
         try {
+          // 1. Concurrent-stream heartbeat (existing)
           const hbRes = await fetch('/api/video/heartbeat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -241,6 +242,24 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
             video.pause();
             setStatus('blocked');
             setBlockMessage(t('concurrent_message'));
+            return;
+          }
+
+          // 2. Position heartbeat for retention graph (fire-and-forget)
+          const currentVideo = videoRef.current;
+          if (currentVideo && !currentVideo.paused && currentVideo.currentTime > 0) {
+            fetch('/api/video/play-position', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                playEventId: playEventIdRef.current,
+                sessionId,
+                positionSeconds: Math.floor(currentVideo.currentTime),
+                totalDurationSeconds: currentVideo.duration && isFinite(currentVideo.duration)
+                  ? Math.floor(currentVideo.duration)
+                  : undefined,
+              }),
+            }).catch(() => {});
           }
         } catch {}
       }, 30000);

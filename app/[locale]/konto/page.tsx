@@ -2,6 +2,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
 import { Play } from 'lucide-react';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -34,6 +35,7 @@ export default async function MySessionsPage({ params }: { params: Promise<{ loc
 
   return (
     <div>
+      <ActiveCallsWidget locale={locale} />
       <h2 className="text-xl font-serif font-semibold text-htg-fg mb-6">{t('my_sessions')}</h2>
 
       {sessions.length === 0 ? (

@@ -116,6 +116,7 @@ export default async function AccountLayout({
     { href: '/konto', label: t('my_sessions'), icon: Film },
     { href: '/konto/sesje-indywidualne', label: tPanel('individual_sessions'), icon: CalendarDays },
     { href: '/konto/spotkania-grupowe', label: 'Spotkania grupowe', icon: Users2 },
+    { href: '/konto/spotkania-grupowe/dostepne', label: 'Dostępne spotkania', icon: CalendarDays },
     { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
     { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Film },

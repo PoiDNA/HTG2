@@ -110,6 +110,9 @@ export async function POST(request: NextRequest) {
         // Pre-session meeting add-on
         pre_session_staff_id: metadata.pre_session_staff_id || '',
         pre_session_source_booking_id: metadata.pre_session_source_booking_id || '',
+        // Gift session
+        gift_for_email: metadata.gift_for_email || '',
+        gift_message: metadata.gift_message || '',
       },
     };
 

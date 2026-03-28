@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from '@/i18n-config';
-import { User, Users, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap, Heart } from 'lucide-react';
+import { User, Users, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap, Heart, Gift } from 'lucide-react';
 
 interface SessionOption {
   slug: string;
@@ -57,6 +57,9 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   const [loading, setLoading] = useState(false);
   const [wantAcceleration, setWantAcceleration] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'full' | 'installments'>('full');
+  const [isGift, setIsGift] = useState(false);
+  const [giftEmail, setGiftEmail] = useState('');
+  const [giftMessage, setGiftMessage] = useState('');
   const router = useRouter();
 
   // Derive sessions
@@ -191,6 +194,8 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             total_amount: String(totalAmount * 100),
             installment_number: paymentMode === 'installments' ? '1' : undefined,
             installments_total: paymentMode === 'installments' ? String(installmentsCount) : undefined,
+            ...(isGift && giftEmail && { gift_for_email: giftEmail.trim().toLowerCase() }),
+            ...(isGift && giftMessage.trim() && { gift_message: giftMessage.trim() }),
           },
         }),
       });
@@ -562,11 +567,60 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             )}
           </div>
 
+          {/* Gift toggle */}
+          <div>
+            <label className={`flex items-center gap-3 text-sm cursor-pointer p-4 rounded-xl border-2 transition-all ${
+              isGift
+                ? 'border-htg-warm/60 bg-htg-warm/5'
+                : 'border-htg-card-border bg-htg-surface hover:border-htg-warm/30'
+            }`}>
+              <input
+                type="checkbox"
+                checked={isGift}
+                onChange={e => { setIsGift(e.target.checked); if (!e.target.checked) { setGiftEmail(''); setGiftMessage(''); } }}
+                className="rounded border-htg-card-border accent-htg-warm w-4 h-4 shrink-0"
+              />
+              <Gift className={`w-4 h-4 shrink-0 ${isGift ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
+              <div className="flex-1">
+                <p className="font-medium text-htg-fg">Kup jako prezent</p>
+                <p className="text-xs text-htg-fg-muted">Sesja zostanie powiązana z inną osobą</p>
+              </div>
+            </label>
+
+            {isGift && (
+              <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div>
+                  <label className="text-xs font-medium text-htg-fg-muted block mb-1">Email obdarowanej osoby *</label>
+                  <input
+                    type="email"
+                    value={giftEmail}
+                    onChange={e => setGiftEmail(e.target.value)}
+                    placeholder="np. syn@przykład.pl"
+                    className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-warm/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-htg-fg-muted block mb-1">Wiadomość (opcjonalnie)</label>
+                  <textarea
+                    value={giftMessage}
+                    onChange={e => setGiftMessage(e.target.value)}
+                    placeholder="Napisz kilka słów do obdarowanej osoby…"
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-warm/40 resize-none"
+                  />
+                </div>
+                <p className="text-xs text-htg-fg-muted">
+                  Po zakupie otrzymasz link do przekazania. Obdarowana osoba może odebrać sesję na swoje konto lub skorzystać z Twojego.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Buy button */}
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration) || !selectedSession?.priceId}
+              disabled={loading || (!selectedSlotId && !wantAcceleration) || !selectedSession?.priceId || (isGift && !giftEmail.trim())}
               className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -587,6 +641,9 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
 
             {!selectedSlotId && !wantAcceleration && slots.length > 0 && selectedSession?.priceId && (
               <p className="text-xs text-htg-warm text-center mt-2">Wybierz termin lub zaznacz opcję przyspieszenia</p>
+            )}
+            {isGift && !giftEmail.trim() && (
+              <p className="text-xs text-htg-warm text-center mt-2">Podaj email obdarowanej osoby</p>
             )}
             {isPara && !selectedSession?.priceId && (
               <p className="text-xs text-htg-fg-muted text-center mt-2">

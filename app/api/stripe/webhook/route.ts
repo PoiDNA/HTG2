@@ -86,14 +86,34 @@ export async function POST(request: NextRequest) {
           const validUntil = new Date();
           validUntil.setMonth(validUntil.getMonth() + validMonths);
 
-          await getSupabaseAdmin().from('entitlements').insert({
+          const { data: newEntitlement } = await getSupabaseAdmin().from('entitlements').insert({
             user_id: userId,
             product_id: productMetadata.product_id || null,
             session_id: productMetadata.session_id || null,
             type: entitlementType,
             stripe_subscription_id: session.subscription || null,
             valid_until: validUntil.toISOString(),
-          });
+          }).select('id').single();
+
+          // If this is a gift, create a session_gifts record
+          const giftEmail = session.metadata?.gift_for_email;
+          if (giftEmail && newEntitlement?.id) {
+            // Check if recipient already has an account
+            const { data: recipientProfile } = await getSupabaseAdmin()
+              .from('profiles')
+              .select('id')
+              .eq('email', giftEmail.toLowerCase())
+              .maybeSingle();
+
+            await getSupabaseAdmin().from('session_gifts').insert({
+              entitlement_id: newEntitlement.id,
+              purchased_by: userId,
+              recipient_email: giftEmail.toLowerCase(),
+              recipient_user_id: recipientProfile?.id ?? null,
+              message: session.metadata?.gift_message || null,
+              status: 'pending',
+            }).select().single();
+          }
 
           // Order items
           await getSupabaseAdmin().from('order_items').insert({

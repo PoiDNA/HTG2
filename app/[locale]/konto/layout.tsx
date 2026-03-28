@@ -7,7 +7,7 @@ import { cookies } from 'next/headers';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import {
-  Film, CreditCard, FileText, UserCircle, CalendarDays, Heart,
+  Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, Users2, BarChart2,
 } from 'lucide-react';
@@ -121,6 +121,7 @@ export default async function AccountLayout({
     { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Film },
     { href: '/konto/polubieni', label: 'Polubieni', icon: Heart },
+    { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', icon: Gift },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     { href: '/konto/profil', label: t('profile'), icon: UserCircle },

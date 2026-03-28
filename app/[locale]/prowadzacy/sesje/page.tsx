@@ -9,6 +9,14 @@ const SESSION_LABELS: Record<string, string> = {
   natalia_solo: 'Sesja 1:1 z Natalią',
   natalia_agata: 'Sesja z Natalią i Agatą',
   natalia_justyna: 'Sesja z Natalią i Justyną',
+  natalia_para: 'Sesja dla par',
+  natalia_asysta: 'Sesja z Asystą',
+};
+
+const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  confirmed_paid: { label: 'Opłacona', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+  installments: { label: 'Raty', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
+  pending_verification: { label: 'Do potwierdzenia', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
 };
 
 export function generateStaticParams() {
@@ -24,14 +32,13 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
 
   const isPractitioner = staffMember?.role === 'practitioner';
   const sessionTypes = isPractitioner
-    ? ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para']
+    ? ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para', 'natalia_asysta']
     : (staffMember?.session_types || []);
 
-  // Fetch all bookings (past + future)
   const { data: bookings } = await admin
     .from('bookings')
     .select(`
-      id, session_type, status, topics, live_session_id, created_at,
+      id, session_type, status, topics, live_session_id, created_at, payment_status,
       slot:booking_slots!inner(slot_date, start_time, end_time),
       user_id
     `)
@@ -40,7 +47,6 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
     .order('created_at', { ascending: false })
     .limit(500);
 
-  // Fetch profiles separately
   const userIds = [...new Set((bookings || []).map((b: any) => b.user_id).filter(Boolean))];
   const { data: profiles } = userIds.length > 0 ? await admin.from('profiles').select('id, email, display_name').in('id', userIds) : { data: [] };
   const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
@@ -98,44 +104,42 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
               const isToday = slot?.slot_date === todayStr;
               const sessionStart = slot ? new Date(slot.slot_date + 'T' + slot.start_time) : null;
               const canJoin = sessionStart ? (sessionStart.getTime() - Date.now()) / (1000 * 60 * 60) <= 0.5 : false;
+              const ps = PAYMENT_STATUS_BADGE[b.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
 
               return (
-                <div key={b.id} className={`flex items-center gap-4 p-4 rounded-xl border ${
-                  isToday ? 'bg-htg-sage/5 border-htg-sage/30' : 'bg-htg-card border-htg-card-border'
-                }`}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
-                      <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
-                      <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}–{slot?.end_time?.slice(0, 5)}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                        {SESSION_LABELS[b.session_type] || b.session_type}
-                      </span>
+                <Link key={b.id} href={`/prowadzacy/sesje/${b.id}` as any} className="block">
+                  <div className={`flex items-center gap-4 p-4 rounded-xl border hover:bg-htg-surface/50 transition-colors ${
+                    isToday ? 'bg-htg-sage/5 border-htg-sage/30' : 'bg-htg-card border-htg-card-border'
+                  }`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
+                        <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
+                        <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}–{slot?.end_time?.slice(0, 5)}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
+                          {SESSION_LABELS[b.session_type] || b.session_type}
+                        </span>
+                      </div>
+                      <p className="text-sm text-htg-fg-muted mt-1">
+                        {client?.display_name || client?.email || '—'}
+                      </p>
+                      {b.topics && (
+                        <p className="text-xs text-htg-fg-muted mt-1 line-clamp-2">📝 {b.topics}</p>
+                      )}
                     </div>
-                    <p className="text-sm text-htg-fg-muted mt-1">
-                      {client?.display_name || client?.email || '—'}
-                    </p>
-                    {b.topics && (
-                      <p className="text-xs text-htg-fg-muted mt-1 line-clamp-2">📝 {b.topics}</p>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {b.status === 'pending_confirmation' && (
-                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-900/30 text-yellow-400">
-                        <AlertCircle className="w-3 h-3 inline mr-1" />Oczekuje
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>
+                        {ps.label}
                       </span>
-                    )}
-                    {b.live_session_id && canJoin && (
-                      <Link
-                        href={`/live/${b.live_session_id}` as any}
-                        className="bg-htg-warm text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-htg-warm/90 transition-colors flex items-center gap-1"
-                      >
-                        <Mic className="w-4 h-4" /> Wejdź
-                      </Link>
-                    )}
+                      {b.live_session_id && canJoin && (
+                        <span className="bg-htg-warm text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1">
+                          <Mic className="w-4 h-4" /> Wejdź
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -154,19 +158,21 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
               const slot = getSlot(b);
               const client = getClient(b);
               return (
-                <div key={b.id} className="flex items-center gap-4 p-3 rounded-xl bg-htg-card border border-htg-card-border">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-htg-fg-muted">{slot?.slot_date}</span>
-                      <span className="text-htg-fg-muted">{slot?.start_time?.slice(0, 5)}</span>
-                      <span className="text-xs text-htg-fg-muted">{SESSION_LABELS[b.session_type] || b.session_type}</span>
+                <Link key={b.id} href={`/prowadzacy/sesje/${b.id}` as any} className="block">
+                  <div className="flex items-center gap-4 p-3 rounded-xl bg-htg-card border border-htg-card-border hover:bg-htg-surface/50 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-htg-fg-muted">{slot?.slot_date}</span>
+                        <span className="text-htg-fg-muted">{slot?.start_time?.slice(0, 5)}</span>
+                        <span className="text-xs text-htg-fg-muted">{SESSION_LABELS[b.session_type] || b.session_type}</span>
+                      </div>
+                      <p className="text-xs text-htg-fg-muted">{client?.display_name || client?.email || '—'}</p>
                     </div>
-                    <p className="text-xs text-htg-fg-muted">{client?.display_name || client?.email || '—'}</p>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
+                      <CheckCircle className="w-3 h-3 inline mr-1" />Zakończona
+                    </span>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                    <CheckCircle className="w-3 h-3 inline mr-1" />Zakończona
-                  </span>
-                </div>
+                </Link>
               );
             })}
           </div>

@@ -1,4 +1,5 @@
-export type SessionType = 'natalia_solo' | 'natalia_agata' | 'natalia_justyna' | 'pre_session' | 'natalia_para';
+export type SessionType = 'natalia_solo' | 'natalia_agata' | 'natalia_justyna' | 'pre_session' | 'natalia_para' | 'natalia_asysta';
+export type PaymentStatus = 'confirmed_paid' | 'installments' | 'pending_verification';
 export type StaffRole = 'practitioner' | 'assistant';
 export type SlotStatus = 'available' | 'held' | 'booked' | 'completed' | 'cancelled';
 export type BookingStatus = 'pending_confirmation' | 'confirmed' | 'completed' | 'cancelled' | 'transferred';
@@ -67,6 +68,8 @@ export interface Booking {
   cancelled_at: string | null;
   created_at: string;
   live_session_id: string | null;
+  payment_status: PaymentStatus;
+  payment_comment: string | null;
   // Joined data
   slot?: BookingSlot;
   user?: { email: string; display_name: string };

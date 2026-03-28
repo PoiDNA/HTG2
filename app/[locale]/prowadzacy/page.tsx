@@ -11,6 +11,14 @@ const SESSION_LABELS: Record<string, string> = {
   natalia_solo: 'Sesja 1:1 z Natalią',
   natalia_agata: 'Sesja z Natalią i Agatą',
   natalia_justyna: 'Sesja z Natalią i Justyną',
+  natalia_para: 'Sesja dla par',
+  natalia_asysta: 'Sesja z Asystą',
+};
+
+const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  confirmed_paid: { label: 'Opłacona', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+  installments: { label: 'Raty', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
+  pending_verification: { label: 'Do potwierdzenia', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
 };
 
 export default async function StaffDashboard({
@@ -40,10 +48,10 @@ export default async function StaffDashboard({
     const { data: rawBookings } = await admin
       .from('bookings')
       .select(`
-        id, session_type, status, topics, live_session_id, user_id,
+        id, session_type, status, topics, live_session_id, user_id, payment_status,
         slot:booking_slots!inner(slot_date, start_time, end_time)
       `)
-      .in('session_type', isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para'] : sessionTypes)
+      .in('session_type', isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para', 'natalia_asysta'] : sessionTypes)
       .in('status', ['confirmed', 'pending_confirmation'])
       .gte('slot.slot_date', todayStr)
       .order('slot_date', { referencedTable: 'booking_slots', ascending: true })
@@ -243,13 +251,19 @@ export default async function StaffDashboard({
                   const isToday = slot?.slot_date === todayStr;
 
                   return (
-                    <tr key={booking.id} className={`border-b border-htg-card-border last:border-0 ${isToday ? 'bg-htg-sage/5' : ''}`}>
+                    <tr key={booking.id} className={`border-b border-htg-card-border last:border-0 hover:bg-htg-surface/50 cursor-pointer ${isToday ? 'bg-htg-sage/5' : ''}`}>
                       <td className="py-3 pr-4 text-htg-fg font-medium">
-                        {isToday && <span className="text-htg-sage text-xs font-bold mr-1">DZIŚ</span>}
-                        {slot?.slot_date || '—'}
+                        <Link href={`/prowadzacy/sesje/${booking.id}` as any} className="hover:underline">
+                          {isToday && <span className="text-htg-sage text-xs font-bold mr-1">DZIŚ</span>}
+                          {slot?.slot_date || '—'}
+                        </Link>
                       </td>
                       <td className="py-3 pr-4 text-htg-fg">{slot ? `${slot.start_time?.slice(0,5)}–${slot.end_time?.slice(0,5)}` : '—'}</td>
-                      <td className="py-3 pr-4 text-htg-fg">{client?.display_name || client?.email || '—'}</td>
+                      <td className="py-3 pr-4 text-htg-fg">
+                        <Link href={`/prowadzacy/sesje/${booking.id}` as any} className="hover:underline">
+                          {client?.display_name || client?.email || '—'}
+                        </Link>
+                      </td>
                       <td className="py-3 pr-4">
                         <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
                           {SESSION_LABELS[booking.session_type] || booking.session_type}
@@ -259,21 +273,29 @@ export default async function StaffDashboard({
                         {booking.topics || '—'}
                       </td>
                       <td className="py-3 pr-4">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                          booking.status === 'confirmed'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        }`}>
-                          {booking.status === 'confirmed' ? 'Potwierdzona' : 'Oczekuje'}
-                        </span>
+                        {(() => {
+                          const ps = PAYMENT_STATUS_BADGE[booking.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
+                          return (
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${ps.className}`}>
+                              {ps.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-3">
-                        {booking.live_session_id && (
+                        {booking.live_session_id ? (
                           <Link
                             href={`/live/${booking.live_session_id}` as any}
                             className="text-htg-sage hover:text-htg-sage-dark text-xs font-medium flex items-center gap-1"
                           >
                             Wejdź <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/prowadzacy/sesje/${booking.id}` as any}
+                            className="text-htg-fg-muted hover:text-htg-fg text-xs flex items-center gap-1"
+                          >
+                            Szczegóły <ArrowRight className="w-3 h-3" />
                           </Link>
                         )}
                       </td>

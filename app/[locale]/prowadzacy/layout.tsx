@@ -49,6 +49,7 @@ export default async function StaffLayout({
     { href: '/prowadzacy/klienci', label: t('clients'), icon: Users },
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Video },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
+    { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     { href: '/prowadzacy/statystyki', label: 'Statystyki odtworzeń', icon: BarChart2 },
   ];
 

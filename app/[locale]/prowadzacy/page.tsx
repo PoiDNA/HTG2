@@ -253,7 +253,7 @@ export default async function StaffDashboard({
 
                   return (
                     <tr key={booking.id} className={`border-b border-htg-card-border last:border-0 hover:bg-htg-surface/50 cursor-pointer ${isToday ? 'bg-htg-sage/5' : ''}`}>
-                      <td className="py-3 pr-4 text-htg-fg font-medium">
+                      <td className="py-3 pr-4 text-htg-fg font-medium whitespace-nowrap">
                         <Link href={`/prowadzacy/sesje/${booking.id}` as any} className="hover:underline">
                           {isToday && <span className="text-htg-sage text-xs font-bold mr-1">DZIŚ</span>}
                           {slot?.slot_date || '—'}

@@ -5,12 +5,12 @@ import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Link } from '@/i18n-config';
 import { Presentation, ArrowRight, Mic, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
-const SESSION_LABELS_SHORT: Record<string, string> = {
-  natalia_solo: '1:1',
-  natalia_agata: 'Agata',
-  natalia_justyna: 'Justyna',
-  natalia_para: 'Para',
-  natalia_asysta: 'Asysta',
+const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> = {
+  natalia_solo: { label: '1:1', className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
+  natalia_agata: { label: 'Agata', className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
+  natalia_justyna: { label: 'Justyna', className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  natalia_para: { label: 'Para', className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
+  natalia_asysta: { label: 'Asysta', className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -116,9 +116,11 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
                         {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
                         <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
                         <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                          {SESSION_LABELS_SHORT[b.session_type] || b.session_type}
-                        </span>
+{(() => { const tb = SESSION_TYPE_BADGE[b.session_type]; return tb ? (
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{tb.label}</span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">{b.session_type}</span>
+                        ); })()}
                       </div>
                       <p className="text-sm text-htg-fg-muted mt-1">
                         {client?.display_name || client?.email || '—'}
@@ -164,7 +166,11 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-htg-fg-muted">{slot?.slot_date}</span>
                         <span className="text-htg-fg-muted">{slot?.start_time?.slice(0, 5)}</span>
-                        <span className="text-xs text-htg-fg-muted">{SESSION_LABELS_SHORT[b.session_type] || b.session_type}</span>
+{(() => { const tb = SESSION_TYPE_BADGE[b.session_type]; return tb ? (
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{tb.label}</span>
+                        ) : (
+                          <span className="text-xs text-htg-fg-muted">{b.session_type}</span>
+                        ); })()}
                       </div>
                       <p className="text-xs text-htg-fg-muted">{client?.display_name || client?.email || '—'}</p>
                     </div>

@@ -77,6 +77,10 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
+        {/* Block Dark Reader from mutating hero section */}
+        <meta name="darkreader-lock" />
+        {/* Preload hero glow asset */}
+        <link rel="preload" href="/hero/glow.avif" as="image" type="image/avif" fetchPriority="high" />
         {/* Anti-flash: apply dark class + override Tailwind CSS vars before paint */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){

@@ -4,13 +4,13 @@ import { isAdminEmail } from '@/lib/roles';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { createObserverToken } from '@/lib/live/livekit';
 
-// GET /api/htg-meeting/session/[sessionId]/peek-token
+// GET /api/htg-meeting/session/[id]/peek-token
 // Returns a hidden observer LiveKit token. Admin + practitioner only.
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { sessionId } = await params;
+  const { id } = await params;
 
   const { user, staffMember } = await getEffectiveStaffMember();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,7 +25,7 @@ export async function GET(
   const { data: session } = await db
     .from('htg_meeting_sessions')
     .select('id, room_name, status')
-    .eq('id', sessionId)
+    .eq('id', id)
     .single();
 
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
@@ -38,7 +38,7 @@ export async function GET(
   return NextResponse.json({
     token,
     url: process.env.LIVEKIT_URL,
-    sessionId,
+    sessionId: id,
     roomName: session.room_name,
   });
 }

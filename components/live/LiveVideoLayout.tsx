@@ -10,6 +10,7 @@ import {
 import { Track, type Participant, type Room } from 'livekit-client';
 import type { Phase } from '@/lib/live/types';
 import MediaControls from '@/components/live/MediaControls';
+import { AudioMainTile, AudioCircleTile } from '@/components/live/AudioWaveTile';
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -129,6 +130,8 @@ interface LiveVideoLayoutProps {
   room: Room;
   phase: Phase;
   showVideo: boolean;
+  /** Faza 2: zachowaj układ kafelków ale pokaż fale audio zamiast wideo */
+  audioMode?: boolean;
   /** Optional staff controls rendered at the right side of the circle row */
   staffRight?: React.ReactNode;
 }
@@ -143,6 +146,7 @@ export default function LiveVideoLayout({
   room,
   phase,
   showVideo,
+  audioMode = false,
   staffRight,
 }: LiveVideoLayoutProps) {
   const participants = useParticipants();
@@ -225,12 +229,16 @@ export default function LiveVideoLayout({
         {/* Relative wrapper: video tiles + assistant overlay */}
         <div className="relative h-full" style={{ width: '70%' }}>
 
-          {/* Video tiles — all corners rounded */}
+          {/* Video / Audio wave tiles — all corners rounded */}
           <div className="absolute inset-0 flex gap-px overflow-hidden rounded-2xl">
             {mainParticipants.length === 0 ? (
               <div className="flex-1 bg-black/30 flex items-center justify-center">
                 <p className="text-htg-cream/30 text-sm">Oczekiwanie na uczestników...</p>
               </div>
+            ) : audioMode ? (
+              mainParticipants.map((p) => (
+                <AudioMainTile key={p.identity} participant={p} />
+              ))
             ) : (
               mainParticipants.map((p) => (
                 <MainTile
@@ -252,12 +260,16 @@ export default function LiveVideoLayout({
             >
               {assistants.map((p) => (
                 <div key={p.identity} style={{ transform: 'translateX(-33%)' }}>
-                  <CircleTile
-                    participant={p}
-                    videoTrack={getVideoTrack(videoTracks, p.identity)}
-                    size={ASST_SIZE}
-                    clickable={false}
-                  />
+                  {audioMode ? (
+                    <AudioCircleTile participant={p} size={ASST_SIZE} clickable={false} />
+                  ) : (
+                    <CircleTile
+                      participant={p}
+                      videoTrack={getVideoTrack(videoTracks, p.identity)}
+                      size={ASST_SIZE}
+                      clickable={false}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -283,14 +295,24 @@ export default function LiveVideoLayout({
         <div className="flex flex-col items-center gap-3">
           <div className="flex items-start justify-center gap-4">
             {circleParticipants.map((p) => (
-              <CircleTile
-                key={p.identity}
-                participant={p}
-                videoTrack={getVideoTrack(videoTracks, p.identity)}
-                size={circleSize}
-                clickable={!p.isLocal}
-                onClick={() => handleSwap(p.identity)}
-              />
+              audioMode ? (
+                <AudioCircleTile
+                  key={p.identity}
+                  participant={p}
+                  size={circleSize}
+                  clickable={!p.isLocal}
+                  onClick={() => handleSwap(p.identity)}
+                />
+              ) : (
+                <CircleTile
+                  key={p.identity}
+                  participant={p}
+                  videoTrack={getVideoTrack(videoTracks, p.identity)}
+                  size={circleSize}
+                  clickable={!p.isLocal}
+                  onClick={() => handleSwap(p.identity)}
+                />
+              )
             ))}
           </div>
           <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />

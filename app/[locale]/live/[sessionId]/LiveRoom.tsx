@@ -13,7 +13,6 @@ import { PHASE_CONFIG } from '@/lib/live/constants';
 import WaitingRoom from '@/components/live/WaitingRoom';
 import LiveVideoLayout from '@/components/live/LiveVideoLayout';
 import LiveControls from '@/components/live/LiveControls';
-import AudioOnlyView from '@/components/live/AudioOnlyView';
 import PhaseTransition from '@/components/live/PhaseTransition';
 import PhaseControls from '@/components/live/PhaseControls';
 import MediaControls from '@/components/live/MediaControls';
@@ -269,7 +268,27 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
           />
         )}
 
-        {phase === 'sesja' && <AudioOnlyView />}
+        {phase === 'sesja' && (
+          <LiveVideoLayout
+            viewerIsStaff={isStaff}
+            room={room}
+            phase={phase}
+            showVideo={false}
+            audioMode={true}
+            staffRight={isStaff ? (
+              <div className="flex flex-col items-end gap-2">
+                <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
+                <PhaseControls
+                  sessionId={sessionId}
+                  currentPhase={phase}
+                  isStaff={isStaff}
+                  onPhaseChanged={handlePhaseChanged}
+                  compact
+                />
+              </div>
+            ) : undefined}
+          />
+        )}
 
         {phase === 'przejscie_2' && (
           <PhaseTransition

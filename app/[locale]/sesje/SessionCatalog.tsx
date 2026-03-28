@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   X, Play, ShoppingCart, Check, ChevronDown, Calendar, Search,
   Grid3X3, List, SlidersHorizontal, Eye, Heart, Mic, Star, Tag, Clock,
-  ArrowUpDown, Sparkles, CheckCircle, Headphones, EyeOff, Gift,
+  ArrowUpDown, Sparkles, CheckCircle, Headphones, EyeOff, Gift, Crown,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -57,6 +57,17 @@ const SORT_OPTIONS = [
   { value: 'az', label: 'A → Z' },
 ];
 
+const MONTH_NAMES_PL: Record<string, string> = {
+  '01': 'Styczeń', '02': 'Luty', '03': 'Marzec', '04': 'Kwiecień',
+  '05': 'Maj', '06': 'Czerwiec', '07': 'Lipiec', '08': 'Sierpień',
+  '09': 'Wrzesień', '10': 'Październik', '11': 'Listopad', '12': 'Grudzień',
+};
+
+function formatMonthLabel(label: string): string {
+  const [year, mm] = label.split('-');
+  return `${MONTH_NAMES_PL[mm] || mm} ${year}`;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -67,15 +78,23 @@ export default function SessionCatalog({
   purchasedSessionIds = [],
   purchasedMonthSetIds = [],
   hasYearly = false,
+  yearlyPrice = 0,
+  yearlyPriceId = '',
+  allYearlyMonths = [],
+  purchasedYearlyMonths = [],
 }: {
   monthSets: MonthSetInfo[];
   prices: Prices;
   purchasedSessionIds?: string[];
   purchasedMonthSetIds?: string[];
   hasYearly?: boolean;
+  yearlyPrice?: number;
+  yearlyPriceId?: string;
+  allYearlyMonths?: MonthSetInfo[];
+  purchasedYearlyMonths?: string[];
 }) {
   // View mode
-  const [view, setView] = useState<'sessions' | 'months'>('sessions');
+  const [view, setView] = useState<'sessions' | 'months' | 'yearly'>('sessions');
 
   // Filters
   const [category, setCategory] = useState('all');
@@ -91,7 +110,11 @@ export default function SessionCatalog({
   const [selectedMonthSets, setSelectedMonthSets] = useState<Set<string>>(new Set());
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
-  // Spotlight (months view)
+  // Yearly selection
+  const [selectedYearlyMonths, setSelectedYearlyMonths] = useState<Set<string>>(new Set());
+  const purchasedYearlySet = useMemo(() => new Set(purchasedYearlyMonths), [purchasedYearlyMonths]);
+
+  // Spotlight (months view + yearly view)
   const [spotlightId, setSpotlightId] = useState<string | null>(null);
   const spotlightRef = useRef<HTMLDivElement>(null);
 
@@ -228,26 +251,62 @@ export default function SessionCatalog({
     });
   }, [isPurchasedMonth]);
 
+  const toggleYearlyMonth = useCallback((monthLabel: string) => {
+    if (purchasedYearlySet.has(monthLabel)) return;
+    setSelectedYearlyMonths(prev => {
+      const next = new Set(prev);
+      if (next.has(monthLabel)) {
+        next.delete(monthLabel);
+      } else if (next.size < 12) {
+        next.add(monthLabel);
+      }
+      return next;
+    });
+  }, [purchasedYearlySet]);
+
+  const autoSelect12FromNow = useCallback(() => {
+    const now = new Date();
+    const currentLabel = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const available = allYearlyMonths
+      .map(m => m.month_label)
+      .filter(l => l >= currentLabel && !purchasedYearlySet.has(l));
+    setSelectedYearlyMonths(new Set(available.slice(0, 12)));
+  }, [allYearlyMonths, purchasedYearlySet]);
+
   async function handleCheckout() {
     setLoading(true);
     try {
       const isMonthMode = view === 'months' && selectedMonthSets.size > 0;
+      const isYearlyMode = view === 'yearly' && selectedYearlyMonths.size === 12;
       const giftMeta = isGift && giftEmail.trim()
         ? { gift_for_email: giftEmail.trim().toLowerCase(), ...(giftMessage.trim() && { gift_message: giftMessage.trim() }) }
         : {};
-      const body = isMonthMode
-        ? {
-            priceId: prices.monthlyPriceId, mode: 'payment',
-            quantity: selectedMonthSets.size,
-            metadata: { type: 'monthly', monthLabels: JSON.stringify(
-              Array.from(selectedMonthSets).map(id => monthSets.find(m => m.id === id)?.month_label).filter(Boolean)
-            ), ...giftMeta },
-          }
-        : {
-            priceId: prices.sessionPriceId, mode: 'payment',
-            quantity: selectedSessions.size,
-            metadata: { type: 'sessions', sessionIds: JSON.stringify(Array.from(selectedSessions)), ...giftMeta },
-          };
+
+      let body: Record<string, any>;
+      if (isYearlyMode) {
+        body = {
+          items: [{ priceId: yearlyPriceId, quantity: 1 }],
+          metadata: {
+            purchase_type: 'yearly',
+            selectedMonths: JSON.stringify(Array.from(selectedYearlyMonths)),
+            ...giftMeta,
+          },
+        };
+      } else if (isMonthMode) {
+        body = {
+          priceId: prices.monthlyPriceId, mode: 'payment',
+          quantity: selectedMonthSets.size,
+          metadata: { type: 'monthly', monthLabels: JSON.stringify(
+            Array.from(selectedMonthSets).map(id => monthSets.find(m => m.id === id)?.month_label).filter(Boolean)
+          ), ...giftMeta },
+        };
+      } else {
+        body = {
+          priceId: prices.sessionPriceId, mode: 'payment',
+          quantity: selectedSessions.size,
+          metadata: { type: 'sessions', sessionIds: JSON.stringify(Array.from(selectedSessions)), ...giftMeta },
+        };
+      }
 
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -260,11 +319,17 @@ export default function SessionCatalog({
     } catch {} finally { setLoading(false); }
   }
 
-  const spotlightSet = monthSets.find(ms => ms.id === spotlightId);
-  const cartCount = view === 'months' ? selectedMonthSets.size : selectedSessions.size;
-  const totalPrice = view === 'months'
-    ? selectedMonthSets.size * prices.monthlyAmount
-    : selectedSessions.size * prices.sessionAmount;
+  const spotlightSet = view === 'yearly'
+    ? allYearlyMonths.find(ms => ms.id === spotlightId)
+    : monthSets.find(ms => ms.id === spotlightId);
+  const cartCount = view === 'yearly'
+    ? selectedYearlyMonths.size
+    : view === 'months' ? selectedMonthSets.size : selectedSessions.size;
+  const totalPrice = view === 'yearly'
+    ? (selectedYearlyMonths.size === 12 ? yearlyPrice : 0)
+    : view === 'months'
+      ? selectedMonthSets.size * prices.monthlyAmount
+      : selectedSessions.size * prices.sessionAmount;
 
   const hasActiveFilters = category !== 'all' || selectedMonth || selectedTag || hideOwned;
 
@@ -294,6 +359,14 @@ export default function SessionCatalog({
             }`}
           >
             <Calendar className="w-4 h-4 inline mr-1.5" />Miesiące
+          </button>
+          <button
+            onClick={() => { setView('yearly'); setSpotlightId(null); }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              view === 'yearly' ? 'bg-htg-indigo text-white' : 'text-htg-fg-muted hover:text-htg-fg'
+            }`}
+          >
+            <Crown className="w-4 h-4 inline mr-1.5" />Rok
           </button>
         </div>
 
@@ -445,10 +518,13 @@ export default function SessionCatalog({
         <span>
           {view === 'sessions'
             ? `${filteredSessions.length} sesji`
-            : `${monthSets.length} miesięcy`
+            : view === 'months'
+              ? `${monthSets.length} miesięcy`
+              : `${allYearlyMonths.length} miesięcy`
           }
           {view === 'sessions' && !hideOwned && <span className="ml-2">· {prices.sessionAmount} PLN / sesja</span>}
           {view === 'months' && <span className="ml-2">· {prices.monthlyAmount} PLN / miesiąc</span>}
+          {view === 'yearly' && <span className="ml-2">· {yearlyPrice} PLN / 12 miesięcy</span>}
           {hideOwned && filteredSessions.length < allSessions.length && (
             <span className="ml-2 text-emerald-400/70">· {ownedCount} w kolekcji ukrytych</span>
           )}
@@ -752,8 +828,189 @@ export default function SessionCatalog({
         </>
       )}
 
-      {/* ── Floating cart ── */}
-      {cartCount > 0 && (
+      {/* ══════════════════════════════════════════════════ */}
+      {/* ── YEARLY VIEW (month grid with checkboxes) ── */}
+      {/* ══════════════════════════════════════════════════ */}
+      {view === 'yearly' && (
+        <>
+          {/* Auto-select + counter */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+            <button
+              onClick={autoSelect12FromNow}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-htg-indigo/10 border border-htg-indigo/30 text-htg-indigo hover:bg-htg-indigo hover:text-white transition-colors"
+            >
+              <Crown className="w-4 h-4 inline mr-1.5" />
+              Zamów 12 miesięcy od teraz
+            </button>
+            <span className="text-sm font-medium text-htg-fg-muted">
+              Wybrano <span className={`font-bold ${selectedYearlyMonths.size === 12 ? 'text-htg-sage' : 'text-htg-fg'}`}>{selectedYearlyMonths.size}</span>/12 miesięcy
+            </span>
+          </div>
+
+          {/* Month grid */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 mb-6">
+            {allYearlyMonths.map(ms => {
+              const isSpotlight = spotlightId === ms.id;
+              const isOwned = purchasedYearlySet.has(ms.month_label);
+              const isSelected = selectedYearlyMonths.has(ms.month_label);
+              const hasSessions = ms.sessions.length > 0;
+
+              return (
+                <div key={ms.id} className="relative">
+                  <button
+                    onClick={() => hasSessions ? setSpotlightId(isSpotlight ? null : ms.id) : undefined}
+                    className={`w-full relative p-3 rounded-xl border-2 text-left transition-all ${
+                      isOwned
+                        ? 'border-emerald-500/40 bg-emerald-500/5 cursor-default'
+                        : isSpotlight
+                          ? 'border-htg-sage bg-htg-sage/20 ring-2 ring-htg-sage/40 scale-105 z-10'
+                          : isSelected
+                            ? 'border-htg-indigo/60 bg-htg-indigo/10'
+                            : hasSessions
+                              ? 'border-htg-card-border bg-htg-card hover:border-htg-sage/40 hover:scale-[1.02]'
+                              : 'border-htg-card-border/50 bg-htg-card/50'
+                    }`}
+                  >
+                    <p className="font-serif font-bold text-sm text-htg-fg leading-tight">
+                      {formatMonthLabel(ms.month_label)}
+                    </p>
+                    {hasSessions && (
+                      <p className="text-htg-fg-muted text-xs mt-1">{ms.sessions.length} sesji</p>
+                    )}
+                    {isOwned && (
+                      <p className="text-emerald-400 text-xs mt-1 font-medium flex items-center gap-0.5">
+                        <CheckCircle className="w-3 h-3" />Kupiony
+                      </p>
+                    )}
+                  </button>
+                  {/* Checkbox overlay */}
+                  {!isOwned && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleYearlyMonth(ms.month_label); }}
+                      className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors z-20 ${
+                        isSelected
+                          ? 'bg-htg-indigo border-htg-indigo'
+                          : 'bg-htg-card border-htg-card-border hover:border-htg-indigo/60'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                  )}
+                  {isOwned && (
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center z-20">
+                      <Check className="w-3 h-3 text-white" />
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Spotlight — reuse same spotlight from months view */}
+          {spotlightSet && (
+            <div ref={spotlightRef} className={`relative bg-htg-card border-2 rounded-2xl p-6 md:p-8 mb-8 animate-in fade-in slide-in-from-top-4 duration-300 ${purchasedYearlySet.has(spotlightSet.month_label) ? 'border-emerald-500/40' : 'border-htg-sage/30'}`}>
+              <button onClick={() => setSpotlightId(null)} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-htg-surface text-htg-fg-muted hover:text-htg-fg">
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-start gap-4 mb-6">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${purchasedYearlySet.has(spotlightSet.month_label) ? 'bg-emerald-500/20' : 'bg-htg-sage/20'}`}>
+                  <Calendar className={`w-6 h-6 ${purchasedYearlySet.has(spotlightSet.month_label) ? 'text-emerald-400' : 'text-htg-sage'}`} />
+                </div>
+                <div>
+                  <h2 className="font-serif font-bold text-2xl text-htg-fg">{formatMonthLabel(spotlightSet.month_label)}</h2>
+                  <p className="text-htg-fg-muted mt-1">
+                    {spotlightSet.sessions.length} sesji
+                    {purchasedYearlySet.has(spotlightSet.month_label) && (
+                      <span className="ml-2 text-emerald-400 font-medium text-sm flex items-center gap-1 inline-flex">
+                        <CheckCircle className="w-3.5 h-3.5" />W kolekcji
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2 mb-6">
+                {spotlightSet.sessions.map((s, i) => {
+                  const isExp = expandedSession === s.id;
+                  const sessionPurchased = isPurchasedSession(s.id);
+                  return (
+                    <div key={s.id} className={`rounded-xl border transition-all ${
+                      sessionPurchased ? 'border-emerald-500/30 bg-emerald-500/5' : isExp ? 'border-htg-sage/40 bg-htg-sage/5' : 'border-htg-card-border hover:border-htg-sage/30'
+                    }`}>
+                      <button
+                        onClick={() => setExpandedSession(isExp ? null : s.id)}
+                        className="w-full flex items-center gap-3 p-4 text-left"
+                      >
+                        <span className="text-htg-sage font-mono text-xs font-bold w-6 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                        <p className="font-medium text-htg-fg text-sm flex-1">{s.title}</p>
+                        {sessionPurchased && (
+                          <span className="text-xs bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1 shrink-0">
+                            <CheckCircle className="w-3 h-3" />W kolekcji
+                          </span>
+                        )}
+                        {s.category === 'slowo_natalii' && !sessionPurchased && (
+                          <span className="text-xs bg-htg-warm/20 text-htg-warm px-2 py-0.5 rounded-full shrink-0">Słowo od Natalii</span>
+                        )}
+                        {s.description && (
+                          <ChevronDown className={`w-4 h-4 text-htg-fg-muted shrink-0 transition-transform ${isExp ? 'rotate-180' : ''}`} />
+                        )}
+                      </button>
+                      {isExp && s.description && (
+                        <div className="px-4 pb-4 pl-14">
+                          <p className="text-htg-fg-muted text-sm leading-relaxed whitespace-pre-line">
+                            {s.description.slice(0, 800)}{s.description.length > 800 && '...'}
+                          </p>
+                          {s.tags && s.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-3">
+                              {s.tags.map((tag: string) => (
+                                <span key={tag} className="text-xs bg-htg-surface text-htg-fg-muted px-2 py-0.5 rounded-full">{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {!spotlightId && (
+            <div className="text-center py-8">
+              <Sparkles className="w-8 h-8 text-htg-fg-muted/40 mx-auto mb-3" />
+              <p className="text-htg-fg-muted text-sm">Kliknij miesiąc aby zobaczyć szczegóły sesji</p>
+            </div>
+          )}
+
+          {/* Yearly floating checkout bar */}
+          {selectedYearlyMonths.size === 12 && (
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-htg-card/95 backdrop-blur-md border-t border-htg-card-border shadow-2xl">
+              <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Crown className="w-5 h-5 text-htg-indigo" />
+                  <span className="text-htg-fg font-medium">Subskrypcja roczna — {yearlyPrice} PLN</span>
+                  <button
+                    onClick={() => setSelectedYearlyMonths(new Set())}
+                    className="text-htg-fg-muted hover:text-red-400"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  onClick={handleCheckout}
+                  disabled={loading}
+                  className="bg-htg-indigo text-white px-6 py-3 rounded-xl font-medium hover:bg-htg-indigo/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? '...' : 'Przejdź do płatności'}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Floating cart (sessions/months only) ── */}
+      {view !== 'yearly' && cartCount > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-htg-card/95 backdrop-blur-md border-t border-htg-card-border shadow-2xl">
           {/* Gift form (expanded) */}
           {showGiftForm && (

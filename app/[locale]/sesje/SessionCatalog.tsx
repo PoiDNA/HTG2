@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   X, Play, ShoppingCart, Check, ChevronDown, Calendar, Search,
   Grid3X3, List, SlidersHorizontal, Eye, Heart, Mic, Star, Tag, Clock,
-  ArrowUpDown, Sparkles, CheckCircle, Headphones, EyeOff, Gift, Crown,
+  ArrowUpDown, Sparkles, CheckCircle, Headphones, EyeOff, Gift, Zap,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -416,10 +416,10 @@ export default function SessionCatalog({
       {/* ── View toggle + Search ── */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {/* View toggle */}
-        <div className="flex bg-htg-surface rounded-xl p-1 shrink-0">
+        <div className="grid grid-cols-3 bg-htg-surface rounded-xl p-1 shrink-0 w-full sm:w-auto sm:min-w-[420px]">
           <button
             onClick={() => { setView('sessions'); setSpotlightId(null); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
               view === 'sessions' ? 'bg-htg-indigo text-white' : 'text-htg-fg-muted hover:text-htg-fg'
             }`}
           >
@@ -427,7 +427,7 @@ export default function SessionCatalog({
           </button>
           <button
             onClick={() => setView('months')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
               view === 'months' ? 'bg-htg-indigo text-white' : 'text-htg-fg-muted hover:text-htg-fg'
             }`}
           >
@@ -435,11 +435,11 @@ export default function SessionCatalog({
           </button>
           <button
             onClick={() => { setView('yearly'); setSpotlightId(null); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
               view === 'yearly' ? 'bg-htg-indigo text-white' : 'text-htg-fg-muted hover:text-htg-fg'
             }`}
           >
-            <Crown className="w-4 h-4 inline mr-1.5" />Rok
+            <Zap className="w-4 h-4 inline mr-1.5" />Rok
           </button>
         </div>
 
@@ -974,7 +974,7 @@ export default function SessionCatalog({
               onClick={autoSelect12FromNow}
               className="px-4 py-2 rounded-xl text-sm font-medium bg-htg-indigo/10 border border-htg-indigo/30 text-htg-indigo hover:bg-htg-indigo hover:text-white transition-colors"
             >
-              <Crown className="w-4 h-4 inline mr-1.5" />
+              <Zap className="w-4 h-4 inline mr-1.5" />
               Zamów 12 miesięcy od teraz
             </button>
             <span className="text-sm font-medium text-htg-fg-muted">
@@ -1122,7 +1122,7 @@ export default function SessionCatalog({
             <div className="fixed bottom-0 left-0 right-0 z-50 bg-htg-card/95 backdrop-blur-md border-t border-htg-card-border shadow-2xl">
               <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <Crown className="w-5 h-5 text-htg-indigo" />
+                  <Zap className="w-5 h-5 text-htg-indigo" />
                   <span className="text-htg-fg font-medium">Subskrypcja roczna — {yearlyPrice} PLN</span>
                   <button
                     onClick={() => setSelectedYearlyMonths(new Set())}

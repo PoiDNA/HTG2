@@ -4,10 +4,10 @@
     "description": "Sesje rozwoju duchowego prowadzone przez Natalię HTG. Nagrania, warsztaty i sesje indywidualne online."
   },
   "Nav": {
-    "sessions": "Sesje",
+    "sessions": "Biblioteka sesji",
     "individual": "Umów sesję",
     "subscriptions": "Subskrypcje",
-    "recordings": "Nagrania",
+    "recordings": "Na początek",
     "account": "Moje konto",
     "login": "Zaloguj",
     "logout": "Wyloguj",
@@ -61,7 +61,7 @@
     "consent_required": "Zgoda jest wymagana, aby kontynuować."
   },
   "Sessions": {
-    "title": "Sesje",
+    "title": "Biblioteka Sesji",
     "subtitle": "Nagrania z sesji osobistych dostępne pojedynczo oraz w pakietach miesięcznych.",
     "buy_access": "Kup dostęp",
     "buy_set": "Kup ten zestaw",

@@ -9,6 +9,7 @@ import BookingCard from '@/components/booking/BookingCard';
 import AccelerationRequest from '@/components/booking/AccelerationRequest';
 import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
 import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
+import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 
 // Session type → assistant slug mapping
 const SESSION_TYPE_TO_SLUG: Record<string, string> = {
@@ -144,6 +145,9 @@ export default async function IndividualSessionsPage({
         <h2 className="text-xl font-serif font-semibold text-htg-fg mb-1">{t('title')}</h2>
         <p className="text-sm text-htg-fg-muted">{t('subtitle')}</p>
       </div>
+
+      {/* Active calls — shown when staff initiates a call */}
+      <ActiveCallsWidget locale={locale} />
 
       {/* Unbooked entitlements notice */}
       {unbookedCount > 0 && (

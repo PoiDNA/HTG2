@@ -4,6 +4,8 @@ import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Calendar, Clock, Users, Mic, ArrowRight } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import StripeConnectCard from '@/components/staff/StripeConnectCard';
+import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
+import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 
 const SESSION_LABELS: Record<string, string> = {
   natalia_solo: 'Sesja 1:1 z Natalią',
@@ -96,14 +98,20 @@ export default async function StaffDashboard({
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-serif font-bold text-htg-fg">
-          {staffMember ? `Witaj, ${staffMember.name}` : 'Panel prowadzącego'}
-        </h1>
-        <p className="text-htg-fg-muted text-sm mt-1">
-          {staffMember?.role === 'practitioner' ? 'Prowadząca' : 'Asystentka'} · {todayStr}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-serif font-bold text-htg-fg">
+            {staffMember ? `Witaj, ${staffMember.name}` : 'Panel prowadzącego'}
+          </h1>
+          <p className="text-htg-fg-muted text-sm mt-1">
+            {staffMember?.role === 'practitioner' ? 'Prowadząca' : 'Asystentka'} · {todayStr}
+          </p>
+        </div>
+        <InitiateCallModal locale={locale} />
       </div>
+
+      {/* Active calls widget */}
+      <ActiveCallsWidget locale={locale} />
 
       {/* Quick stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

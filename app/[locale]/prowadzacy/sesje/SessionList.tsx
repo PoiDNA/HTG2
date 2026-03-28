@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, Calendar, CheckCircle, Mic, Download } from 'lucide-react';
+import { Search, Calendar, CheckCircle, Download, Trash2 } from 'lucide-react';
 
 const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> = {
   natalia_solo: { label: '1:1', className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
@@ -30,8 +30,8 @@ function TypeBadge({ type }: { type: string }) {
 }
 
 export default function SessionList({
-  upcoming,
-  past,
+  upcoming: initialUpcoming,
+  past: initialPast,
   todayStr,
   locale,
 }: {
@@ -40,7 +40,10 @@ export default function SessionList({
   todayStr: string;
   locale: string;
 }) {
+  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState<string | null>(null);
   const q = search.toLowerCase().trim();
 
   function matchesSearch(b: any) {
@@ -51,12 +54,30 @@ export default function SessionList({
     return name.includes(q) || email.includes(q);
   }
 
-  const filteredUpcoming = upcoming.filter(matchesSearch);
-  const filteredPast = past.filter(matchesSearch);
+  const upcoming = initialUpcoming.filter(b => !deletedIds.has(b.id));
+  const past = initialPast.filter(b => !deletedIds.has(b.id));
+  const filtered = (tab === 'upcoming' ? upcoming : past).filter(matchesSearch);
+
+  async function deleteSession(e: React.MouseEvent, bookingId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Czy na pewno chcesz usunąć tę sesję?')) return;
+    setDeleting(bookingId);
+    try {
+      const res = await fetch(`/api/booking/${bookingId}/delete`, { method: 'DELETE' });
+      if (res.ok) {
+        setDeletedIds(prev => new Set([...prev, bookingId]));
+      } else {
+        alert('Nie udało się usunąć sesji.');
+      }
+    } catch {
+      alert('Błąd połączenia.');
+    }
+    setDeleting(null);
+  }
 
   function exportPDF() {
-    const allFiltered = [...filteredUpcoming, ...filteredPast];
-    const rows = allFiltered.map(b => {
+    const rows = filtered.map(b => {
       const slot = getSlot(b);
       const client = getClient(b);
       const tb = SESSION_TYPE_BADGE[b.session_type];
@@ -71,7 +92,8 @@ export default function SessionList({
       </tr>`;
     }).join('');
 
-    const title = q ? `Sesje HTG — "${search}"` : 'Sesje HTG';
+    const tabLabel = tab === 'upcoming' ? 'Nadchodzące' : 'Zakończone';
+    const title = q ? `${tabLabel} sesje HTG — "${search}"` : `${tabLabel} sesje HTG`;
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
 <style>body{font-family:Arial,sans-serif;padding:20px;color:#333}
 h1{font-size:18px;margin-bottom:4px}p{font-size:12px;color:#666;margin-bottom:16px}
@@ -81,7 +103,7 @@ td{padding:6px 12px;border-bottom:1px solid #ddd}
 tr:nth-child(even){background:#f9f9f9}
 @media print{body{padding:0}}</style></head>
 <body><h1>${title}</h1>
-<p>Wygenerowano: ${new Date().toLocaleDateString('pl-PL')} | Liczba sesji: ${allFiltered.length}</p>
+<p>Wygenerowano: ${new Date().toLocaleDateString('pl-PL')} | Liczba sesji: ${filtered.length}</p>
 <table><thead><tr><th>Data</th><th>Godzina</th><th>Klient</th><th>Email</th><th>Typ</th><th>Płatność</th></tr></thead>
 <tbody>${rows}</tbody></table></body></html>`;
 
@@ -90,114 +112,102 @@ tr:nth-child(even){background:#f9f9f9}
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search + Export */}
+    <div className="space-y-4">
+      {/* Search + PDF */}
       <div className="flex gap-3 items-center">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Szukaj po imieniu lub emailu..."
-          className="w-full pl-10 pr-4 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg placeholder-htg-fg-muted focus:outline-none focus:ring-2 focus:ring-htg-sage/30"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-htg-fg-muted hover:text-htg-fg text-xs"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-      <button
-        onClick={exportPDF}
-        className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
-      >
-        <Download className="w-4 h-4" />
-        PDF
-      </button>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Szukaj po imieniu lub emailu..."
+            className="w-full pl-10 pr-8 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg placeholder-htg-fg-muted focus:outline-none focus:ring-2 focus:ring-htg-sage/30"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-htg-fg-muted hover:text-htg-fg text-xs">✕</button>
+          )}
+        </div>
+        <button
+          onClick={exportPDF}
+          className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+        >
+          <Download className="w-4 h-4" /> PDF
+        </button>
       </div>
 
-      {/* Upcoming */}
-      <div>
-        <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-htg-sage" />
-          Nadchodzące ({filteredUpcoming.length}{q ? ` z ${upcoming.length}` : ''})
-        </h3>
+      {/* Tabs */}
+      <div className="flex gap-1 bg-htg-surface rounded-xl p-1">
+        <button
+          onClick={() => setTab('upcoming')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            tab === 'upcoming'
+              ? 'bg-htg-card text-htg-fg shadow-sm'
+              : 'text-htg-fg-muted hover:text-htg-fg'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          Nadchodzące ({upcoming.length})
+        </button>
+        <button
+          onClick={() => setTab('past')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            tab === 'past'
+              ? 'bg-htg-card text-htg-fg shadow-sm'
+              : 'text-htg-fg-muted hover:text-htg-fg'
+          }`}
+        >
+          <CheckCircle className="w-4 h-4" />
+          Zakończone ({past.length})
+        </button>
+      </div>
 
-        {filteredUpcoming.length === 0 ? (
-          <p className="text-htg-fg-muted text-sm bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">
-            {q ? 'Brak wyników wyszukiwania.' : 'Brak zaplanowanych sesji.'}
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {filteredUpcoming.map((b: any) => {
-              const slot = getSlot(b);
-              const client = getClient(b);
-              const isToday = slot?.slot_date === todayStr;
-              const ps = PAYMENT_STATUS_BADGE[b.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
+      {/* Session list */}
+      {filtered.length === 0 ? (
+        <p className="text-htg-fg-muted text-sm bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">
+          {q ? 'Brak wyników wyszukiwania.' : tab === 'upcoming' ? 'Brak zaplanowanych sesji.' : 'Brak zakończonych sesji.'}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((b: any) => {
+            const slot = getSlot(b);
+            const client = getClient(b);
+            const isToday = slot?.slot_date === todayStr;
+            const ps = PAYMENT_STATUS_BADGE[b.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
+            const isDeleting = deleting === b.id;
 
-              return (
-                <Link key={b.id} href={`/${locale}/prowadzacy/sesje/${b.id}`} className="block">
-                  <div className={`flex items-center gap-4 p-4 rounded-xl border hover:bg-htg-surface/50 transition-colors ${
-                    isToday ? 'bg-htg-sage/5 border-htg-sage/30' : 'bg-htg-card border-htg-card-border'
-                  }`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
-                        <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
-                        <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
-                        <TypeBadge type={b.session_type} />
-                      </div>
-                      <p className="text-sm text-htg-fg-muted mt-1">
-                        {client?.display_name || client?.email || '—'}
-                      </p>
-                      {b.topics && (
-                        <p className="text-xs text-htg-fg-muted mt-1 line-clamp-2">📝 {b.topics}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
-                    </div>
+            return (
+              <div key={b.id} className={`flex items-center gap-4 p-4 rounded-xl border hover:bg-htg-surface/50 transition-colors ${
+                isToday && tab === 'upcoming' ? 'bg-htg-sage/5 border-htg-sage/30' : 'bg-htg-card border-htg-card-border'
+              } ${tab === 'past' ? 'opacity-70' : ''} ${isDeleting ? 'opacity-30' : ''}`}>
+                <Link href={`/${locale}/prowadzacy/sesje/${b.id}`} className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {isToday && tab === 'upcoming' && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
+                    <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
+                    <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
+                    <TypeBadge type={b.session_type} />
                   </div>
+                  <p className="text-sm text-htg-fg-muted mt-1">
+                    {client?.display_name || client?.email || '—'}
+                  </p>
+                  {b.topics && tab === 'upcoming' && (
+                    <p className="text-xs text-htg-fg-muted mt-1 line-clamp-1">📝 {b.topics}</p>
+                  )}
                 </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Past */}
-      {filteredPast.length > 0 && (
-        <div>
-          <h3 className="text-lg font-serif font-semibold text-htg-fg-muted mb-4 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-htg-fg-muted" />
-            Zakończone ({filteredPast.length}{q ? ` z ${past.length}` : ''})
-          </h3>
-          <div className="space-y-2 opacity-70">
-            {filteredPast.slice(0, q ? 50 : 20).map((b: any) => {
-              const slot = getSlot(b);
-              const client = getClient(b);
-              return (
-                <Link key={b.id} href={`/${locale}/prowadzacy/sesje/${b.id}`} className="block">
-                  <div className="flex items-center gap-4 p-3 rounded-xl bg-htg-card border border-htg-card-border hover:bg-htg-surface/50 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-htg-fg-muted">{slot?.slot_date}</span>
-                        <span className="text-htg-fg-muted">{slot?.start_time?.slice(0, 5)}</span>
-                        <TypeBadge type={b.session_type} />
-                      </div>
-                      <p className="text-xs text-htg-fg-muted">{client?.display_name || client?.email || '—'}</p>
-                    </div>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                      <CheckCircle className="w-3 h-3 inline mr-1" />Zakończona
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
+                  <button
+                    onClick={(e) => deleteSession(e, b.id)}
+                    disabled={isDeleting}
+                    className="p-1.5 rounded-lg text-htg-fg-muted hover:text-red-400 hover:bg-red-900/20 transition-colors"
+                    title="Usuń sesję"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

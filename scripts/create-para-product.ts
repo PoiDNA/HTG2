@@ -1,5 +1,6 @@
 #!/usr/bin/env npx tsx
-// @ts-nocheck/**
+// @ts-nocheck
+/**
  * HTG — Create "Sesja dla par" Stripe product + price, sync to DB
  *
  * Usage:

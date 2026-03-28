@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 import QuickCallRoom from './QuickCallRoom';
 
 export default async function PolaczeniePage({
@@ -38,12 +39,15 @@ export default async function PolaczeniePage({
   if (!participant) redirect(`/${locale}/konto`);
 
   const isCreator = call.created_by === user.id;
+  const isStaff   = isAdminEmail(user.email ?? '') || isStaffEmail(user.email ?? '');
+  const backUrl   = `/${locale}/${isStaff ? 'prowadzacy' : 'konto'}`;
 
   return (
     <QuickCallRoom
       callId={callId}
       isCreator={isCreator}
       locale={locale}
+      backUrl={backUrl}
     />
   );
 }

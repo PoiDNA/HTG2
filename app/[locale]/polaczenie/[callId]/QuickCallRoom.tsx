@@ -21,6 +21,7 @@ interface QuickCallRoomProps {
   callId: string;
   isCreator: boolean;
   locale: string;
+  backUrl: string;
 }
 
 // ─── Circle size — same visual weight as the assistant overlay in individual session
@@ -223,7 +224,7 @@ function QuickCallInner({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function QuickCallRoom({ callId, isCreator, locale }: QuickCallRoomProps) {
+export default function QuickCallRoom({ callId, isCreator, locale, backUrl }: QuickCallRoomProps) {
   const router = useRouter();
   const [token, setToken] = useState('');
   const [livekitUrl, setLivekitUrl] = useState('');
@@ -263,7 +264,7 @@ export default function QuickCallRoom({ callId, isCreator, locale }: QuickCallRo
       }).catch(() => {});
     }
 
-    router.push(`/${locale}/prowadzacy`);
+    router.push(backUrl);
   }, [callId, isCreator, locale, router]);
 
   if (error) {

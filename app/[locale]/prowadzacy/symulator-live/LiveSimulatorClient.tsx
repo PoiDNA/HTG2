@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import SessionAnimation from '@/components/live/SessionAnimation';
 import PhaseTransition from '@/components/live/PhaseTransition';
-import { Waveform } from '@/components/live/AudioWaveTile';
+import { VoiceWaveform } from '@/components/live/AudioWaveTile';
 import {
   Play, SkipForward, Coffee, Square, CoffeeIcon,
   Mic, MicOff, Video, VideoOff, Monitor,
@@ -166,10 +166,12 @@ function SimAudioMainTile({ p }: { p: MockParticipant }) {
         )}
       </div>
       <div className="relative z-10">
-        <Waveform
+        <VoiceWaveform
           speaking={p.isSpeaking}
           muted={!p.isMicrophoneEnabled}
-          height={36}
+          height={44}
+          width={220}
+          seed={p.identity.charCodeAt(0) % 10}
         />
       </div>
     </div>
@@ -237,11 +239,13 @@ function SimAudioCircleTile({ p, size }: { p: MockParticipant; size: number }) {
           {p.name[0]}
         </span>
       </div>
-      <div className="mt-1">
-        <Waveform
+      <div className="mt-1 overflow-hidden" style={{ width: Math.round(size * 0.68) }}>
+        <VoiceWaveform
           speaking={p.isSpeaking}
           muted={!p.isMicrophoneEnabled}
           height={waveH}
+          width={Math.round(size * 0.68)}
+          seed={p.identity.charCodeAt(0) % 10}
         />
       </div>
       <div className="absolute bottom-0 inset-x-0 bg-black/50 text-center py-0.5">

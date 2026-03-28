@@ -239,9 +239,9 @@ export default async function StaffDashboard({
                   <th className="pb-2 pr-4">Data</th>
                   <th className="pb-2 pr-4">Godzina</th>
                   <th className="pb-2 pr-4">Klient</th>
-                  <th className="pb-2 pr-4">Typ</th>
+                  <th className="pb-2 pr-4"></th>
                   <th className="pb-2 pr-4">Zagadnienia</th>
-                  <th className="pb-2">Status</th>
+                  <th className="pb-2"></th>
                   <th className="pb-2"></th>
                 </tr>
               </thead>

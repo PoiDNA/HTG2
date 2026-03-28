@@ -56,9 +56,13 @@ interface MeetingRoomProps {
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
-const MOD_SIZE      = 264;
-const PART_SIZE     = 132;
-const SPOTLIGHT_SIZE = 264;
+const PART_SIZE      = 132;  // all ring circles equal — including moderator
+const SPOTLIGHT_SIZE = 264;  // center spotlight (current speaker)
+
+// Ring: distance from spotlight center to ring-circle center
+const RING_RADIUS  = SPOTLIGHT_SIZE / 2 + PART_SIZE / 2 + 20; // 218px
+const MAX_IN_RING  = 8;  // max circles before overflow to row below
+const RING_BOX     = 2 * (RING_RADIUS + PART_SIZE / 2);       // 568px
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function idSeed(id: string): number {
@@ -380,6 +384,74 @@ function ModeratorPanel({
   );
 }
 
+// ─── Ring layout ───────────────────────────────────────────────────────────
+// Spotlight circle in center, ring circles arranged radially around it.
+// If more than MAX_IN_RING participants, overflow circles appear below.
+function CircleRingLayout({
+  spotlight,
+  ringNodes,
+  noSpotlight,
+}: {
+  spotlight: React.ReactNode | null;
+  ringNodes: React.ReactNode[];
+  noSpotlight?: boolean;
+}) {
+  if (noSpotlight || !spotlight) {
+    // No active speaker — simple centered flex grid
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-5 max-w-3xl">
+        {ringNodes}
+      </div>
+    );
+  }
+
+  const inRing   = ringNodes.slice(0, MAX_IN_RING);
+  const overflow = ringNodes.slice(MAX_IN_RING);
+  const N = inRing.length;
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      {/* Relative container: spotlight in center, ring around */}
+      <div style={{ position: 'relative', width: RING_BOX, height: RING_BOX, flexShrink: 0 }}>
+        {/* Center spotlight */}
+        <div style={{
+          position: 'absolute',
+          top:  RING_BOX / 2 - SPOTLIGHT_SIZE / 2,
+          left: RING_BOX / 2 - SPOTLIGHT_SIZE / 2,
+        }}>
+          {spotlight}
+        </div>
+
+        {/* Ring circles — evenly distributed around center */}
+        {inRing.map((node, i) => {
+          const angle = (2 * Math.PI * i) / Math.max(N, 1) - Math.PI / 2; // start from top
+          const cx    = RING_BOX / 2 + RING_RADIUS * Math.cos(angle);
+          const cy    = RING_BOX / 2 + RING_RADIUS * Math.sin(angle);
+          return (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                left: cx - PART_SIZE / 2,
+                top:  cy - PART_SIZE / 2,
+              }}
+            >
+              {node}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Overflow row below */}
+      {overflow.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {overflow}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Inner room (has LiveKit context) ─────────────────────────────────────
 function MeetingRoomInner({
   sessionId, userId, isModerator, state, onRefresh, onLeave,
@@ -493,8 +565,8 @@ function MeetingRoomInner({
   const isCurrentQueueSpeaker = queueCurrentSpeakerId === userId;
   const isCurrentQuestionSpeaker = structuredSpeakerId === userId;
 
-  const modParticipant   = state.participants.find(p => p.userId === state.moderatorId);
-  const otherParticipants = state.participants.filter(p => p.userId !== state.moderatorId);
+  // All participants for ring — everyone equal size (including moderator)
+  const ringParticipants = state.participants.filter(p => p.userId !== spotlightUserId);
 
   return (
     <div className="absolute inset-0 flex flex-col">
@@ -556,88 +628,65 @@ function MeetingRoomInner({
           </div>
         )}
 
-        {/* Center spotlight */}
-        {spotlightParticipant && (
-          <div className="relative">
-            <MeetingCircle
-              participant={spotlightLK}
-              size={SPOTLIGHT_SIZE}
-              isCurrentSpeaker={true}
-              isModerator={spotlightParticipant.isModerator}
-              handRaised={spotlightParticipant.handRaised}
-              isMuted={spotlightParticipant.isMuted}
-              index={0}
-              isSpotlight
-              nameOverride={spotlightParticipant.displayName}
-            />
-
-            {/* Skip button — structured Q&A, only for the person selected */}
-            {isCurrentQuestionSpeaker && !isFreeTalk && (
-              <button
-                onClick={async () => {
-                  await fetch(`/api/htg-meeting/session/${sessionId}/control`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'skip_speaker' }),
-                  });
-                  onRefresh();
-                }}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70 flex items-center
-                  justify-center text-white/60 hover:text-white hover:bg-black/90 transition-colors
-                  text-base font-bold z-10"
-                title="Pomiń mnie (tylko Ty widzisz ten przycisk)"
-              >
-                ✕
-              </button>
-            )}
-
-            {/* Done button — queue mode, current speaker */}
-            {isCurrentQueueSpeaker && isFreeTalk && (
-              <button
-                onClick={() => signalDone()}
-                className="absolute -bottom-14 left-1/2 -translate-x-1/2 whitespace-nowrap
-                  flex items-center gap-2 px-5 py-2.5 rounded-full
-                  bg-[#4ade80]/15 hover:bg-[#4ade80]/25
-                  text-[#4ade80] ring-1 ring-[#4ade80]/40
-                  text-sm font-medium transition-colors z-10"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Zakończyłem/am wypowiedź
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Circle ring — all participants */}
-        <div
-          className="flex flex-wrap items-end justify-center"
-          style={{ gap: 20, maxWidth: 920, marginTop: isCurrentQueueSpeaker ? 56 : 0 }}
-        >
-          {modParticipant && (
-            <MeetingCircle
-              participant={lkMap.get(modParticipant.userId) ?? null}
-              size={MOD_SIZE}
-              isCurrentSpeaker={false}
-              isModerator={true}
-              handRaised={modParticipant.handRaised}
-              isMuted={modParticipant.isMuted}
-              index={0}
-              nameOverride={modParticipant.displayName}
-            />
-          )}
-          {otherParticipants.map((p, i) => (
+        {/* Ring layout: current speaker center, everyone else around */}
+        <CircleRingLayout
+          noSpotlight={!spotlightParticipant}
+          spotlight={spotlightParticipant ? (
+            <div className="relative">
+              <MeetingCircle
+                participant={spotlightLK}
+                size={SPOTLIGHT_SIZE}
+                isCurrentSpeaker={true}
+                isModerator={spotlightParticipant.isModerator}
+                handRaised={spotlightParticipant.handRaised}
+                isMuted={spotlightParticipant.isMuted}
+                index={0}
+                isSpotlight
+                nameOverride={spotlightParticipant.displayName}
+              />
+              {isCurrentQuestionSpeaker && !isFreeTalk && (
+                <button
+                  onClick={async () => {
+                    await fetch(`/api/htg-meeting/session/${sessionId}/control`, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ action: 'skip_speaker' }),
+                    });
+                    onRefresh();
+                  }}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70
+                    flex items-center justify-center text-white/60 hover:text-white
+                    hover:bg-black/90 transition-colors text-base font-bold z-10"
+                  title="Pomiń mnie"
+                >✕</button>
+              )}
+              {isCurrentQueueSpeaker && isFreeTalk && (
+                <button
+                  onClick={() => signalDone()}
+                  className="absolute -bottom-14 left-1/2 -translate-x-1/2 whitespace-nowrap
+                    flex items-center gap-2 px-5 py-2.5 rounded-full
+                    bg-[#4ade80]/15 hover:bg-[#4ade80]/25 text-[#4ade80]
+                    ring-1 ring-[#4ade80]/40 text-sm font-medium transition-colors z-10"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Zakończyłem/am wypowiedź
+                </button>
+              )}
+            </div>
+          ) : null}
+          ringNodes={ringParticipants.map((p, i) => (
             <MeetingCircle
               key={p.userId}
               participant={lkMap.get(p.userId) ?? null}
               size={PART_SIZE}
               isCurrentSpeaker={false}
-              isModerator={false}
+              isModerator={p.isModerator}
               handRaised={p.handRaised}
               isMuted={p.isMuted}
-              index={i + 1}
+              index={i}
               nameOverride={p.displayName}
             />
           ))}
-        </div>
+        />
       </div>
 
       {/* Bottom controls */}

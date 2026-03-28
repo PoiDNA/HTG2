@@ -57,9 +57,11 @@ interface SimState {
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const MOD_SIZE      = 264;
-const PART_SIZE     = 132;
+const PART_SIZE      = 132;
 const SPOTLIGHT_SIZE = 264;
+const RING_RADIUS    = SPOTLIGHT_SIZE / 2 + PART_SIZE / 2 + 20; // 218px
+const MAX_IN_RING    = 8;
+const RING_BOX       = 2 * (RING_RADIUS + PART_SIZE / 2); // 568px
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function idSeed(id: string): number {
@@ -167,6 +169,48 @@ function SimCircle({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Ring layout ─────────────────────────────────────────────────────────────
+function SimRingLayout({
+  spotlight, ringNodes, noSpotlight,
+}: {
+  spotlight: React.ReactNode | null;
+  ringNodes: React.ReactNode[];
+  noSpotlight?: boolean;
+}) {
+  if (noSpotlight || !spotlight) {
+    return <div className="flex flex-wrap items-center justify-center gap-5 max-w-3xl">{ringNodes}</div>;
+  }
+  const inRing   = ringNodes.slice(0, MAX_IN_RING);
+  const overflow = ringNodes.slice(MAX_IN_RING);
+  const N = inRing.length;
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div style={{ position: 'relative', width: RING_BOX, height: RING_BOX, flexShrink: 0 }}>
+        <div style={{
+          position: 'absolute',
+          top:  RING_BOX / 2 - SPOTLIGHT_SIZE / 2,
+          left: RING_BOX / 2 - SPOTLIGHT_SIZE / 2,
+        }}>
+          {spotlight}
+        </div>
+        {inRing.map((node, i) => {
+          const angle = (2 * Math.PI * i) / Math.max(N, 1) - Math.PI / 2;
+          const cx    = RING_BOX / 2 + RING_RADIUS * Math.cos(angle);
+          const cy    = RING_BOX / 2 + RING_RADIUS * Math.sin(angle);
+          return (
+            <div key={i} style={{ position: 'absolute', left: cx - PART_SIZE / 2, top: cy - PART_SIZE / 2 }}>
+              {node}
+            </div>
+          );
+        })}
+      </div>
+      {overflow.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-4">{overflow}</div>
+      )}
     </div>
   );
 }
@@ -294,8 +338,9 @@ export default function MeetingSimulatorClient() {
     });
   };
 
-  const modParticipant    = MOCK_PARTICIPANTS.find(p => p.isModerator)!;
-  const otherParticipants = MOCK_PARTICIPANTS.filter(p => !p.isModerator);
+  // Ring: all participants except spotlight person (everyone equal size)
+  const ringParticipants = MOCK_PARTICIPANTS.filter(p => p.userId !== spotlightParticipant?.userId);
+  const otherParticipants = MOCK_PARTICIPANTS.filter(p => !p.isModerator); // used for mod panel only
 
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ background: isFreeTalk ? '#0b170b' : '#0a0e1a' }}>
@@ -355,77 +400,58 @@ export default function MeetingSimulatorClient() {
           <p className="text-white/25 text-sm">Kliknij uczestnika w panelu moderatora żeby dodać do kolejki</p>
         )}
 
-        {/* Spotlight */}
-        {spotlightParticipant && (
-          <div className="relative z-10">
-            <SimCircle
-              participant={spotlightParticipant}
-              size={SPOTLIGHT_SIZE}
-              isCurrentSpeaker={!isFreeTalk}
-              isModerator={spotlightParticipant.isModerator}
-              isMuted={sim.allMuted || sim.mutedIds.has(spotlightParticipant.userId)}
-              inQueue={sim.queue.some(q => q.userId === spotlightParticipant.userId)}
-              isQueueCurrent={isFreeTalk}
-              index={0}
-              isSpotlight
-            />
-            {/* Done button in free talk */}
-            {isFreeTalk && sim.queue.find(q => q.isCurrent)?.userId === spotlightParticipant.userId && (
-              <button
-                onClick={() => signalDone()}
-                className="absolute -bottom-14 left-1/2 -translate-x-1/2 whitespace-nowrap
-                  flex items-center gap-2 px-5 py-2.5 rounded-full
-                  bg-[#4ade80]/15 hover:bg-[#4ade80]/25 text-[#4ade80]
-                  ring-1 ring-[#4ade80]/40 text-sm font-medium transition-colors"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Zakończyłem/am wypowiedź
-              </button>
-            )}
-            {/* Skip button — structured */}
-            {!isFreeTalk && spotlightParticipant.userId === sim.currentSpeakerId && (
-              <button
-                onClick={skipSpeaker}
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70
-                  flex items-center justify-center text-white/60 hover:text-white
-                  hover:bg-black/90 transition-colors text-base font-bold z-10"
-                title="Pomiń"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Circle ring */}
-        <div
-          className="flex flex-wrap items-end justify-center z-10"
-          style={{ gap: 20, maxWidth: 920, marginTop: isFreeTalk && sim.queue.find(q => q.isCurrent)?.userId ? 48 : 0 }}
-        >
-          <SimCircle
-            participant={modParticipant}
-            size={MOD_SIZE}
-            isCurrentSpeaker={false}
-            isModerator={true}
-            isMuted={false}
-            inQueue={false}
-            isQueueCurrent={false}
-            index={0}
-          />
-          {otherParticipants.map((p, i) => (
+        {/* Ring layout — spotlight center, everyone else around */}
+        <SimRingLayout
+          noSpotlight={!spotlightParticipant}
+          spotlight={spotlightParticipant ? (
+            <div className="relative">
+              <SimCircle
+                participant={spotlightParticipant}
+                size={SPOTLIGHT_SIZE}
+                isCurrentSpeaker={!isFreeTalk}
+                isModerator={spotlightParticipant.isModerator}
+                isMuted={sim.allMuted || sim.mutedIds.has(spotlightParticipant.userId)}
+                inQueue={sim.queue.some(q => q.userId === spotlightParticipant.userId)}
+                isQueueCurrent={isFreeTalk}
+                index={0}
+                isSpotlight
+              />
+              {isFreeTalk && sim.queue.find(q => q.isCurrent)?.userId === spotlightParticipant.userId && (
+                <button
+                  onClick={() => signalDone()}
+                  className="absolute -bottom-14 left-1/2 -translate-x-1/2 whitespace-nowrap
+                    flex items-center gap-2 px-5 py-2.5 rounded-full
+                    bg-[#4ade80]/15 hover:bg-[#4ade80]/25 text-[#4ade80]
+                    ring-1 ring-[#4ade80]/40 text-sm font-medium transition-colors"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Zakończyłem/am wypowiedź
+                </button>
+              )}
+              {!isFreeTalk && spotlightParticipant.userId === sim.currentSpeakerId && (
+                <button
+                  onClick={skipSpeaker}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/70
+                    flex items-center justify-center text-white/60 hover:text-white
+                    hover:bg-black/90 transition-colors text-base font-bold z-10"
+                >✕</button>
+              )}
+            </div>
+          ) : null}
+          ringNodes={ringParticipants.map((p, i) => (
             <SimCircle
               key={p.userId}
               participant={p}
               size={PART_SIZE}
               isCurrentSpeaker={false}
-              isModerator={false}
+              isModerator={p.isModerator}
               isMuted={sim.allMuted || sim.mutedIds.has(p.userId)}
               inQueue={sim.queue.some(q => q.userId === p.userId)}
               isQueueCurrent={sim.queue.find(q => q.isCurrent)?.userId === p.userId}
-              index={i + 1}
+              index={i}
             />
           ))}
-        </div>
+        />
       </div>
 
       {/* Bottom controls — participant view */}

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, Calendar, CheckCircle, Mic } from 'lucide-react';
+import { Search, Calendar, CheckCircle, Mic, Download } from 'lucide-react';
 
 const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> = {
   natalia_solo: { label: '1:1', className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
@@ -54,10 +54,45 @@ export default function SessionList({
   const filteredUpcoming = upcoming.filter(matchesSearch);
   const filteredPast = past.filter(matchesSearch);
 
+  function exportPDF() {
+    const allFiltered = [...filteredUpcoming, ...filteredPast];
+    const rows = allFiltered.map(b => {
+      const slot = getSlot(b);
+      const client = getClient(b);
+      const tb = SESSION_TYPE_BADGE[b.session_type];
+      const ps = PAYMENT_STATUS_BADGE[b.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
+      return `<tr>
+        <td>${slot?.slot_date || ''}</td>
+        <td>${slot?.start_time?.slice(0,5) || ''}</td>
+        <td>${client?.display_name || client?.email || '—'}</td>
+        <td>${client?.email || ''}</td>
+        <td>${tb?.label || b.session_type}</td>
+        <td>${ps.label}</td>
+      </tr>`;
+    }).join('');
+
+    const title = q ? `Sesje HTG — "${search}"` : 'Sesje HTG';
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
+<style>body{font-family:Arial,sans-serif;padding:20px;color:#333}
+h1{font-size:18px;margin-bottom:4px}p{font-size:12px;color:#666;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 12px;border-bottom:2px solid #333;font-weight:600}
+td{padding:6px 12px;border-bottom:1px solid #ddd}
+tr:nth-child(even){background:#f9f9f9}
+@media print{body{padding:0}}</style></head>
+<body><h1>${title}</h1>
+<p>Wygenerowano: ${new Date().toLocaleDateString('pl-PL')} | Liczba sesji: ${allFiltered.length}</p>
+<table><thead><tr><th>Data</th><th>Godzina</th><th>Klient</th><th>Email</th><th>Typ</th><th>Płatność</th></tr></thead>
+<tbody>${rows}</tbody></table></body></html>`;
+
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); w.print(); }
+  }
+
   return (
     <div className="space-y-6">
-      {/* Search */}
-      <div className="relative">
+      {/* Search + Export */}
+      <div className="flex gap-3 items-center">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
         <input
           type="text"
@@ -74,6 +109,14 @@ export default function SessionList({
             ✕
           </button>
         )}
+      </div>
+      <button
+        onClick={exportPDF}
+        className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+      >
+        <Download className="w-4 h-4" />
+        PDF
+      </button>
       </div>
 
       {/* Upcoming */}

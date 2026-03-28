@@ -4,13 +4,13 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 
-// POST /api/htg-meeting/session/[sessionId]/approve-participant
+// POST /api/htg-meeting/session/[id]/approve-participant
 // Body: { participantId, action: 'approve' | 'reject' }
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ sessionId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { sessionId } = await params;
+  const sessionId = (await params).id;
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();

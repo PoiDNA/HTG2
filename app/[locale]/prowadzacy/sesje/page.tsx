@@ -2,23 +2,8 @@ import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
-import { Link } from '@/i18n-config';
-import { Presentation, ArrowRight, Mic, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-
-const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> = {
-  natalia_solo: { label: '1:1', className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
-  natalia_agata: { label: 'Agata', className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
-  natalia_justyna: { label: 'Justyna', className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
-  natalia_para: { label: 'Para', className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
-  natalia_asysta: { label: 'Asysta', className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
-};
-
-const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  confirmed_paid: { label: 'Opłacona', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  installments: { label: 'Raty', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
-  partial_payment: { label: 'Niepełna płatność', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
-  pending_verification: { label: 'Do potwierdzenia', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-};
+import { Presentation } from 'lucide-react';
+import SessionList from './SessionList';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -60,7 +45,6 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
     const sb = Array.isArray(b.slot) ? b.slot[0] : b.slot;
     return (sa?.slot_date + sa?.start_time).localeCompare(sb?.slot_date + sb?.start_time);
   };
-  const sortBySlotDesc = (a: any, b: any) => -sortBySlotAsc(a, b);
 
   const upcoming = enrichedBookings
     .filter((b: any) => {
@@ -74,10 +58,7 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
       const slot = Array.isArray(b.slot) ? b.slot[0] : b.slot;
       return slot?.slot_date < todayStr || b.status === 'completed';
     })
-    .sort(sortBySlotDesc);
-
-  function getSlot(b: any) { return Array.isArray(b.slot) ? b.slot[0] : b.slot; }
-  function getClient(b: any) { return Array.isArray(b.client) ? b.client[0] : b.client; }
+    .sort((a: any, b: any) => -sortBySlotAsc(a, b));
 
   return (
     <div className="space-y-8">
@@ -86,105 +67,12 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
         <h2 className="text-2xl font-serif font-bold text-htg-fg">Moje sesje</h2>
       </div>
 
-      {/* Upcoming */}
-      <div>
-        <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-htg-sage" />
-          Nadchodzące ({upcoming.length})
-        </h3>
-
-        {upcoming.length === 0 ? (
-          <p className="text-htg-fg-muted text-sm bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">
-            Brak zaplanowanych sesji.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {upcoming.map((b: any) => {
-              const slot = getSlot(b);
-              const client = getClient(b);
-              const isToday = slot?.slot_date === todayStr;
-              const sessionStart = slot ? new Date(slot.slot_date + 'T' + slot.start_time) : null;
-              const canJoin = sessionStart ? (sessionStart.getTime() - Date.now()) / (1000 * 60 * 60) <= 0.5 : false;
-              const ps = PAYMENT_STATUS_BADGE[b.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
-
-              return (
-                <Link key={b.id} href={`/prowadzacy/sesje/${b.id}` as any} className="block">
-                  <div className={`flex items-center gap-4 p-4 rounded-xl border hover:bg-htg-surface/50 transition-colors ${
-                    isToday ? 'bg-htg-sage/5 border-htg-sage/30' : 'bg-htg-card border-htg-card-border'
-                  }`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
-                        <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
-                        <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
-{(() => { const tb = SESSION_TYPE_BADGE[b.session_type]; return tb ? (
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{tb.label}</span>
-                        ) : (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">{b.session_type}</span>
-                        ); })()}
-                      </div>
-                      <p className="text-sm text-htg-fg-muted mt-1">
-                        {client?.display_name || client?.email || '—'}
-                      </p>
-                      {b.topics && (
-                        <p className="text-xs text-htg-fg-muted mt-1 line-clamp-2">📝 {b.topics}</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>
-                        {ps.label}
-                      </span>
-                      {b.live_session_id && canJoin && (
-                        <span className="bg-htg-warm text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1">
-                          <Mic className="w-4 h-4" /> Wejdź
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Past sessions */}
-      {past.length > 0 && (
-        <div>
-          <h3 className="text-lg font-serif font-semibold text-htg-fg-muted mb-4 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-htg-fg-muted" />
-            Zakończone ({past.length})
-          </h3>
-          <div className="space-y-2 opacity-70">
-            {past.slice(0, 20).map((b: any) => {
-              const slot = getSlot(b);
-              const client = getClient(b);
-              return (
-                <Link key={b.id} href={`/prowadzacy/sesje/${b.id}` as any} className="block">
-                  <div className="flex items-center gap-4 p-3 rounded-xl bg-htg-card border border-htg-card-border hover:bg-htg-surface/50 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-htg-fg-muted">{slot?.slot_date}</span>
-                        <span className="text-htg-fg-muted">{slot?.start_time?.slice(0, 5)}</span>
-{(() => { const tb = SESSION_TYPE_BADGE[b.session_type]; return tb ? (
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{tb.label}</span>
-                        ) : (
-                          <span className="text-xs text-htg-fg-muted">{b.session_type}</span>
-                        ); })()}
-                      </div>
-                      <p className="text-xs text-htg-fg-muted">{client?.display_name || client?.email || '—'}</p>
-                    </div>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                      <CheckCircle className="w-3 h-3 inline mr-1" />Zakończona
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <SessionList
+        upcoming={upcoming}
+        past={past}
+        todayStr={todayStr}
+        locale={locale}
+      />
     </div>
   );
 }

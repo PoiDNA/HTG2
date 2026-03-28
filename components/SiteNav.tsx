@@ -14,7 +14,6 @@ import UserPanelNav from './UserPanelNav';
 const navLinks = [
   { href: '/sesje', key: 'sessions' },
   { href: '/sesje-indywidualne', key: 'individual' },
-  { href: '/subskrypcje', key: 'subscriptions' },
   { href: '/nagrania', key: 'recordings' },
 ] as const;
 

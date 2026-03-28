@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { requireEmailAccess, getUserMailboxIds } from '@/lib/email/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { normalizeAddress, resolveUser } from '@/lib/email/hub';
+import { downloadFile } from '@/lib/bunny-storage';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error;
   const { user, isAdmin } = auth;
 
-  const { to, from, subject, bodyHtml, bodyText } = await req.json();
+  const { to, from, subject, bodyHtml, bodyText, attachments: attachmentsMeta } = await req.json();
   if (!to || (!bodyHtml && !bodyText)) {
     return NextResponse.json({ error: 'to and body required' }, { status: 400 });
   }
@@ -78,6 +79,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
   }
 
+  // Prepare Resend attachments (download from Bunny → send as buffer)
+  const resendAttachments: { filename: string; content: Buffer }[] = [];
+  if (attachmentsMeta?.length > 0) {
+    for (const att of attachmentsMeta) {
+      if (att.bunny_path) {
+        try {
+          const { buffer } = await downloadFile(att.bunny_path);
+          resendAttachments.push({ filename: att.filename, content: Buffer.from(buffer) });
+        } catch { /* skip failed downloads */ }
+      }
+    }
+  }
+
   // Send via Resend
   const { data: sentEmail, error: sendError } = await resend.emails.send({
     from: `${fromName} <${fromAddress}>`,
@@ -85,6 +99,7 @@ export async function POST(req: NextRequest) {
     subject: subject || '(bez tematu)',
     html: bodyHtml || undefined,
     text: bodyText || undefined,
+    ...(resendAttachments.length > 0 && { attachments: resendAttachments }),
   });
 
   if (sendError) {
@@ -105,6 +120,8 @@ export async function POST(req: NextRequest) {
     body_text: bodyText || null,
     provider_message_id: sentEmail?.id || null,
     sent_by: user.id,
+    has_attachments: (attachmentsMeta?.length || 0) > 0,
+    attachments: attachmentsMeta || [],
     processing_status: 'done',
   });
 

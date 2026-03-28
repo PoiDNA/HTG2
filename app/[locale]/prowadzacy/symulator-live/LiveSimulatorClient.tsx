@@ -10,11 +10,13 @@ import {
   Eye, User, ChevronRight, Clock, CheckCircle2,
 } from 'lucide-react';
 
-// ─── SimVoiceWaveform — static waveform, only amplitude breathes ──────────────
+// ─── SimVoiceWaveform — filled envelope, static shape, amplitude breathes ────
 //
-// Shape is fully determined by `seed` (no phase scrolling).
-// Only the amplitude envelope pulses gently so the waveform feels alive
-// without moving left-to-right.
+// Renders the "filled audio editor" style (like the reference image):
+//   • Harmonic oscillation × speech-onset envelope → symmetric filled shape
+//   • Internal oscillation "teeth" visible inside the fill
+//   • Shape fixed from seed (no horizontal scroll)
+//   • Only amplitude breathes gently (~1.7 Hz) when speaking
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SIM_HARMONICS = [
@@ -25,7 +27,14 @@ const SIM_HARMONICS = [
   { mult: 5.0, weight: 0.14, phaseOff: 3.50 },
   { mult: 7.0, weight: 0.09, phaseOff: 1.80 },
 ];
-const SIM_WEIGHT_SUM = SIM_HARMONICS.reduce((s, h) => s + h.weight, 0);
+const SIM_H_SUM = SIM_HARMONICS.reduce((s, h) => s + h.weight, 0);
+
+// Speech onset/sustain envelope: fast attack, plateau, gentle tail
+function speechEnv(t: number): number {
+  const attack  = Math.pow(Math.min(1, t * 3.2), 0.55);
+  const release = Math.pow(Math.max(0, 1 - Math.max(0, (t - 0.52) * 2.0)), 0.75);
+  return attack * release;
+}
 
 function SimVoiceWaveform({
   speaking,
@@ -53,18 +62,23 @@ function SimVoiceWaveform({
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    const cy     = height / 2;
-    const maxAmp = cy * 0.82;
+    const cy      = height / 2;
+    const maxAmp  = cy * 0.88;
 
-    // Pre-compute static shape from seed — never changes
-    const shape: number[] = new Array(width + 1);
+    // Oscillation cycles visible across width (seed-varied)
+    const osc = Math.max(8, Math.round(width / 9)) + seed * 0.5;
+
+    // Pre-compute STATIC shape: oscillation × speech envelope, both from seed
+    // abs() so it's symmetric (mirror fill style)
+    const shape = new Float32Array(width + 1);
     for (let px = 0; px <= width; px++) {
-      const pos = (px / width) * Math.PI * 5.5;
-      let y = 0;
+      const t   = px / width; // 0..1
+      const pos = t * osc * Math.PI * 2;
+      let s = 0;
       for (const h of SIM_HARMONICS) {
-        y += Math.sin(pos * h.mult + h.phaseOff + seed * 1.41) * h.weight;
+        s += Math.sin(pos * h.mult + h.phaseOff + seed * 1.41) * h.weight;
       }
-      shape[px] = y / SIM_WEIGHT_SUM; // –1 … +1
+      shape[px] = Math.abs(s / SIM_H_SUM) * speechEnv(t); // 0..1
     }
 
     let raf: number;
@@ -73,43 +87,44 @@ function SimVoiceWaveform({
       const t = ts * 0.001;
       ctx.clearRect(0, 0, width, height);
 
-      // ── Muted: thin flat line ─────────────────────────────────────────────
+      // Muted: flat line
       if (muted) {
         ctx.beginPath();
-        ctx.moveTo(0, cy);
-        ctx.lineTo(width, cy);
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.moveTo(0, cy); ctx.lineTo(width, cy);
+        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
         ctx.lineWidth = 1;
         ctx.stroke();
         raf = requestAnimationFrame(draw);
         return;
       }
 
-      // ── Amplitude-only envelope — shape stays fixed ───────────────────────
+      // Amplitude breathing — shape stays fixed, only scale changes
       const amp = speaking
-        ? maxAmp * (0.55 + 0.45 * Math.abs(Math.sin(t * 1.8 + seed * 0.9)))
+        ? maxAmp * (0.50 + 0.50 * Math.abs(Math.sin(t * 1.7 + seed * 0.85)))
         : maxAmp * 0.05;
 
+      // Filled closed path: top edge (cy - h) → bottom edge (cy + h)
       ctx.beginPath();
       for (let px = 0; px <= width; px++) {
-        const y = cy + shape[px] * amp;
-        if (px === 0) ctx.moveTo(px, y);
-        else          ctx.lineTo(px, y);
+        const h = shape[px] * amp;
+        if (px === 0) ctx.moveTo(0, cy - h);
+        else          ctx.lineTo(px, cy - h);
       }
+      for (let px = width; px >= 0; px--) {
+        ctx.lineTo(px, cy + shape[px] * amp);
+      }
+      ctx.closePath();
 
-      // Edge-faded gradient stroke
+      // Edge-faded gradient fill
       const grad = ctx.createLinearGradient(0, 0, width, 0);
-      const a    = speaking ? 1.0 : 0.38;
-      const rgb  = speaking ? '74,222,128' : '190,195,220';
+      const a   = speaking ? 0.88 : 0.26;
+      const rgb = speaking ? '74,222,128' : '185,195,215';
       grad.addColorStop(0,    `rgba(${rgb},0)`);
-      grad.addColorStop(0.07, `rgba(${rgb},${a})`);
-      grad.addColorStop(0.93, `rgba(${rgb},${a})`);
+      grad.addColorStop(0.06, `rgba(${rgb},${a})`);
+      grad.addColorStop(0.94, `rgba(${rgb},${a})`);
       grad.addColorStop(1,    `rgba(${rgb},0)`);
-
-      ctx.strokeStyle = grad;
-      ctx.lineWidth   = speaking ? 2 : 1.5;
-      ctx.lineJoin    = 'round';
-      ctx.stroke();
+      ctx.fillStyle = grad;
+      ctx.fill();
 
       raf = requestAnimationFrame(draw);
     };

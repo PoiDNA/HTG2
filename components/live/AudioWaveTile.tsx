@@ -4,16 +4,16 @@ import { useRef, useEffect, useMemo } from 'react';
 import type { Participant } from 'livekit-client';
 import { MicOff } from 'lucide-react';
 
-// ─── VoiceWaveform — canvas-based realistic speech waveform ──────────────────
+// ─── VoiceWaveform — filled envelope with internal oscillation ────────────────
 //
-// Generates a voice-like oscilloscope trace by summing harmonics at typical
-// speech-spectrum weights.  Amplitude envelope pulses at ~3.5 Hz to mimic
-// natural syllable rhythm.  Canvas scrolls leftward so the waveform looks live.
-//
-// Harmonic weights approximate the glottal source spectrum of a female voice
-// (dominant fundamental, 6 dB/octave rolloff, slight odd-harmonic emphasis).
+// Visual style: symmetric filled waveform (like the reference audio editor image).
+// For each x pixel: |sample(x)| determines the half-height of the filled bar.
+// The harmonic synthesis creates "teeth" (oscillation detail) inside the fill.
+// The overall amplitude pulses at syllable rate (~3 Hz) when speaking.
+// Phase scrolls leftward so the live waveform appears active.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Harmonic weights ≈ voice spectrum (dominant fundamental, 6 dB/oct rolloff)
 const HARMONICS = [
   { mult: 1.0, weight: 1.00, phaseOff: 0.00 },
   { mult: 2.0, weight: 0.58, phaseOff: 1.10 },
@@ -21,19 +21,58 @@ const HARMONICS = [
   { mult: 4.0, weight: 0.22, phaseOff: 0.70 },
   { mult: 5.0, weight: 0.14, phaseOff: 3.50 },
   { mult: 7.0, weight: 0.09, phaseOff: 1.80 },
-  { mult: 9.0, weight: 0.05, phaseOff: 2.90 },
 ];
+const H_SUM = HARMONICS.reduce((s, h) => s + h.weight, 0);
 
-const HARMONICS_WEIGHT_SUM = HARMONICS.reduce((s, h) => s + h.weight, 0);
+// Compute harmonic sample at a given phase
+function hSample(phase: number): number {
+  let s = 0;
+  for (const h of HARMONICS) {
+    s += Math.sin(phase * h.mult + h.phaseOff) * h.weight;
+  }
+  return s / H_SUM; // −1 … +1
+}
+
+// Draw filled symmetric waveform onto ctx
+// points: Float32Array of raw samples (−1…+1) length = width+1
+// amp: current half-height scale in px
+function drawFilled(
+  ctx: CanvasRenderingContext2D,
+  points: Float32Array,
+  width: number,
+  cy: number,
+  amp: number,
+  speaking: boolean,
+) {
+  ctx.beginPath();
+  // Top edge left → right
+  for (let px = 0; px <= width; px++) {
+    const h = Math.abs(points[px]) * amp;
+    if (px === 0) ctx.moveTo(0, cy - h);
+    else          ctx.lineTo(px, cy - h);
+  }
+  // Bottom edge right → left
+  for (let px = width; px >= 0; px--) {
+    ctx.lineTo(px, cy + Math.abs(points[px]) * amp);
+  }
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(0, 0, width, 0);
+  const a   = speaking ? 0.88 : 0.28;
+  const rgb = speaking ? '74,222,128' : '185,195,215';
+  grad.addColorStop(0,    `rgba(${rgb},0)`);
+  grad.addColorStop(0.06, `rgba(${rgb},${a})`);
+  grad.addColorStop(0.94, `rgba(${rgb},${a})`);
+  grad.addColorStop(1,    `rgba(${rgb},0)`);
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
 
 interface VoiceWaveformProps {
   speaking: boolean;
   muted: boolean;
-  /** Visible height in px */
   height?: number;
-  /** Visible width in px (default 220) */
   width?: number;
-  /** 0–10 — shifts phase so each participant looks different */
   seed?: number;
 }
 
@@ -45,7 +84,6 @@ export function VoiceWaveform({
   seed = 0,
 }: VoiceWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef    = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -58,74 +96,42 @@ export function VoiceWaveform({
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
 
-    const cy     = height / 2;
-    const maxAmp = cy * 0.82;
+    const cy      = height / 2;
+    const maxAmp  = cy * 0.88;
+    // Oscillation cycles visible across width — scaled so teeth are visible
+    const osc = Math.max(8, Math.round(width / 9)) + seed * 0.5;
+    const pts = new Float32Array(width + 1);
 
     let raf: number;
 
     const draw = (ts: number) => {
-      const t = ts * 0.001; // seconds
-
+      const t = ts * 0.001;
       ctx.clearRect(0, 0, width, height);
 
-      // ── Flat / muted state ────────────────────────────────────────────────
       if (muted) {
         ctx.beginPath();
-        ctx.moveTo(0, cy);
-        ctx.lineTo(width, cy);
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.moveTo(0, cy); ctx.lineTo(width, cy);
+        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
         ctx.lineWidth = 1;
         ctx.stroke();
         raf = requestAnimationFrame(draw);
         return;
       }
 
-      // ── Speaking / idle amplitude + scroll speed ──────────────────────────
-      const baseAmp  = speaking ? maxAmp : maxAmp * 0.045;
-      const speed    = speaking ? 1.5    : 0.25;   // phase scroll (cycles/sec)
+      // Global amplitude: syllable pulsing when speaking
+      const amp = speaking
+        ? maxAmp * (0.32 + 0.68 * Math.pow(0.5 + 0.5 * Math.sin(t * 3.1 + seed * 1.9), 0.5))
+        : maxAmp * 0.05;
 
-      // Syllable-rate amplitude envelope (only while speaking)
-      const env = speaking
-        ? 0.30 + 0.70 * Math.pow(
-            0.5 + 0.5 * Math.sin(t * 3.4 + seed * 2.7 + 0.5),
-            0.6,
-          )
-        : 1.0;
-
-      // ── Build path ────────────────────────────────────────────────────────
-      ctx.beginPath();
+      // Phase scrolls leftward over time
+      const shift = t * 1.6 * Math.PI * 2;
 
       for (let px = 0; px <= width; px++) {
-        // Map pixel position → phase offset (show ~3 full cycles across width)
-        const pos   = (px / width) * Math.PI * 6;
-        const phase = t * speed * Math.PI * 2 - pos + seed * 1.37;
-
-        let sample = 0;
-        for (const h of HARMONICS) {
-          sample += Math.sin(phase * h.mult + h.phaseOff) * h.weight;
-        }
-        sample /= HARMONICS_WEIGHT_SUM; // normalise to ≈ -1…+1
-
-        const y = cy + sample * baseAmp * env;
-        if (px === 0) ctx.moveTo(px, y);
-        else          ctx.lineTo(px, y);
+        const pos = (px / width) * osc * Math.PI * 2;
+        pts[px] = hSample(shift - pos + seed * 2.1);
       }
 
-      // ── Stroke with edge fade ─────────────────────────────────────────────
-      const grad = ctx.createLinearGradient(0, 0, width, 0);
-      const alpha = speaking ? 1.0 : 0.45;
-      const rgb   = speaking ? '74,222,128' : '200,200,220';
-
-      grad.addColorStop(0,    `rgba(${rgb},0)`);
-      grad.addColorStop(0.08, `rgba(${rgb},${alpha})`);
-      grad.addColorStop(0.92, `rgba(${rgb},${alpha})`);
-      grad.addColorStop(1,    `rgba(${rgb},0)`);
-
-      ctx.strokeStyle = grad;
-      ctx.lineWidth   = speaking ? 2 : 1.5;
-      ctx.lineJoin    = 'round';
-      ctx.stroke();
-
+      drawFilled(ctx, pts, width, cy, amp, speaking);
       raf = requestAnimationFrame(draw);
     };
 
@@ -134,11 +140,7 @@ export function VoiceWaveform({
   }, [speaking, muted, height, width, seed]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{ width, height, display: 'block' }}
-      aria-hidden
-    />
+    <canvas ref={canvasRef} style={{ width, height, display: 'block' }} aria-hidden />
   );
 }
 
@@ -162,7 +164,6 @@ const BAR_PROFILE = [
 export function Waveform({ speaking, muted, height = 32, color }: WaveformProps) {
   const barColor = color ?? (speaking ? '#4ade80' : '#ffffff33');
   const barWidth = Math.max(3, Math.round(height / 11));
-
   return (
     <>
       <style>{`
@@ -185,7 +186,7 @@ export function Waveform({ speaking, muted, height = 32, color }: WaveformProps)
   );
 }
 
-// ─── Seed helper — consistent per participant identity ────────────────────────
+// ─── Seed helper ──────────────────────────────────────────────────────────────
 
 function identitySeed(identity: string): number {
   let h = 0;
@@ -195,7 +196,7 @@ function identitySeed(identity: string): number {
   return Math.abs(h % 100) / 10; // 0–9.9
 }
 
-// ─── Full-size audio tile (replaces MainTile in sesja phase) ─────────────────
+// ─── Full-size audio tile ─────────────────────────────────────────────────────
 
 interface AudioMainTileProps { participant: Participant }
 
@@ -207,14 +208,13 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
   const seed        = useMemo(() => identitySeed(p.identity), [p.identity]);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const widthRef     = useRef(220);
+  const widthRef     = useRef(240);
 
-  // Measure container width so waveform fills the tile
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      widthRef.current = Math.round(entry.contentRect.width * 0.72) || 220;
+      widthRef.current = Math.round(entry.contentRect.width * 0.74) || 240;
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -230,11 +230,9 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
         ${speaking ? 'ring-4 ring-[#4ade80]/40 ring-inset' : ''}`}
       style={{ background: 'radial-gradient(ellipse at 50% 35%, rgba(15,20,40,0.95), #07091a 80%)' }}
     >
-      {/* Glow */}
       <div className="absolute inset-0 pointer-events-none transition-opacity duration-500"
         style={{ background: `radial-gradient(ellipse 55% 45% at 50% 40%, ${glowColor}, transparent 70%)` }} />
 
-      {/* Avatar */}
       <div
         className={`relative z-10 flex items-center justify-center rounded-full transition-all duration-300
           ${speaking
@@ -245,7 +243,6 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
         <span className="text-4xl font-serif text-white/90 select-none">{initial}</span>
       </div>
 
-      {/* Name */}
       <div className="relative z-10 flex flex-col items-center gap-1">
         <span className="text-white/90 font-medium text-sm tracking-wide">{displayName}</span>
         {muted && (
@@ -255,21 +252,14 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
         )}
       </div>
 
-      {/* Voice waveform */}
       <div className="relative z-10">
-        <VoiceWaveform
-          speaking={speaking}
-          muted={muted}
-          height={44}
-          width={widthRef.current}
-          seed={seed}
-        />
+        <VoiceWaveform speaking={speaking} muted={muted} height={48} width={widthRef.current} seed={seed} />
       </div>
     </div>
   );
 }
 
-// ─── Circle audio tile (replaces CircleTile in sesja phase) ─────────────────
+// ─── Circle audio tile ────────────────────────────────────────────────────────
 
 interface AudioCircleTileProps {
   participant: Participant;
@@ -287,7 +277,7 @@ export function AudioCircleTile({ participant: p, size, onClick, clickable }: Au
 
   const avatarSize = Math.round(size * 0.42);
   const waveW      = Math.round(size * 0.68);
-  const waveH      = Math.round(size * 0.18);
+  const waveH      = Math.round(size * 0.20);
 
   return (
     <div
@@ -306,7 +296,6 @@ export function AudioCircleTile({ participant: p, size, onClick, clickable }: Au
       onClick={clickable ? onClick : undefined}
       title={clickable ? `Zamień z ${p.name || 'uczestnikiem'}` : undefined}
     >
-      {/* Avatar */}
       <div className="rounded-full flex items-center justify-center flex-shrink-0"
         style={{
           width: avatarSize, height: avatarSize,
@@ -319,17 +308,14 @@ export function AudioCircleTile({ participant: p, size, onClick, clickable }: Au
         </span>
       </div>
 
-      {/* Voice waveform */}
       <div className="mt-1 overflow-hidden" style={{ width: waveW }}>
         <VoiceWaveform speaking={speaking} muted={muted} height={waveH} width={waveW} seed={seed} />
       </div>
 
-      {/* Name */}
       <div className="absolute bottom-0 inset-x-0 bg-black/50 text-center py-0.5">
         <span className="text-[10px] text-white/80 truncate px-1 font-medium">{displayName}</span>
       </div>
 
-      {/* Muted badge */}
       {muted && (
         <div className="absolute top-1 right-1 bg-red-500/80 rounded-full p-0.5">
           <MicOff className="w-2.5 h-2.5 text-white" />

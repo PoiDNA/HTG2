@@ -5,6 +5,7 @@ import { Link } from '@/i18n-config';
 import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History } from 'lucide-react';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 import PaymentCommentEditor from './PaymentCommentEditor';
+import SessionTypeSelector from './SessionTypeSelector';
 
 const SESSION_LABELS: Record<string, string> = {
   natalia_solo: 'Sesja 1:1 z Natalią',
@@ -127,6 +128,14 @@ export default async function SessionDetailPage({
           />
         </div>
       </div>
+
+      {/* Session type selector — for natalia_asysta, admin/practitioner can assign assistant */}
+      {canEditPayment && ['natalia_asysta', 'natalia_agata', 'natalia_justyna'].includes(booking.session_type) && (
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-3">
+          <h2 className="text-base font-serif font-bold text-htg-fg">Typ sesji / Przypisanie asystentki</h2>
+          <SessionTypeSelector bookingId={booking.id} initialType={booking.session_type} />
+        </div>
+      )}
 
       {/* Topics */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">

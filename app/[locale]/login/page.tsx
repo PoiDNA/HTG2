@@ -1,10 +1,7 @@
 import { setRequestLocale } from 'next-intl/server';
-import { locales } from '@/i18n-config';
 import LoginForm from './LoginForm';
 
-export function generateStaticParams() {
-  return locales.map((locale) => ({ locale }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function LoginPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;

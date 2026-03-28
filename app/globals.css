@@ -1,24 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  /* Raw palette */
-  --color-htg-indigo: #4A3B6B;
-  --color-htg-indigo-light: #5D4E7E;
-  --color-htg-lavender: #8B7AAF;
-  --color-htg-sage: #7A9E7E;
-  --color-htg-sage-dark: #5F8363;
-  --color-htg-cream: #FBF8F1;
-  --color-htg-warm: #D4A76A;
+  /* Raw palette — lotus flower inspired */
+  --color-htg-indigo: #9B4A5C;
+  --color-htg-indigo-light: #B06278;
+  --color-htg-lavender: #C8949E;
+  --color-htg-sage: #5A8A4E;
+  --color-htg-sage-dark: #3D6B32;
+  --color-htg-cream: #FDF5F0;
+  --color-htg-warm: #D4A840;
   /* Accessible warm for text on cream — passes WCAG AA 4.5:1 */
-  --color-htg-warm-text: #8B6914;
+  --color-htg-warm-text: #8B6B14;
 
   /* Semantic tokens (light-mode defaults) */
-  --color-htg-bg: #FBF8F1;
-  --color-htg-fg: #2D2A3E;
-  --color-htg-fg-muted: rgba(45, 42, 62, 0.6);
+  --color-htg-bg: #FDF5F0;
+  --color-htg-fg: #3A2A30;
+  --color-htg-fg-muted: rgba(58, 42, 48, 0.6);
   --color-htg-card: #FFFFFF;
-  --color-htg-card-border: rgba(74, 59, 107, 0.08);
-  --color-htg-surface: rgba(74, 59, 107, 0.04);
+  --color-htg-card-border: rgba(155, 74, 92, 0.08);
+  --color-htg-surface: rgba(155, 74, 92, 0.04);
 
   --font-serif: Georgia, "Playfair Display", serif;
   --font-sans: "DM Sans", system-ui, sans-serif;

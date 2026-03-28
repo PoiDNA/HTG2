@@ -4,7 +4,11 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { downloadFile } from '@/lib/bunny-storage';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 const FALLBACK_FROM = 'HTG <sesje@htgcyou.com>';
 
 // Map mailbox addresses to display names for From header
@@ -81,7 +85,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Send via Resend with threading headers — FROM = mailbox address
-  const { data: sentEmail, error: sendError } = await resend.emails.send({
+  const { data: sentEmail, error: sendError } = await getResend().emails.send({
     from: `${fromName} <${fromEmail}>`,
     to: Array.isArray(to) ? to : [to],
     cc: cc || undefined,

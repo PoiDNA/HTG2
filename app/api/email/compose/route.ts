@@ -5,7 +5,11 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { normalizeAddress, resolveUser } from '@/lib/email/hub';
 import { downloadFile } from '@/lib/bunny-storage';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 const FROM_NAMES: Record<string, string> = {
   'kontakt@htgcyou.com': 'HTG Kontakt',
@@ -93,7 +97,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Send via Resend
-  const { data: sentEmail, error: sendError } = await resend.emails.send({
+  const { data: sentEmail, error: sendError } = await getResend().emails.send({
     from: `${fromName} <${fromAddress}>`,
     to: [toNormalized],
     subject: subject || '(bez tematu)',

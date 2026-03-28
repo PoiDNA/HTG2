@@ -3,7 +3,11 @@ import { Resend } from 'resend';
 import { requireEmailAccess } from '@/lib/email/auth';
 import { checkRateLimit, logAutoReply } from '@/lib/email/hub';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireEmailAccess();
@@ -30,7 +34,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     .toString('base64url');
   const verifyUrl = `${baseUrl}/api/email/verify?token=${token}`;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: 'HTG <sesje@htgcyou.com>',
     to: conv.from_address,
     subject: 'Potwierdź swój adres email — HTG',

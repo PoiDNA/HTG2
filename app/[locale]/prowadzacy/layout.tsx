@@ -44,19 +44,28 @@ export default async function StaffLayout({
   // Stats visible only to admin and practitioner (Natalia), not assistants
   const canSeeStats = isAdmin || staffMember?.role === 'practitioner';
 
+  const isPractitioner = staffMember?.role === 'practitioner';
+
   const navItems = [
     { href: '/prowadzacy', label: t('dashboard'), icon: LayoutDashboard },
     { href: '/prowadzacy/sesje', label: t('sessions'), icon: Presentation },
     { href: '/prowadzacy/grafik', label: t('schedule'), icon: Calendar },
     { href: '/prowadzacy/klienci', label: t('clients'), icon: Users },
-    { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Video },
-    { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
-    { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
-    ...(canSeeStats ? [{ href: '/prowadzacy/statystyki', label: 'Statystyki odtworzeń', icon: BarChart2 }] : []),
-    { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
-    ...(canSeeStats ? [{ href: '/prowadzacy/spotkania-htg/profile-uczestnikow', label: 'Profile uczestników', icon: BarChart2 }] : []),
-    { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
-    { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
+    // Items below only for assistants and admin (not practitioner/Natalia)
+    ...(!isPractitioner ? [
+      { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Video },
+      { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
+      { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
+    ] : []),
+    ...(canSeeStats && !isPractitioner ? [{ href: '/prowadzacy/statystyki', label: 'Statystyki odtworzeń', icon: BarChart2 }] : []),
+    ...(!isPractitioner ? [
+      { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
+    ] : []),
+    ...(canSeeStats && !isPractitioner ? [{ href: '/prowadzacy/spotkania-htg/profile-uczestnikow', label: 'Profile uczestników', icon: BarChart2 }] : []),
+    ...(!isPractitioner ? [
+      { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
+      { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
+    ] : []),
   ];
 
   return (

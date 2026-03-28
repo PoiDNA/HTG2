@@ -80,6 +80,7 @@ export default function EmailInbox() {
   const [threads, setThreads] = useState<ConversationSummary[]>([]);
   const [totalThreads, setTotalThreads] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
+  const [mailboxFilter, setMailboxFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -124,6 +125,7 @@ export default function EmailInbox() {
     setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter) params.set('status', statusFilter);
+    if (mailboxFilter) params.set('mailbox_id', mailboxFilter);
     if (searchQuery) params.set('search', searchQuery);
     params.set('limit', '30');
 
@@ -140,7 +142,7 @@ export default function EmailInbox() {
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, mailboxFilter, searchQuery]);
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
@@ -307,8 +309,8 @@ export default function EmailInbox() {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="p-3 border-b border-htg-card-border">
+        {/* Search + Mailbox filter */}
+        <div className="p-2 border-b border-htg-card-border space-y-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
             <input
@@ -319,6 +321,31 @@ export default function EmailInbox() {
               className="w-full pl-8 pr-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-xs focus:outline-none focus:ring-1 focus:ring-htg-sage"
             />
           </div>
+          {/* Mailbox filter — show when multiple mailboxes */}
+          {mailboxes.length > 1 && (
+            <div className="flex gap-1 flex-wrap">
+              <button
+                onClick={() => setMailboxFilter('')}
+                className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                  !mailboxFilter ? 'bg-htg-sage text-white' : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
+                }`}
+              >
+                Wszystkie
+              </button>
+              {mailboxes.map(mb => (
+                <button
+                  key={mb.id}
+                  onClick={() => setMailboxFilter(mailboxFilter === mb.id ? '' : mb.id)}
+                  title={mb.address}
+                  className={`px-2 py-1 rounded text-[10px] font-medium transition-colors truncate max-w-[120px] ${
+                    mailboxFilter === mb.id ? 'bg-htg-sage text-white' : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
+                  }`}
+                >
+                  {mb.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Thread list */}
@@ -347,6 +374,11 @@ export default function EmailInbox() {
                     </div>
                     <p className="text-xs text-htg-fg-muted truncate mt-0.5">
                       {thread.subject || '(bez tematu)'}
+                      {isAdmin && !mailboxFilter && thread.mailboxes?.name && (
+                        <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-htg-card text-htg-fg-muted/60">
+                          {thread.mailboxes.name}
+                        </span>
+                      )}
                     </p>
                     {isAdmin && thread.ai_summary && (
                       <p className="text-xs text-htg-fg-muted/70 truncate mt-0.5 italic">

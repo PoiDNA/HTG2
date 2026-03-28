@@ -324,3 +324,99 @@ export function AudioCircleTile({ participant: p, size, onClick, clickable }: Au
     </div>
   );
 }
+
+// ─── SimVoiceWaveform — static shape from seed, amplitude breathes ────────────
+// Shared between LiveSimulatorClient and MeetingSimulatorClient.
+// Shape is fixed (no horizontal scroll) — only amplitude pulses when speaking.
+
+const SIM_HARMONICS_SV = [
+  { mult: 1.0, weight: 1.00, phaseOff: 0.00 },
+  { mult: 2.0, weight: 0.58, phaseOff: 1.10 },
+  { mult: 3.0, weight: 0.36, phaseOff: 2.30 },
+  { mult: 4.0, weight: 0.22, phaseOff: 0.70 },
+  { mult: 5.0, weight: 0.14, phaseOff: 3.50 },
+  { mult: 7.0, weight: 0.09, phaseOff: 1.80 },
+];
+const SIM_H_SUM_SV = SIM_HARMONICS_SV.reduce((s, h) => s + h.weight, 0);
+
+function simSpeechEnv(t: number): number {
+  const attack  = Math.pow(Math.min(1, t * 3.2), 0.55);
+  const release = Math.pow(Math.max(0, 1 - Math.max(0, (t - 0.52) * 2.0)), 0.75);
+  return attack * release;
+}
+
+export function SimVoiceWaveform({
+  speaking, height = 40, width = 220, seed = 0,
+}: {
+  speaking: boolean;
+  height?: number;
+  width?: number;
+  seed?: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = width  * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const cy     = height / 2;
+    const maxAmp = cy * 0.88;
+    const osc    = Math.max(8, Math.round(width / 9)) + seed * 0.5;
+
+    const shape = new Float32Array(width + 1);
+    for (let px = 0; px <= width; px++) {
+      const t   = px / width;
+      const pos = t * osc * Math.PI * 2;
+      let s = 0;
+      for (const h of SIM_HARMONICS_SV) {
+        s += Math.sin(pos * h.mult + h.phaseOff + seed * 1.41) * h.weight;
+      }
+      shape[px] = Math.abs(s / SIM_H_SUM_SV) * simSpeechEnv(t);
+    }
+
+    let raf: number;
+    const draw = (ts: number) => {
+      const t = ts * 0.001;
+      ctx.clearRect(0, 0, width, height);
+
+      const amp = speaking
+        ? maxAmp * (0.50 + 0.50 * Math.abs(Math.sin(t * 1.7 + seed * 0.85)))
+        : maxAmp * 0.05;
+
+      ctx.beginPath();
+      for (let px = 0; px <= width; px++) {
+        const h = shape[px] * amp;
+        if (px === 0) ctx.moveTo(0, cy - h);
+        else          ctx.lineTo(px, cy - h);
+      }
+      for (let px = width; px >= 0; px--) {
+        ctx.lineTo(px, cy + shape[px] * amp);
+      }
+      ctx.closePath();
+
+      const grad = ctx.createLinearGradient(0, 0, width, 0);
+      const a    = speaking ? 0.88 : 0.22;
+      const rgb  = speaking ? '74,222,128' : '185,195,215';
+      grad.addColorStop(0,    `rgba(${rgb},0)`);
+      grad.addColorStop(0.06, `rgba(${rgb},${a})`);
+      grad.addColorStop(0.94, `rgba(${rgb},${a})`);
+      grad.addColorStop(1,    `rgba(${rgb},0)`);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      raf = requestAnimationFrame(draw);
+    };
+
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [speaking, height, width, seed]);
+
+  return <canvas ref={canvasRef} style={{ width, height, display: 'block' }} />;
+}

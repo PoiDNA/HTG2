@@ -51,6 +51,24 @@ export async function GET(
     .eq('session_id', sessionId)
     .neq('status', 'left');
 
+  // Load active speaking queue (not done, ordered by queued_at)
+  const { data: queueRows } = await db
+    .from('htg_meeting_queue')
+    .select('id, user_id, display_name, queued_at, is_done')
+    .eq('session_id', sessionId)
+    .eq('is_done', false)
+    .order('queued_at', { ascending: true });
+
+  const queue = (queueRows ?? []).map((q, i) => ({
+    id: q.id,
+    userId: q.user_id,
+    displayName: q.display_name ?? 'Uczestnik',
+    queuedAt: q.queued_at,
+    isCurrent: i === 0, // first in queue is current speaker
+  }));
+
+  const queueSpeakerId = queue.length > 0 ? queue[0].userId : null;
+
   return NextResponse.json({
     status: session.status,
     moderatorId: session.moderator_id,
@@ -58,6 +76,8 @@ export async function GET(
     currentStage,
     currentQuestion,
     allMuted: session.all_muted ?? false,
+    queue,
+    queueSpeakerId,
     participants: (participants ?? []).map(p => ({
       userId: p.user_id,
       displayName: p.display_name ?? 'Uczestnik',

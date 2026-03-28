@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from '@/i18n-config';
-import { User, Users, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap } from 'lucide-react';
+import { User, Users, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap, Heart } from 'lucide-react';
 
 interface SessionOption {
   slug: string;
@@ -41,8 +41,8 @@ const DAYS_PL = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 const MONTHS_PL = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
 
 export function SessionPicker({ sessions, labels }: SessionPickerProps) {
-  // 'solo' | 'asysta' | null
-  const [selectedGroup, setSelectedGroup] = useState<'solo' | 'asysta' | null>(null);
+  // 'solo' | 'asysta' | 'para' | null
+  const [selectedGroup, setSelectedGroup] = useState<'solo' | 'asysta' | 'para' | null>(null);
   // slug of chosen assistant session (sesja-natalia-agata or sesja-natalia-justyna)
   const [selectedAssistant, setSelectedAssistant] = useState<string | null>(null);
 
@@ -64,6 +64,15 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   const assistantSessions = sessions.filter(
     s => s.sessionType === 'natalia_agata' || s.sessionType === 'natalia_justyna'
   );
+  const paraSession = sessions.find(s => s.sessionType === 'natalia_para') ?? {
+    slug: 'sesja-natalia-para',
+    name: 'Sesja dla par',
+    description: 'Sesja dla dwóch osób z Natalią',
+    amount: 160000,
+    currency: 'pln',
+    priceId: '',
+    sessionType: 'natalia_para',
+  };
   // Representative assistant price (same for both)
   const assistantPrice = assistantSessions[0]?.amount ?? 0;
 
@@ -72,8 +81,9 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
     if (selectedGroup === 'solo') return soloSession ?? null;
     if (selectedGroup === 'asysta' && selectedAssistant)
       return assistantSessions.find(s => s.slug === selectedAssistant) ?? null;
+    if (selectedGroup === 'para') return paraSession;
     return null;
-  }, [selectedGroup, selectedAssistant, soloSession, assistantSessions]);
+  }, [selectedGroup, selectedAssistant, soloSession, assistantSessions, paraSession]);
 
   // Load available slots when session type changes
   useEffect(() => {
@@ -155,12 +165,14 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
 
   const totalAmount = selectedSession ? selectedSession.amount / 100 : 0;
   const isWithAssistant = selectedSession?.sessionType === 'natalia_agata' || selectedSession?.sessionType === 'natalia_justyna';
-  const installmentsCount = isWithAssistant ? 4 : 3;
+  const isPara = selectedSession?.sessionType === 'natalia_para';
+  const installmentsCount = isWithAssistant || isPara ? 4 : 3;
   const installmentAmount = 400;
   const payAmount = paymentMode === 'full' ? totalAmount : installmentAmount;
 
   async function handleCheckout() {
     if (!selectedSession || payAmount <= 0) return;
+    if (!selectedSession.priceId) return; // product not yet configured in Stripe
     setLoading(true);
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -192,7 +204,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
     }
   }
 
-  function selectGroup(group: 'solo' | 'asysta') {
+  function selectGroup(group: 'solo' | 'asysta' | 'para') {
     setSelectedGroup(group);
     setSelectedAssistant(null);
     setSelectedSlotId(null);
@@ -212,7 +224,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
       {/* Step 1: Choose session type */}
       <h2 className="font-serif font-semibold text-xl text-htg-fg">{labels.choose}</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Sesja 1:1 z Natalią */}
         {soloSession && (
           <button
@@ -291,6 +303,29 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             )}
           </div>
         )}
+
+        {/* Sesja dla par */}
+        <button
+          onClick={() => selectGroup('para')}
+          className={`relative text-left p-6 rounded-xl border-2 transition-all ${
+            selectedGroup === 'para'
+              ? 'border-rose-500/70 bg-rose-500/5 ring-2 ring-rose-500/20'
+              : 'border-htg-card-border bg-htg-card hover:border-rose-500/30'
+          }`}
+        >
+          {selectedGroup === 'para' && (
+            <div className="absolute top-3 right-3 w-6 h-6 bg-rose-500 rounded-full flex items-center justify-center">
+              <Check className="w-4 h-4 text-white" />
+            </div>
+          )}
+          <Heart className={`w-8 h-8 mb-3 ${selectedGroup === 'para' ? 'text-rose-400' : 'text-htg-fg-muted'}`} />
+          <h3 className="font-serif font-semibold text-htg-fg mb-1">Sesja dla par</h3>
+          <p className="text-xs text-htg-fg-muted mb-4">Natalia HTG · 2 osoby · 120 min</p>
+          <p className="text-2xl font-bold text-htg-fg">
+            {(paraSession.amount / 100).toLocaleString('pl-PL')} <span className="text-sm font-normal text-htg-fg-muted">PLN</span>
+          </p>
+          <p className="text-xs text-htg-fg-muted">{labels.per_session}</p>
+        </button>
       </div>
 
       {/* Step 2: Slot + payment — shown only when session is fully selected */}
@@ -531,7 +566,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration)}
+              disabled={loading || (!selectedSlotId && !wantAcceleration) || !selectedSession?.priceId}
               className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -550,8 +585,13 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
               )}
             </button>
 
-            {!selectedSlotId && !wantAcceleration && slots.length > 0 && (
+            {!selectedSlotId && !wantAcceleration && slots.length > 0 && selectedSession?.priceId && (
               <p className="text-xs text-htg-warm text-center mt-2">Wybierz termin lub zaznacz opcję przyspieszenia</p>
+            )}
+            {isPara && !selectedSession?.priceId && (
+              <p className="text-xs text-htg-fg-muted text-center mt-2">
+                Płatność online dla sesji par wkrótce. Skontaktuj się z nami bezpośrednio.
+              </p>
             )}
             <p className="text-xs text-htg-fg-muted text-center mt-3">{labels.cancel_policy}</p>
           </div>

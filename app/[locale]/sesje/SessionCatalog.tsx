@@ -114,6 +114,10 @@ export default function SessionCatalog({
   const [selectedYearlyMonths, setSelectedYearlyMonths] = useState<Set<string>>(new Set());
   const purchasedYearlySet = useMemo(() => new Set(purchasedYearlyMonths), [purchasedYearlyMonths]);
 
+  // Matching / Rezonans
+  const [matchQuery, setMatchQuery] = useState('');
+  const [matchActive, setMatchActive] = useState(false);
+
   // Spotlight (months view + yearly view)
   const [spotlightId, setSpotlightId] = useState<string | null>(null);
   const spotlightRef = useRef<HTMLDivElement>(null);
@@ -163,6 +167,71 @@ export default function SessionCatalog({
     [allSessions, purchasedSet, hasYearly]
   );
 
+  // ── Matching / Rezonans engine ──
+  function scoreText(text: string, keywords: string[]): number {
+    const lower = text.toLowerCase();
+    return keywords.reduce((score, kw) => score + (lower.includes(kw) ? 1 : 0), 0);
+  }
+
+  function scoreSession(s: { title: string; description: string | null; tags: string[] }, keywords: string[]): number {
+    let score = scoreText(s.title, keywords) * 3; // title weight
+    if (s.description) score += scoreText(s.description, keywords) * 1;
+    if (s.tags) score += s.tags.reduce((acc, t) => acc + scoreText(t, keywords) * 2, 0); // tags weight
+    return score;
+  }
+
+  function scoreMonth(ms: MonthSetInfo, keywords: string[]): number {
+    return ms.sessions.reduce((total, s) => total + scoreSession(s, keywords), 0);
+  }
+
+  const matchKeywords = useMemo(() =>
+    matchQuery.toLowerCase().split(/[\s,;]+/).filter(w => w.length >= 2),
+    [matchQuery]
+  );
+
+  // Session scores (for Dopasowanie Sesji)
+  const sessionScores = useMemo(() => {
+    if (!matchActive || matchKeywords.length === 0) return new Map<string, number>();
+    const scores = new Map<string, number>();
+    allSessions.forEach(s => {
+      const sc = scoreSession(s, matchKeywords);
+      if (sc > 0) scores.set(s.id, sc);
+    });
+    return scores;
+  }, [allSessions, matchKeywords, matchActive]);
+
+  // Month scores (for Dopasowanie Miesięcy + Rezonans)
+  const monthScores = useMemo(() => {
+    if (!matchActive || matchKeywords.length === 0) return new Map<string, number>();
+    const scores = new Map<string, number>();
+    const source = view === 'yearly' ? allYearlyMonths : monthSets;
+    source.forEach(ms => {
+      const sc = scoreMonth(ms, matchKeywords);
+      if (sc > 0) scores.set(ms.month_label, sc);
+    });
+    return scores;
+  }, [monthSets, allYearlyMonths, matchKeywords, matchActive, view]);
+
+  function runMatch() {
+    if (matchKeywords.length === 0) return;
+    setMatchActive(true);
+
+    // In yearly: auto-select top 12 scored months
+    if (view === 'yearly') {
+      const scored = [...monthScores.entries()]
+        .filter(([label]) => !purchasedYearlySet.has(label))
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([label]) => label);
+      setSelectedYearlyMonths(new Set(scored));
+    }
+  }
+
+  function clearMatch() {
+    setMatchQuery('');
+    setMatchActive(false);
+  }
+
   // Filter + sort sessions
   const filteredSessions = useMemo(() => {
     let result = [...allSessions];
@@ -201,24 +270,28 @@ export default function SessionCatalog({
       result = result.filter(s => s.tags?.includes(selectedTag));
     }
 
-    // Sort
-    switch (sort) {
-      case 'newest':
-        result.sort((a, b) => b.monthLabel.localeCompare(a.monthLabel));
-        break;
-      case 'oldest':
-        result.sort((a, b) => a.monthLabel.localeCompare(b.monthLabel));
-        break;
-      case 'popular':
-        result.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
-        break;
-      case 'az':
-        result.sort((a, b) => a.title.localeCompare(b.title, 'pl'));
-        break;
+    // Sort by match score if matching active, otherwise normal sort
+    if (matchActive && sessionScores.size > 0) {
+      result.sort((a, b) => (sessionScores.get(b.id) || 0) - (sessionScores.get(a.id) || 0));
+    } else {
+      switch (sort) {
+        case 'newest':
+          result.sort((a, b) => b.monthLabel.localeCompare(a.monthLabel));
+          break;
+        case 'oldest':
+          result.sort((a, b) => a.monthLabel.localeCompare(b.monthLabel));
+          break;
+        case 'popular':
+          result.sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
+          break;
+        case 'az':
+          result.sort((a, b) => a.title.localeCompare(b.title, 'pl'));
+          break;
+      }
     }
 
     return result;
-  }, [allSessions, category, searchQuery, selectedMonth, selectedTag, sort, hideOwned, isPurchasedSession]);
+  }, [allSessions, category, searchQuery, selectedMonth, selectedTag, sort, hideOwned, isPurchasedSession, matchActive, sessionScores]);
 
   // Spotlight scroll
   useEffect(() => {
@@ -513,6 +586,55 @@ export default function SessionCatalog({
         </div>
       )}
 
+      {/* ── Matching / Rezonans bar ── */}
+      <div className="mb-6 bg-htg-card border border-htg-card-border rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="w-4 h-4 text-htg-warm" />
+          <span className="text-sm font-medium text-htg-fg">
+            {view === 'sessions' ? 'Dopasowanie Sesji' : view === 'months' ? 'Dopasowanie Miesięcy' : 'Rezonans 12 Sesji'}
+          </span>
+          {matchActive && (
+            <button onClick={clearMatch} className="text-xs text-red-400 hover:text-red-300 ml-auto">Wyczyść</button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={matchQuery}
+            onChange={e => { setMatchQuery(e.target.value); if (matchActive) setMatchActive(false); }}
+            onKeyDown={e => { if (e.key === 'Enter') runMatch(); }}
+            placeholder={view === 'yearly'
+              ? 'Wpisz słowa kluczowe — system dobierze 12 najlepszych miesięcy...'
+              : 'Wpisz słowa kluczowe (np. lęk, relacja, ciało, pieniądze)...'
+            }
+            className="flex-1 px-3 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-sm text-htg-fg placeholder-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-warm/30"
+          />
+          <button
+            onClick={runMatch}
+            disabled={matchQuery.trim().length < 2}
+            className="shrink-0 px-4 py-2 bg-htg-warm text-white rounded-lg text-sm font-medium hover:bg-htg-warm/90 transition-colors disabled:opacity-40 flex items-center gap-1.5"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {view === 'yearly' ? 'Dobierz 12' : 'Dopasuj'}
+          </button>
+        </div>
+        {matchActive && view === 'sessions' && sessionScores.size > 0 && (
+          <p className="text-xs text-htg-fg-muted mt-2">
+            Znaleziono <span className="text-htg-warm font-medium">{sessionScores.size}</span> pasujących sesji — posortowane od najlepszego dopasowania
+          </p>
+        )}
+        {matchActive && view === 'months' && monthScores.size > 0 && (
+          <p className="text-xs text-htg-fg-muted mt-2">
+            Znaleziono <span className="text-htg-warm font-medium">{monthScores.size}</span> pasujących miesięcy
+          </p>
+        )}
+        {matchActive && view === 'yearly' && selectedYearlyMonths.size > 0 && (
+          <p className="text-xs text-htg-fg-muted mt-2">
+            Dobrano <span className="text-htg-warm font-medium">{selectedYearlyMonths.size}</span> miesięcy na podstawie Twojego rezonansu
+          </p>
+        )}
+      </div>
+
       {/* ── Stats bar ── */}
       <div className="flex items-center justify-between mb-4 text-sm text-htg-fg-muted">
         <span>
@@ -584,6 +706,11 @@ export default function SessionCatalog({
                       <span className="text-xs text-htg-fg-muted flex items-center gap-1">
                         <Calendar className="w-3 h-3" />{s.monthTitle.replace('Sesje ', '')}
                       </span>
+                      {matchActive && sessionScores.has(s.id) && (
+                        <span className="text-xs bg-htg-warm/20 text-htg-warm px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" />Dopasowanie
+                        </span>
+                      )}
                       {isPurchased && (
                         <span className="text-xs bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                           <CheckCircle className="w-3 h-3" />W kolekcji
@@ -684,6 +811,7 @@ export default function SessionCatalog({
               const isSpotlight = spotlightId === ms.id;
               const isSelected = selectedMonthSets.has(ms.id);
               const isPurchased = isPurchasedMonth(ms.id);
+              const hasMatch = matchActive && monthScores.has(ms.month_label);
               return (
                 <button
                   key={ms.id}
@@ -691,17 +819,24 @@ export default function SessionCatalog({
                   className={`relative p-3 rounded-xl border-2 text-left transition-all ${
                     isPurchased
                       ? 'border-emerald-500/40 bg-emerald-500/5'
-                      : isSpotlight
-                        ? 'border-htg-sage bg-htg-sage/20 ring-2 ring-htg-sage/40 scale-105 z-10'
-                        : isSelected
-                          ? 'border-htg-sage/60 bg-htg-sage/10'
-                          : 'border-htg-card-border bg-htg-card hover:border-htg-sage/40 hover:scale-[1.02]'
+                      : hasMatch
+                        ? 'border-htg-warm/60 bg-htg-warm/10 ring-1 ring-htg-warm/30'
+                        : isSpotlight
+                          ? 'border-htg-sage bg-htg-sage/20 ring-2 ring-htg-sage/40 scale-105 z-10'
+                          : isSelected
+                            ? 'border-htg-sage/60 bg-htg-sage/10'
+                            : 'border-htg-card-border bg-htg-card hover:border-htg-sage/40 hover:scale-[1.02]'
                   }`}
                 >
                   <p className="font-serif font-bold text-sm text-htg-fg leading-tight">
                     {ms.title.replace('Sesje ', '')}
                   </p>
                   <p className="text-htg-fg-muted text-xs mt-1">{ms.sessions.length} sesji</p>
+                  {hasMatch && (
+                    <p className="text-htg-warm text-xs mt-1 font-medium flex items-center gap-0.5">
+                      <Sparkles className="w-3 h-3" />Dopasowanie
+                    </p>
+                  )}
                   {isPurchased ? (
                     <p className="text-emerald-400 text-xs mt-1 font-medium flex items-center gap-0.5">
                       <CheckCircle className="w-3 h-3" />Kupiony

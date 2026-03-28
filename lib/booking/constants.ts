@@ -42,6 +42,14 @@ export const SESSION_CONFIG: Record<SessionType, {
     color: 'bg-rose-600',
     maxClients: 2,
   },
+  natalia_asysta: {
+    label: 'Sesja z Asystą',
+    labelShort: 'Z Asystą',
+    durationMinutes: 90,
+    pricePln: 1600,
+    requiredStaff: ['natalia'],
+    color: 'bg-amber-600',
+  },
   pre_session: {
     label: 'Spotkanie wstępne (15 min)',
     labelShort: 'Spotkanie wstępne',
@@ -52,7 +60,7 @@ export const SESSION_CONFIG: Record<SessionType, {
   },
 };
 
-export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para'];
+export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para', 'natalia_asysta'];
 export const PRE_SESSION_DURATION = 15;
 
 // Days of week (0=Sunday) — Polish labels

@@ -19,6 +19,33 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
+// ─── Session Timer ─────────────────────────────────────────────────────────
+function SessionTimer({ startedAt }: { startedAt: string | null }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!startedAt) return;
+    const start = new Date(startedAt).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [startedAt]);
+
+  if (!startedAt) return null;
+
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+  const formatted = h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${m}:${String(s).padStart(2, '0')}`;
+
+  return (
+    <span className="text-white/40 text-xs tabular-nums">{formatted}</span>
+  );
+}
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface QueueEntry {
   id: string;
@@ -606,7 +633,10 @@ function MeetingRoomInner({
             </div>
           )}
         </div>
-        <div className="text-white/30 text-xs">HTG Spotkanie</div>
+        <div className="flex items-center gap-2">
+          <SessionTimer startedAt={state.startedAt} />
+          <span className="text-white/20 text-xs">HTG</span>
+        </div>
       </div>
 
       {/* Done flash notification */}
@@ -786,6 +816,73 @@ function MeetingRoomInner({
   );
 }
 
+// ─── Ended screen ──────────────────────────────────────────────────────────
+function EndedScreen({
+  sessionId, locale, router,
+}: {
+  sessionId: string;
+  locale: string;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [countdown, setCountdown] = useState(5);
+  const [hasRecording, setHasRecording] = useState(false);
+
+  useEffect(() => {
+    // Check if recording exists
+    fetch(`/api/htg-meeting/session/${sessionId}/recording-check`)
+      .then(r => r.json())
+      .then(d => setHasRecording(!!d.exists))
+      .catch(() => {});
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (countdown <= 0) {
+      router.push(hasRecording
+        ? `/${locale}/konto/spotkania-grupowe/${sessionId}`
+        : `/${locale}/konto/spotkania-grupowe`
+      );
+      return;
+    }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown, hasRecording, locale, router, sessionId]);
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-htg-indigo">
+      <div className="text-center space-y-6 text-white px-6">
+        <div className="w-16 h-16 rounded-full bg-htg-sage/20 flex items-center justify-center mx-auto">
+          <CheckCircle2 className="w-8 h-8 text-htg-sage" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-2xl font-serif">Spotkanie zakończone</p>
+          <p className="text-white/50 text-sm">
+            {hasRecording ? 'Nagranie dostępne' : 'Dziękujemy za udział'}
+          </p>
+        </div>
+        <p className="text-white/30 text-xs">
+          Przekierowanie za {countdown}s…
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          {hasRecording && (
+            <button
+              onClick={() => router.push(`/${locale}/konto/spotkania-grupowe/${sessionId}`)}
+              className="px-6 py-2.5 rounded-xl bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage/80 transition-colors"
+            >
+              Obejrzyj nagranie
+            </button>
+          )}
+          <button
+            onClick={() => router.push(`/${locale}/konto/spotkania-grupowe`)}
+            className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
+          >
+            Moje spotkania
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ────────────────────────────────────────────────────────
 export default function MeetingRoom({
   sessionId, userId, displayName, isModerator, meetingName, locale,
@@ -852,14 +949,7 @@ export default function MeetingRoom({
   );
 
   if (state.status === 'ended') return (
-    <div className="fixed inset-0 flex items-center justify-center bg-htg-indigo">
-      <div className="text-center space-y-4 text-white">
-        <p className="text-xl font-serif">Spotkanie zakończone</p>
-        <button onClick={() => router.push(`/${locale}/konto`)} className="px-6 py-2 rounded-xl bg-htg-sage text-white text-sm">
-          Wróć do konta
-        </button>
-      </div>
-    </div>
+    <EndedScreen sessionId={sessionId} locale={locale} router={router} />
   );
 
   return (

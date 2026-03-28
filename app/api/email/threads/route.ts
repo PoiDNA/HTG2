@@ -61,5 +61,7 @@ export async function GET(req: NextRequest) {
     page,
     limit,
     mailboxes: mailboxes || [],
+    isAdmin,
+    userId: user.id,
   });
 }

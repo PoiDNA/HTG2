@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { requireAdmin } from '@/lib/admin/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { downloadFile } from '@/lib/bunny-storage';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FALLBACK_FROM = 'HTG <sesje@htgcyou.com>';
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error;
   const { user } = auth;
 
-  const { conversationId, to, cc, bcc, subject, bodyHtml, bodyText } = await req.json();
+  const { conversationId, to, cc, bcc, subject, bodyHtml, bodyText, attachments: attachmentsMeta } = await req.json();
   if (!conversationId || !to || (!bodyHtml && !bodyText)) {
     return NextResponse.json({ error: 'conversationId, to, and body required' }, { status: 400 });
   }
@@ -66,6 +67,19 @@ export async function POST(req: NextRequest) {
     ? (conv.subject.match(/^(Re|Odp):/i) ? conv.subject : `Re: ${conv.subject}`)
     : 'Re:');
 
+  // Prepare Resend attachments
+  const resendAttachments: { filename: string; content: Buffer }[] = [];
+  if (attachmentsMeta?.length > 0) {
+    for (const att of attachmentsMeta) {
+      if (att.bunny_path) {
+        try {
+          const { buffer } = await downloadFile(att.bunny_path);
+          resendAttachments.push({ filename: att.filename, content: Buffer.from(buffer) });
+        } catch { /* skip */ }
+      }
+    }
+  }
+
   // Send via Resend with threading headers — FROM = mailbox address
   const { data: sentEmail, error: sendError } = await resend.emails.send({
     from: `${fromName} <${fromEmail}>`,
@@ -79,6 +93,7 @@ export async function POST(req: NextRequest) {
       ...(inReplyTo ? { 'In-Reply-To': inReplyTo } : {}),
       ...(referencesChain.length > 0 ? { References: referencesChain.join(' ') } : {}),
     },
+    ...(resendAttachments.length > 0 && { attachments: resendAttachments }),
   });
 
   if (sendError) {
@@ -99,6 +114,8 @@ export async function POST(req: NextRequest) {
     bcc: bcc || [],
     provider_message_id: sentEmail?.id || null,
     sent_by: user.id,
+    has_attachments: (attachmentsMeta?.length || 0) > 0,
+    attachments: attachmentsMeta || [],
     processing_status: 'done',
   }).select('id').single();
 

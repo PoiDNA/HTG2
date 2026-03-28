@@ -1,7 +1,7 @@
-# HTG Platform — Architektura v2
+# HTG Platform — Architektura v3
 
 ## Przegląd
-Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesje live + system rezerwacji + pipeline publikacji audio + spotkania wstępne.
+Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesje live + system rezerwacji + pipeline publikacji audio + spotkania wstępne + spotkania grupowe + sesje dla par + prezenty sesyjne + Communication Hub (email/SMS).
 
 **URL:** htgcyou.com | **Repo:** github.com/PoiDNA/HTG2
 
@@ -18,14 +18,14 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 | Wideo live | LiveKit Cloud (WebRTC, Egress recording MP4) |
 | VOD streaming | Bunny Stream (HLS + Token Auth) |
 | Storage plików | Bunny Storage (WAV, MP3, assety) |
-| Email | Resend (SMTP via Supabase Auth) |
+| Email (wysyłka+odbiór) | Resend (outbound + inbound webhooks, Svix verify) |
 | CDN/DNS | Cloudflare |
 | Hosting | Vercel (serverless, Edge) |
-| AI | OpenAI Whisper (transkrypcja), Claude (analiza) |
+| AI | OpenAI Whisper (transkrypcja), Claude Haiku (analiza audio + email AI) |
 
 ---
 
-## Baza danych — 34 tabele
+## Baza danych — 50+ tabel
 
 ### Core
 | Tabela | Opis |
@@ -73,6 +73,37 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 | `pre_session_settings` | Ustawienia asystentki (staff_member_id UNIQUE, is_enabled, duration_minutes=15, note_for_client) |
 | `pre_session_eligibility` | Uprawnienia klientów (user_id+staff_member_id+source_booking_id UNIQUE, is_active, meeting_booked, pre_booking_id) |
 
+### Spotkania grupowe (HTG Meetings)
+| Tabela | Opis |
+|--------|------|
+| `htg_meetings` | Definicje spotkań grupowych (self_register, max_participants) |
+| `htg_meeting_sessions` | Sesje spotkań (status: waiting/active/ended, started_at) |
+| `htg_meeting_participants` | Uczestnicy (status: registered/approved/joined/left) |
+| `htg_meeting_speaking_events` | Logi mówienia (start/end, offset_seconds) — D2/D3 profil |
+| `htg_meeting_recordings` | Nagrania spotkań |
+| `participant_profiles` | Profile uczestników (score computation z speaking events) |
+
+### Sesje dla par (natalia_para)
+| Tabela | Opis |
+|--------|------|
+| `booking_companions` | Partner sesji (invite_token, accepted_at); booking_id FK |
+
+### Prezenty sesyjne
+| Tabela | Opis |
+|--------|------|
+| `session_gifts` | Podarowane sesje (entitlement_id, purchased_by, recipient_email, claim_token, status: pending/claimed/revoked) |
+
+### Communication Hub (email + przyszły SMS)
+| Tabela | Opis |
+|--------|------|
+| `mailboxes` | Skrzynki odbiorcze (kontakt@htgcyou.com, sesje@, htg@htg.cyou, natalia@htg.cyou) |
+| `mailbox_members` | Uprawnienia per skrzynka (user_id + role: owner/member) |
+| `conversations` | Wątki — kanał-agnostyczne (channel: email/sms/internal, status, priority, AI labels) |
+| `messages` | Wiadomości (direction: inbound/outbound/internal, SMTP threading, attachments JSONB, processing queue) |
+| `message_templates` | Szablony wiadomości (multi-channel, created_by per user) |
+| `autoresponders` | Autoresponders z trigger_conditions JSONB |
+| `auto_reply_log` | Rate limiter + magic link cooldown |
+
 ### Społeczność
 | Tabela | Opis |
 |--------|------|
@@ -101,6 +132,18 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 | `009_webhook_fixes.sql` | RPC `complete_session_track_egress()` z FOR UPDATE lock; UNIQUE na session_publications |
 | `010_audit_log.sql` | play_events, user_flags, profiles.is_blocked/blocked_reason/blocked_at |
 | `011_pre_session.sql` | pre_session_settings, pre_session_eligibility, booking_slots pre_session type; RPC `grant_pre_session_to_existing_bookings()` |
+| `012_pre_session_paid.sql` | Paid pre-session via Stripe |
+| `013_session_timers_connect.sql` | Session timers + Stripe Connect |
+| `014_playback_analytics.sql` | Playback analytics |
+| `015_quick_calls.sql` | Quick calls |
+| `016_htg_meetings.sql` | Spotkania grupowe (meetings, sessions, participants) |
+| `017_meeting_queue.sql` | Kolejka spotkań |
+| `018_meeting_recordings.sql` | Nagrania spotkań |
+| `019_participant_profiles.sql` | Profile uczestników (scoring) |
+| `020_session_para.sql` | Sesja dla par (natalia_para type, booking_companions) |
+| `021_session_gifts.sql` | Prezenty sesyjne (session_gifts, claim_token) |
+| `022_entitlement_type_booking.sql` | Extend entitlements.type → individual_booking |
+| `023_communication_hub.sql` | Communication Hub: mailboxes, conversations, messages, templates, autoresponders, RPC (claim_pending_messages, get_customer_card) |
 
 ---
 
@@ -284,6 +327,57 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 - DELETE /api/favorites/remove — usuń
 - GET /api/favorites/list — lista polubionych + followers
 
+### HTG Meetings (spotkania grupowe)
+- POST /api/htg-meeting/session/self-register — rejestracja uczestnika (+ DELETE cancel)
+- POST /api/htg-meeting/session/[sessionId]/approve-participant — admin approve/reject
+- GET /api/htg-meeting/session/my-active — aktywne sesje usera (polling 10s)
+- POST /api/htg-meeting/session/[id]/speaking-event — log mówienia (start/end + offset)
+- GET /api/htg-meeting/session/[id]/recording-check — sprawdź nagranie
+- POST /api/htg-meeting/session/[id]/state — zmiana stanu sesji
+- GET /api/htg-meeting/profiles — profile uczestników
+
+### Companion (sesja dla par)
+- POST /api/companion/invite — utwórz zaproszenie (invite_token) + DELETE usuń
+- POST /api/companion/accept — partner akceptuje zaproszenie
+
+### Gift Sessions (prezenty)
+- POST /api/gift/claim — odbiorca klika token → przeniesienie entitlement
+- POST /api/gift/transfer — Iwona ręcznie przekazuje po emailu
+- POST /api/gift/revoke — Iwona odwołuje prezent
+- POST /api/gift/link-pending — auto-link prezentów po logowaniu
+
+### Communication Hub (email)
+- POST /api/email/inbound — Resend webhook (Svix verify, anti-loop, 0 DB queries)
+- POST /api/email/compose — nowa wiadomość (compose modal)
+- POST /api/email/send — reply w wątku (SMTP threading: In-Reply-To + References)
+- GET /api/email/threads — lista wątków (filtry: status, priority, category, mailbox)
+- GET /api/email/threads/[id] — wątek + messages + customerCard
+- POST /api/email/threads/[id]/close|assign|link-user|verify-link
+- GET /api/email/templates — lista szablonów (own + global)
+- POST /api/email/templates — utwórz szablon
+- PUT/DELETE /api/email/templates/[id] — edytuj/usuń
+- POST /api/email/upload — upload załączników → Bunny Storage
+- GET /api/email/search-users — autocomplete (email/imię)
+- GET /api/email/verify — magic link callback (weryfikacja powiązania konta)
+
+### Email Notifications (Resend outbound)
+- sendOrderConfirmation — po Stripe checkout
+- sendBookingConfirmation — po rezerwacji slotu
+- sendSessionReminder — cron D-1 (08:00)
+- sendGiftNotification — powiadomienie odbiorcy prezentu z claim linkiem
+- sendWelcomeEmail — po pierwszym logowaniu
+- sendPaymentFailedNotification — po nieudanej płatności
+- sendEarlierSlotNotification — wcześniejszy termin
+
+### Cron (Vercel)
+- */5 * * * * — /api/cron/prepare-sessions (tworzenie live_sessions + expire slotów)
+- 0 8 * * * — /api/cron/session-reminders (email D-1)
+- * * * * * — /api/cron/process-messages (async email processing: fetch body, AI, attachments)
+
+### Auth
+- POST /api/auth/session — sync tokens to server cookies
+- POST /api/auth/welcome — welcome email for new users
+
 ---
 
 ## Strony (pages)
@@ -297,8 +391,15 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 | /konto/youtube | Filmy YouTube |
 | /konto/spotkanie-wstepne | Rezerwacja spotkania wstępnego (slot picker) |
 | /konto/nagrania-klienta | Nagrania przed/po sesji |
+| /konto/spotkania-grupowe | Spotkania grupowe klienta |
+| /konto/spotkania-grupowe/dostepne | Odkrywanie + rejestracja na spotkania |
+| /konto/polubieni | Lista polubionych użytkowników |
+| /konto/podarowane-sesje | Wysłane/otrzymane prezenty (claim, transfer, revoke) |
+| /konto/odbierz-prezent/[token] | Strona odbioru prezentu (magic link) |
+| /konto/sesje-indywidualne/dolacz-jako-partner/[token] | Akceptacja zaproszenia na sesję par |
 | /konto/admin | Panel admina (użytkownicy, sloty, zestawy) |
 | /konto/admin/naruszenia | Dashboard naruszeń (flagi, blokady, historia odtworzeń) |
+| /konto/admin/skrzynka | Communication Hub — 3-panelowy inbox (admin: +AI+CustomerCard; staff: prosty) |
 
 ### Panel prowadzącego (/prowadzacy)
 | Ścieżka | Opis |
@@ -308,10 +409,21 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 | /prowadzacy/grafik | Grafik: Natalia (reguły+sloty) lub Asystentka (moje sloty + dostępne + spotkania wstępne) |
 | /prowadzacy/klienci | Lista klientów |
 
+### Spotkania grupowe (/spotkanie)
+| Ścieżka | Opis |
+|---------|------|
+| /spotkanie/[sessionId] | Pokój LiveKit spotkania (MeetingRoom: timer, speaking tracking, ended screen) |
+
 ### Sesje live (/live)
 | Ścieżka | Opis |
 |---------|------|
-| /live/[sessionId] | Pokój LiveKit (8 faz) |
+| /live/[sessionId] | Pokój LiveKit (8 faz) — obsługuje też companion (sesja par) |
+
+### Publiczne
+| Ścieżka | Opis |
+|---------|------|
+| /sesje-indywidualne | SessionPicker: 3 typy (solo 1200PLN, asysta 1600PLN, para 1600PLN) + gift toggle + slot calendar |
+| /sesje | SessionCatalog: VOD catalog z floating cart + gift toggle |
 
 ### Publikacja (/publikacja)
 | Ścieżka | Opis |
@@ -321,6 +433,89 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 | /publikacja/sesje/[id] | Edytor DAW + pipeline AI |
 | /publikacja/archiwum | Opublikowane sesje |
 | /publikacja/nagrania | Nagrania LiveKit → tworzenie publikacji |
+
+---
+
+## Communication Hub — architektura
+
+### Skrzynki i uprawnienia
+| Skrzynka | Admin | Natalia | Asystentki |
+|---|---|---|---|
+| kontakt@htgcyou.com (domyślna) | owner | — | — |
+| sesje@htgcyou.com | owner | member | na życzenie |
+| htg@htg.cyou | owner | — | — |
+| natalia@htg.cyou | owner | owner | — |
+
+### Przepływ inbound
+```
+Klient → Resend webhook → POST /api/email/inbound (Svix verify, 0 DB queries)
+  → INSERT message (processing_status='pending') → 200 OK
+  → Cron /process-messages (co 1 min, FOR UPDATE SKIP LOCKED):
+    → Fetch body z Resend API
+    → Upload załączników do Bunny
+    → Customer Card (RPC, 1 zapytanie, 6-mies. okno)
+    → Claude Haiku (analiza + spersonalizowana sugestia)
+    → Update conversation z AI labels
+```
+
+### PII guard (3 warstwy)
+1. **Auto-match (SPF/DKIM ok)** → `user_link_verified = true` → AI dostaje pełną kartę
+2. **Manual link** → `verified = false` → AI bez danych wrażliwych, disclaimer w UI
+3. **Magic link** → user klika weryfikację → `verified = true`
+
+### Role-based inbox
+- **Admin**: 3-panel (lista + wątek + CustomerCard), AI sugestie, sentiment/priority, kategoria
+- **Staff**: 2-panel (lista + wątek), szablony, załączniki, bez AI
+
+### Customer Card (RPC `get_customer_card`)
+Jedno zapytanie SQL zwraca: profil, zamówienia (6 mies.), aktywne entitlements, nadchodzące rezerwacje, subskrypcja, poprzednie wątki.
+
+### Szablony
+- Każdy user tworzy własne; admin widzi/edytuje globalne
+- "Wstaw szablon" dropdown w compose/reply — wstawia tekst (nie zastępuje)
+- CRUD: create, edit, delete via modal TemplateManager
+
+### Zabezpieczenia
+- Svix HMAC-SHA256 webhook verification
+- Deduplikacja: UNIQUE(channel, provider_message_id)
+- Anti-loop: Auto-Submitted + Precedence headers
+- Spam pre-filter: >10/h z adresu → skip AI
+- Rate-limiter: auto_reply_log (autoresponder + magic link cooldown 15 min)
+- Zombie protection: locked_until + auto-reset
+- Attachment: prywatne Bunny Storage paths
+
+---
+
+## Sesja dla par (natalia_para)
+
+- Typ: `natalia_para`, 1600 PLN, 120 min, prowadzi Natalia (bez asystentek)
+- Stripe product: `prod_UENkxGoUs8gRir` / `price_1TFuyhKwJfb68PaVoKcaWPcz`
+- Partner: zaproszenie via `booking_companions` (invite_token → accept → LiveKit access)
+- LiveKit: `LiveVideoLayout.tsx` automatycznie obsługuje wielu klientów (remoteClients → circles)
+
+---
+
+## Prezenty sesyjne (session_gifts)
+
+### Przepływ
+1. Iwona kupuje sesję → zaznacza "Kup jako prezent" → wpisuje email syna
+2. Stripe webhook: `gift_for_email` metadata → tworzy `session_gifts` z `claim_token`
+3. Resend: automatyczny email do odbiorcy z linkiem claim
+4. Syn tworzy konto → HTG auto-linkuje pending gifts po emailu → widzi w panelu
+5. Klik "Odbierz" → entitlement przeniesiony na konto syna
+6. Alternatywnie: Iwona klika "Przekaż ręcznie" → wpisuje email (odbiorca nie musi mieć konta)
+
+### Statusy: pending → claimed | revoked
+
+---
+
+## Spotkania grupowe (HTG Meetings)
+
+- Self-registration: klient rejestruje się na otwarte sesje
+- Admin approve/reject uczestników
+- Speaking event tracking: `isSpeaking` z LiveKit → POST offset_seconds → profile D2/D3
+- Session timer (live elapsed), ended screen z countdown → redirect
+- ActiveMeetingBanner: polling co 10s, zielony "Dołącz"
 
 ---
 
@@ -353,7 +548,7 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 
 ---
 
-## Env vars (18)
+## Env vars (22)
 
 | Zmienna | Serwis |
 |---------|--------|
@@ -374,7 +569,11 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 | LIVEKIT_API_KEY | LiveKit |
 | LIVEKIT_API_SECRET | LiveKit |
 | OPENAI_API_KEY | Whisper |
-| ANTHROPIC_API_KEY | Claude |
+| ANTHROPIC_API_KEY | Claude (audio analysis + email AI) |
+| RESEND_API_KEY | Resend (outbound email) |
+| RESEND_WEBHOOK_SECRET | Resend Svix (inbound webhook verify) |
+| CRON_SECRET | Vercel Cron auth (Bearer token) |
+| NEXT_PUBLIC_SITE_URL | https://htgcyou.com |
 
 ---
 
@@ -384,7 +583,15 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 - robots.txt — Disallow: / (staging)
 - Domeny: htgcyou.com (prod), www → redirect, htg-2.vercel.app
 - Supabase Auth: auth.htg.cyou (custom domain)
+- Email domeny: htgcyou.com + htg.cyou (Resend — SPF/DKIM/DMARC + MX inbound)
+
+### Vercel Cron Jobs
+| Schedule | Endpoint | Opis |
+|---|---|---|
+| */5 * * * * | /api/cron/prepare-sessions | Tworzenie live_sessions + expire slotów |
+| 0 8 * * * | /api/cron/session-reminders | Email D-1 reminder |
+| * * * * * | /api/cron/process-messages | Async email processing (body, attachments, AI) |
 
 ---
 
-*Ostatnia aktualizacja: 2026-03-27*
+*Ostatnia aktualizacja: 2026-03-28*

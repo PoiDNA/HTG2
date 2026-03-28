@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Inbox, Clock, CheckCircle2, AlertTriangle, Ban,
   Search, Send, X, ChevronRight, Lightbulb, Paperclip,
-  MessageSquare, RefreshCw, PenSquare, ChevronDown,
+  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2,
 } from 'lucide-react';
 import CustomerCard from './CustomerCard';
+import TemplateInsert from './TemplateInsert';
+import TemplateManager from './TemplateManager';
 
 interface ConversationSummary {
   id: string;
@@ -78,6 +80,7 @@ export default function EmailInbox() {
   const [threads, setThreads] = useState<ConversationSummary[]>([]);
   const [totalThreads, setTotalThreads] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
+  const [mailboxFilter, setMailboxFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -103,11 +106,26 @@ export default function EmailInbox() {
   const [toSuggestions, setToSuggestions] = useState<{ id: string; email: string; display_name: string | null }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
+  // Attachments (for compose + reply)
+  const [composeAttachments, setComposeAttachments] = useState<{ filename: string; size: number; bunny_path: string; cdn_url: string }[]>([]);
+  const [replyAttachments, setReplyAttachments] = useState<{ filename: string; size: number; bunny_path: string; cdn_url: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const composeFileRef = useRef<HTMLInputElement>(null);
+  const replyFileRef = useRef<HTMLInputElement>(null);
+
+  // Template manager modal
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+
+  // Role-based view
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState('');
+
   // Fetch thread list
   const fetchThreads = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter) params.set('status', statusFilter);
+    if (mailboxFilter) params.set('mailbox_id', mailboxFilter);
     if (searchQuery) params.set('search', searchQuery);
     params.set('limit', '30');
 
@@ -116,13 +134,15 @@ export default function EmailInbox() {
       const data = await res.json();
       setThreads(data.threads || []);
       setTotalThreads(data.total || 0);
+      if (data.isAdmin !== undefined) setIsAdmin(data.isAdmin);
+      if (data.userId) setUserId(data.userId);
       if (data.mailboxes?.length > 0 && mailboxes.length === 0) {
         setMailboxes(data.mailboxes);
         if (!composeFrom && data.mailboxes[0]) setComposeFrom(data.mailboxes[0].address);
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, mailboxFilter, searchQuery]);
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
@@ -164,9 +184,11 @@ export default function EmailInbox() {
           subject: detail.subject,
           bodyText: replyText,
           bodyHtml: `<p>${replyText.replace(/\n/g, '<br/>')}</p>`,
+          attachments: replyAttachments.length > 0 ? replyAttachments : undefined,
         }),
       });
       setReplyText('');
+      setReplyAttachments([]);
       // Refresh detail
       const res = await fetch(`/api/email/threads/${detail.id}`);
       setDetail(await res.json());
@@ -201,6 +223,22 @@ export default function EmailInbox() {
     else alert(data.error || 'Błąd');
   };
 
+  // Upload files handler
+  const handleFileUpload = async (files: FileList, target: 'compose' | 'reply') => {
+    if (files.length === 0) return;
+    setUploading(true);
+    const formData = new FormData();
+    for (const f of Array.from(files)) formData.append('files', f);
+    try {
+      const res = await fetch('/api/email/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      const uploaded = (data.files || []).filter((f: any) => !f.error);
+      if (target === 'compose') setComposeAttachments(prev => [...prev, ...uploaded]);
+      else setReplyAttachments(prev => [...prev, ...uploaded]);
+    } catch { /* ignore */ }
+    setUploading(false);
+  };
+
   // Send new message (compose)
   const handleComposeSend = async () => {
     if (!composeTo.trim() || !composeBody.trim()) return;
@@ -215,6 +253,7 @@ export default function EmailInbox() {
           subject: composeSubject.trim() || '(bez tematu)',
           bodyText: composeBody,
           bodyHtml: `<p>${composeBody.replace(/\n/g, '<br/>')}</p>`,
+          attachments: composeAttachments.length > 0 ? composeAttachments : undefined,
         }),
       });
       const data = await res.json();
@@ -223,6 +262,7 @@ export default function EmailInbox() {
         setComposeTo('');
         setComposeSubject('');
         setComposeBody('');
+        setComposeAttachments([]);
         fetchThreads();
         if (data.conversationId) setSelectedId(data.conversationId);
       } else {
@@ -269,8 +309,8 @@ export default function EmailInbox() {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="p-3 border-b border-htg-card-border">
+        {/* Search + Mailbox filter */}
+        <div className="p-2 border-b border-htg-card-border space-y-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
             <input
@@ -281,6 +321,31 @@ export default function EmailInbox() {
               className="w-full pl-8 pr-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-xs focus:outline-none focus:ring-1 focus:ring-htg-sage"
             />
           </div>
+          {/* Mailbox filter — show when multiple mailboxes */}
+          {mailboxes.length > 1 && (
+            <div className="flex gap-1 flex-wrap">
+              <button
+                onClick={() => setMailboxFilter('')}
+                className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                  !mailboxFilter ? 'bg-htg-sage text-white' : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
+                }`}
+              >
+                Wszystkie
+              </button>
+              {mailboxes.map(mb => (
+                <button
+                  key={mb.id}
+                  onClick={() => setMailboxFilter(mailboxFilter === mb.id ? '' : mb.id)}
+                  title={mb.address}
+                  className={`px-2 py-1 rounded text-[10px] font-medium transition-colors truncate max-w-[120px] ${
+                    mailboxFilter === mb.id ? 'bg-htg-sage text-white' : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
+                  }`}
+                >
+                  {mb.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Thread list */}
@@ -301,16 +366,21 @@ export default function EmailInbox() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      {thread.priority === 'urgent' && <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />}
-                      {thread.priority === 'high' && <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
+                      {isAdmin && thread.priority === 'urgent' && <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />}
+                      {isAdmin && thread.priority === 'high' && <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
                       <span className="text-sm font-medium text-htg-fg truncate">
                         {thread.from_name || thread.from_address.split('@')[0]}
                       </span>
                     </div>
                     <p className="text-xs text-htg-fg-muted truncate mt-0.5">
                       {thread.subject || '(bez tematu)'}
+                      {isAdmin && !mailboxFilter && thread.mailboxes?.name && (
+                        <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-htg-card text-htg-fg-muted/60">
+                          {thread.mailboxes.name}
+                        </span>
+                      )}
                     </p>
-                    {thread.ai_summary && (
+                    {isAdmin && thread.ai_summary && (
                       <p className="text-xs text-htg-fg-muted/70 truncate mt-0.5 italic">
                         {thread.ai_summary}
                       </p>
@@ -318,7 +388,7 @@ export default function EmailInbox() {
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className="text-xs text-htg-fg-muted">{timeAgo(thread.last_message_at)}</span>
-                    {thread.ai_category && (
+                    {isAdmin && thread.ai_category && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-htg-surface text-htg-fg-muted">
                         {thread.ai_category}
                       </span>
@@ -380,8 +450,8 @@ export default function EmailInbox() {
                   </button>
                 </div>
               </div>
-              {/* AI labels */}
-              {(detail.ai_category || detail.ai_sentiment) && (
+              {/* AI labels — admin only */}
+              {isAdmin && (detail.ai_category || detail.ai_sentiment) && (
                 <div className="flex items-center gap-2 mt-2">
                   {detail.ai_category && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
@@ -443,8 +513,8 @@ export default function EmailInbox() {
               ))}
             </div>
 
-            {/* AI suggestion */}
-            {detail.ai_suggested_reply && (
+            {/* AI suggestion — admin only */}
+            {isAdmin && detail.ai_suggested_reply && (
               <div className="px-4 py-2 border-t border-htg-card-border bg-htg-sage/5">
                 <button
                   onClick={useSuggestion}
@@ -461,8 +531,22 @@ export default function EmailInbox() {
               </div>
             )}
 
-            {/* Compose */}
-            <div className="p-3 border-t border-htg-card-border">
+            {/* Compose reply */}
+            <div className="p-3 border-t border-htg-card-border space-y-2">
+              {/* Attachment list */}
+              {replyAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {replyAttachments.map((att, i) => (
+                    <span key={i} className="flex items-center gap-1 text-xs bg-htg-surface px-2 py-1 rounded border border-htg-card-border text-htg-fg">
+                      <Paperclip className="w-3 h-3" />
+                      {att.filename}
+                      <button onClick={() => setReplyAttachments(prev => prev.filter((_, j) => j !== i))} className="text-htg-fg-muted hover:text-red-500">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-2">
                 <textarea
                   value={replyText}
@@ -471,22 +555,49 @@ export default function EmailInbox() {
                   rows={2}
                   className="flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
                 />
+                <div className="flex flex-col gap-1 self-end">
+                  <button
+                    onClick={handleSend}
+                    disabled={sending || !replyText.trim()}
+                    className="px-4 py-2 rounded-lg bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage-dark disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <Send className="w-4 h-4" />
+                    Wyślij
+                  </button>
+                </div>
+              </div>
+              {/* Toolbar: template + attachment */}
+              <div className="flex items-center gap-2">
+                <TemplateInsert
+                  userId={userId}
+                  onInsert={(text) => setReplyText(prev => prev + text)}
+                  onManage={() => setShowTemplateManager(true)}
+                />
                 <button
-                  onClick={handleSend}
-                  disabled={sending || !replyText.trim()}
-                  className="self-end px-4 py-2 rounded-lg bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage-dark disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                  type="button"
+                  onClick={() => replyFileRef.current?.click()}
+                  disabled={uploading}
+                  title="Dodaj załącznik"
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface border border-htg-card-border transition-colors"
                 >
-                  <Send className="w-4 h-4" />
-                  Wyślij
+                  <Paperclip className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{uploading ? 'Wgrywanie...' : 'Załącznik'}</span>
                 </button>
+                <input
+                  ref={replyFileRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={e => { if (e.target.files) handleFileUpload(e.target.files, 'reply'); e.target.value = ''; }}
+                />
               </div>
             </div>
           </>
         ) : null}
       </div>
 
-      {/* Right panel: Customer Card */}
-      {detail && (
+      {/* Right panel: Customer Card — admin only */}
+      {isAdmin && detail && (
         <div className="hidden lg:block w-64 shrink-0 border-l border-htg-card-border p-4 overflow-y-auto">
           <CustomerCard
             card={detail.customerCard || null}
@@ -509,6 +620,15 @@ export default function EmailInbox() {
           />
         </div>
       )}
+      {/* Template manager modal */}
+      {showTemplateManager && (
+        <TemplateManager
+          onClose={() => setShowTemplateManager(false)}
+          isAdmin={isAdmin}
+          userId={userId}
+        />
+      )}
+
       {/* Compose modal */}
       {showCompose && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -593,6 +713,44 @@ export default function EmailInbox() {
                   className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
                 />
               </div>
+              {/* Toolbar: template + attachment */}
+              <div className="flex items-center gap-2">
+                <TemplateInsert
+                  userId={userId}
+                  onInsert={(text) => setComposeBody(prev => prev + text)}
+                  onManage={() => setShowTemplateManager(true)}
+                />
+                <button
+                  type="button"
+                  onClick={() => composeFileRef.current?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface border border-htg-card-border transition-colors"
+                >
+                  <Paperclip className="w-3.5 h-3.5" />
+                  <span>{uploading ? 'Wgrywanie...' : 'Załącznik'}</span>
+                </button>
+                <input
+                  ref={composeFileRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={e => { if (e.target.files) handleFileUpload(e.target.files, 'compose'); e.target.value = ''; }}
+                />
+              </div>
+              {/* Attachment list */}
+              {composeAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {composeAttachments.map((att, i) => (
+                    <span key={i} className="flex items-center gap-1 text-xs bg-htg-surface px-2 py-1 rounded border border-htg-card-border text-htg-fg">
+                      <Paperclip className="w-3 h-3" />
+                      {att.filename} <span className="text-htg-fg-muted">({(att.size / 1024).toFixed(0)}KB)</span>
+                      <button onClick={() => setComposeAttachments(prev => prev.filter((_, j) => j !== i))} className="text-htg-fg-muted hover:text-red-500">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2 p-4 border-t border-htg-card-border">
               <button

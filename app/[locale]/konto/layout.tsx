@@ -86,6 +86,8 @@ export default async function AccountLayout({
     { href: '/konto/admin/zestawy', label: tPanel('admin_sets'), icon: Package },
     { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
     { href: '/konto/admin/naruszenia', label: 'Naruszenia', icon: ShieldAlert },
+    { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
+    { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
   ] as const;
 
   // STAFF section (moderator/prowadzacy — NOT admin)

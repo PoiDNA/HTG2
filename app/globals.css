@@ -54,3 +54,20 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+/* HTG Meeting — floating circle animations */
+@keyframes htg-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(5px, -8px) scale(1.02); }
+  66% { transform: translate(-4px, 4px) scale(0.98); }
+}
+@keyframes htg-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-6px, 5px) scale(0.99); }
+  66% { transform: translate(4px, -6px) scale(1.01); }
+}
+@keyframes htg-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(3px, 7px) scale(1.01); }
+  66% { transform: translate(-5px, -3px) scale(0.99); }
+}

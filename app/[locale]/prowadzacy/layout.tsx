@@ -5,7 +5,7 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { stopImpersonation } from '@/lib/admin/impersonate';
-import { LayoutDashboard, Calendar, Presentation, Users, Video, ArrowLeft, Eye, MonitorPlay, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Calendar, Presentation, Users, Video, ArrowLeft, Eye, MonitorPlay, BarChart2, Users2 } from 'lucide-react';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -53,6 +53,7 @@ export default async function StaffLayout({
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     ...(canSeeStats ? [{ href: '/prowadzacy/statystyki', label: 'Statystyki odtworzeń', icon: BarChart2 }] : []),
+    { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
   ];
 
   return (

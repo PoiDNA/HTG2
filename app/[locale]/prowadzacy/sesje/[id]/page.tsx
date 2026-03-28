@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History }
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 import PaymentCommentEditor from './PaymentCommentEditor';
 import SessionTypeSelector from './SessionTypeSelector';
+import ClientNameEditor from './ClientNameEditor';
 
 const SESSION_LABELS: Record<string, string> = {
   natalia_solo: 'Sesja 1:1 z Natalią',
@@ -110,7 +111,10 @@ export default async function SessionDetailPage({
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <User className="w-4 h-4" />
-            <span className="text-htg-fg font-medium">{clientProfile?.display_name || '—'}</span>
+            <ClientNameEditor
+              userId={booking.user_id}
+              initialName={clientProfile?.display_name || ''}
+            />
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <Mail className="w-4 h-4" />

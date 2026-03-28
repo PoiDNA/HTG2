@@ -6,6 +6,7 @@ import { Link } from '@/i18n-config';
 import StripeConnectCard from '@/components/staff/StripeConnectCard';
 import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
+import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 
 const SESSION_LABELS: Record<string, string> = {
   natalia_solo: 'Sesja 1:1 z Natalią',
@@ -273,14 +274,11 @@ export default async function StaffDashboard({
                         {booking.topics || '—'}
                       </td>
                       <td className="py-3 pr-4">
-                        {(() => {
-                          const ps = PAYMENT_STATUS_BADGE[booking.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
-                          return (
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${ps.className}`}>
-                              {ps.label}
-                            </span>
-                          );
-                        })()}
+                        <PaymentStatusBadge
+                          bookingId={booking.id}
+                          initialStatus={booking.payment_status || 'pending_verification'}
+                          canEdit={isPractitioner}
+                        />
                       </td>
                       <td className="py-3">
                         {booking.live_session_id ? (

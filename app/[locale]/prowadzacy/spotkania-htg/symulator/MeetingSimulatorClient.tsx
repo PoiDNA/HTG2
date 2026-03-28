@@ -71,8 +71,8 @@ function idSeed(id: string): number {
 }
 
 function floatStyle(seed: number, index: number): React.CSSProperties {
-  const duration = 4 + (seed % 3);
-  const delay    = -(index * 0.7 + seed * 0.4);
+  const duration = 8 + (seed % 5);        // was 4+3 = 4-7s → now 8-13s
+  const delay    = -(index * 1.4 + seed * 0.8);
   return { animation: `htg-float-${(index % 3) + 1} ${duration}s ease-in-out ${delay}s infinite` };
 }
 

@@ -90,6 +90,7 @@ export default async function AccountLayout({
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
     { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
+    { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
   ] as const;
 
   // STAFF section (moderator/prowadzacy — NOT admin)
@@ -113,6 +114,7 @@ export default async function AccountLayout({
   const userItems = [
     { href: '/konto', label: t('my_sessions'), icon: Film },
     { href: '/konto/sesje-indywidualne', label: tPanel('individual_sessions'), icon: CalendarDays },
+    { href: '/konto/spotkania-grupowe', label: 'Spotkania grupowe', icon: Users2 },
     { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
     { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Film },

@@ -55,6 +55,7 @@ export default async function StaffLayout({
     ...(canSeeStats ? [{ href: '/prowadzacy/statystyki', label: 'Statystyki odtworzeń', icon: BarChart2 }] : []),
     { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
     { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
+    { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
   ];
 
   return (

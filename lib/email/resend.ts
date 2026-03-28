@@ -1,6 +1,10 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 const FROM_EMAIL = 'HTG <sesje@htgcyou.com>';
 const REPLY_TO = 'htg@htg.cyou';
@@ -11,7 +15,7 @@ export async function sendOrderConfirmation(to: string, data: {
   amount: number;
   currency: string;
 }) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: REPLY_TO,
@@ -48,7 +52,7 @@ export async function sendBookingConfirmation(to: string, data: {
   time: string;
   expiresAt: string;
 }) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: REPLY_TO,
@@ -86,7 +90,7 @@ export async function sendSessionReminder(to: string, data: {
   time: string;
   joinUrl: string;
 }) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: REPLY_TO,
@@ -121,7 +125,7 @@ export async function sendEarlierSlotNotification(to: string, data: {
   newTime: string;
   sessionType: string;
 }) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: REPLY_TO,
@@ -157,7 +161,7 @@ export async function sendGiftNotification(to: string, data: {
   message?: string;
   claimUrl: string;
 }) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: REPLY_TO,
@@ -189,7 +193,7 @@ export async function sendGiftNotification(to: string, data: {
 }
 
 export async function sendWelcomeEmail(to: string, data: { name: string }) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: REPLY_TO,
@@ -218,7 +222,7 @@ export async function sendPaymentFailedNotification(to: string, data: {
   name: string;
   productName: string;
 }) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: REPLY_TO,

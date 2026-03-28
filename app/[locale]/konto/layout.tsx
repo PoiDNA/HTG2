@@ -101,6 +101,7 @@ export default async function AccountLayout({
     { href: '/prowadzacy/grafik', label: tPanel('staff_schedule'), icon: Calendar },
     { href: '/prowadzacy/sesje', label: tPanel('staff_sessions'), icon: Presentation },
     { href: '/prowadzacy/klienci', label: tPanel('staff_clients'), icon: Users },
+    { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
   ] as const;
 
   // PUBLIKACJA section (admin, moderator, publikacja)

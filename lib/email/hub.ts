@@ -272,7 +272,7 @@ export async function saveInboundMessage(payload: InboundWebhookPayload): Promis
     return null;
   }
 
-  return { conversationId, messageId: msg.id, isNew };
+  return { conversationId: conversationId!, messageId: msg.id, isNew };
 }
 
 // ── Fetch full email from Resend API ──────────────────────────

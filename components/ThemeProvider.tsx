@@ -5,21 +5,21 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 type Theme = 'light' | 'dark' | 'system';
 
 const DARK_VARS: Record<string, string> = {
-  '--color-htg-bg': '#121018',
-  '--color-htg-fg': '#E8E4DC',
-  '--color-htg-fg-muted': 'rgba(232,228,220,0.6)',
-  '--color-htg-card': '#1E1A28',
-  '--color-htg-card-border': '#2A2538',
-  '--color-htg-surface': '#1A1624',
+  '--color-htg-bg': '#14100E',
+  '--color-htg-fg': '#E8DCD6',
+  '--color-htg-fg-muted': 'rgba(232,220,214,0.6)',
+  '--color-htg-card': '#221A1E',
+  '--color-htg-card-border': '#322830',
+  '--color-htg-surface': '#1C1418',
 };
 
 const LIGHT_VARS: Record<string, string> = {
-  '--color-htg-bg': '#FBF8F1',
-  '--color-htg-fg': '#2D2A3E',
-  '--color-htg-fg-muted': 'rgba(45,42,62,0.6)',
+  '--color-htg-bg': '#FDF5F0',
+  '--color-htg-fg': '#3A2A30',
+  '--color-htg-fg-muted': 'rgba(58,42,48,0.6)',
   '--color-htg-card': '#FFFFFF',
-  '--color-htg-card-border': 'rgba(74,59,107,0.08)',
-  '--color-htg-surface': 'rgba(74,59,107,0.04)',
+  '--color-htg-card-border': 'rgba(155,74,92,0.08)',
+  '--color-htg-surface': 'rgba(155,74,92,0.04)',
 };
 
 interface ThemeContextType {

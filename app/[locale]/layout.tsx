@@ -90,12 +90,12 @@ export default async function LocaleLayout({
               if(dark){
                 var d=document.documentElement;
                 d.classList.add('dark');
-                d.style.setProperty('--color-htg-bg','#121018');
-                d.style.setProperty('--color-htg-fg','#E8E4DC');
-                d.style.setProperty('--color-htg-fg-muted','rgba(232,228,220,0.6)');
-                d.style.setProperty('--color-htg-card','#1E1A28');
-                d.style.setProperty('--color-htg-card-border','#2A2538');
-                d.style.setProperty('--color-htg-surface','#1A1624');
+                d.style.setProperty('--color-htg-bg','#14100E');
+                d.style.setProperty('--color-htg-fg','#E8DCD6');
+                d.style.setProperty('--color-htg-fg-muted','rgba(232,220,214,0.6)');
+                d.style.setProperty('--color-htg-card','#221A1E');
+                d.style.setProperty('--color-htg-card-border','#322830');
+                d.style.setProperty('--color-htg-surface','#1C1418');
               }
             }catch(e){}
           })();

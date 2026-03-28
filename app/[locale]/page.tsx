@@ -1,7 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import type { Metadata } from 'next';
-import HeroSection from '@/components/home/HeroSection';
+import HeroSection from '@/components/hero/HeroSection';
 import VODPreviewSection from '@/components/home/VODPreviewSection';
 import SubscriptionCTASection from '@/components/home/SubscriptionCTASection';
 import YouTubeSection from '@/components/home/YouTubeSection';

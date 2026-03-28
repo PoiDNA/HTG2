@@ -53,6 +53,64 @@ export async function POST(request: NextRequest) {
       const lineItems = await getStripe().checkout.sessions.listLineItems(session.id, { expand: ['data.price.product'] });
 
       if (order) {
+        // ── Handle yearly subscription with selected months ────────────────
+        const purchaseType = session.metadata?.purchase_type;
+        const selectedMonthsRaw = session.metadata?.selected_months;
+        if (purchaseType === 'yearly' && selectedMonthsRaw) {
+          try {
+            const selectedMonths: string[] = JSON.parse(selectedMonthsRaw);
+            const validUntil = new Date();
+            validUntil.setMonth(validUntil.getMonth() + 24); // 24-month access
+
+            // Find yearly product
+            const { data: yearlyProduct } = await getSupabaseAdmin()
+              .from('products')
+              .select('id')
+              .eq('slug', 'pakiet-roczny')
+              .single();
+
+            for (const monthLabel of selectedMonths) {
+              // Find monthly_set for this month
+              const { data: monthSet } = await getSupabaseAdmin()
+                .from('monthly_sets')
+                .select('id')
+                .eq('month_label', monthLabel)
+                .maybeSingle();
+
+              // Check if entitlement already exists
+              const { data: existing } = await getSupabaseAdmin()
+                .from('entitlements')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('scope_month', monthLabel)
+                .eq('type', 'yearly')
+                .maybeSingle();
+
+              if (!existing) {
+                await getSupabaseAdmin().from('entitlements').insert({
+                  user_id: userId,
+                  product_id: yearlyProduct?.id || null,
+                  type: 'yearly',
+                  scope_month: monthLabel,
+                  monthly_set_id: monthSet?.id || null,
+                  valid_from: `${monthLabel}-01`,
+                  valid_until: validUntil.toISOString(),
+                  is_active: true,
+                  source: 'stripe',
+                });
+              }
+            }
+
+            // Create order items
+            await getSupabaseAdmin().from('order_items').insert({
+              order_id: order.id,
+              product_id: yearlyProduct?.id || null,
+            });
+          } catch (e) {
+            console.error('Failed to process yearly subscription:', e);
+          }
+        }
+
         // Handle pre-session meeting add-on (paid eligibility grant)
         const preSessionStaffId = session.metadata?.pre_session_staff_id;
         if (preSessionStaffId) {

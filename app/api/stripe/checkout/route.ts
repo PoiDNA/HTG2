@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
         session_ids: metadata.sessionIds || '',
         month_labels: metadata.monthLabels || '',
         start_month: metadata.startMonth || '',
+        selected_months: metadata.selectedMonths || '',
         // Installment tracking
         payment_mode: metadata.payment_mode || 'full',
         total_amount: metadata.total_amount || '',

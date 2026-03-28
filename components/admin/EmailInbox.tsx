@@ -99,6 +99,10 @@ export default function EmailInbox() {
   const [composeSending, setComposeSending] = useState(false);
   const [mailboxes, setMailboxes] = useState<{ id: string; name: string; address: string }[]>([]);
 
+  // Autocomplete for "To" field
+  const [toSuggestions, setToSuggestions] = useState<{ id: string; email: string; display_name: string | null }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // Fetch thread list
   const fetchThreads = useCallback(async () => {
     setLoading(true);
@@ -121,6 +125,20 @@ export default function EmailInbox() {
   }, [statusFilter, searchQuery]);
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
+
+  // Autocomplete: search users as you type in "To" field
+  useEffect(() => {
+    if (composeTo.length < 2) { setToSuggestions([]); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/email/search-users?q=${encodeURIComponent(composeTo)}`);
+        const data = await res.json();
+        setToSuggestions(data.users || []);
+        setShowSuggestions(true);
+      } catch { /* ignore */ }
+    }, 300); // debounce 300ms
+    return () => clearTimeout(timer);
+  }, [composeTo]);
 
   // Fetch thread detail
   useEffect(() => {
@@ -216,24 +234,39 @@ export default function EmailInbox() {
 
   return (
     <div className="flex h-[calc(100vh-12rem)] gap-0 rounded-xl border border-htg-card-border overflow-hidden bg-htg-card">
-      {/* Left panel: Filters + Thread list */}
-      <div className="w-80 shrink-0 border-r border-htg-card-border flex flex-col">
-        {/* Status tabs */}
-        <div className="flex gap-1 p-3 border-b border-htg-card-border overflow-x-auto">
+      {/* Left panel: Filters + Thread list (full width on mobile when no thread selected) */}
+      <div className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-72 lg:w-80 shrink-0 border-r border-htg-card-border flex-col`}>
+        {/* Status tabs — icon-only with tooltip */}
+        <div className="flex gap-1 p-2 border-b border-htg-card-border">
           {STATUS_TABS.map(tab => (
             <button
               key={tab.value}
               onClick={() => setStatusFilter(tab.value)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              title={tab.label}
+              className={`relative group p-2 rounded-lg transition-colors ${
                 statusFilter === tab.value
                   ? 'bg-htg-sage text-white'
                   : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
               }`}
             >
-              <tab.icon className="w-3 h-3" />
-              {tab.label}
+              <tab.icon className="w-4 h-4" />
+              {/* Tooltip */}
+              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded text-[10px] font-medium bg-htg-fg text-htg-bg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                {tab.label}
+              </span>
             </button>
           ))}
+          <div className="flex-1" />
+          <button
+            onClick={() => setShowCompose(true)}
+            title="Nowa wiadomość"
+            className="relative group p-2 rounded-lg bg-htg-sage text-white hover:bg-htg-sage-dark transition-colors"
+          >
+            <PenSquare className="w-4 h-4" />
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded text-[10px] font-medium bg-htg-fg text-htg-bg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+              Nowa wiadomość
+            </span>
+          </button>
         </div>
 
         {/* Search */}
@@ -300,23 +333,14 @@ export default function EmailInbox() {
         {/* Footer */}
         <div className="p-2 border-t border-htg-card-border flex items-center justify-between">
           <span className="text-xs text-htg-fg-muted">{totalThreads} wątków</span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowCompose(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-htg-sage text-white hover:bg-htg-sage-dark transition-colors"
-            >
-              <PenSquare className="w-3 h-3" />
-              Nowa
-            </button>
-            <button onClick={fetchThreads} className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted">
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <button onClick={fetchThreads} className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted" title="Odśwież">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
       {/* Center panel: Thread detail */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`${selectedId ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0`}>
         {!selectedId ? (
           <div className="flex-1 flex items-center justify-center text-htg-fg-muted">
             <div className="text-center">
@@ -329,11 +353,20 @@ export default function EmailInbox() {
         ) : detail ? (
           <>
             {/* Thread header */}
-            <div className="p-4 border-b border-htg-card-border">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="font-serif font-semibold text-htg-fg truncate">{detail.subject || '(bez tematu)'}</h3>
-                  <p className="text-xs text-htg-fg-muted mt-0.5">{detail.from_name || detail.from_address}</p>
+            <div className="p-3 md:p-4 border-b border-htg-card-border">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {/* Back button (mobile) */}
+                  <button
+                    onClick={() => setSelectedId(null)}
+                    className="md:hidden p-1 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface shrink-0"
+                  >
+                    <ChevronRight className="w-5 h-5 rotate-180" />
+                  </button>
+                  <div className="min-w-0">
+                    <h3 className="font-serif font-semibold text-htg-fg truncate text-sm md:text-base">{detail.subject || '(bez tematu)'}</h3>
+                    <p className="text-xs text-htg-fg-muted mt-0.5">{detail.from_name || detail.from_address}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${PRIORITY_COLORS[detail.priority]}`}>
@@ -454,7 +487,7 @@ export default function EmailInbox() {
 
       {/* Right panel: Customer Card */}
       {detail && (
-        <div className="w-64 shrink-0 border-l border-htg-card-border p-4 overflow-y-auto">
+        <div className="hidden lg:block w-64 shrink-0 border-l border-htg-card-border p-4 overflow-y-auto">
           <CustomerCard
             card={detail.customerCard || null}
             isVerified={detail.user_link_verified}
@@ -505,17 +538,38 @@ export default function EmailInbox() {
                   </select>
                 </div>
               )}
-              {/* To */}
-              <div>
+              {/* To — with autocomplete */}
+              <div className="relative">
                 <label className="text-xs font-medium text-htg-fg-muted block mb-1">Do *</label>
                 <input
                   type="email"
                   value={composeTo}
-                  onChange={e => setComposeTo(e.target.value)}
-                  placeholder="email@przyklad.pl"
+                  onChange={e => { setComposeTo(e.target.value); setShowSuggestions(true); }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder="Zacznij pisać email lub imię..."
                   className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
                   autoFocus
                 />
+                {showSuggestions && toSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-htg-card border border-htg-card-border rounded-lg shadow-xl z-10 max-h-40 overflow-y-auto">
+                    {toSuggestions.map(u => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); setComposeTo(u.email); setShowSuggestions(false); }}
+                        className="w-full text-left px-3 py-2 hover:bg-htg-surface transition-colors flex items-center gap-2"
+                      >
+                        <div className="w-6 h-6 rounded-full bg-htg-sage/20 flex items-center justify-center text-xs font-medium text-htg-sage shrink-0">
+                          {(u.display_name || u.email)[0].toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          {u.display_name && <p className="text-sm text-htg-fg truncate">{u.display_name}</p>}
+                          <p className="text-xs text-htg-fg-muted truncate">{u.email}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               {/* Subject */}
               <div>

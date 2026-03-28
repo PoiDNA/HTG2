@@ -66,7 +66,7 @@ const PHASE_COLORS: Record<SimPhase, string> = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CIRCLE_BASE = 132;
-const ASST_SIZE = 88;
+const ASST_SIZE = CIRCLE_BASE * 2; // 264px — 2× user circle, per design
 const VIDEO_TOP = 60;
 const VIDEO_PCT = 67;
 
@@ -318,15 +318,17 @@ function SimVideoLayout({
             ))}
           </div>
 
-          {/* Assistant overlay circles */}
+          {/* Assistant overlay circles — right side, 50% hanging outside */}
           {assistants.length > 0 && (
             <div
-              className="absolute left-0 z-10 flex flex-col"
-              style={{ top: 50, gap: 40 }}
+              className="absolute right-0 z-10 flex flex-col"
+              style={{ top: 50, gap: 32 }}
             >
               {assistants.map((p) => (
-                <div key={p.identity} style={{ transform: 'translateX(-33%)' }}>
-                  <SimAudioCircleTile p={p} size={ASST_SIZE} />
+                <div key={p.identity} style={{ transform: 'translateX(50%)' }}>
+                  {audioMode
+                    ? <SimAudioCircleTile p={p} size={ASST_SIZE} />
+                    : <SimVideoCircleTile p={p} size={ASST_SIZE} />}
                 </div>
               ))}
             </div>

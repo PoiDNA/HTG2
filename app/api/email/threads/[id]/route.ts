@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireEmailAccess, getUserMailboxIds } from '@/lib/email/auth';
 import { getCustomerCard } from '@/lib/email/context';
 import { getSignedAttachmentUrl } from '@/lib/email/hub';
 
@@ -8,9 +8,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAdmin();
+  const auth = await requireEmailAccess();
   if ('error' in auth) return auth.error;
-  const { supabase } = auth;
+  const { supabase, user, isAdmin } = auth;
   const { id } = await params;
 
   // Fetch conversation
@@ -22,6 +22,14 @@ export async function GET(
 
   if (error || !conv) {
     return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+  }
+
+  // Check mailbox access
+  if (!isAdmin && conv.mailbox_id) {
+    const ids = await getUserMailboxIds(user.id, false);
+    if (!ids.includes(conv.mailbox_id)) {
+      return NextResponse.json({ error: 'No access' }, { status: 403 });
+    }
   }
 
   // Fetch messages
@@ -40,7 +48,7 @@ export async function GET(
     })),
   }));
 
-  // Customer card (with PII guard based on verification status)
+  // Customer card (with PII guard)
   const customerCard = await getCustomerCard(
     conv.from_address,
     conv.user_id,

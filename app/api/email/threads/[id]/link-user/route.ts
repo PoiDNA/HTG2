@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireEmailAccess } from '@/lib/email/auth';
 
-// POST — manually link conversation to a user profile (unverified)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
+  const auth = await requireEmailAccess();
   if ('error' in auth) return auth.error;
   const { id } = await params;
   const { userId } = await req.json();
 
   if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
-  // Verify user exists
   const { data: profile } = await auth.supabase
     .from('profiles')
     .select('id, display_name, email')
@@ -21,11 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   await auth.supabase
     .from('conversations')
-    .update({
-      user_id: userId,
-      user_link_verified: false,
-      user_link_method: 'manual',
-    })
+    .update({ user_id: userId, user_link_verified: false, user_link_method: 'manual' })
     .eq('id', id);
 
   return NextResponse.json({

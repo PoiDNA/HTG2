@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireEmailAccess } from '@/lib/email/auth';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAdmin();
+  const auth = await requireEmailAccess();
   if ('error' in auth) return auth.error;
   const { id } = await params;
   const { assignedTo } = await req.json();

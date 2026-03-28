@@ -4,7 +4,15 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = 'HTG <sesje@htgcyou.com>';
+const FALLBACK_FROM = 'HTG <sesje@htgcyou.com>';
+
+// Map mailbox addresses to display names for From header
+const FROM_NAMES: Record<string, string> = {
+  'kontakt@htgcyou.com': 'HTG Kontakt',
+  'sesje@htgcyou.com': 'HTG Sesje',
+  'htg@htg.cyou': 'HTG',
+  'natalia@htg.cyou': 'Natalia HTG',
+};
 
 // POST /api/email/send — Admin sends reply in a conversation thread
 export async function POST(req: NextRequest) {
@@ -19,16 +27,23 @@ export async function POST(req: NextRequest) {
 
   const db = createSupabaseServiceRole();
 
-  // Get conversation + last inbound message for threading headers
+  // Get conversation with mailbox for From address
   const { data: conv } = await db
     .from('conversations')
-    .select('id, mailbox_id, subject')
+    .select('id, mailbox_id, subject, to_address, mailboxes(address, name)')
     .eq('id', conversationId)
     .single();
   if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
 
-  // Check mailbox access (admin has full access)
-  // TODO: For non-admin staff, check mailbox_members access
+  // Resolve FROM address from the mailbox the conversation belongs to
+  const mailboxAddress = (conv as any).mailboxes?.address || conv.to_address;
+  const fromName = FROM_NAMES[mailboxAddress || ''] || 'HTG';
+  const fromEmail = mailboxAddress || 'sesje@htgcyou.com';
+
+  // Check mailbox access for non-admin staff
+  if (!auth.user.email || !(await isAdminOrMailboxMember(db, auth.user.id, conv.mailbox_id))) {
+    return NextResponse.json({ error: 'No access to this mailbox' }, { status: 403 });
+  }
 
   // Get last inbound message for In-Reply-To / References
   const { data: lastInbound } = await db
@@ -51,9 +66,9 @@ export async function POST(req: NextRequest) {
     ? (conv.subject.match(/^(Re|Odp):/i) ? conv.subject : `Re: ${conv.subject}`)
     : 'Re:');
 
-  // Send via Resend with threading headers
+  // Send via Resend with threading headers — FROM = mailbox address
   const { data: sentEmail, error: sendError } = await resend.emails.send({
-    from: FROM_EMAIL,
+    from: `${fromName} <${fromEmail}>`,
     to: Array.isArray(to) ? to : [to],
     cc: cc || undefined,
     bcc: bcc || undefined,
@@ -75,7 +90,7 @@ export async function POST(req: NextRequest) {
     conversation_id: conversationId,
     channel: 'email',
     direction: 'outbound',
-    from_address: 'sesje@htgcyou.com',
+    from_address: fromEmail,
     to_address: Array.isArray(to) ? to[0] : to,
     subject: replySubject,
     body_html: bodyHtml || null,
@@ -94,4 +109,21 @@ export async function POST(req: NextRequest) {
   }).eq('id', conversationId);
 
   return NextResponse.json({ sent: true, messageId: msg?.id, resendId: sentEmail?.id });
+}
+
+// Helper: check if user is admin or member of a mailbox
+async function isAdminOrMailboxMember(db: any, userId: string, mailboxId: string | null): Promise<boolean> {
+  // Admin check (already done by requireAdmin, but for staff access)
+  const { data: profile } = await db.from('profiles').select('role').eq('id', userId).single();
+  if (profile?.role === 'admin') return true;
+
+  // Mailbox member check
+  if (!mailboxId) return false;
+  const { data } = await db
+    .from('mailbox_members')
+    .select('id')
+    .eq('mailbox_id', mailboxId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  return !!data;
 }

@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 const PAYMENT_OPTIONS = [
   { value: 'confirmed_paid', label: 'Opłacona', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
   { value: 'installments', label: 'Raty', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
+  { value: 'partial_payment', label: 'Niepełna płatność', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
   { value: 'pending_verification', label: 'Do potwierdzenia', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
 ];
 

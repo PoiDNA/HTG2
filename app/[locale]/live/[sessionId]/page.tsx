@@ -39,11 +39,23 @@ export default async function LiveSessionPage({ params }: PageProps) {
     redirect(`/${locale}/konto`);
   }
 
-  // Verify access: must be staff or booking owner
+  // Verify access: must be staff, booking owner, or accepted companion
   const staff = isStaffEmail(user.email ?? '');
   const isBookingOwner = (session as any).booking?.user_id === user.id;
 
-  if (!staff && !isBookingOwner) {
+  let isCompanion = false;
+  if (!staff && !isBookingOwner && (session as any).booking_id) {
+    const { data: companion } = await adminClient
+      .from('booking_companions')
+      .select('id')
+      .eq('booking_id', (session as any).booking_id)
+      .eq('user_id', user.id)
+      .not('accepted_at', 'is', null)
+      .maybeSingle();
+    isCompanion = !!companion;
+  }
+
+  if (!staff && !isBookingOwner && !isCompanion) {
     redirect(`/${locale}/konto`);
   }
 

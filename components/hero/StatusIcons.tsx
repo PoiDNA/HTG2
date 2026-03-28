@@ -6,79 +6,96 @@ interface Props {
   activePhaseValue: MotionValue<number>;
 }
 
+// Each icon orbits at a different radius, speed, start angle, and depth layer
 const ICONS = [
-  { emoji: '👑', x: -120, y: -80, phase: 2 },
-  { emoji: '💎', x: 320, y: -60, phase: 2 },
-  { emoji: '❤️', x: -100, y: 120, phase: 1 },
-  { emoji: '👍', x: 340, y: 140, phase: 1 },
-  { emoji: '⭐', x: -80, y: 300, phase: 3 },
-  { emoji: '🔥', x: 360, y: 280, phase: 3 },
+  { emoji: '👑', radius: 160, period: 6,   startDeg: 0,   behind: true,  fadePhase: 2 },
+  { emoji: '💎', radius: 200, period: 8,   startDeg: 60,  behind: false, fadePhase: 2 },
+  { emoji: '❤️', radius: 140, period: 7,   startDeg: 120, behind: true,  fadePhase: 1 },
+  { emoji: '👍', radius: 220, period: 9,   startDeg: 180, behind: false, fadePhase: 1 },
+  { emoji: '⭐', radius: 170, period: 5.5, startDeg: 240, behind: true,  fadePhase: 3 },
+  { emoji: '🔥', radius: 190, period: 7.5, startDeg: 300, behind: false, fadePhase: 3 },
 ] as const;
 
 /**
- * Floating status icons around the masked figure.
- * Each fades out at its assigned phase. Explode (scale+opacity) at phase 3.
+ * Status icons orbiting around the host figure.
+ * 4× larger, alternating in front/behind the figure.
+ * Each icon fades/explodes at its assigned phase.
  */
 export default function StatusIcons({ activePhaseValue }: Props) {
   return (
-    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
+    <>
       {ICONS.map((icon, i) => (
-        <StatusIcon
+        <OrbitIcon
           key={i}
           emoji={icon.emoji}
-          x={icon.x}
-          y={icon.y}
-          fadePhase={icon.phase}
+          radius={icon.radius}
+          period={icon.period}
+          startDeg={icon.startDeg}
+          behind={icon.behind}
+          fadePhase={icon.fadePhase}
           activePhaseValue={activePhaseValue}
-          index={i}
         />
       ))}
-    </div>
+      <style jsx global>{`
+        @keyframes icon-orbit {
+          from { transform: rotate(var(--start-deg)) translateX(var(--orbit-r)) rotate(calc(-1 * var(--start-deg))); }
+          to   { transform: rotate(calc(var(--start-deg) + 360deg)) translateX(var(--orbit-r)) rotate(calc(-1 * (var(--start-deg) + 360deg))); }
+        }
+      `}</style>
+    </>
   );
 }
 
-function StatusIcon({
+function OrbitIcon({
   emoji,
-  x,
-  y,
+  radius,
+  period,
+  startDeg,
+  behind,
   fadePhase,
   activePhaseValue,
-  index,
 }: {
   emoji: string;
-  x: number;
-  y: number;
+  radius: number;
+  period: number;
+  startDeg: number;
+  behind: boolean;
   fadePhase: number;
   activePhaseValue: MotionValue<number>;
-  index: number;
 }) {
   const opacity = useTransform(
     activePhaseValue,
     [0, fadePhase - 0.5, fadePhase, fadePhase + 0.3],
-    [0.8, 0.8, 0.3, 0]
+    [0.9, 0.9, 0.4, 0]
   );
   const scale = useTransform(
     activePhaseValue,
     [fadePhase - 0.2, fadePhase + 0.3],
-    [1, fadePhase === 3 ? 3 : 0.5]
+    [1, fadePhase === 3 ? 3.5 : 0.3]
   );
 
-  // Floating animation offset
-  const floatX = `calc(50% + ${x}px)`;
-  const floatY = `calc(50% + ${y}px)`;
-
   return (
-    <m.span
-      className="absolute text-2xl"
+    <m.div
+      className="absolute pointer-events-none"
       style={{
-        left: floatX,
-        top: floatY,
-        opacity,
-        scale,
-        animation: `htg-float-${(index % 3) + 1} ${3 + index * 0.5}s ease-in-out infinite`,
-      }}
+        // Center in parent
+        left: '50%',
+        top: '50%',
+        marginLeft: '-2rem',
+        marginTop: '-2rem',
+        // Orbit animation
+        animation: `icon-orbit ${period}s linear infinite`,
+        '--orbit-r': `${radius}px`,
+        '--start-deg': `${startDeg}deg`,
+        // Depth: behind figure (z < 10) or in front (z > 10)
+        zIndex: behind ? 5 : 25,
+        opacity: opacity as unknown as number,
+        scale: scale as unknown as number,
+      } as React.CSSProperties}
     >
-      {emoji}
-    </m.span>
+      <span className="text-7xl block" style={{ filter: behind ? 'brightness(0.7)' : 'none' }}>
+        {emoji}
+      </span>
+    </m.div>
   );
 }

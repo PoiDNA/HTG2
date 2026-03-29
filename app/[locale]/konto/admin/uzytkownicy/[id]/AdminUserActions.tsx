@@ -1,11 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, UserCog, BookOpen, Calendar, Users, RefreshCw, CheckCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, UserCog, BookOpen, Calendar, Users, RefreshCw, CheckCircle, Pencil } from 'lucide-react';
 
 interface Props {
   userId: string;
   userEmail: string;
+  initialName?: string;
+  initialPhone?: string;
+  initialSecondEmail?: string;
 }
 
 type AddPurchaseType = 'session' | 'monthly' | 'yearly' | 'individual';
@@ -17,8 +21,9 @@ const INDIVIDUAL_TYPES = [
   { value: 'natalia_para', label: 'Sesja dla Par' },
 ];
 
-export default function AdminUserActions({ userId, userEmail }: Props) {
-  const [tab, setTab] = useState<'add_purchase' | 'change_role' | null>(null);
+export default function AdminUserActions({ userId, userEmail, initialName = '', initialPhone = '', initialSecondEmail = '' }: Props) {
+  const router = useRouter();
+  const [tab, setTab] = useState<'add_purchase' | 'change_role' | 'edit_profile' | null>(null);
   const [purchaseType, setPurchaseType] = useState<AddPurchaseType>('session');
   const [scopeMonth, setScopeMonth] = useState('');
   const [source, setSource] = useState('manual');
@@ -28,6 +33,9 @@ export default function AdminUserActions({ userId, userEmail }: Props) {
   const [startTime, setStartTime] = useState('');
   const [paymentStatus, setPaymentStatus] = useState('confirmed_paid');
   const [newRole, setNewRole] = useState('user');
+  const [editName, setEditName] = useState(initialName);
+  const [editPhone, setEditPhone] = useState(initialPhone);
+  const [editSecondEmail, setEditSecondEmail] = useState(initialSecondEmail);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -86,6 +94,23 @@ export default function AdminUserActions({ userId, userEmail }: Props) {
     setSaving(false);
   }
 
+  async function handleEditProfile() {
+    setSaving(true); setError(''); setSuccess('');
+    const res = await fetch('/api/admin/user-profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, displayName: editName, phone: editPhone, secondEmail: editSecondEmail }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setSuccess('Dane zaktualizowane!');
+      setTimeout(() => { setSuccess(''); setTab(null); router.refresh(); }, 2000);
+    } else {
+      setError(data.error || 'Błąd zapisu');
+    }
+    setSaving(false);
+  }
+
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-2xl p-6 space-y-4">
       <h3 className="text-base font-semibold text-htg-fg flex items-center gap-2">
@@ -109,6 +134,13 @@ export default function AdminUserActions({ userId, userEmail }: Props) {
       {!tab && (
         <div className="flex flex-wrap gap-3">
           <button
+            onClick={() => setTab('edit_profile')}
+            className="flex items-center gap-2 px-4 py-2 bg-htg-indigo text-white rounded-xl text-sm font-medium hover:bg-htg-indigo/90 transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            Edytuj dane
+          </button>
+          <button
             onClick={() => setTab('add_purchase')}
             className="flex items-center gap-2 px-4 py-2 bg-htg-sage text-white rounded-xl text-sm font-medium hover:bg-htg-sage/90 transition-colors"
           >
@@ -122,6 +154,49 @@ export default function AdminUserActions({ userId, userEmail }: Props) {
             <UserCog className="w-4 h-4" />
             Zmień rolę
           </button>
+        </div>
+      )}
+
+      {/* Edit profile form */}
+      {tab === 'edit_profile' && (
+        <div className="space-y-4 border-t border-htg-card-border pt-4">
+          <h4 className="text-sm font-semibold text-htg-fg">Edytuj dane klienta</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1 block">Imię i nazwisko</label>
+              <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
+                placeholder="Jan Kowalski"
+                className="w-full px-3 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-indigo/50" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1 block">Telefon</label>
+              <input type="text" value={editPhone} onChange={e => setEditPhone(e.target.value)}
+                placeholder="+48 600 000 000"
+                className="w-full px-3 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-indigo/50" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1 block">Email główny</label>
+              <input type="text" value={userEmail} disabled
+                className="w-full px-3 py-2.5 bg-htg-surface/50 border border-htg-card-border rounded-xl text-htg-fg-muted text-sm cursor-not-allowed" />
+              <p className="text-xs text-htg-fg-muted mt-1">Email główny jest zarządzany przez Supabase Auth — edytuj przez panel Supabase.</p>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1 block">Email dodatkowy</label>
+              <input type="email" value={editSecondEmail} onChange={e => setEditSecondEmail(e.target.value)}
+                placeholder="alternatywny@email.pl"
+                className="w-full px-3 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-indigo/50" />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={handleEditProfile} disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 bg-htg-indigo text-white rounded-xl text-sm font-medium hover:bg-htg-indigo/90 disabled:opacity-50 transition-colors">
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Pencil className="w-4 h-4" />}
+              {saving ? 'Zapisywanie...' : 'Zapisz dane'}
+            </button>
+            <button onClick={() => { setTab(null); setError(''); }} className="px-5 py-2.5 bg-htg-surface text-htg-fg-muted rounded-xl text-sm font-medium hover:bg-htg-card-border transition-colors">
+              Anuluj
+            </button>
+          </div>
         </div>
       )}
 

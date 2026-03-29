@@ -8,7 +8,7 @@ import {
   ArrowLeft, User, Mail, Calendar, CreditCard, BookOpen, Package,
   Crown, Shield, ExternalLink, Clock,
 } from 'lucide-react';
-import { PAYMENT_STATUS_BADGE } from '@/components/staff/PaymentStatusBadge';
+import { PAYMENT_STATUS_BADGE } from '@/lib/booking/constants';
 import AdminUserActions from './AdminUserActions';
 
 export const dynamic = 'force-dynamic';

@@ -6,7 +6,8 @@ import { Link } from '@/i18n-config';
 import StripeConnectCard from '@/components/staff/StripeConnectCard';
 import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
-import PaymentStatusBadge, { PAYMENT_STATUS_BADGE } from '@/components/staff/PaymentStatusBadge';
+import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
+import { PAYMENT_STATUS_BADGE } from '@/lib/booking/constants';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 

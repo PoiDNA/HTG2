@@ -37,24 +37,6 @@ export default function SiteNav() {
 
   return (
     <nav aria-label="Nawigacja główna">
-      {/* Desktop nav — inset-0 absolute overlay, flex centered both axes, pointer-events-none so right-side controls stay clickable */}
-      <div className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none">
-        <div className="flex items-center gap-5 pointer-events-auto">
-          {navLinks.map(({ href, key }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
-                pathname.startsWith(href)
-                  ? 'text-htg-indigo'
-                  : 'text-htg-fg-muted'
-              }`}
-            >
-              {t(key)}
-            </Link>
-          ))}
-        </div>
-      </div>
       {/* Desktop: FontSize + Theme + Notifications + Auth — po prawej */}
       <div className="hidden md:flex items-center gap-2">
         <FontSizeToggle />

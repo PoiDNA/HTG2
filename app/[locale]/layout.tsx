@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
 import SiteNav from "@/components/SiteNav";
+import NavLinks from "@/components/NavLinks";
 import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
 // LocaleSwitcher removed — Polish only for now
@@ -109,13 +110,12 @@ export default async function LocaleLayout({
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
             <header className="bg-htg-card border-b border-htg-card-border sticky top-0 z-50 transition-colors duration-300">
-              <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between relative">
-                <Link href="/" className="flex items-center gap-3">
+              <div className="mx-auto max-w-6xl px-6 py-4 grid grid-cols-[auto_1fr_auto] items-center gap-4 relative">
+                <Link href="/" className="flex items-center">
                   <span className="text-2xl font-serif font-bold text-htg-indigo">HTG</span>
                 </Link>
-                <div className="flex items-center gap-0">
-                  <SiteNav />
-                </div>
+                <NavLinks />
+                <SiteNav />
               </div>
             </header>
 

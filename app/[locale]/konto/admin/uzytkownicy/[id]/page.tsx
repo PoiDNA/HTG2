@@ -50,9 +50,9 @@ export default async function AdminUserDetailPage({
       .eq('user_id', id)
       .order('created_at', { ascending: false }),
 
-    // Bookings (individual sessions) — join slot for date/time when available
+    // Bookings (individual sessions) — join slot for date/time
     db.from('bookings')
-      .select('id, session_type, session_date, start_time, status, payment_status, payment_comment, payment_notes, created_at, booking_slots(session_date, start_time)')
+      .select('id, session_type, status, payment_status, created_at, slot:booking_slots(slot_date, start_time)')
       .eq('user_id', id)
       .order('created_at', { ascending: false }),
 
@@ -109,11 +109,8 @@ export default async function AdminUserDetailPage({
   const monthlyEntitlements = entitlements.filter(e => e.type === 'monthly');
   const yearlyEntitlements = entitlements.filter(e => e.type === 'yearly');
 
-  // Resolve session date: manual bookings use session_date column, slot-based use booking_slots.session_date
-  const getBookingDate = (b: typeof bookings[0]) =>
-    b.session_date || (b.booking_slots as { session_date?: string } | null)?.session_date || '';
-  const getBookingTime = (b: typeof bookings[0]) =>
-    b.start_time || (b.booking_slots as { start_time?: string } | null)?.start_time || '';
+  const getBookingDate = (b: any) => (Array.isArray(b.slot) ? b.slot[0] : b.slot)?.slot_date || '';
+  const getBookingTime = (b: any) => (Array.isArray(b.slot) ? b.slot[0] : b.slot)?.start_time || '';
 
   const today = new Date().toISOString().slice(0, 10);
   const upcomingBookings = bookings.filter(b =>

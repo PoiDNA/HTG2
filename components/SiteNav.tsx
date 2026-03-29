@@ -10,12 +10,14 @@ import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
 import UserPanelNav from './UserPanelNav';
+import { NotificationBell } from './community/NotificationBell';
 
 const navLinks = [
   { href: '/sesje', key: 'sessions' },
   { href: '/sesje-indywidualne', key: 'individual' },
   { href: '/subskrypcje', key: 'subscriptions' },
   { href: '/nagrania', key: 'recordings' },
+  { href: '/spolecznosc', key: 'community' },
 ] as const;
 
 export default function SiteNav() {
@@ -24,7 +26,7 @@ export default function SiteNav() {
   const tPanel = useTranslations('PanelNav');
   const pathname = usePathname();
   const router = useRouter();
-  const { isLoggedIn, isAdmin, isStaff, loading } = useUserRole();
+  const { user, isLoggedIn, isAdmin, isStaff, loading } = useUserRole();
 
   async function handleLogout() {
     const supabase = createSupabaseBrowser();
@@ -57,6 +59,7 @@ export default function SiteNav() {
       <div className="hidden md:flex items-center gap-2">
         <FontSizeToggle />
         <ThemeToggle />
+        {!loading && isLoggedIn && user && <NotificationBell userId={user.id} />}
         {!loading && isLoggedIn ? <UserPanelNav /> : <HeaderAuthButton />}
       </div>
 
@@ -109,6 +112,7 @@ export default function SiteNav() {
                 <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{t('account')}</p>
                 <MobileLink href="/konto" label={tPanel('my_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/konto/sesje-indywidualne" label={tPanel('individual_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/spolecznosc" label={t('community')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/konto/subskrypcje" label={tPanel('my_subscriptions')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/konto/zamowienia" label={tPanel('orders')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/konto/profil" label={tPanel('profile')} pathname={pathname} onClick={() => setOpen(false)} />

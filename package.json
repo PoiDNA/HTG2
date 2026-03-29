@@ -15,6 +15,14 @@
     "@livekit/components-react": "^2.9.20",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.49.0",
+    "@tiptap/extension-link": "^3.21.0",
+    "@tiptap/extension-mention": "^3.21.0",
+    "@tiptap/extension-placeholder": "^3.21.0",
+    "@tiptap/pm": "^3.21.0",
+    "@tiptap/react": "^3.21.0",
+    "@tiptap/starter-kit": "^3.21.0",
+    "@tiptap/suggestion": "^3.21.0",
+    "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "framer-motion": "^11.18.2",
     "hls.js": "^1.5.0",
@@ -26,7 +34,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "resend": "^6.9.4",
+    "sonner": "^2.0.7",
     "stripe": "^17.0.0",
+    "web-push": "^3.6.7",
     "zod": "^3.24.0"
   },
   "devDependencies": {
@@ -34,6 +44,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/web-push": "^3.6.4",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0"
   }

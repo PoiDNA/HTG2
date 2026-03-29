@@ -15,6 +15,12 @@ export interface CommunityAuthError {
   error: NextResponse;
 }
 
+export const COMMUNITY_MOD_ROLES = ['moderator', 'admin'] as const;
+export type CommunityMemberRole = typeof COMMUNITY_MOD_ROLES[number];
+export function isCommunityModerator(role: string | null | undefined): role is CommunityMemberRole {
+  return role === 'moderator' || role === 'admin';
+}
+
 /**
  * Verify that the current request comes from an authenticated user.
  * Returns service-role client for all subsequent data operations.
@@ -87,9 +93,7 @@ export async function requireGroupAccess(
   // Determine permissions
   const isMember = !!membership || isAdmin || isStaff;
   const canWrite = isMember;
-  const canModerate = isAdmin || isStaff ||
-    (membership?.role === 'moderator') ||
-    (membership?.role === 'admin');
+  const canModerate = isAdmin || isStaff || isCommunityModerator(membership?.role);
 
   // Private groups: require membership
   if (group.visibility === 'private' && !isMember) {

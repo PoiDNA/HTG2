@@ -1,5 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
+import { PRODUCT_SLUGS } from '@/lib/booking/constants';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { SessionPicker } from './SessionPicker';
 
@@ -24,7 +25,12 @@ async function getIndividualSessions() {
       id, name, slug, description, metadata,
       prices ( id, stripe_price_id, amount, currency )
     `)
-    .in('slug', ['sesja-natalia', 'sesja-natalia-agata', 'sesja-natalia-justyna', 'sesja-natalia-para'])
+    .in('slug', [
+      PRODUCT_SLUGS.SESSION_1ON1,
+      PRODUCT_SLUGS.SESSION_AGATA,
+      PRODUCT_SLUGS.SESSION_JUSTYNA,
+      PRODUCT_SLUGS.SESSION_PARA
+    ])
     .eq('is_active', true);
 
   return products || [];

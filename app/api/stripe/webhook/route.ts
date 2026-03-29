@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { PRODUCT_SLUGS } from '@/lib/booking/constants';
 import { sendOrderConfirmation, sendPaymentFailedNotification, sendGiftNotification } from '@/lib/email/resend';
-
-// Use service role for webhook (no user context) — lazy init
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -35,7 +28,7 @@ export async function POST(request: NextRequest) {
       if (!userId) break;
 
       // Create order
-      const { data: order } = await getSupabaseAdmin()
+      const { data: order } = await createSupabaseServiceRole()
         .from('orders')
         .insert({
           user_id: userId,
@@ -63,22 +56,22 @@ export async function POST(request: NextRequest) {
             validUntil.setMonth(validUntil.getMonth() + 24); // 24-month access
 
             // Find yearly product
-            const { data: yearlyProduct } = await getSupabaseAdmin()
+            const { data: yearlyProduct } = await createSupabaseServiceRole()
               .from('products')
               .select('id')
-              .eq('slug', 'pakiet-roczny')
+              .eq('slug', PRODUCT_SLUGS.YEARLY)
               .single();
 
             for (const monthLabel of selectedMonths) {
               // Find monthly_set for this month
-              const { data: monthSet } = await getSupabaseAdmin()
+              const { data: monthSet } = await createSupabaseServiceRole()
                 .from('monthly_sets')
                 .select('id')
                 .eq('month_label', monthLabel)
                 .maybeSingle();
 
               // Check if entitlement already exists
-              const { data: existing } = await getSupabaseAdmin()
+              const { data: existing } = await createSupabaseServiceRole()
                 .from('entitlements')
                 .select('id')
                 .eq('user_id', userId)
@@ -87,7 +80,7 @@ export async function POST(request: NextRequest) {
                 .maybeSingle();
 
               if (!existing) {
-                await getSupabaseAdmin().from('entitlements').insert({
+                await createSupabaseServiceRole().from('entitlements').insert({
                   user_id: userId,
                   product_id: yearlyProduct?.id || null,
                   type: 'yearly',
@@ -102,7 +95,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Create order items
-            await getSupabaseAdmin().from('order_items').insert({
+            await createSupabaseServiceRole().from('order_items').insert({
               order_id: order.id,
               product_id: yearlyProduct?.id || null,
             });
@@ -114,7 +107,7 @@ export async function POST(request: NextRequest) {
         // Handle pre-session meeting add-on (paid eligibility grant)
         const preSessionStaffId = session.metadata?.pre_session_staff_id;
         if (preSessionStaffId) {
-          await getSupabaseAdmin()
+          await createSupabaseServiceRole()
             .from('pre_session_eligibility')
             .insert({
               user_id: userId,
@@ -144,7 +137,7 @@ export async function POST(request: NextRequest) {
           const validUntil = new Date();
           validUntil.setMonth(validUntil.getMonth() + validMonths);
 
-          const { data: newEntitlement } = await getSupabaseAdmin().from('entitlements').insert({
+          const { data: newEntitlement } = await createSupabaseServiceRole().from('entitlements').insert({
             user_id: userId,
             product_id: productMetadata.product_id || null,
             session_id: productMetadata.session_id || null,
@@ -157,13 +150,13 @@ export async function POST(request: NextRequest) {
           const giftEmail = session.metadata?.gift_for_email;
           if (giftEmail && newEntitlement?.id) {
             // Check if recipient already has an account
-            const { data: recipientProfile } = await getSupabaseAdmin()
+            const { data: recipientProfile } = await createSupabaseServiceRole()
               .from('profiles')
               .select('id')
               .eq('email', giftEmail.toLowerCase())
               .maybeSingle();
 
-            const { data: giftRecord } = await getSupabaseAdmin().from('session_gifts').insert({
+            const { data: giftRecord } = await createSupabaseServiceRole().from('session_gifts').insert({
               entitlement_id: newEntitlement.id,
               purchased_by: userId,
               recipient_email: giftEmail.toLowerCase(),
@@ -191,7 +184,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Order items
-          await getSupabaseAdmin().from('order_items').insert({
+          await createSupabaseServiceRole().from('order_items').insert({
             order_id: order.id,
             product_id: productMetadata.product_id || null,
             price_id: productMetadata.price_id || null,
@@ -200,7 +193,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Log in audit
-      await getSupabaseAdmin().from('audit_logs').insert({
+      await createSupabaseServiceRole().from('audit_logs').insert({
         user_id: userId,
         action: 'purchase_completed',
         entity_type: 'order',
@@ -232,7 +225,7 @@ export async function POST(request: NextRequest) {
       const subscription = event.data.object;
 
       // Deactivate entitlements linked to this subscription
-      await getSupabaseAdmin()
+      await createSupabaseServiceRole()
         .from('entitlements')
         .update({ is_active: false })
         .eq('stripe_subscription_id', subscription.id);

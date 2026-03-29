@@ -6,28 +6,16 @@ import { Link } from '@/i18n-config';
 import StripeConnectCard from '@/components/staff/StripeConnectCard';
 import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
-import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
+import PaymentStatusBadge, { PAYMENT_STATUS_BADGE } from '@/components/staff/PaymentStatusBadge';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
-const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> = {
-  natalia_solo: { label: '1:1', className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
-  natalia_agata: { label: 'Agata', className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
-  natalia_justyna: { label: 'Justyna', className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
-  natalia_para: { label: 'Para', className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
-  natalia_asysta: { label: 'Asysta', className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
-};
-
-const SESSION_LABELS_SHORT: Record<string, string> = {
-  natalia_solo: "1:1",
-  natalia_agata: "Agata",
-  natalia_justyna: "Justyna",
-  natalia_para: "Para",
-  natalia_asysta: "Asysta",
-};
-const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  confirmed_paid: { label: 'Opłacona', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  installments: { label: 'Raty', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
-  partial_payment: { label: 'Niepełna płatność', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
-  pending_verification: { label: 'Do potwierdzenia', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
+const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
+  natalia_solo: { className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
+  natalia_agata: { className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
+  natalia_justyna: { className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  natalia_para: { className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
+  natalia_asysta: { className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
 
 export default async function StaffDashboard({
@@ -190,7 +178,7 @@ export default async function StaffDashboard({
                         {slot?.start_time?.slice(0, 5)}
                       </span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                        {SESSION_LABELS_SHORT[booking.session_type] || booking.session_type}
+                        {SESSION_CONFIG[booking.session_type as SessionType]?.labelShort || booking.session_type}
                       </span>
                       {isNow && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-warm text-white font-bold">TERAZ</span>}
                     </div>
@@ -275,7 +263,7 @@ export default async function StaffDashboard({
                       </td>
                       <td className="py-3 pr-4">
                         {(() => { const tb = SESSION_TYPE_BADGE[booking.session_type]; return tb ? (
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{tb.label}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{SESSION_CONFIG[booking.session_type as SessionType]?.labelShort || booking.session_type}</span>
                         ) : (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">{booking.session_type}</span>
                         ); })()}

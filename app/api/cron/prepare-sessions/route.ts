@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 // Vercel Cron Job — runs every 5 minutes
 // Creates live_sessions for confirmed bookings starting within 30 minutes
@@ -15,10 +15,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+  const supabase = createSupabaseServiceRole();
 
   const results = { sessionsCreated: 0, slotsExpired: 0, errors: [] as string[] };
 

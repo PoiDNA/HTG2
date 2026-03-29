@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isStaffEmail } from '@/lib/roles';
 import { VALID_TRANSITIONS } from '@/lib/live/constants';
 import { startRoomCompositeEgress, startParticipantEgress, stopEgress } from '@/lib/live/livekit';
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const sessionId = request.nextUrl.searchParams.get('sessionId');
     if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
 
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const admin = createSupabaseServiceRole();
     const { data } = await admin.from('live_sessions').select('phase').eq('id', sessionId).single();
     return NextResponse.json({ phase: data?.phase || 'ended' });
   } catch {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const admin = createSupabaseServiceRole();
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

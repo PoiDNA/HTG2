@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/auth';
+import { PRODUCT_SLUGS } from '@/lib/booking/constants';
 
 export async function GET(req: NextRequest) {
   const check = await requireAdmin();
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   const { supabase } = check;
 
-  const slug = type === 'monthly' ? 'pakiet-miesieczny' : 'pakiet-roczny';
+  const slug = type === 'monthly' ? PRODUCT_SLUGS.MONTHLY : PRODUCT_SLUGS.YEARLY;
   const { data: product } = await supabase
     .from('products')
     .select('id')

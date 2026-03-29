@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Search, Calendar, CheckCircle, Download, ExternalLink } from 'lucide-react';
+import { PAYMENT_STATUS_BADGE } from '@/components/staff/PaymentStatusBadge';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
 const SESSION_TYPES_CONFIG = [
   { key: 'all',             label: 'Wszystkie',        short: 'Wszystkie', className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
@@ -15,19 +18,12 @@ const SESSION_TYPES_CONFIG = [
 
 type TypeKey = typeof SESSION_TYPES_CONFIG[number]['key'];
 
-const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> = {
-  natalia_solo:    { label: '1:1',     className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
-  natalia_agata:   { label: 'Agata',   className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
-  natalia_justyna: { label: 'Justyna', className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
-  natalia_para:    { label: 'Para',    className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
-  natalia_asysta:  { label: 'Asysta',  className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
-};
-
-const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  confirmed_paid:      { label: 'Opłacona',         className: 'bg-green-900/30 text-green-400' },
-  installments:        { label: 'Raty',              className: 'bg-amber-900/30 text-amber-400' },
-  partial_payment:     { label: 'Niepełna',          className: 'bg-orange-900/30 text-orange-400' },
-  pending_verification:{ label: 'Do potwierdzenia', className: 'bg-yellow-900/30 text-yellow-400' },
+const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
+  natalia_solo:    { className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
+  natalia_agata:   { className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
+  natalia_justyna: { className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  natalia_para:    { className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
+  natalia_asysta:  { className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
 
 function getSlot(b: any) { return Array.isArray(b.slot) ? b.slot[0] : b.slot; }
@@ -35,8 +31,9 @@ function getClient(b: any) { return Array.isArray(b.client) ? b.client[0] : b.cl
 
 function TypeBadge({ type }: { type: string }) {
   const tb = SESSION_TYPE_BADGE[type];
+  const label = SESSION_CONFIG[type as SessionType]?.labelShort || type;
   return tb
-    ? <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{tb.label}</span>
+    ? <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{label}</span>
     : <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">{type}</span>;
 }
 
@@ -106,7 +103,7 @@ export default function AdminSessionList({
         <td>${slot?.start_time?.slice(0, 5) || ''}</td>
         <td>${client?.display_name || client?.email || '—'}</td>
         <td>${client?.email || ''}</td>
-        <td>${tb?.label || b.session_type}</td>
+        <td>${SESSION_CONFIG[b.session_type as SessionType]?.labelShort || b.session_type}</td>
         <td>${ps.label}</td>
       </tr>`;
     }).join('');

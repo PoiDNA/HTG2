@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { uploadFile } from '@/lib/bunny-storage';
 
 export async function POST(request: NextRequest) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const cdnUrl = `${process.env.NEXT_PUBLIC_BUNNY_CDN_URL}/${path}`;
 
     // Save to DB
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const admin = createSupabaseServiceRole();
 
     const { data: recording, error: dbError } = await admin
       .from('client_recordings')
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const bookingId = request.nextUrl.searchParams.get('bookingId');
-  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const admin = createSupabaseServiceRole();
 
   let query = admin.from('client_recordings').select('*');
 

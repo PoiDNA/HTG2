@@ -60,8 +60,25 @@ export const SESSION_CONFIG: Record<SessionType, {
   },
 };
 
+export const PRODUCT_SLUGS = {
+  YEARLY:              'pakiet-roczny',
+  MONTHLY:             'pakiet-miesieczny',
+  SINGLE_SESSION:      'sesja-pojedyncza',
+  SESSION_1ON1:        'sesja-natalia',
+  SESSION_AGATA:       'sesja-natalia-agata',
+  SESSION_JUSTYNA:     'sesja-natalia-justyna',
+  SESSION_PARA:        'sesja-natalia-para',
+} as const;
+
 export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para', 'natalia_asysta'];
 export const PRE_SESSION_DURATION = 15;
+
+export const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  confirmed_paid:       'Opłacona',
+  installments:         'Raty',
+  partial_payment:      'Niepełna płatność',
+  pending_verification: 'Do potwierdzenia',
+};
 
 // Days of week (0=Sunday) — Polish labels
 export const DAY_LABELS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];

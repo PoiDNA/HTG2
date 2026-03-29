@@ -5,6 +5,8 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isStaffEmail } from '@/lib/roles';
 import RecordingsPair from '@/components/live/RecordingsPair';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 import { Video } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -71,12 +73,6 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
     if (rec.type === 'after') entry.after = rec;
   }
 
-  const SESSION_LABELS: Record<string, string> = {
-    natalia_solo: 'Sesja 1:1',
-    natalia_agata: 'Sesja + Agata',
-    natalia_justyna: 'Sesja + Justyna',
-  };
-
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3">
@@ -99,7 +95,7 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
                 )}
                 <span className="text-htg-fg-muted">{meta.sessionDate}</span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                  {SESSION_LABELS[meta.sessionType] || meta.sessionType}
+                  {SESSION_CONFIG[meta.sessionType as SessionType]?.labelShort || meta.sessionType}
                 </span>
               </div>
               <RecordingsPair

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCommunityAuth } from '@/lib/community/auth';
+import { requireCommunityAuth, isCommunityModerator } from '@/lib/community/auth';
 
 /**
  * PATCH /api/community/posts/[id]/pin
@@ -38,7 +38,7 @@ export async function PATCH(
       .eq('user_id', user.id)
       .single();
 
-    if (!membership || !['moderator', 'admin'].includes(membership.role)) {
+    if (!membership || !isCommunityModerator(membership.role)) {
       return NextResponse.json({ error: 'Only moderators can pin posts' }, { status: 403 });
     }
   }

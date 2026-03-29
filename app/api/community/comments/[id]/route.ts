@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCommunityAuth } from '@/lib/community/auth';
+import { requireCommunityAuth, isCommunityModerator } from '@/lib/community/auth';
 
 /**
  * PATCH /api/community/comments/[id]
@@ -90,7 +90,7 @@ export async function DELETE(
       .eq('user_id', user.id)
       .single();
 
-    if (!membership || !['moderator', 'admin'].includes(membership.role)) {
+    if (!membership || !isCommunityModerator(membership.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
   }

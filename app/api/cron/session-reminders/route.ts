@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { sendSessionReminder } from '@/lib/email/resend';
 
 // GET /api/cron/session-reminders
@@ -11,10 +11,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const db = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const db = createSupabaseServiceRole();
 
   // Find confirmed bookings for tomorrow
   const tomorrow = new Date();
@@ -40,6 +37,7 @@ export async function GET(req: NextRequest) {
     natalia_agata: 'Sesja z Natalią i Agatą',
     natalia_justyna: 'Sesja z Natalią i Justyną',
     natalia_para: 'Sesja dla par z Natalią',
+    natalia_asysta: 'Sesja z Asystą z Natalią',
   };
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://htgcyou.com';

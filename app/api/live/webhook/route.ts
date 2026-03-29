@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWebhookReceiver } from '@/lib/live/livekit';
-import { createClient } from '@supabase/supabase-js';
-
-// Use service role client for webhooks (no user context)
-function getServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
-    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY for webhook handler');
-  }
-  return createClient(url, serviceKey);
-}
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +21,7 @@ export async function POST(request: NextRequest) {
     if (event.event === 'egress_ended' && event.egressInfo) {
       const egress = event.egressInfo;
       const egressId = egress.egressId;
-      const supabase = getServiceClient();
+      const supabase = createSupabaseServiceRole();
 
       // ── 1. Composite recordings (wstep / sesja / podsumowanie) ──────────
       // Single query with OR instead of 3 sequential round-trips

@@ -1,6 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { PRODUCT_SLUGS } from '@/lib/booking/constants';
 import SessionCatalog from './SessionCatalog';
 
 export const dynamic = 'force-dynamic';
@@ -200,9 +201,9 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
 
   // Fetch prices from DB
   const supabase2 = await createSupabaseServer();
-  const { data: sessionProduct } = await supabase2.from('products').select('id').eq('slug', 'sesja-pojedyncza').single();
-  const { data: monthlyProduct } = await supabase2.from('products').select('id').eq('slug', 'pakiet-miesieczny').single();
-  const { data: yearlyProduct } = await supabase2.from('products').select('id').eq('slug', 'pakiet-roczny').single();
+  const { data: sessionProduct } = await supabase2.from('products').select('id').eq('slug', PRODUCT_SLUGS.SINGLE_SESSION).single();
+  const { data: monthlyProduct } = await supabase2.from('products').select('id').eq('slug', PRODUCT_SLUGS.MONTHLY).single();
+  const { data: yearlyProduct } = await supabase2.from('products').select('id').eq('slug', PRODUCT_SLUGS.YEARLY).single();
 
   const { data: sessionPrice } = await supabase2.from('prices').select('stripe_price_id, amount')
     .eq('product_id', sessionProduct?.id || '').eq('is_active', true).single();

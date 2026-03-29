@@ -3,7 +3,7 @@ import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n-config';
 import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History } from 'lucide-react';
-import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
+import PaymentStatusBadge, { PAYMENT_STATUS_BADGE } from '@/components/staff/PaymentStatusBadge';
 import PaymentCommentEditor from './PaymentCommentEditor';
 import SessionTypeSelector from './SessionTypeSelector';
 import ClientNameEditor from './ClientNameEditor';
@@ -15,13 +15,6 @@ const SESSION_LABELS: Record<string, string> = {
   natalia_justyna: 'Sesja z Natalią i Justyną',
   natalia_para: 'Sesja dla par',
   natalia_asysta: 'Sesja z Asystą',
-};
-
-const PAYMENT_STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  confirmed_paid: { label: 'Opłacona', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  installments: { label: 'Raty', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
-  partial_payment: { label: 'Niepełna płatność', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
-  pending_verification: { label: 'Do potwierdzenia', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
 };
 
 export default async function SessionDetailPage({
@@ -87,7 +80,7 @@ export default async function SessionDetailPage({
     .limit(50);
 
   const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
-  const ps = PAYMENT_STATUS_LABEL[booking.payment_status] || PAYMENT_STATUS_LABEL.pending_verification;
+  const ps = PAYMENT_STATUS_BADGE[booking.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -184,7 +177,7 @@ export default async function SessionDetailPage({
             {clientHistory.map((h: any) => {
               const hSlot = Array.isArray(h.slot) ? h.slot[0] : h.slot;
               const isCurrent = h.id === id;
-              const hPs = PAYMENT_STATUS_LABEL[h.payment_status] || PAYMENT_STATUS_LABEL.pending_verification;
+              const hPs = PAYMENT_STATUS_BADGE[h.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
               return (
                 <div
                   key={h.id}

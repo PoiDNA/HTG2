@@ -1,14 +1,10 @@
 import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Users, Mail, Calendar, Hash } from 'lucide-react';
-
-const SESSION_LABELS: Record<string, string> = {
-  natalia_solo: '1:1',
-  natalia_agata: '+ Agata',
-  natalia_justyna: '+ Justyna',
-};
+import type { SessionType } from '@/lib/booking/types';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -94,7 +90,7 @@ export default async function StaffClientsPage({ params }: { params: Promise<{ l
                   {client.sessions.slice(0, 6).map((s, i) => (
                     <div key={i} className={`text-xs px-2.5 py-1.5 rounded-lg border ${s.date >= todayStr && s.status !== 'completed' ? 'border-htg-sage/30 bg-htg-sage/10 text-htg-fg' : 'border-htg-card-border text-htg-fg-muted'}`}>
                       <span>{s.date} {s.time}</span>
-                      <span className="ml-1 opacity-60">{SESSION_LABELS[s.type] || s.type}</span>
+                      <span className="ml-1 opacity-60">{SESSION_CONFIG[s.type as SessionType]?.labelShort || s.type}</span>
                     </div>
                   ))}
                   {client.sessions.length > 6 && <span className="text-xs text-htg-fg-muted px-2 py-1.5">+{client.sessions.length - 6} więcej</span>}

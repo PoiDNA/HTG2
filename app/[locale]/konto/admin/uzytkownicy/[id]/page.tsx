@@ -8,6 +8,7 @@ import {
   ArrowLeft, User, Mail, Calendar, CreditCard, BookOpen, Package,
   Crown, Shield, ExternalLink, Clock,
 } from 'lucide-react';
+import { PAYMENT_STATUS_BADGE } from '@/components/staff/PaymentStatusBadge';
 import AdminUserActions from './AdminUserActions';
 
 export const dynamic = 'force-dynamic';
@@ -80,13 +81,6 @@ export default async function AdminUserDetailPage({
     natalia_justyna: 'Sesja z Natalią i Justyną',
     natalia_para: 'Sesja dla Par',
     pre_session: 'Sesja wstępna',
-  };
-
-  const PAYMENT_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-    confirmed_paid: { label: 'Opłacona', color: 'text-green-500 bg-green-500/10' },
-    installments: { label: 'Raty', color: 'text-blue-500 bg-blue-500/10' },
-    partial_payment: { label: 'Niepełna płatność', color: 'text-orange-500 bg-orange-500/10' },
-    pending_verification: { label: 'Do potwierdzenia', color: 'text-yellow-500 bg-yellow-500/10' },
   };
 
   const BOOKING_STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -227,7 +221,7 @@ export default async function AdminUserDetailPage({
           </h3>
           <div className="space-y-2">
             {upcomingBookings.map(b => {
-              const ps = b.payment_status ? PAYMENT_STATUS_LABELS[b.payment_status] : null;
+              const ps = b.payment_status ? PAYMENT_STATUS_BADGE[b.payment_status] : null;
               const bs = BOOKING_STATUS_LABELS[b.status] || { label: b.status, color: 'text-htg-fg-muted' };
               return (
                 <div key={b.id} className="flex items-center justify-between py-2.5 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap">
@@ -242,7 +236,7 @@ export default async function AdminUserDetailPage({
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-medium ${bs.color}`}>{bs.label}</span>
                     {ps && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${ps.color}`}>{ps.label}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${ps.className}`}>{ps.label}</span>
                     )}
                   </div>
                 </div>
@@ -336,7 +330,7 @@ export default async function AdminUserDetailPage({
           </h3>
           <div className="space-y-1 max-h-64 overflow-y-auto">
             {pastBookings.map(b => {
-              const ps = b.payment_status ? PAYMENT_STATUS_LABELS[b.payment_status] : null;
+              const ps = b.payment_status ? PAYMENT_STATUS_BADGE[b.payment_status] : null;
               return (
                 <div key={b.id} className="flex items-center justify-between py-2 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap">
                   <div>
@@ -344,7 +338,7 @@ export default async function AdminUserDetailPage({
                     <p className="text-xs text-htg-fg-muted">{getBookingDate(b)} · {getBookingTime(b)?.slice(0,5)}</p>
                   </div>
                   {ps && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${ps.color}`}>{ps.label}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${ps.className}`}>{ps.label}</span>
                   )}
                 </div>
               );

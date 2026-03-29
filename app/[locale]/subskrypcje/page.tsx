@@ -1,6 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { Star, Check } from 'lucide-react';
+import { PRODUCT_SLUGS } from '@/lib/booking/constants';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { CheckoutButton } from '@/components/CheckoutButton';
 
@@ -75,9 +76,9 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
 
   // Fetch prices from DB (falls back to placeholder if no data yet)
   const [singlePrice, monthlyPrice, yearlyPrice] = await Promise.all([
-    getPriceByProductSlug('sesja-pojedyncza'),
-    getPriceByProductSlug('pakiet-miesieczny'),
-    getPriceByProductSlug('pakiet-roczny'),
+    getPriceByProductSlug(PRODUCT_SLUGS.SINGLE_SESSION),
+    getPriceByProductSlug(PRODUCT_SLUGS.MONTHLY),
+    getPriceByProductSlug(PRODUCT_SLUGS.YEARLY),
   ]);
 
   const features = {

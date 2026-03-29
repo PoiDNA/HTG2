@@ -32,15 +32,16 @@ export default async function SessionDetailPage({
   const { locale, id } = await params;
   setRequestLocale(locale);
 
-  const { staffMember } = await getEffectiveStaffMember();
+  const { staffMember, user: authUser } = await getEffectiveStaffMember();
   const admin = createSupabaseServiceRole();
 
   const isPractitioner = staffMember?.role === 'practitioner';
 
-  // Check if user is admin
+  // Check admin: use staffMember.user_id when impersonating, otherwise the actual logged-in user
   let isAdmin = false;
-  if (staffMember?.user_id) {
-    const { data: profile } = await admin.from('profiles').select('role').eq('id', staffMember.user_id).single();
+  const profileUserId = staffMember?.user_id ?? authUser?.id;
+  if (profileUserId) {
+    const { data: profile } = await admin.from('profiles').select('role').eq('id', profileUserId).single();
     isAdmin = profile?.role === 'admin';
   }
   const canEditPayment = isPractitioner || isAdmin;

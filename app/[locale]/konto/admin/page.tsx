@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { startImpersonation, startUserImpersonation } from '@/lib/admin/impersonate';
 import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
-import { Calendar, Users, Clock, ExternalLink, Eye } from 'lucide-react';
+import { Calendar, Users, Clock, ExternalLink, Eye, BookOpen, MessagesSquare, Mail } from 'lucide-react';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
@@ -64,6 +64,11 @@ export default async function AdminDashboard({
   const staffMembers = staffRes.data ?? [];
 
   const quickLinks = [
+    { href: '/konto/admin/uzytkownicy', label: 'Użytkownicy', icon: Users },
+    { href: '/konto/admin/sesje', label: 'Sesje', icon: BookOpen },
+    { href: '/konto/admin/podglad', label: 'Podgląd użytkowników', icon: Eye },
+    { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
+    { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
     { href: '/konto/admin/kalendarz', label: t('go_to_calendar'), icon: Calendar },
     { href: '/konto/admin/kolejka', label: t('go_to_queue'), icon: Users },
     { href: '/konto/admin/sloty', label: t('go_to_slots'), icon: Clock },
@@ -256,7 +261,7 @@ export default async function AdminDashboard({
       {/* Quick links */}
       <div>
         <h2 className="text-xl font-serif font-bold text-htg-fg mb-4">{t('quick_links')}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {quickLinks.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}

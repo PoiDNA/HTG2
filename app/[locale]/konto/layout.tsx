@@ -90,25 +90,25 @@ export default async function AccountLayout({
 
   // ADMIN section (admin only)
   const adminItems = [
+    { href: '/konto/admin/uzytkownicy', label: tPanel('admin_users'), icon: Users },
+    { href: '/konto/admin/sesje', label: tPanel('admin_sessions'), icon: BookOpen },
+    { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
+    { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
+    { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
     { href: '/konto/admin', label: tPanel('admin_panel'), icon: LayoutDashboard },
     { href: '/konto/admin/kalendarz', label: tPanel('admin_calendar'), icon: Calendar },
     { href: '/konto/admin/kolejka', label: tPanel('admin_queue'), icon: Users },
     { href: '/konto/admin/sloty', label: tPanel('admin_slots'), icon: Clock },
-    { href: '/konto/admin/uzytkownicy', label: tPanel('admin_users'), icon: Users },
     { href: '/konto/admin/subskrypcje', label: tPanel('admin_subscriptions'), icon: CreditCard },
-    { href: '/konto/admin/sesje', label: tPanel('admin_sessions'), icon: BookOpen },
     { href: '/konto/admin/zestawy', label: tPanel('admin_sets'), icon: Package },
-    { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
     { href: '/konto/admin/zgloszenia', label: `Aktualizacje klientów${pendingUpdates > 0 ? ` — ${pendingUpdates}` : ''}`, icon: ClipboardCheck },
     { href: '/konto/admin/naruszenia', label: 'Naruszenia', icon: ShieldAlert },
-    { href: '/konto/admin/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
     { href: '/prowadzacy/spotkania-htg/profile-uczestnikow', label: 'Profile uczestników', icon: BarChart2 },
     { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
-    { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
   ] as const;
 
   // STAFF section (moderator/prowadzacy — NOT admin)

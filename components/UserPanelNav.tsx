@@ -20,6 +20,9 @@ import {
   LogOut,
   Presentation,
   BookOpen,
+  Eye,
+  MessagesSquare,
+  Mail,
 } from 'lucide-react';
 
 export default function UserPanelNav() {
@@ -71,40 +74,44 @@ export default function UserPanelNav() {
             )}
           </div>
 
-          {/* User section */}
-          <div className="py-1">
-            <DropdownLink href="/konto" icon={Film} label={t('my_sessions')} onClick={() => setOpen(false)} />
-            <DropdownLink href="/konto/sesje-indywidualne" icon={CalendarDays} label={t('individual_sessions')} onClick={() => setOpen(false)} />
-            <DropdownLink href="/konto/subskrypcje" icon={CreditCard} label={t('my_subscriptions')} onClick={() => setOpen(false)} />
-            <DropdownLink href="/konto/zamowienia" icon={FileText} label={t('orders')} onClick={() => setOpen(false)} />
-            <DropdownLink href="/konto/profil" icon={UserCircle} label={t('profile')} onClick={() => setOpen(false)} />
-          </div>
-
-          {/* Staff section */}
-          {isStaff && (
-            <>
+          {/* Admin: show only admin items, no user/staff sections */}
+          {isAdmin ? (
+            <div className="py-1">
+              <DropdownLink href="/konto/admin/uzytkownicy" icon={Users} label={t('admin_users')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/sesje" icon={BookOpen} label={t('admin_sessions')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/podglad" icon={Eye} label={t('admin_preview')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/spolecznosc" icon={MessagesSquare} label="Społeczność" onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/skrzynka" icon={Mail} label="Skrzynka" onClick={() => setOpen(false)} />
               <div className="border-t border-htg-card-border my-1" />
-              <div className="py-1">
-                <DropdownLink href="/prowadzacy" icon={LayoutDashboard} label={t('staff_panel')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/prowadzacy/grafik" icon={Calendar} label={t('staff_schedule')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/prowadzacy/sesje" icon={Presentation} label={t('staff_sessions')} onClick={() => setOpen(false)} />
-              </div>
-            </>
-          )}
-
-          {/* Admin section */}
-          {isAdmin && (
+              <DropdownLink href="/konto/admin" icon={LayoutDashboard} label={t('admin_panel')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/kalendarz" icon={Calendar} label={t('admin_calendar')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/kolejka" icon={Users} label={t('admin_queue')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/sloty" icon={Clock} label={t('admin_slots')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/subskrypcje" icon={CreditCard} label={t('admin_subscriptions')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/profil" icon={UserCircle} label={t('profile')} onClick={() => setOpen(false)} />
+            </div>
+          ) : (
             <>
-              <div className="border-t border-htg-card-border my-1" />
+              {/* User section */}
               <div className="py-1">
-                <DropdownLink href="/konto/admin" icon={LayoutDashboard} label={t('admin_panel')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/admin/kalendarz" icon={Calendar} label={t('admin_calendar')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/admin/kolejka" icon={Users} label={t('admin_queue')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/admin/sloty" icon={Clock} label={t('admin_slots')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/admin/uzytkownicy" icon={Users} label={t('admin_users')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/admin/subskrypcje" icon={CreditCard} label={t('admin_subscriptions')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/admin/sesje" icon={BookOpen} label={t('admin_sessions')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto" icon={Film} label={t('my_sessions')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/sesje-indywidualne" icon={CalendarDays} label={t('individual_sessions')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/subskrypcje" icon={CreditCard} label={t('my_subscriptions')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/zamowienia" icon={FileText} label={t('orders')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/profil" icon={UserCircle} label={t('profile')} onClick={() => setOpen(false)} />
               </div>
+
+              {/* Staff section */}
+              {isStaff && (
+                <>
+                  <div className="border-t border-htg-card-border my-1" />
+                  <div className="py-1">
+                    <DropdownLink href="/prowadzacy" icon={LayoutDashboard} label={t('staff_panel')} onClick={() => setOpen(false)} />
+                    <DropdownLink href="/prowadzacy/grafik" icon={Calendar} label={t('staff_schedule')} onClick={() => setOpen(false)} />
+                    <DropdownLink href="/prowadzacy/sesje" icon={Presentation} label={t('staff_sessions')} onClick={() => setOpen(false)} />
+                  </div>
+                </>
+              )}
             </>
           )}
 

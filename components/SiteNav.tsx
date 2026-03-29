@@ -37,9 +37,9 @@ export default function SiteNav() {
 
   return (
     <nav aria-label="Nawigacja główna">
-      {/* Desktop nav — linki absolutnie wyśrodkowane w headerze */}
-      <div className="hidden md:flex items-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="flex items-center gap-5">
+      {/* Desktop nav — inset-0 absolute overlay, flex centered both axes, pointer-events-none so right-side controls stay clickable */}
+      <div className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none">
+        <div className="flex items-center gap-5 pointer-events-auto">
           {navLinks.map(({ href, key }) => (
             <Link
               key={href}

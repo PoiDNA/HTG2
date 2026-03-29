@@ -14,6 +14,7 @@ import type { TipTapContent } from '@/lib/community/types';
 export async function GET(req: NextRequest) {
   const groupId = req.nextUrl.searchParams.get('group_id');
   const cursor = req.nextUrl.searchParams.get('cursor');
+  const search = req.nextUrl.searchParams.get('search');
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get('limit') || '20'), 50);
 
   if (!groupId) {
@@ -35,6 +36,11 @@ export async function GET(req: NextRequest) {
     .order('last_activity_at', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit + 1); // fetch one extra to determine has_more
+
+  // Full-text search on content_text
+  if (search) {
+    query = query.ilike('content_text', `%${search}%`);
+  }
 
   // Cursor pagination: decode cursor as last_activity_at|id
   if (cursor) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 
 interface UseReactionOptions {
   targetType: 'post' | 'comment';
@@ -40,14 +41,14 @@ export function useReaction({
       });
 
       if (!res.ok) {
-        // Revert optimistic update on failure
         setHasReacted(wasReacted);
         setCount(prev => wasReacted ? prev + 1 : Math.max(prev - 1, 0));
+        toast.error('Nie udało się zapisać reakcji');
       }
     } catch {
-      // Revert on network error
       setHasReacted(wasReacted);
       setCount(prev => wasReacted ? prev + 1 : Math.max(prev - 1, 0));
+      toast.error('Nie udało się zapisać reakcji');
     } finally {
       setToggling(false);
     }

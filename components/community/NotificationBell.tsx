@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Bell } from 'lucide-react';
+import { UserAvatar } from './UserAvatar';
 import { useNotificationCount, useNotifications } from '@/lib/community/hooks/useNotifications';
 import { useRouter } from 'next/navigation';
 import type { NotificationWithActor } from '@/lib/community/types';
@@ -63,7 +64,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-h-96 bg-htg-card border border-htg-card-border rounded-xl shadow-2xl overflow-hidden z-50">
+        <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] max-h-96 bg-htg-card border border-htg-card-border rounded-xl shadow-2xl overflow-hidden z-50">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-htg-card-border">
             <h3 className="font-medium text-sm text-htg-fg">Powiadomienia</h3>
@@ -100,9 +101,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-htg-surface flex items-center justify-center text-xs font-medium text-htg-fg shrink-0">
-                    {n.actor?.display_name?.[0]?.toUpperCase() || '?'}
-                  </div>
+                  <UserAvatar avatarUrl={n.actor?.avatar_url} displayName={n.actor?.display_name} size="sm" className="shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-htg-fg">
                       <span className="font-medium">{n.actor?.display_name || 'Ktoś'}</span>

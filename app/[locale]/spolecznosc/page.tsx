@@ -3,9 +3,21 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 import { GroupCard } from '@/components/community/GroupCard';
+import { PushConsentBanner } from '@/components/community/PushConsentBanner';
 import { Users2, Plus } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import type { GroupWithMeta } from '@/lib/community/types';
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'Community' });
+  return {
+    title: t('title'),
+    description: t('meta_description'),
+    openGraph: { title: t('title'), description: t('meta_description') },
+  };
+}
 
 export default async function CommunityPage({
   params,
@@ -88,15 +100,16 @@ export default async function CommunityPage({
 
   return (
     <div>
+      <PushConsentBanner />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-serif font-bold text-htg-fg">
           {t('title')}
         </h1>
         {isAdmin && (
-          <span className="text-xs text-htg-fg-muted">
-            {/* TODO: Link to admin group creation */}
-            Admin: utwórz grupy przez API
-          </span>
+          <Link href="/konto/admin/spolecznosc" className="text-xs text-htg-sage hover:underline">
+            Zarządzaj grupami →
+          </Link>
         )}
       </div>
 

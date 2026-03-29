@@ -7,9 +7,10 @@ import type { PostWithAuthor, CursorPage } from '../types';
 interface UseFeedOptions {
   groupId: string;
   limit?: number;
+  search?: string;
 }
 
-export function useFeed({ groupId, limit = 20 }: UseFeedOptions) {
+export function useFeed({ groupId, limit = 20, search }: UseFeedOptions) {
   const [posts, setPosts] = useState<PostWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -21,6 +22,7 @@ export function useFeed({ groupId, limit = 20 }: UseFeedOptions) {
     try {
       const params = new URLSearchParams({ group_id: groupId, limit: String(limit) });
       if (cursor) params.set('cursor', cursor);
+      if (search) params.set('search', search);
 
       const res = await fetch(`/api/community/posts?${params}`);
       if (!res.ok) throw new Error('Failed to fetch posts');
@@ -31,7 +33,7 @@ export function useFeed({ groupId, limit = 20 }: UseFeedOptions) {
       setError(err instanceof Error ? err.message : 'Error');
       return null;
     }
-  }, [groupId, limit]);
+  }, [groupId, limit, search]);
 
   // Initial load
   useEffect(() => {

@@ -11,6 +11,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { locales, routing } from "@/i18n-config";
 import { Link } from "@/i18n-config";
+import { Toaster } from "sonner";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -126,6 +127,7 @@ export default async function LocaleLayout({
             </main>
 
             <Footer />
+            <Toaster richColors position="bottom-right" />
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

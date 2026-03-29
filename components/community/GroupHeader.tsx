@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowLeft, Users, Lock, Globe, Shield, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Link } from '@/i18n-config';
 import type { CommunityGroup } from '@/lib/community/types';
 
@@ -21,10 +22,10 @@ export function GroupHeader({ group, memberCount, isMember, canModerate, slug }:
     setJoining(true);
     try {
       const res = await fetch(`/api/community/groups/${slug}/join`, { method: 'POST' });
-      if (res.ok) setJoined(true);
-    } finally {
-      setJoining(false);
-    }
+      if (res.ok) { setJoined(true); toast.success('Dołączono do grupy'); }
+      else toast.error('Nie udało się dołączyć do grupy');
+    } catch { toast.error('Coś poszło nie tak'); }
+    finally { setJoining(false); }
   };
 
   const handleLeave = async () => {
@@ -32,10 +33,10 @@ export function GroupHeader({ group, memberCount, isMember, canModerate, slug }:
     setJoining(true);
     try {
       const res = await fetch(`/api/community/groups/${slug}/join`, { method: 'DELETE' });
-      if (res.ok) setJoined(false);
-    } finally {
-      setJoining(false);
-    }
+      if (res.ok) { setJoined(false); toast.success('Opuszczono grupę'); }
+      else toast.error('Nie udało się opuścić grupy');
+    } catch { toast.error('Coś poszło nie tak'); }
+    finally { setJoining(false); }
   };
 
   const visibilityBadge = {

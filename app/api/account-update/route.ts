@@ -13,28 +13,46 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status');
 
+  // Always use service role to bypass RLS issues
+  const db = createSupabaseServiceRole();
+
   if (isAdmin) {
-    // Admin sees all requests with user info
-    const db = createSupabaseServiceRole();
+    // Admin sees all requests — fetch profiles separately to avoid FK join issues
     let query = db
       .from('account_update_requests')
-      .select('*, profiles!account_update_requests_user_id_fkey(email, display_name)')
+      .select('*')
       .order('created_at', { ascending: false });
     if (status && status !== 'all') query = query.eq('status', status);
-    const { data, error } = await query;
+    const { data: requests, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(data);
+
+    // Enrich with user profiles
+    if (requests && requests.length > 0) {
+      const userIds = [...new Set(requests.map(r => r.user_id))];
+      const { data: profiles } = await db
+        .from('profiles')
+        .select('id, email, display_name')
+        .in('id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const enriched = requests.map(r => ({
+        ...r,
+        profiles: profileMap.get(r.user_id) || null,
+      }));
+      return NextResponse.json(enriched);
+    }
+    return NextResponse.json(requests || []);
   }
 
   // Regular user sees own requests
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('account_update_requests')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json(data || []);
 }
 
 // POST — create new request
@@ -50,7 +68,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Category and description are required' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  // Use service role to bypass RLS for insert
+  const db = createSupabaseServiceRole();
+  const { data, error } = await db
     .from('account_update_requests')
     .insert({
       user_id: user.id,

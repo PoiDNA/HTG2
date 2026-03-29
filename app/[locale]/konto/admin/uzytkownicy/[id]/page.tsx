@@ -50,11 +50,11 @@ export default async function AdminUserDetailPage({
       .eq('user_id', id)
       .order('created_at', { ascending: false }),
 
-    // Bookings (individual sessions)
+    // Bookings (individual sessions) — join slot for date/time when available
     db.from('bookings')
-      .select('id, session_type, session_date, start_time, status, payment_status, payment_notes, created_at')
+      .select('id, session_type, session_date, start_time, status, payment_status, payment_comment, payment_notes, created_at, booking_slots(session_date, start_time)')
       .eq('user_id', id)
-      .order('session_date', { ascending: false }),
+      .order('created_at', { ascending: false }),
 
     // Orders
     db.from('orders')
@@ -109,11 +109,18 @@ export default async function AdminUserDetailPage({
   const monthlyEntitlements = entitlements.filter(e => e.type === 'monthly');
   const yearlyEntitlements = entitlements.filter(e => e.type === 'yearly');
 
+  // Resolve session date: manual bookings use session_date column, slot-based use booking_slots.session_date
+  const getBookingDate = (b: typeof bookings[0]) =>
+    b.session_date || (b.booking_slots as { session_date?: string } | null)?.session_date || '';
+  const getBookingTime = (b: typeof bookings[0]) =>
+    b.start_time || (b.booking_slots as { start_time?: string } | null)?.start_time || '';
+
+  const today = new Date().toISOString().slice(0, 10);
   const upcomingBookings = bookings.filter(b =>
-    b.session_date >= new Date().toISOString().slice(0, 10) && b.status !== 'cancelled'
+    getBookingDate(b) >= today && b.status !== 'cancelled'
   );
   const pastBookings = bookings.filter(b =>
-    b.session_date < new Date().toISOString().slice(0, 10) || b.status === 'completed'
+    getBookingDate(b) < today || b.status === 'completed'
   );
 
   return (
@@ -221,7 +228,7 @@ export default async function AdminUserDetailPage({
                       <p className="text-sm font-medium text-htg-fg">
                         {SESSION_TYPE_LABELS[b.session_type] || b.session_type}
                       </p>
-                      <p className="text-xs text-htg-fg-muted">{b.session_date} · {b.start_time?.slice(0,5)}</p>
+                      <p className="text-xs text-htg-fg-muted">{getBookingDate(b)} · {getBookingTime(b)?.slice(0,5)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -326,7 +333,7 @@ export default async function AdminUserDetailPage({
                 <div key={b.id} className="flex items-center justify-between py-2 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap">
                   <div>
                     <p className="text-sm text-htg-fg">{SESSION_TYPE_LABELS[b.session_type] || b.session_type}</p>
-                    <p className="text-xs text-htg-fg-muted">{b.session_date} · {b.start_time?.slice(0,5)}</p>
+                    <p className="text-xs text-htg-fg-muted">{getBookingDate(b)} · {getBookingTime(b)?.slice(0,5)}</p>
                   </div>
                   {ps && (
                     <span className={`text-xs px-2 py-0.5 rounded-full ${ps.color}`}>{ps.label}</span>

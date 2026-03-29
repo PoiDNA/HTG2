@@ -41,7 +41,7 @@ export default async function SessionDetailPage({
   let isAdmin = false;
   if (staffMember?.user_id) {
     const { data: profile } = await admin.from('profiles').select('role').eq('id', staffMember.user_id).single();
-    isAdmin = profile?.role === 'admin' || profile?.role === 'moderator';
+    isAdmin = profile?.role === 'admin';
   }
   const canEditPayment = isPractitioner || isAdmin;
 

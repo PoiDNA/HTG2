@@ -1,26 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { staffMember, user: authUser } = await getEffectiveStaffMember();
 
-  // Allow practitioner directly
+  // Auth: get the real logged-in user from session cookies
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const db = createSupabaseServiceRole();
+
+  // Check profile role (admin always allowed)
+  const { data: profile } = await db.from('profiles').select('role').eq('id', user.id).single();
+  const isAdmin = profile?.role === 'admin';
+
+  // Check if practitioner (Natalia — role 'practitioner' in staff_members)
+  const { data: staffMember } = await db
+    .from('staff_members')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .maybeSingle();
   const isPractitioner = staffMember?.role === 'practitioner';
 
-  if (!isPractitioner) {
-    // Fallback: check profiles.role for admin (works even when staffMember is null)
-    const profileUserId = staffMember?.user_id ?? authUser?.id;
-    if (!profileUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    const db = createSupabaseServiceRole();
-    const { data: profile } = await db.from('profiles').select('role').eq('id', profileUserId).single();
-    if (!profile || !['admin', 'moderator'].includes(profile?.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+  if (!isAdmin && !isPractitioner) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const body = await request.json();

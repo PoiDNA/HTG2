@@ -153,6 +153,25 @@ export default function SiteNav() {
             <div className="flex items-center gap-3 pt-2 border-t border-htg-card-border mt-2">
               <FontSizeToggle />
               <ThemeToggle />
+              {!loading && (
+                isLoggedIn ? (
+                  <button
+                    onClick={handleLogout}
+                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-500 hover:bg-htg-surface transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    {tPanel('logout')}
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-htg-indigo hover:bg-htg-surface transition-colors"
+                  >
+                    Zaloguj
+                  </Link>
+                )
+              )}
             </div>
           </div>
         </div>

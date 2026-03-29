@@ -1,7 +1,12 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { Play } from 'lucide-react';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
+import { createSupabaseServer } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/roles';
+import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 
 export function generateStaticParams() {
@@ -11,6 +16,24 @@ export function generateStaticParams() {
 export default async function MySessionsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  // Redirect admin to admin dashboard (unless impersonating a user)
+  const cookieStore = await cookies();
+  const isImpersonating = !!cookieStore.get(IMPERSONATE_USER_COOKIE)?.value;
+  if (!isImpersonating) {
+    const sessionClient = await createSupabaseServer();
+    const { data: { user } } = await sessionClient.auth.getUser();
+    if (user) {
+      const isAdminByEmail = isAdminEmail(user.email ?? '');
+      if (isAdminByEmail) {
+        redirect(`/${locale}/konto/admin`);
+      } else {
+        const { data: profile } = await sessionClient.from('profiles').select('role').eq('id', user.id).single();
+        if (profile?.role === 'admin') redirect(`/${locale}/konto/admin`);
+      }
+    }
+  }
+
   const t = await getTranslations({ locale, namespace: 'Account' });
 
   const { userId, supabase } = await getEffectiveUser();

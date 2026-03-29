@@ -22,6 +22,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(true);
 
   const editor = useEditor({
     extensions: [
@@ -44,6 +45,9 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
         suggestion: MentionSuggestion(groupId),
       }),
     ],
+    onUpdate: ({ editor: e }) => {
+      setIsEmpty(e.isEmpty);
+    },
     editorProps: {
       attributes: {
         class: compact
@@ -54,13 +58,14 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
   });
 
   const handleSubmit = useCallback(async () => {
-    if (!editor || editor.isEmpty) return;
+    if (!editor || isEmpty) return;
     setSubmitting(true);
 
     try {
       const content = editor.getJSON() as TipTapContent;
       await onSubmit(content, attachments);
       editor.commands.clearContent();
+      setIsEmpty(true);
       setAttachments([]);
       setShowUpload(false);
     } catch (err) {
@@ -68,7 +73,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
     } finally {
       setSubmitting(false);
     }
-  }, [editor, attachments, onSubmit]);
+  }, [editor, attachments, onSubmit, isEmpty]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (compact && e.key === 'Enter' && !e.shiftKey) {
@@ -142,7 +147,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={submitting || !editor || editor.isEmpty}
+          disabled={submitting || !editor || isEmpty}
           className="flex items-center gap-2 px-4 py-2 bg-htg-sage text-white rounded-lg font-medium text-sm hover:bg-htg-sage-dark transition-colors disabled:opacity-50"
         >
           {submitting ? (

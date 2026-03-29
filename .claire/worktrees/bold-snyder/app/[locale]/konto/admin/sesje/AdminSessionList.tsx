@@ -2,35 +2,32 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, Calendar, CheckCircle, Download, ExternalLink } from 'lucide-react';
-import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
-
-const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  installments:         { label: PAYMENT_STATUS_LABELS.installments,         className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
-  partial_payment:      { label: PAYMENT_STATUS_LABELS.partial_payment,      className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
-  pending_verification: { label: PAYMENT_STATUS_LABELS.pending_verification, className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-};
-import { SESSION_CONFIG } from '@/lib/booking/constants';
-import type { SessionType } from '@/lib/booking/types';
+import { Search, Calendar, CheckCircle, Download, Trash2, ExternalLink } from 'lucide-react';
 
 const SESSION_TYPES_CONFIG = [
   { key: 'all',             label: 'Wszystkie',        short: 'Wszystkie', className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
   { key: 'natalia_solo',   label: 'Sesje 1:1',         short: '1:1',       className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
   { key: 'natalia_asysta', label: 'Sesje z Asystą',    short: 'Asysta',    className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
-  { key: 'natalia_justyna', label: 'Sesje z Justyną', short: 'Justyna',   className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  { key: 'natalia_justyna','label': 'Sesje z Justyną', short: 'Justyna',   className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
   { key: 'natalia_agata',  label: 'Sesje z Agatą',     short: 'Agata',     className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
   { key: 'natalia_para',   label: 'Sesje dla Par',     short: 'Para',      className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
 ] as const;
 
 type TypeKey = typeof SESSION_TYPES_CONFIG[number]['key'];
 
-const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
-  natalia_solo:    { className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
-  natalia_agata:   { className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
-  natalia_justyna: { className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
-  natalia_para:    { className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
-  natalia_asysta:  { className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
+const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> = {
+  natalia_solo:    { label: '1:1',     className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
+  natalia_agata:   { label: 'Agata',   className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
+  natalia_justyna: { label: 'Justyna', className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  natalia_para:    { label: 'Para',    className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
+  natalia_asysta:  { label: 'Asysta',  className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
+};
+
+const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  confirmed_paid:      { label: 'Opłacona',         className: 'bg-green-900/30 text-green-400' },
+  installments:        { label: 'Raty',              className: 'bg-amber-900/30 text-amber-400' },
+  partial_payment:     { label: 'Niepełna',          className: 'bg-orange-900/30 text-orange-400' },
+  pending_verification:{ label: 'Do potwierdzenia', className: 'bg-yellow-900/30 text-yellow-400' },
 };
 
 function getSlot(b: any) { return Array.isArray(b.slot) ? b.slot[0] : b.slot; }
@@ -38,9 +35,8 @@ function getClient(b: any) { return Array.isArray(b.client) ? b.client[0] : b.cl
 
 function TypeBadge({ type }: { type: string }) {
   const tb = SESSION_TYPE_BADGE[type];
-  const label = SESSION_CONFIG[type as SessionType]?.labelShort || type;
   return tb
-    ? <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{label}</span>
+    ? <span className={`text-xs px-2 py-0.5 rounded-full ${tb.className}`}>{tb.label}</span>
     : <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">{type}</span>;
 }
 
@@ -56,7 +52,8 @@ export default function AdminSessionList({
   const [typeTab, setTypeTab] = useState<TypeKey>('all');
   const [statusTab, setStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');
-  const [deletedIds] = useState<Set<string>>(new Set());
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const q = search.toLowerCase().trim();
 
@@ -99,6 +96,19 @@ export default function AdminSessionList({
     return base.filter(b => { const s = getSlot(b); return s?.slot_date < todayStr || b.status === 'completed'; }).length;
   }
 
+  async function deleteSession(e: React.MouseEvent, bookingId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Czy na pewno chcesz usunąć tę sesję?')) return;
+    setDeleting(bookingId);
+    try {
+      const res = await fetch(`/api/booking/${bookingId}/delete`, { method: 'DELETE' });
+      if (res.ok) setDeletedIds(prev => new Set([...prev, bookingId]));
+      else alert('Nie udało się usunąć sesji.');
+    } catch { alert('Błąd połączenia.'); }
+    setDeleting(null);
+  }
+
   function exportPDF() {
     const rows = filtered.map(b => {
       const slot = getSlot(b);
@@ -110,7 +120,7 @@ export default function AdminSessionList({
         <td>${slot?.start_time?.slice(0, 5) || ''}</td>
         <td>${client?.display_name || client?.email || '—'}</td>
         <td>${client?.email || ''}</td>
-        <td>${SESSION_CONFIG[b.session_type as SessionType]?.labelShort || b.session_type}</td>
+        <td>${tb?.label || b.session_type}</td>
         <td>${ps.label}</td>
       </tr>`;
     }).join('');
@@ -217,6 +227,7 @@ tr:nth-child(even){background:#f9f9f9}
             const client = getClient(b);
             const isToday = slot?.slot_date === todayStr;
             const ps = PAYMENT_STATUS_BADGE[b.payment_status] || { label: '—', className: 'bg-htg-surface text-htg-fg-muted' };
+            const isDeleting = deleting === b.id;
 
             return (
               <div
@@ -225,7 +236,7 @@ tr:nth-child(even){background:#f9f9f9}
                   isToday && statusTab === 'upcoming'
                     ? 'bg-htg-sage/5 border-htg-sage/30'
                     : 'bg-htg-card border-htg-card-border'
-                } ${statusTab === 'past' ? 'opacity-70' : ''}`}
+                } ${statusTab === 'past' ? 'opacity-70' : ''} ${isDeleting ? 'opacity-30' : ''}`}
               >
                 {/* Main info — link to session detail */}
                 <Link href={`/${locale}/prowadzacy/sesje/${b.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
@@ -261,6 +272,14 @@ tr:nth-child(even){background:#f9f9f9}
                   >
                     <ExternalLink className="w-4 h-4" />
                   </Link>
+                  <button
+                    onClick={(e) => deleteSession(e, b.id)}
+                    disabled={isDeleting}
+                    className="p-1.5 rounded-lg text-htg-fg-muted hover:text-red-400 hover:bg-red-900/20 transition-colors"
+                    title="Usuń sesję"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             );

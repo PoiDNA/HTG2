@@ -7,17 +7,17 @@ const LEVELS = [100, 120, 140, 160]; // % of base font size
 const LABELS = ['A', 'A+', 'A++', 'A+++'];
 
 export default function FontSizeToggle() {
-  const [level, setLevel] = useState(0);
+  const [level, setLevel] = useState(1); // default A+
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount (default to 1 = A+ if no preference saved)
   useEffect(() => {
     const saved = localStorage.getItem('htg-font-level');
-    if (saved) {
-      const idx = parseInt(saved);
-      if (idx >= 0 && idx < LEVELS.length) {
-        setLevel(idx);
-        applyFontSize(idx);
-      }
+    const idx = saved !== null ? parseInt(saved) : 1;
+    if (idx >= 0 && idx < LEVELS.length) {
+      setLevel(idx);
+      applyFontSize(idx);
+    } else {
+      applyFontSize(1);
     }
   }, []);
 

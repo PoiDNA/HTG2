@@ -7,7 +7,14 @@ import StripeConnectCard from '@/components/staff/StripeConnectCard';
 import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
-import { PAYMENT_STATUS_BADGE } from '@/lib/booking/constants';
+import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
+
+const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+  installments:         { label: PAYMENT_STATUS_LABELS.installments,         className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
+  partial_payment:      { label: PAYMENT_STATUS_LABELS.partial_payment,      className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
+  pending_verification: { label: PAYMENT_STATUS_LABELS.pending_verification, className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
+};
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 

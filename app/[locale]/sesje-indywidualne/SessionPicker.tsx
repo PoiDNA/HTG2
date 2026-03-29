@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from '@/i18n-config';
-import { PRODUCT_SLUGS } from '@/lib/booking/constants';
+import { PRODUCT_SLUGS, SESSION_CONFIG } from '@/lib/booking/constants';
 import { User, Users, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap, Heart, Gift } from 'lucide-react';
 
 interface SessionOption {
@@ -70,7 +70,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   );
   const paraSession = sessions.find(s => s.sessionType === 'natalia_para') ?? {
     slug: PRODUCT_SLUGS.SESSION_PARA,
-    name: 'Sesja dla par',
+    name: SESSION_CONFIG.natalia_para.label,
     description: 'Sesja dla dwóch osób z Natalią',
     amount: 160000,
     currency: 'pln',

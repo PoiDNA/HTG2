@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Rate limit exceeded. Max 5 reports per hour.' }, { status: 429 });
   }
 
-  // Get group_id from target
+  // Resolve group_id from target and verify the reporter can see the content
   let groupId: string | null = null;
   if (target_type === 'post') {
     const { data } = await supabase.from('community_posts').select('group_id').eq('id', target_id).single();
@@ -35,6 +35,22 @@ export async function POST(req: NextRequest) {
   } else {
     const { data } = await supabase.from('community_comments').select('group_id').eq('id', target_id).single();
     groupId = data?.group_id ?? null;
+  }
+
+  if (!groupId) {
+    return NextResponse.json({ error: 'Target not found' }, { status: 404 });
+  }
+
+  if (!auth.isAdmin && !auth.isStaff) {
+    const { data: membership } = await supabase
+      .from('community_memberships')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .single();
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
   }
 
   const { data: report, error } = await supabase

@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 
-// Temporary debug endpoint — remove after fixing
+// Temporary debug endpoint — staff only
 export async function GET(request: NextRequest) {
   const sessionId = request.nextUrl.searchParams.get('sessionId');
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { isStaffEmail } = await import('@/lib/roles');
+  if (!isStaffEmail(user.email ?? '')) {
+    return NextResponse.json({ error: 'Staff only' }, { status: 403 });
+  }
 
   const admin = createSupabaseServiceRole();
 

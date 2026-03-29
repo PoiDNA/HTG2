@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isStaffEmail, isAdminEmail } from '@/lib/roles';
 import { transferToAssistant, SESSION_PAYOUT_CONFIG } from '@/lib/stripe-connect';
 
@@ -21,10 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'bookingId required' }, { status: 400 });
     }
 
-    const admin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
+    const admin = createSupabaseServiceRole();
 
     // 1. Get settlement record
     const { data: settlement, error: settleErr } = await admin
@@ -133,13 +130,18 @@ export async function POST(request: NextRequest) {
 
 // GET /api/stripe/settle — get settlement status for a booking
 export async function GET(request: NextRequest) {
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Only staff/admin can view settlements
+  if (!user || (!isStaffEmail(user.email ?? '') && !isAdminEmail(user.email ?? ''))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const bookingId = request.nextUrl.searchParams.get('bookingId');
   if (!bookingId) return NextResponse.json({ error: 'bookingId required' }, { status: 400 });
 
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+  const admin = createSupabaseServiceRole();
 
   const { data } = await admin
     .from('session_settlements')

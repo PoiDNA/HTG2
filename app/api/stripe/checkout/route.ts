@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,13 +55,7 @@ export async function POST(request: NextRequest) {
     let lineItems: any[];
 
     if (amountOverride && amountOverride > 0) {
-      // Human-readable session type names
-      const SESSION_TYPE_NAMES: Record<string, string> = {
-        natalia_solo: 'Sesja 1:1 z Natalią',
-        natalia_agata: 'Sesja z Natalią i Agatą',
-        natalia_justyna: 'Sesja z Natalią i Justyną',
-      };
-      const sessionName = SESSION_TYPE_NAMES[metadata.session_type] || 'Sesja indywidualna HTG';
+      const sessionName = SESSION_CONFIG[metadata.session_type as SessionType]?.label || metadata.session_type || 'Sesja indywidualna HTG';
 
       const productName = metadata.payment_mode === 'installments'
         ? `Rata ${metadata.installment_number || 1}/3 — ${sessionName}`

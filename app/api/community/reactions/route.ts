@@ -24,7 +24,33 @@ export async function POST(req: NextRequest) {
   const auth = await requireCommunityAuth();
   if ('error' in auth) return auth.error;
 
-  const { supabase, user } = auth;
+  const { supabase, user, isAdmin, isStaff } = auth;
+
+  // Resolve group from target and verify caller has access
+  let targetGroupId: string | null = null;
+  if (target_type === 'post') {
+    const { data: post } = await supabase.from('community_posts').select('group_id').eq('id', target_id).single();
+    targetGroupId = post?.group_id ?? null;
+  } else {
+    const { data: comment } = await supabase.from('community_comments').select('group_id').eq('id', target_id).single();
+    targetGroupId = comment?.group_id ?? null;
+  }
+
+  if (!targetGroupId) {
+    return NextResponse.json({ error: 'Target not found' }, { status: 404 });
+  }
+
+  if (!isAdmin && !isStaff) {
+    const { data: membership } = await supabase
+      .from('community_memberships')
+      .select('id')
+      .eq('group_id', targetGroupId)
+      .eq('user_id', user.id)
+      .single();
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  }
 
   // Check if reaction already exists
   const { data: existing } = await supabase
@@ -71,35 +97,24 @@ export async function POST(req: NextRequest) {
 
   await logCommunityAction(user.id, 'reaction');
 
-  // Notify the target owner
+  // Notify the target owner (reuse targetGroupId resolved above)
   let targetOwnerId: string | null = null;
-  let groupId: string | null = null;
 
   if (target_type === 'post') {
-    const { data: post } = await supabase
-      .from('community_posts')
-      .select('user_id, group_id')
-      .eq('id', target_id)
-      .single();
+    const { data: post } = await supabase.from('community_posts').select('user_id').eq('id', target_id).single();
     targetOwnerId = post?.user_id ?? null;
-    groupId = post?.group_id ?? null;
   } else {
-    const { data: comment } = await supabase
-      .from('community_comments')
-      .select('user_id, group_id')
-      .eq('id', target_id)
-      .single();
+    const { data: comment } = await supabase.from('community_comments').select('user_id').eq('id', target_id).single();
     targetOwnerId = comment?.user_id ?? null;
-    groupId = comment?.group_id ?? null;
   }
 
-  if (targetOwnerId && groupId) {
+  if (targetOwnerId && targetGroupId) {
     await notifyReaction({
       targetOwnerId,
       reactorId: user.id,
       targetType: target_type,
       targetId: target_id,
-      groupId,
+      groupId: targetGroupId,
     });
   }
 
@@ -122,7 +137,29 @@ export async function GET(req: NextRequest) {
   const auth = await requireCommunityAuth();
   if ('error' in auth) return auth.error;
 
-  const { supabase } = auth;
+  const { supabase, user: authUser, isAdmin, isStaff } = auth;
+
+  // Verify caller can access the target's group
+  let groupId: string | null = null;
+  if (targetType === 'post') {
+    const { data: post } = await supabase.from('community_posts').select('group_id').eq('id', targetId).single();
+    groupId = post?.group_id ?? null;
+  } else {
+    const { data: comment } = await supabase.from('community_comments').select('group_id').eq('id', targetId).single();
+    groupId = comment?.group_id ?? null;
+  }
+
+  if (groupId && !isAdmin && !isStaff) {
+    const { data: membership } = await supabase
+      .from('community_memberships')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', authUser.id)
+      .single();
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  }
 
   const { data: reactions } = await supabase
     .from('community_reactions')

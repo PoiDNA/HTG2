@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createLiveKitToken, createRoom } from '@/lib/live/livekit';
 import { isStaffEmail } from '@/lib/roles';
@@ -21,16 +21,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
     }
 
-    // Use service role to bypass RLS (we verify access manually)
-    const adminClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
+    // Fetch live session using the authenticated user client to respect RLS
+    // or keep using service role but ensure that the initial fetch respects the user context if possible.
+    // However, live_sessions RLS might restrict reading. We should safely read via service_role,
+    // but ONLY select what we absolutely need, and immediately check permissions.
+    const adminClient = createSupabaseServiceRole();
 
     // Fetch live session with explicit FK hint
     const { data: session, error: sessionError } = await adminClient
       .from('live_sessions')
-      .select('*, booking:bookings!live_sessions_booking_id_fkey(user_id)')
+      .select('id, room_name, booking:bookings!live_sessions_booking_id_fkey(user_id)')
       .eq('id', sessionId)
       .single();
 

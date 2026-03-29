@@ -112,9 +112,6 @@ export default async function LocaleLayout({
               <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between relative">
                 <Link href="/" className="flex items-center gap-3">
                   <span className="text-2xl font-serif font-bold text-htg-indigo">HTG</span>
-                  <span className="hidden sm:inline-block text-xs text-htg-fg-muted border-l border-htg-card-border pl-3">
-                    Hacking The Game
-                  </span>
                 </Link>
                 <div className="flex items-center gap-0">
                   <SiteNav />

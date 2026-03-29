@@ -6,9 +6,13 @@ import { VALID_TRANSITIONS } from '@/lib/live/constants';
 import { startRoomCompositeEgress, startParticipantEgress, stopEgress } from '@/lib/live/livekit';
 import type { Phase, PhaseChangeRequest } from '@/lib/live/types';
 
-// GET — poll current phase
+// GET — poll current phase (requires authenticated user)
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const sessionId = request.nextUrl.searchParams.get('sessionId');
     if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
 
@@ -40,10 +44,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'sessionId and newPhase required' }, { status: 400 });
     }
 
-    // Fetch current session
     const { data: session, error: fetchError } = await admin
       .from('live_sessions')
-      .select('*')
+      .select(`
+        id, phase, room_name, booking_id, slot_id,
+        started_at, sesja_started_at, podsumowanie_started_at,
+        egress_wstep_id, egress_sesja_id, egress_sesja_tracks_ids, egress_podsumowanie_id,
+        session_type
+      `)
       .eq('id', sessionId)
       .single();
 

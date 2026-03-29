@@ -57,10 +57,9 @@ export default function UserPanelNav() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-sm font-medium text-htg-fg-muted hover:text-htg-fg transition-colors"
+        className="flex items-center gap-1 text-sm font-medium text-htg-fg-muted hover:text-htg-fg transition-colors"
       >
         <UserCircle className="w-5 h-5" />
-        <span className="hidden lg:inline max-w-[120px] truncate">{displayName}</span>
         <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -69,9 +68,6 @@ export default function UserPanelNav() {
           {/* User info */}
           <div className="px-4 py-2 border-b border-htg-card-border">
             <p className="text-sm font-medium text-htg-fg truncate">{displayName}</p>
-            {user?.email && displayName !== user.email && (
-              <p className="text-xs text-htg-fg-muted truncate">{user.email}</p>
-            )}
           </div>
 
           {/* Admin: show only admin items, no user/staff sections */}

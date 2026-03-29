@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCommunityAuth } from '@/lib/community/auth';
+import { requireCommunityAuth, isCommunityModerator } from '@/lib/community/auth';
 import crypto from 'crypto';
 
 /**
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .single();
 
-    if (!membership || !['moderator', 'admin'].includes(membership.role)) {
+    if (!membership || !isCommunityModerator(membership.role)) {
       return NextResponse.json({ error: 'Only moderators can create invites' }, { status: 403 });
     }
   }
@@ -70,9 +70,23 @@ export async function GET(req: NextRequest) {
   const auth = await requireCommunityAuth();
   if ('error' in auth) return auth.error;
 
+  const { supabase, user, isAdmin, isStaff } = auth;
   const groupId = req.nextUrl.searchParams.get('group_id');
   if (!groupId) {
     return NextResponse.json({ error: 'group_id is required' }, { status: 400 });
+  }
+
+  if (!isAdmin && !isStaff) {
+    const { data: membership } = await supabase
+      .from('community_memberships')
+      .select('role')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!membership || !isCommunityModerator(membership.role)) {
+      return NextResponse.json({ error: 'Only moderators can view invites' }, { status: 403 });
+    }
   }
 
   const { data: invites } = await auth.supabase

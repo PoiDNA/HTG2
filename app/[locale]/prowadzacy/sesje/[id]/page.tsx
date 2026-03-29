@@ -4,19 +4,21 @@ import { setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n-config';
 import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History } from 'lucide-react';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
-import { PAYMENT_STATUS_BADGE } from '@/lib/booking/constants';
+import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
+
+const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+  installments:         { label: PAYMENT_STATUS_LABELS.installments,         className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
+  partial_payment:      { label: PAYMENT_STATUS_LABELS.partial_payment,      className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
+  pending_verification: { label: PAYMENT_STATUS_LABELS.pending_verification, className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
+};
 import PaymentCommentEditor from './PaymentCommentEditor';
 import SessionTypeSelector from './SessionTypeSelector';
 import ClientNameEditor from './ClientNameEditor';
 import DeleteSessionButton from './DeleteSessionButton';
 
-const SESSION_LABELS: Record<string, string> = {
-  natalia_solo: 'Sesja 1:1 z Natalią',
-  natalia_agata: 'Sesja z Natalią i Agatą',
-  natalia_justyna: 'Sesja z Natalią i Justyną',
-  natalia_para: 'Sesja dla par',
-  natalia_asysta: 'Sesja z Asystą',
-};
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
 export default async function SessionDetailPage({
   params,
@@ -93,7 +95,7 @@ export default async function SessionDetailPage({
       {/* Session info */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-4">
         <h1 className="text-xl font-serif font-bold text-htg-fg">
-          {SESSION_LABELS[booking.session_type] || booking.session_type}
+          {SESSION_CONFIG[booking.session_type as SessionType]?.label || booking.session_type}
         </h1>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -188,7 +190,7 @@ export default async function SessionDetailPage({
                 >
                   <span className="text-htg-fg-muted w-24 shrink-0">{hSlot?.slot_date || '—'}</span>
                   <span className="text-htg-fg w-14 shrink-0">{hSlot?.start_time?.slice(0,5) || ''}</span>
-                  <span className="text-xs text-htg-fg-muted flex-1">{SESSION_LABELS[h.session_type] || h.session_type}</span>
+                  <span className="text-xs text-htg-fg-muted flex-1">{SESSION_CONFIG[h.session_type as SessionType]?.labelShort || h.session_type}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${hPs.className}`}>{hPs.label}</span>
                   {isCurrent && <span className="text-xs text-htg-sage font-bold">← ta sesja</span>}
                 </div>

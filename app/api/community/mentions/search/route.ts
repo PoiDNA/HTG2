@@ -17,9 +17,22 @@ export async function GET(req: NextRequest) {
   const auth = await requireCommunityAuth();
   if ('error' in auth) return auth.error;
 
-  const { supabase, user } = auth;
+  const { supabase, user, isAdmin, isStaff } = auth;
 
-  // Get group members
+  // Verify caller can access this group before exposing its members
+  if (!isAdmin && !isStaff) {
+    const { data: callerMembership } = await supabase
+      .from('community_memberships')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!callerMembership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  }
+
   const { data: memberships } = await supabase
     .from('community_memberships')
     .select('user_id')

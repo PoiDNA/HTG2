@@ -98,7 +98,21 @@ export async function GET(req: NextRequest) {
 
   const { supabase, user } = auth;
 
-  // Get all votes
+  // Verify caller can access the post's group
+  const { data: post } = await supabase
+    .from('community_posts')
+    .select('group_id')
+    .eq('id', postId)
+    .is('deleted_at', null)
+    .single();
+
+  if (!post) {
+    return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+  }
+
+  const groupAuth = await requireGroupAccess(post.group_id);
+  if ('error' in groupAuth) return groupAuth.error;
+
   const { data: votes } = await supabase
     .from('community_poll_votes')
     .select('option_index, user_id')

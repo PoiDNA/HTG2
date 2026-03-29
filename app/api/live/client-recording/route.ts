@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET — list recordings for a booking
+// GET — list recordings for a booking (scoped to current user unless staff)
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -68,11 +68,13 @@ export async function GET(request: NextRequest) {
 
   const bookingId = request.nextUrl.searchParams.get('bookingId');
   const admin = createSupabaseServiceRole();
+  const staff = (await import('@/lib/roles')).isStaffEmail(user.email ?? '');
 
   let query = admin.from('client_recordings').select('*');
 
   if (bookingId) {
     query = query.eq('booking_id', bookingId);
+    if (!staff) query = query.eq('user_id', user.id);
   } else {
     query = query.eq('user_id', user.id);
   }

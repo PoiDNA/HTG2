@@ -9,10 +9,14 @@ import type { NotificationWithActor } from '@/lib/community/types';
 
 interface NotificationBellProps {
   userId: string;
+  alwaysShow?: boolean;
 }
 
-export function NotificationBell({ userId }: NotificationBellProps) {
+export function NotificationBell({ userId, alwaysShow = false }: NotificationBellProps) {
   const { count, resetCount } = useNotificationCount(userId);
+
+  // Hide bell when no notifications unless on community page
+  if (count === 0 && !alwaysShow) return null;
   const { notifications, loading, fetchNotifications, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);

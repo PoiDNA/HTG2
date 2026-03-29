@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isStaffEmail } from '@/lib/roles';
 import type { AdmitRequest } from '@/lib/live/types';
@@ -24,16 +24,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
     }
 
-    // Use service role to bypass RLS
-    const admin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
+    // Use service role to bypass RLS, because staff members update the session state,
+    // which may not be fully accessible for writes without service role depending on RLS.
+    // The security is guaranteed by `isStaffEmail` above.
+    const admin = createSupabaseServiceRole();
 
     // Fetch session — must be in poczekalnia phase
     const { data: session, error: fetchError } = await admin
       .from('live_sessions')
-      .select('*')
+      .select('phase')
       .eq('id', sessionId)
       .single();
 

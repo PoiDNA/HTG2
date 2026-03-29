@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { sendBookingConfirmation } from '@/lib/email/resend';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,18 +42,11 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id)
         .single();
 
-      const SESSION_NAMES: Record<string, string> = {
-        natalia_solo: 'Sesja 1:1 z Natalią',
-        natalia_agata: 'Sesja z Natalią i Agatą',
-        natalia_justyna: 'Sesja z Natalią i Justyną',
-        natalia_para: 'Sesja dla par z Natalią',
-      };
-
       if (slot && profile?.email) {
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
         await sendBookingConfirmation(profile.email, {
           name: profile.display_name || profile.email.split('@')[0],
-          sessionType: SESSION_NAMES[slot.session_type] || slot.session_type,
+          sessionType: SESSION_CONFIG[slot.session_type as SessionType]?.label || slot.session_type,
           date: new Date(slot.slot_date + 'T00:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
           time: slot.start_time.slice(0, 5),
           expiresAt,

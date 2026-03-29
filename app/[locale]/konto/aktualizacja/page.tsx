@@ -51,6 +51,9 @@ const STATUS_CONFIG = {
   rejected: { label: 'Odrzucono', icon: XCircle, color: 'text-red-500 bg-red-500/10 border border-red-500/30' },
 };
 
+import { SESSION_CONFIG, PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
+
 export default function AccountUpdatePage() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
@@ -145,15 +148,7 @@ export default function AccountUpdatePage() {
   }
 
   const formatSessionType = (t: string) => {
-    const map: Record<string, string> = {
-      natalia_solo: 'Sesja 1:1 z Natalią',
-      natalia_asysta: 'Sesja z Asystą',
-      natalia_agata: 'Sesja z Natalią i Agatą',
-      natalia_justyna: 'Sesja z Natalią i Justyną',
-      natalia_para: 'Sesja dla Par',
-      pre_session: 'Sesja wstępna',
-    };
-    return map[t] || t;
+    return SESSION_CONFIG[t as SessionType]?.label || t;
   };
 
   const formatEntitlementType = (e: Entitlement) => {
@@ -408,7 +403,7 @@ export default function AccountUpdatePage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         b.payment_status === 'confirmed_paid' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'
                       }`}>
-                        {b.payment_status === 'confirmed_paid' ? 'Opłacona' : 'Do potwierdzenia'}
+                        {PAYMENT_STATUS_LABELS[b.payment_status ?? ''] || b.payment_status || 'Do potwierdzenia'}
                       </span>
                     </div>
                   ))}

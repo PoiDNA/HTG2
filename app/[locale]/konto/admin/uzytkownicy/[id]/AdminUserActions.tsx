@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, UserCog, BookOpen, Calendar, Users, RefreshCw, CheckCircle, Pencil } from 'lucide-react';
 
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
+
 interface Props {
   userId: string;
   userEmail: string;
@@ -15,10 +18,10 @@ interface Props {
 type AddPurchaseType = 'session' | 'monthly' | 'yearly' | 'individual';
 
 const INDIVIDUAL_TYPES = [
-  { value: 'natalia_solo', label: 'Sesja 1:1 z Natalią' },
-  { value: 'natalia_asysta', label: 'Sesja z Asystą' },
-  { value: 'natalia_agata', label: 'Sesja z Natalią i Agatą' },
-  { value: 'natalia_para', label: 'Sesja dla Par' },
+  { value: 'natalia_solo', label: SESSION_CONFIG['natalia_solo']?.label || 'natalia_solo' },
+  { value: 'natalia_asysta', label: SESSION_CONFIG['natalia_asysta']?.label || 'natalia_asysta' },
+  { value: 'natalia_agata', label: SESSION_CONFIG['natalia_agata']?.label || 'natalia_agata' },
+  { value: 'natalia_para', label: SESSION_CONFIG['natalia_para']?.label || 'natalia_para' },
 ];
 
 export default function AdminUserActions({ userId, userEmail, initialName = '', initialPhone = '', initialSecondEmail = '' }: Props) {

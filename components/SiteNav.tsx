@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Menu, X, LogOut, Users2 } from 'lucide-react';
+import { Menu, X, LogOut, Users2 } from 'lucide-react'; // Users2 kept for mobile menu
 import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
@@ -38,7 +38,7 @@ export default function SiteNav() {
   return (
     <nav aria-label="Nawigacja główna">
       {/* Desktop nav — linki absolutnie wyśrodkowane w headerze */}
-      <div className="hidden md:flex items-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+      <div className="hidden md:flex items-center absolute top-0 bottom-0 left-1/2 -translate-x-1/2">
         <div className="flex items-center gap-5">
           {navLinks.map(({ href, key }) => (
             <Link
@@ -46,7 +46,7 @@ export default function SiteNav() {
               href={href}
               className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
                 pathname.startsWith(href)
-                  ? 'text-htg-indigo border-b-2 border-htg-sage pb-0.5'
+                  ? 'text-htg-indigo'
                   : 'text-htg-fg-muted'
               }`}
             >
@@ -55,26 +55,11 @@ export default function SiteNav() {
           ))}
         </div>
       </div>
-      {/* Desktop: Community icon + FontSize + Theme + Notifications + Auth — po prawej */}
+      {/* Desktop: FontSize + Theme + Notifications + Auth — po prawej */}
       <div className="hidden md:flex items-center gap-2">
-        {!loading && isLoggedIn && (
-          <Link
-            href="/spolecznosc"
-            className={`relative p-2 rounded-lg transition-colors ${
-              isCommunityActive
-                ? 'text-htg-sage bg-htg-sage/10'
-                : 'text-htg-fg-muted hover:text-htg-sage hover:bg-htg-surface'
-            }`}
-            title={t('community')}
-          >
-            <Users2 className="w-5 h-5" />
-            {/* Animated pulse dot */}
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-htg-sage animate-pulse" />
-          </Link>
-        )}
         <FontSizeToggle />
         <ThemeToggle />
-        {!loading && isLoggedIn && user && <NotificationBell userId={user.id} />}
+        {!loading && isLoggedIn && user && <NotificationBell userId={user.id} alwaysShow={isCommunityActive} />}
         {!loading && isLoggedIn ? <UserPanelNav /> : <HeaderAuthButton />}
       </div>
 

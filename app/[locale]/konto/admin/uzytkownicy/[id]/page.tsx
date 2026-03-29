@@ -8,7 +8,15 @@ import {
   ArrowLeft, User, Mail, Calendar, CreditCard, BookOpen, Package,
   Crown, Shield, ExternalLink, Clock,
 } from 'lucide-react';
-import { PAYMENT_STATUS_BADGE } from '@/lib/booking/constants';
+import { PAYMENT_STATUS_LABELS, SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
+
+const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+  installments:         { label: PAYMENT_STATUS_LABELS.installments,         className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
+  partial_payment:      { label: PAYMENT_STATUS_LABELS.partial_payment,      className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
+  pending_verification: { label: PAYMENT_STATUS_LABELS.pending_verification, className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
+};
 import AdminUserActions from './AdminUserActions';
 
 export const dynamic = 'force-dynamic';
@@ -28,11 +36,17 @@ export default async function AdminUserDetailPage({
   const db = createSupabaseServiceRole();
 
   // Load profile
-  const { data: profile } = await db
+  const { data: profile, error: profileError } = await db
     .from('profiles')
     .select('id, display_name, email, role, wix_member_id, created_at, phone, second_email')
     .eq('id', id)
     .single();
+
+  if (profileError) {
+    console.error('Error fetching admin user profile:', profileError);
+    // Let the error boundary catch it or render an explicit error message instead of 404
+    throw new Error(`Failed to load profile: ${profileError.message}`);
+  }
 
   if (!profile) notFound();
 
@@ -43,45 +57,38 @@ export default async function AdminUserDetailPage({
     ordersRes,
     updateReqRes,
   ] = await Promise.all([
-    // Entitlements (library access)
     db.from('entitlements')
       .select('id, type, scope_month, source, created_at, is_active, order_id')
       .eq('user_id', id)
       .order('created_at', { ascending: false }),
 
-    // Bookings (individual sessions) — join slot for date/time
     db.from('bookings')
       .select('id, session_type, status, payment_status, created_at, slot:booking_slots(slot_date, start_time)')
       .eq('user_id', id)
       .order('created_at', { ascending: false }),
 
-    // Orders
     db.from('orders')
       .select('id, amount_paid, currency, status, source, payment_method, created_at, wix_order_id')
       .eq('user_id', id)
       .order('created_at', { ascending: false })
       .limit(20),
 
-    // Account update requests
     db.from('account_update_requests')
       .select('id, category, description, status, created_at')
       .eq('user_id', id)
       .order('created_at', { ascending: false }),
   ]);
 
+  // Log query failures for observability instead of silently returning []
+  if (entRes.error) console.error('Failed to load entitlements:', entRes.error);
+  if (bookRes.error) console.error('Failed to load bookings:', bookRes.error);
+  if (ordersRes.error) console.error('Failed to load orders:', ordersRes.error);
+  if (updateReqRes.error) console.error('Failed to load update requests:', updateReqRes.error);
+
   const entitlements = entRes.data || [];
   const bookings = bookRes.data || [];
   const orders = ordersRes.data || [];
   const updateRequests = updateReqRes.data || [];
-
-  const SESSION_TYPE_LABELS: Record<string, string> = {
-    natalia_solo: 'Sesja 1:1 z Natalią',
-    natalia_asysta: 'Sesja z Asystą',
-    natalia_agata: 'Sesja z Natalią i Agatą',
-    natalia_justyna: 'Sesja z Natalią i Justyną',
-    natalia_para: 'Sesja dla Par',
-    pre_session: 'Sesja wstępna',
-  };
 
   const BOOKING_STATUS_LABELS: Record<string, { label: string; color: string }> = {
     confirmed: { label: 'Potwierdzona', color: 'text-green-500' },
@@ -228,7 +235,7 @@ export default async function AdminUserDetailPage({
                   <div className="flex items-center gap-3">
                     <div>
                       <p className="text-sm font-medium text-htg-fg">
-                        {SESSION_TYPE_LABELS[b.session_type] || b.session_type}
+                        {SESSION_CONFIG[b.session_type as SessionType]?.label || b.session_type}
                       </p>
                       <p className="text-xs text-htg-fg-muted">{getBookingDate(b)} · {getBookingTime(b)?.slice(0,5)}</p>
                     </div>
@@ -334,7 +341,7 @@ export default async function AdminUserDetailPage({
               return (
                 <div key={b.id} className="flex items-center justify-between py-2 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap">
                   <div>
-                    <p className="text-sm text-htg-fg">{SESSION_TYPE_LABELS[b.session_type] || b.session_type}</p>
+                    <p className="text-sm text-htg-fg">{SESSION_CONFIG[b.session_type as SessionType]?.label || b.session_type}</p>
                     <p className="text-xs text-htg-fg-muted">{getBookingDate(b)} · {getBookingTime(b)?.slice(0,5)}</p>
                   </div>
                   {ps && (

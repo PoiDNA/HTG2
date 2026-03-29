@@ -142,6 +142,19 @@ export default function LoginForm() {
     }
 
     const locale = window.location.pathname.split('/')[1] || 'pl';
+    if (!returnTo) {
+      // Redirect admin to /konto/admin, others to /konto
+      try {
+        const { data: { user: u } } = await supabase.auth.getUser();
+        if (u) {
+          const { data: prof } = await supabase.from('profiles').select('role').eq('id', u.id).single();
+          if (prof?.role === 'admin' || getRoleForEmail(u.email ?? '') === 'admin') {
+            window.location.href = `/${locale}/konto/admin`;
+            return;
+          }
+        }
+      } catch { /* fallback below */ }
+    }
     window.location.href = returnTo || `/${locale}/konto`;
   }
 

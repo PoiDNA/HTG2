@@ -4,6 +4,8 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Link } from '@/i18n-config';
 import { Video, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { CreatePublicationButton } from '@/components/publikacja/CreatePublicationButton';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -56,12 +58,6 @@ export default async function NagraniePage({
     : { data: [] };
   const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
 
-  const SESSION_LABELS: Record<string, string> = {
-    natalia_solo: 'Sesja 1:1 z Natalią',
-    natalia_agata: 'Sesja z Natalią i Agatą',
-    natalia_justyna: 'Sesja z Natalią i Justyną',
-  };
-
   const STATUS_LABELS: Record<string, string> = {
     raw: 'Do edycji',
     editing: 'W edycji',
@@ -83,7 +79,7 @@ export default async function NagraniePage({
   }
   function getSessionType(s: any): string {
     const b = Array.isArray(s.booking) ? s.booking[0] : s.booking;
-    return SESSION_LABELS[b?.session_type] || b?.session_type || '—';
+    return SESSION_CONFIG[b?.session_type as SessionType]?.label || b?.session_type || '—';
   }
 
   return (

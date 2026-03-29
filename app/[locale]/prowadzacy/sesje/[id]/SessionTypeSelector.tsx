@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
 const SESSION_TYPE_OPTIONS = [
-  { value: 'natalia_asysta', label: 'Sesja z Asystą (nieprzypisana)' },
-  { value: 'natalia_agata', label: 'Sesja z Natalią i Agatą' },
-  { value: 'natalia_justyna', label: 'Sesja z Natalią i Justyną' },
+  { value: 'natalia_asysta' as SessionType, label: `${SESSION_CONFIG.natalia_asysta.label} (nieprzypisana)` },
+  { value: 'natalia_agata' as SessionType, label: SESSION_CONFIG.natalia_agata.label },
+  { value: 'natalia_justyna' as SessionType, label: SESSION_CONFIG.natalia_justyna.label },
 ];
 
 export default function SessionTypeSelector({

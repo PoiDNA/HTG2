@@ -11,11 +11,33 @@ export async function POST(req: NextRequest) {
   const auth = await requireCommunityAuth();
   if ('error' in auth) return auth.error;
 
-  const { supabase, user } = auth;
+  const { supabase, user, isAdmin, isStaff } = auth;
   const { post_id } = await req.json();
 
   if (!post_id) {
     return NextResponse.json({ error: 'post_id is required' }, { status: 400 });
+  }
+
+  // Verify caller can access the post's group
+  if (!isAdmin && !isStaff) {
+    const { data: post } = await supabase
+      .from('community_posts')
+      .select('group_id')
+      .eq('id', post_id)
+      .is('deleted_at', null)
+      .single();
+
+    if (post) {
+      const { data: membership } = await supabase
+        .from('community_memberships')
+        .select('id')
+        .eq('group_id', post.group_id)
+        .eq('user_id', user.id)
+        .single();
+      if (!membership) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
   }
 
   // Check if already bookmarked

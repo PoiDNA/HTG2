@@ -1,7 +1,7 @@
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { locales, Link } from '@/i18n-config';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Users2, ArrowLeft, CalendarDays, Clock } from 'lucide-react';
 import RegisterButton from '@/components/meeting/RegisterButton';
@@ -15,9 +15,7 @@ export default async function DostepneSpotkania({ params }: { params: Promise<{ 
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  const { userId } = await getEffectiveUser();
 
   const db = createSupabaseServiceRole();
 
@@ -39,7 +37,7 @@ export default async function DostepneSpotkania({ params }: { params: Promise<{ 
     ? await db
         .from('htg_meeting_participants')
         .select('session_id, status')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .in('session_id', sessionIds)
     : { data: [] };
 

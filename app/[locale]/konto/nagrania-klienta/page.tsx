@@ -1,6 +1,7 @@
 import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { createClient } from '@supabase/supabase-js';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isStaffEmail } from '@/lib/roles';
 import RecordingsPair from '@/components/live/RecordingsPair';
@@ -14,33 +15,32 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const { userId, isImpersonating } = await getEffectiveUser();
+  const realSupabase = await createSupabaseServer();
+  const { data: { user } } = await realSupabase.auth.getUser();
+  const admin = createSupabaseServiceRole();
 
-  const staff = user ? isStaffEmail(user.email ?? '') : false;
+  const staff = !isImpersonating && user ? isStaffEmail(user.email ?? '') : false;
 
   // Fetch recordings
   let recordings: any[] = [];
-  if (user) {
-    if (staff) {
-      // Staff see all recordings
-      const { data } = await admin
-        .from('client_recordings')
-        .select('*, booking:bookings(session_type, slot:booking_slots(slot_date, start_time))')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      recordings = data || [];
-    } else {
-      // User sees own recordings
-      const { data } = await admin
-        .from('client_recordings')
-        .select('*, booking:bookings(session_type, slot:booking_slots(slot_date, start_time))')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      recordings = data || [];
-    }
+  if (staff) {
+    // Staff see all recordings
+    const { data } = await admin
+      .from('client_recordings')
+      .select('*, booking:bookings(session_type, slot:booking_slots(slot_date, start_time))')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    recordings = data || [];
+  } else {
+    // User sees own recordings (or impersonated user's recordings)
+    const { data } = await admin
+      .from('client_recordings')
+      .select('*, booking:bookings(session_type, slot:booking_slots(slot_date, start_time))')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    recordings = data || [];
   }
 
   // Fetch profile names for staff view

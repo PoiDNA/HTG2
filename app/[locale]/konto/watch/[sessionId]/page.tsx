@@ -1,6 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { redirect } from 'next/navigation';
 import { ArrowLeft, Lock } from 'lucide-react';
 import VideoPlayer from '@/components/video/VideoPlayer';
@@ -24,12 +24,7 @@ export default async function WatchPage({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Account' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/login`);
-  }
+  const { userId, supabase } = await getEffectiveUser();
 
   // Fetch session template
   const { data: session } = await supabase
@@ -56,7 +51,7 @@ export default async function WatchPage({
   const { data: entitlement } = await supabase
     .from('entitlements')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('session_id', sessionId)
     .eq('is_active', true)
     .gt('valid_until', new Date().toISOString())
@@ -69,7 +64,7 @@ export default async function WatchPage({
     const { data: yearly } = await supabase
       .from('entitlements')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('type', 'yearly')
       .eq('is_active', true)
       .gt('valid_until', new Date().toISOString())
@@ -120,8 +115,8 @@ export default async function WatchPage({
       {hasAccess ? (
         <VideoPlayer
           sessionId={session.id}
-          userEmail={user.email || ''}
-          userId={user.id}
+          userEmail={''}
+          userId={userId}
         />
       ) : (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-8 text-center">

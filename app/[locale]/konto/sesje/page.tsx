@@ -1,6 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { redirect } from 'next/navigation';
 import { Play, Film } from 'lucide-react';
 
@@ -23,12 +23,7 @@ export default async function MySesjeListPage({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Account' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(`/${locale}/login`);
-  }
+  const { userId, supabase } = await getEffectiveUser();
 
   // Fetch all active entitlements with session info
   const { data: entitlements } = await supabase
@@ -38,7 +33,7 @@ export default async function MySesjeListPage({
       session:session_templates ( id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id ),
       product:products ( name, slug )
     `)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('is_active', true)
     .gte('valid_until', new Date().toISOString())
     .order('valid_until', { ascending: false });

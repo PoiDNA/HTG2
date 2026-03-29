@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { redirect } from 'next/navigation';
 import { PreSessionBooking } from '@/components/konto/PreSessionBooking';
@@ -18,9 +18,7 @@ export default async function SpotkaniePage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const sessionClient = await createSupabaseServer();
-  const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  const { userId } = await getEffectiveUser();
 
   const db = createSupabaseServiceRole();
 
@@ -28,7 +26,7 @@ export default async function SpotkaniePage({
   const { data: eligibilities } = await db
     .from('pre_session_eligibility')
     .select('id, staff_member_id, is_active, meeting_booked, pre_booking_id, created_at')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .eq('is_active', true);
 
   if (!eligibilities || eligibilities.length === 0) {

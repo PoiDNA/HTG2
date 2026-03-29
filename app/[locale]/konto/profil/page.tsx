@@ -1,6 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { ProfileForm } from './ProfileForm';
 
 export function generateStaticParams() {
@@ -12,34 +12,29 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Account' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { userId, supabase } = await getEffectiveUser();
 
   // Fetch profile
-  const { data: profile } = user
-    ? await supabase
-        .from('profiles')
-        .select('display_name, phone')
-        .eq('id', user.id)
-        .single()
-    : { data: null };
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name, phone, email')
+    .eq('id', userId)
+    .single();
 
   // Fetch consents
-  const { data: consents } = user
-    ? await supabase
-        .from('consent_records')
-        .select('id, consent_type, granted, consent_text, created_at')
-        .eq('user_id', user.id)
-        .eq('granted', true)
-        .order('created_at', { ascending: false })
-    : { data: null };
+  const { data: consents } = await supabase
+    .from('consent_records')
+    .select('id, consent_type, granted, consent_text, created_at')
+    .eq('user_id', userId)
+    .eq('granted', true)
+    .order('created_at', { ascending: false });
 
   return (
     <div>
       <h2 className="text-xl font-serif font-semibold text-htg-fg mb-6">{t('profile')}</h2>
 
       <ProfileForm
-        email={user?.email || ''}
+        email={profile?.email || ''}
         displayName={profile?.display_name || ''}
         phone={profile?.phone || ''}
         consents={consents || []}

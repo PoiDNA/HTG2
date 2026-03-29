@@ -171,12 +171,17 @@ export default async function AccountLayout({
         <nav className="md:w-56 shrink-0">
           <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
 
-            {/* ADMIN role: ADMIN + PUBLIKACJA + Profil */}
-            {isAdmin && (
+            {/* ADMIN role: ADMIN + PUBLIKACJA + Profil (but show user nav when impersonating) */}
+            {isAdmin && !viewAsUserEmail && (
               <>
                 {renderSection('Admin', adminItems)}
                 {showPublikacja && renderSection('Publikacja', publikacjaItems)}
                 {renderSection('Profil', [profileItem])}
+              </>
+            )}
+            {isAdmin && viewAsUserEmail && (
+              <>
+                {renderSection('Moje konto', userItems)}
               </>
             )}
 

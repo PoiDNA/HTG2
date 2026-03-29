@@ -1,6 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { ALL_SESSION_TYPES } from '@/lib/booking/constants';
 import type { Booking, AccelerationEntry } from '@/lib/booking/types';
@@ -31,49 +31,42 @@ export default async function IndividualSessionsPage({
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Booking' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { userId, supabase } = await getEffectiveUser();
 
   // Fetch user's bookings with slot details
-  let bookings: Booking[] = [];
-  if (user) {
-    const { data } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        slot:booking_slots(*)
-      `)
-      .eq('user_id', user.id)
-      .in('status', ['pending_confirmation', 'confirmed', 'completed'])
-      .order('assigned_at', { ascending: false })
-      .limit(20);
+  const { data } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      slot:booking_slots(*)
+    `)
+    .eq('user_id', userId)
+    .in('status', ['pending_confirmation', 'confirmed', 'completed'])
+    .order('assigned_at', { ascending: false })
+    .limit(20);
 
-    // Sort by slot date/time — nearest session first
-    bookings = ((data ?? []) as Booking[]).sort((a, b) => {
-      const dateA = a.slot ? a.slot.slot_date + 'T' + a.slot.start_time : '9999';
-      const dateB = b.slot ? b.slot.slot_date + 'T' + b.slot.start_time : '9999';
-      return dateA.localeCompare(dateB);
-    });
-  }
+  // Sort by slot date/time — nearest session first
+  const bookings: Booking[] = ((data ?? []) as Booking[]).sort((a, b) => {
+    const dateA = a.slot ? a.slot.slot_date + 'T' + a.slot.start_time : '9999';
+    const dateB = b.slot ? b.slot.slot_date + 'T' + b.slot.start_time : '9999';
+    return dateA.localeCompare(dateB);
+  });
 
   // Fetch user's unbooked individual session entitlements
-  let unbookedCount = 0;
-  if (user) {
-    const { count } = await supabase
-      .from('entitlements')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('type', 'individual')
-      .eq('is_active', true)
-      .is('booking_id', null)
-      .gte('valid_until', new Date().toISOString());
+  const { count } = await supabase
+    .from('entitlements')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('type', 'individual')
+    .eq('is_active', true)
+    .is('booking_id', null)
+    .gte('valid_until', new Date().toISOString());
 
-    unbookedCount = count ?? 0;
-  }
+  const unbookedCount = count ?? 0;
 
   // Fetch pre-session upsell data for active bookings with assistant session types
   const preSessionUpsellMap: Record<string, { staffId: string; staffName: string; priceId: string; pricePln: number }> = {};
-  if (user) {
+  {
     // Find active bookings with assistants
     const assistantBookings = bookings.filter(
       b => (b.status === 'pending_confirmation' || b.status === 'confirmed')
@@ -96,7 +89,7 @@ export default async function IndividualSessionsPage({
       const { data: existingElig } = await db
         .from('pre_session_eligibility')
         .select('staff_member_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('is_active', true);
 
       const alreadyEligibleIds = new Set((existingElig || []).map((e: any) => e.staff_member_id));
@@ -118,20 +111,17 @@ export default async function IndividualSessionsPage({
   }
 
   // Fetch user's acceleration queue entries
-  let accelerationEntries: AccelerationEntry[] = [];
-  if (user) {
-    const { data } = await supabase
-      .from('acceleration_queue')
-      .select(`
-        *,
-        offered_slot:booking_slots(*)
-      `)
-      .eq('user_id', user.id)
-      .in('status', ['waiting', 'offered'])
-      .order('created_at', { ascending: false });
+  const { data: accelData } = await supabase
+    .from('acceleration_queue')
+    .select(`
+      *,
+      offered_slot:booking_slots(*)
+    `)
+    .eq('user_id', userId)
+    .in('status', ['waiting', 'offered'])
+    .order('created_at', { ascending: false });
 
-    accelerationEntries = (data ?? []) as AccelerationEntry[];
-  }
+  const accelerationEntries: AccelerationEntry[] = (accelData ?? []) as AccelerationEntry[];
 
   const activeBookings = bookings.filter(
     (b) => b.status === 'pending_confirmation' || b.status === 'confirmed'
@@ -146,7 +136,7 @@ export default async function IndividualSessionsPage({
     .map(b => b.id);
 
   const companionMap: Record<string, { email: string; displayName: string | null; acceptedAt: string | null } | null> = {};
-  if (user && paraBookingIds.length > 0) {
+  if (paraBookingIds.length > 0) {
     const db = createSupabaseServiceRole();
     const { data: companions } = await db
       .from('booking_companions')
@@ -158,24 +148,21 @@ export default async function IndividualSessionsPage({
   }
 
   // Fetch partner-joined sessions (user is a companion, not booking owner)
-  let partnerBookings: any[] = [];
-  if (user) {
-    const db = createSupabaseServiceRole();
-    const { data: companionRows } = await db
-      .from('booking_companions')
-      .select(`
-        accepted_at,
-        bookings!inner (
-          id, session_type, status, live_session_id,
-          booking_slots (slot_date, start_time, end_time)
-        )
-      `)
-      .eq('user_id', user.id)
-      .not('accepted_at', 'is', null);
-    partnerBookings = (companionRows ?? [])
-      .map((c: any) => c.bookings)
-      .filter((b: any) => ['pending_confirmation', 'confirmed'].includes(b?.status));
-  }
+  const db2 = createSupabaseServiceRole();
+  const { data: companionRows } = await db2
+    .from('booking_companions')
+    .select(`
+      accepted_at,
+      bookings!inner (
+        id, session_type, status, live_session_id,
+        booking_slots (slot_date, start_time, end_time)
+      )
+    `)
+    .eq('user_id', userId)
+    .not('accepted_at', 'is', null);
+  const partnerBookings = (companionRows ?? [])
+    .map((c: any) => c.bookings)
+    .filter((b: any) => ['pending_confirmation', 'confirmed'].includes(b?.status));
 
   return (
     <div className="space-y-8">

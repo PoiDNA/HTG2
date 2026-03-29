@@ -1,7 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
 import { Play } from 'lucide-react';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 
 export function generateStaticParams() {
@@ -13,23 +13,20 @@ export default async function MySessionsPage({ params }: { params: Promise<{ loc
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Account' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { userId, supabase } = await getEffectiveUser();
 
   // Fetch user's active entitlements with session info
-  const { data: entitlements } = user
-    ? await supabase
-        .from('entitlements')
-        .select(`
-          id, type, scope_month, valid_from, valid_until, is_active,
-          session:session_templates ( id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id ),
-          product:products ( name, slug )
-        `)
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .gte('valid_until', new Date().toISOString())
-        .order('valid_until', { ascending: false })
-    : { data: null };
+  const { data: entitlements } = await supabase
+    .from('entitlements')
+    .select(`
+      id, type, scope_month, valid_from, valid_until, is_active,
+      session:session_templates ( id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id ),
+      product:products ( name, slug )
+    `)
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .gte('valid_until', new Date().toISOString())
+    .order('valid_until', { ascending: false });
 
   const sessions = entitlements || [];
 

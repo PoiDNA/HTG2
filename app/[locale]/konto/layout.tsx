@@ -10,7 +10,7 @@ import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, Users2, BarChart2,
-  ClipboardCheck, RefreshCw,
+  MessagesSquare, ClipboardCheck, RefreshCw,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -101,6 +101,7 @@ export default async function AccountLayout({
     { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
     { href: '/konto/admin/zgloszenia', label: `Aktualizacje klientów${pendingUpdates > 0 ? ` — ${pendingUpdates}` : ''}`, icon: ClipboardCheck },
     { href: '/konto/admin/naruszenia', label: 'Naruszenia', icon: ShieldAlert },
+    { href: '/konto/admin/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
@@ -134,6 +135,7 @@ export default async function AccountLayout({
     { href: '/konto/sesje-indywidualne', label: tPanel('individual_sessions'), icon: CalendarDays },
     { href: '/konto/spotkania-grupowe', label: 'Spotkania grupowe', icon: Users2 },
     { href: '/konto/spotkania-grupowe/dostepne', label: 'Dostępne spotkania', icon: CalendarDays },
+    { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
     { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
     { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
     { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Film },

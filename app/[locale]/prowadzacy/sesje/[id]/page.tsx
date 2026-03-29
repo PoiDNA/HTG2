@@ -32,16 +32,17 @@ export default async function SessionDetailPage({
   const { locale, id } = await params;
   setRequestLocale(locale);
 
-  const { staffMember } = await getEffectiveStaffMember();
+  const { staffMember, user: authUser } = await getEffectiveStaffMember();
   const admin = createSupabaseServiceRole();
 
   const isPractitioner = staffMember?.role === 'practitioner';
 
-  // Check if user is admin
+  // Check admin: use staffMember.user_id when impersonating, otherwise the actual logged-in user
   let isAdmin = false;
-  if (staffMember?.user_id) {
-    const { data: profile } = await admin.from('profiles').select('role').eq('id', staffMember.user_id).single();
-    isAdmin = profile?.role === 'admin' || profile?.role === 'moderator';
+  const profileUserId = staffMember?.user_id ?? authUser?.id;
+  if (profileUserId) {
+    const { data: profile } = await admin.from('profiles').select('role').eq('id', profileUserId).single();
+    isAdmin = profile?.role === 'admin';
   }
   const canEditPayment = isPractitioner || isAdmin;
 
@@ -135,7 +136,7 @@ export default async function SessionDetailPage({
         </div>
       </div>
 
-      {/* Session type selector — for natalia_asysta, admin/practitioner can assign assistant */}
+      {/* Session type selector — practitioner or admin */}
       {canEditPayment && ['natalia_asysta', 'natalia_agata', 'natalia_justyna'].includes(booking.session_type) && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-3">
           <h2 className="text-base font-serif font-bold text-htg-fg">Typ sesji / Przypisanie asystentki</h2>
@@ -156,7 +157,7 @@ export default async function SessionDetailPage({
         )}
       </div>
 
-      {/* Payment comment — admin/practitioner only */}
+      {/* Payment comment — practitioner or admin */}
       {canEditPayment && (
         <PaymentCommentEditor
           bookingId={booking.id}
@@ -164,8 +165,8 @@ export default async function SessionDetailPage({
         />
       )}
 
-      {/* Delete session — admin only */}
-      {isAdmin && (
+      {/* Delete session — strict admin only (not practitioner/assistants) */}
+      {isAdmin && !isPractitioner && (
         <DeleteSessionButton bookingId={booking.id} locale={locale} />
       )}
 

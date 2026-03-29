@@ -100,13 +100,16 @@ export default async function AccountLayout({
     { href: '/konto/admin/kolejka', label: tPanel('admin_queue'), icon: Users },
     { href: '/konto/admin/sloty', label: tPanel('admin_slots'), icon: Clock },
     { href: '/konto/admin/subskrypcje', label: tPanel('admin_subscriptions'), icon: CreditCard },
+  ] as const;
+
+  // PIASKOWNICA section (admin only — narzędzia i testy)
+  const piaskownicaItems = [
     { href: '/konto/admin/zestawy', label: tPanel('admin_sets'), icon: Package },
     { href: '/konto/admin/zgloszenia', label: `Aktualizacje klientów${pendingUpdates > 0 ? ` — ${pendingUpdates}` : ''}`, icon: ClipboardCheck },
+    { href: '/prowadzacy/spotkania-htg/profile-uczestnikow', label: 'Profile uczestników', icon: BarChart2 },
     { href: '/konto/admin/naruszenia', label: 'Naruszenia', icon: ShieldAlert },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
-    { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
-    { href: '/prowadzacy/spotkania-htg/profile-uczestnikow', label: 'Profile uczestników', icon: BarChart2 },
     { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
   ] as const;
@@ -194,6 +197,7 @@ export default async function AccountLayout({
               <>
                 {renderSection('Admin', adminItems)}
                 {showPublikacja && renderSection('Publikacja', publikacjaItems)}
+                {renderSection('Piaskownica', piaskownicaItems)}
                 {renderSection('Profil', [profileItem])}
               </>
             )}

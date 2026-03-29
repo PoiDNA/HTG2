@@ -143,14 +143,18 @@ export default async function AdminUsersPage({ params, searchParams }: {
             </thead>
             <tbody>
               {(users || []).map((u) => (
-                <tr key={u.id} className="border-b border-htg-card-border last:border-0 hover:bg-htg-surface/50">
+                <tr key={u.id} className="border-b border-htg-card-border last:border-0 hover:bg-htg-surface/50 cursor-pointer">
                   <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
+                    <Link href={`/konto/admin/uzytkownicy/${u.id}`} className="flex items-center gap-2">
                       {roleIcon(u.role)}
-                      <span className="text-htg-fg font-medium">{u.display_name || '—'}</span>
-                    </div>
+                      <span className="text-htg-fg font-medium hover:text-htg-indigo transition-colors">{u.display_name || '—'}</span>
+                    </Link>
                   </td>
-                  <td className="py-3 px-4 text-htg-fg-muted">{u.email || '—'}</td>
+                  <td className="py-3 px-4 text-htg-fg-muted">
+                    <Link href={`/konto/admin/uzytkownicy/${u.id}`} className="hover:text-htg-fg transition-colors">
+                      {u.email || '—'}
+                    </Link>
+                  </td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadge(u.role)}`}>
                       {u.role}

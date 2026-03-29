@@ -35,16 +35,25 @@ export default async function AdminUserDetailPage({
 
   const db = createSupabaseServiceRole();
 
-  // Load profile
-  const { data: profile, error: profileError } = await db
+  // Load profile — with graceful fallback if second_email column not yet migrated
+  let profileResult = await db
     .from('profiles')
     .select('id, display_name, email, role, wix_member_id, created_at, phone, second_email')
     .eq('id', id)
     .single();
 
+  if (profileResult.error?.code === '42703' || profileResult.error?.message?.includes('second_email')) {
+    profileResult = await db
+      .from('profiles')
+      .select('id, display_name, email, role, wix_member_id, created_at, phone')
+      .eq('id', id)
+      .single();
+  }
+
+  const { data: profile, error: profileError } = profileResult;
+
   if (profileError) {
     console.error('Error fetching admin user profile:', profileError);
-    // Let the error boundary catch it or render an explicit error message instead of 404
     throw new Error(`Failed to load profile: ${profileError.message}`);
   }
 

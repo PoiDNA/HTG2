@@ -12,6 +12,17 @@ const SESSION_TYPE_BADGE: Record<string, { label: string; className: string }> =
   natalia_asysta: { label: 'Asysta', className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
 
+const TYPE_TABS = [
+  { key: 'all',             label: 'Wszystkie',     className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
+  { key: 'natalia_solo',   label: 'Sesje 1:1',      className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
+  { key: 'natalia_asysta', label: 'Sesje z Asystą', className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
+  { key: 'natalia_justyna',label: 'Sesje z Justyną',className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  { key: 'natalia_agata',  label: 'Sesje z Agatą',  className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
+  { key: 'natalia_para',   label: 'Sesje dla Par',  className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
+] as const;
+
+type TypeKey = typeof TYPE_TABS[number]['key'];
+
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   confirmed_paid: { label: 'Opłacona', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
   installments: { label: 'Raty', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
@@ -34,13 +45,16 @@ export default function SessionList({
   past: initialPast,
   todayStr,
   locale,
+  isPractitioner,
 }: {
   upcoming: any[];
   past: any[];
   todayStr: string;
   locale: string;
+  isPractitioner?: boolean;
 }) {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [typeTab, setTypeTab] = useState<TypeKey>('all');
   const [search, setSearch] = useState('');
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -54,9 +68,13 @@ export default function SessionList({
     return name.includes(q) || email.includes(q);
   }
 
+  function matchesType(b: any) {
+    return typeTab === 'all' || b.session_type === typeTab;
+  }
+
   const upcoming = initialUpcoming.filter(b => !deletedIds.has(b.id));
   const past = initialPast.filter(b => !deletedIds.has(b.id));
-  const filtered = (tab === 'upcoming' ? upcoming : past).filter(matchesSearch);
+  const filtered = (tab === 'upcoming' ? upcoming : past).filter(matchesType).filter(matchesSearch);
 
   async function deleteSession(e: React.MouseEvent, bookingId: string) {
     e.preventDefault();
@@ -111,8 +129,38 @@ tr:nth-child(even){background:#f9f9f9}
     if (w) { w.document.write(html); w.document.close(); w.print(); }
   }
 
+  function countForType(key: TypeKey, which: 'upcoming' | 'past') {
+    const base = which === 'upcoming' ? upcoming : past;
+    return key === 'all' ? base.length : base.filter(b => b.session_type === key).length;
+  }
+
   return (
     <div className="space-y-4">
+      {/* Type tabs — practitioner only */}
+      {isPractitioner && (
+        <div className="flex flex-wrap gap-2">
+          {TYPE_TABS.map(cfg => {
+            const count = countForType(cfg.key, tab);
+            const isActive = typeTab === cfg.key;
+            return (
+              <button
+                key={cfg.key}
+                onClick={() => setTypeTab(cfg.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border ${
+                  isActive
+                    ? cfg.className + ' opacity-100 ring-2 ring-white/20'
+                    : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:border-htg-fg-muted/30'
+                }`}
+              >
+                <span>{cfg.label}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-htg-card text-htg-fg-muted'
+                }`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {/* Search + PDF */}
       <div className="flex gap-3 items-center">
         <div className="relative flex-1">
@@ -185,7 +233,7 @@ tr:nth-child(even){background:#f9f9f9}
                     {isToday && tab === 'upcoming' && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
                     <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
                     <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
-                    <TypeBadge type={b.session_type} />
+                    {(!isPractitioner || typeTab === 'all') && <TypeBadge type={b.session_type} />}
                   </div>
                   <p className="text-sm text-htg-fg-muted mt-1">
                     {client?.display_name || client?.email || '—'}

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Menu, X, LogOut } from 'lucide-react';
+import { Menu, X, LogOut, Users2 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
@@ -16,7 +16,6 @@ const navLinks = [
   { href: '/sesje', key: 'sessions' },
   { href: '/sesje-indywidualne', key: 'individual' },
   { href: '/nagrania', key: 'recordings' },
-  { href: '/spolecznosc', key: 'community' },
 ] as const;
 
 export default function SiteNav() {
@@ -33,6 +32,8 @@ export default function SiteNav() {
     router.push('/');
     setOpen(false);
   }
+
+  const isCommunityActive = pathname.startsWith('/spolecznosc');
 
   return (
     <nav aria-label="Nawigacja główna">
@@ -54,8 +55,23 @@ export default function SiteNav() {
           ))}
         </div>
       </div>
-      {/* Desktop: ThemeToggle + auth — po prawej */}
+      {/* Desktop: Community icon + FontSize + Theme + Notifications + Auth — po prawej */}
       <div className="hidden md:flex items-center gap-2">
+        {!loading && isLoggedIn && (
+          <Link
+            href="/spolecznosc"
+            className={`relative p-2 rounded-lg transition-colors ${
+              isCommunityActive
+                ? 'text-htg-sage bg-htg-sage/10'
+                : 'text-htg-fg-muted hover:text-htg-sage hover:bg-htg-surface'
+            }`}
+            title={t('community')}
+          >
+            <Users2 className="w-5 h-5" />
+            {/* Animated pulse dot */}
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-htg-sage animate-pulse" />
+          </Link>
+        )}
         <FontSizeToggle />
         <ThemeToggle />
         {!loading && isLoggedIn && user && <NotificationBell userId={user.id} />}
@@ -91,6 +107,22 @@ export default function SiteNav() {
               </Link>
             ))}
 
+            {/* Community link in mobile menu */}
+            {isLoggedIn && (
+              <Link
+                href="/spolecznosc"
+                onClick={() => setOpen(false)}
+                className={`py-3 px-4 rounded-lg text-base font-medium transition-colors flex items-center gap-2 ${
+                  isCommunityActive
+                    ? 'bg-htg-surface text-htg-indigo'
+                    : 'text-htg-fg hover:bg-htg-surface'
+                }`}
+              >
+                <Users2 className="w-5 h-5" />
+                {t('community')}
+              </Link>
+            )}
+
             {/* Staff: show staff panel first, then profile only */}
             {isStaff && !isAdmin && (
               <>
@@ -111,7 +143,6 @@ export default function SiteNav() {
                 <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{t('account')}</p>
                 <MobileLink href="/konto" label={tPanel('my_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/konto/sesje-indywidualne" label={tPanel('individual_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/spolecznosc" label={t('community')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/konto/subskrypcje" label={tPanel('my_subscriptions')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/konto/zamowienia" label={tPanel('orders')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/konto/profil" label={tPanel('profile')} pathname={pathname} onClick={() => setOpen(false)} />

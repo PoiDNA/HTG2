@@ -7,6 +7,7 @@ import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 import PaymentCommentEditor from './PaymentCommentEditor';
 import SessionTypeSelector from './SessionTypeSelector';
 import ClientNameEditor from './ClientNameEditor';
+import DeleteSessionButton from './DeleteSessionButton';
 
 const SESSION_LABELS: Record<string, string> = {
   natalia_solo: 'Sesja 1:1 z Natalią',
@@ -161,6 +162,11 @@ export default async function SessionDetailPage({
           bookingId={booking.id}
           initialComment={booking.payment_comment || ''}
         />
+      )}
+
+      {/* Delete session — admin only */}
+      {isAdmin && (
+        <DeleteSessionButton bookingId={booking.id} locale={locale} />
       )}
 
       {/* Client session history */}

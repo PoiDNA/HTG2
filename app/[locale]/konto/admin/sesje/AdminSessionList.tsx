@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, Calendar, CheckCircle, Download, Trash2, ExternalLink } from 'lucide-react';
+import { Search, Calendar, CheckCircle, Download, ExternalLink } from 'lucide-react';
 
 const SESSION_TYPES_CONFIG = [
   { key: 'all',             label: 'Wszystkie',        short: 'Wszystkie', className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
@@ -52,8 +52,7 @@ export default function AdminSessionList({
   const [typeTab, setTypeTab] = useState<TypeKey>('all');
   const [statusTab, setStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deletedIds] = useState<Set<string>>(new Set());
 
   const q = search.toLowerCase().trim();
 
@@ -94,19 +93,6 @@ export default function AdminSessionList({
     const base = key === 'all' ? bookings : bookings.filter(b => b.session_type === key);
     if (which === 'upcoming') return base.filter(b => { const s = getSlot(b); return s?.slot_date >= todayStr && b.status !== 'completed'; }).length;
     return base.filter(b => { const s = getSlot(b); return s?.slot_date < todayStr || b.status === 'completed'; }).length;
-  }
-
-  async function deleteSession(e: React.MouseEvent, bookingId: string) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!confirm('Czy na pewno chcesz usunąć tę sesję?')) return;
-    setDeleting(bookingId);
-    try {
-      const res = await fetch(`/api/booking/${bookingId}/delete`, { method: 'DELETE' });
-      if (res.ok) setDeletedIds(prev => new Set([...prev, bookingId]));
-      else alert('Nie udało się usunąć sesji.');
-    } catch { alert('Błąd połączenia.'); }
-    setDeleting(null);
   }
 
   function exportPDF() {
@@ -227,7 +213,6 @@ tr:nth-child(even){background:#f9f9f9}
             const client = getClient(b);
             const isToday = slot?.slot_date === todayStr;
             const ps = PAYMENT_STATUS_BADGE[b.payment_status] || { label: '—', className: 'bg-htg-surface text-htg-fg-muted' };
-            const isDeleting = deleting === b.id;
 
             return (
               <div
@@ -236,7 +221,7 @@ tr:nth-child(even){background:#f9f9f9}
                   isToday && statusTab === 'upcoming'
                     ? 'bg-htg-sage/5 border-htg-sage/30'
                     : 'bg-htg-card border-htg-card-border'
-                } ${statusTab === 'past' ? 'opacity-70' : ''} ${isDeleting ? 'opacity-30' : ''}`}
+                } ${statusTab === 'past' ? 'opacity-70' : ''}`}
               >
                 {/* Main info — link to session detail */}
                 <Link href={`/${locale}/prowadzacy/sesje/${b.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
@@ -272,14 +257,6 @@ tr:nth-child(even){background:#f9f9f9}
                   >
                     <ExternalLink className="w-4 h-4" />
                   </Link>
-                  <button
-                    onClick={(e) => deleteSession(e, b.id)}
-                    disabled={isDeleting}
-                    className="p-1.5 rounded-lg text-htg-fg-muted hover:text-red-400 hover:bg-red-900/20 transition-colors"
-                    title="Usuń sesję"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             );

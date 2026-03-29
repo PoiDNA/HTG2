@@ -196,7 +196,7 @@ export default function AdminZgloszeniaPage() {
                     <p className="text-sm text-htg-fg-muted truncate mt-0.5">{r.description}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {r.proof_url && <Paperclip className="w-4 h-4 text-htg-sage" title="Ma załącznik" />}
+                    {r.proof_url && <span title="Ma załącznik"><Paperclip className="w-4 h-4 text-htg-sage" /></span>}
                     <span className="text-xs text-htg-fg-muted">{new Date(r.created_at).toLocaleDateString('pl')}</span>
                     <ChevronDown className={`w-4 h-4 text-htg-fg-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </div>

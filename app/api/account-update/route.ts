@@ -87,6 +87,28 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(data);
 }
 
+// DELETE — admin delete request
+export async function DELETE(req: NextRequest) {
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !isAdminEmail(user.email ?? '')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+  const db = createSupabaseServiceRole();
+  const { error } = await db
+    .from('account_update_requests')
+    .delete()
+    .eq('id', id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
+
 // PATCH — admin approve/reject
 export async function PATCH(req: NextRequest) {
   const supabase = await createSupabaseServer();

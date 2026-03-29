@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   RefreshCw, CheckCircle, XCircle, Clock, FileText, ChevronDown,
-  BookOpen, Users, Heart, Calendar, Download, MessageSquare, Paperclip,
+  BookOpen, Users, Heart, Calendar, Download, MessageSquare, Paperclip, Trash2,
 } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 
@@ -47,6 +47,7 @@ export default function AdminZgloszeniaPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => { loadRequests(); }, []);
 
@@ -83,6 +84,17 @@ export default function AdminZgloszeniaPage() {
       setExpandedId(null);
     }
     setProcessing(null);
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Usunąć to zgłoszenie? Tej operacji nie można cofnąć.')) return;
+    setDeleting(id);
+    const res = await fetch(`/api/account-update?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setAllRequests(prev => prev.filter(r => r.id !== id));
+      if (expandedId === id) setExpandedId(null);
+    }
+    setDeleting(null);
   }
 
   async function downloadProof(proofUrl: string) {
@@ -277,6 +289,18 @@ export default function AdminZgloszeniaPage() {
                         Rozpatrzone: {new Date(r.reviewed_at).toLocaleString('pl')}
                       </p>
                     )}
+
+                    {/* Delete */}
+                    <div className="pt-2 border-t border-htg-card-border">
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        disabled={deleting === r.id}
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {deleting === r.id ? 'Usuwanie...' : 'Usuń zgłoszenie'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

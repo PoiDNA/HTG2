@@ -22,48 +22,61 @@ export default function ZoomBackupOverlay({ url, onDismiss }: ZoomBackupOverlayP
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-6"
-      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)' }}
     >
-      <div className="relative w-full max-w-md bg-htg-indigo border border-amber-500/40
-        rounded-2xl shadow-2xl p-8 text-center space-y-5 animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-htg-card border border-blue-500/40
+        rounded-3xl shadow-2xl p-10 text-center space-y-6 animate-in zoom-in-95 duration-200">
 
         {/* Dismiss */}
         <button
           onClick={onDismiss}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center
-            rounded-full bg-white/10 hover:bg-white/20 text-htg-cream/60 transition-colors"
+          className="absolute top-5 right-5 w-9 h-9 flex items-center justify-center
+            rounded-full bg-white/10 hover:bg-white/20 text-htg-fg-muted transition-colors"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
 
         {/* Icon */}
-        <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto">
-          <Video className="w-8 h-8 text-amber-400" />
+        <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto">
+          <Video className="w-10 h-10 text-blue-400" />
         </div>
 
         {/* Heading */}
         <div>
-          <h2 className="text-xl font-semibold text-htg-cream">Tryb awaryjny — Zoom</h2>
-          <p className="text-htg-cream/60 text-sm mt-1">
-            Wystąpił problem techniczny. Przenosimy spotkanie na Zoom.
+          <h2 className="text-2xl font-bold text-htg-fg">Przechodzimy na Zoom</h2>
+          <p className="text-htg-fg-muted text-sm mt-2">
+            Kliknij poniższy przycisk, aby dołączyć do spotkania na Zoom.
           </p>
         </div>
 
-        {/* CTA */}
+        {/* Big CTA button */}
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full py-3 px-6 rounded-xl
-            bg-amber-500 hover:bg-amber-400 text-white font-semibold text-base
-            transition-colors active:scale-95"
+          className="flex items-center justify-center gap-3 w-full py-5 px-8 rounded-2xl
+            bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg
+            transition-all active:scale-95 shadow-lg shadow-blue-600/30"
         >
-          <ExternalLink className="w-5 h-5" />
+          <ExternalLink className="w-6 h-6" />
           Dołącz do Zoom
         </a>
 
-        <p className="text-htg-cream/40 text-xs">
-          Kliknij, aby otworzyć spotkanie w aplikacji Zoom lub przeglądarce.
+        {/* URL display for copy */}
+        <div className="bg-htg-surface rounded-xl px-4 py-3 break-all">
+          <p className="text-xs text-htg-fg-muted mb-1">Link do spotkania:</p>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-400 hover:underline"
+          >
+            {url}
+          </a>
+        </div>
+
+        <p className="text-htg-fg-muted/50 text-xs">
+          Kliknij przycisk lub skopiuj link powyżej.
         </p>
       </div>
     </div>

@@ -10,7 +10,7 @@ import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, Users2, BarChart2,
-  MessagesSquare,
+  MessagesSquare, ClipboardCheck, RefreshCw,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -73,6 +73,19 @@ export default async function AccountLayout({
     // fallback — just show user items
   }
 
+  // --- Fetch pending update requests count for admin badge ---
+  let pendingUpdates = 0;
+  if (isAdmin) {
+    try {
+      const db = createSupabaseServiceRole();
+      const { count } = await db
+        .from('account_update_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      pendingUpdates = count || 0;
+    } catch { /* ignore */ }
+  }
+
   // --- Build sections based on role ---
 
   // ADMIN section (admin only)
@@ -86,6 +99,7 @@ export default async function AccountLayout({
     { href: '/konto/admin/sesje', label: tPanel('admin_sessions'), icon: BookOpen },
     { href: '/konto/admin/zestawy', label: tPanel('admin_sets'), icon: Package },
     { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
+    { href: '/konto/admin/zgloszenia', label: `Aktualizacje klientów${pendingUpdates > 0 ? ` — ${pendingUpdates}` : ''}`, icon: ClipboardCheck },
     { href: '/konto/admin/naruszenia', label: 'Naruszenia', icon: ShieldAlert },
     { href: '/konto/admin/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
@@ -129,6 +143,7 @@ export default async function AccountLayout({
     { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', icon: Gift },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
+    { href: '/konto/aktualizacja', label: 'Aktualizacja konta', icon: RefreshCw },
     { href: '/konto/profil', label: t('profile'), icon: UserCircle },
   ] as const;
 

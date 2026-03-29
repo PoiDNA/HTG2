@@ -15,7 +15,6 @@ import { NotificationBell } from './community/NotificationBell';
 const navLinks = [
   { href: '/sesje', key: 'sessions' },
   { href: '/sesje-indywidualne', key: 'individual' },
-  { href: '/subskrypcje', key: 'subscriptions' },
   { href: '/nagrania', key: 'recordings' },
   { href: '/spolecznosc', key: 'community' },
 ] as const;

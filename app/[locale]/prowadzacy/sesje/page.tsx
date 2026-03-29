@@ -72,6 +72,7 @@ export default async function StaffSessionsPage({ params }: { params: Promise<{ 
         past={past}
         todayStr={todayStr}
         locale={locale}
+        isPractitioner={isPractitioner}
       />
     </div>
   );

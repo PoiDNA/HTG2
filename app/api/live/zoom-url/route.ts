@@ -1,13 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isStaffEmail } from '@/lib/roles';
 
+const BACKUP_ZOOM_URL = 'https://us06web.zoom.us/j/89618749712';
+
 /**
- * GET /api/live/zoom-url
- * Returns the emergency backup Zoom meeting URL — staff only.
- * Kept server-side so the URL is never exposed in client bundle.
+ * GET /api/live/zoom-url?slotId=xxx
+ * Returns Zoom meeting URL for a session — staff only.
+ * Priority: slot-specific zoom_url → env ZOOM_BACKUP_URL → hardcoded backup
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
@@ -20,12 +23,30 @@ export async function GET() {
       return NextResponse.json({ error: 'Staff only' }, { status: 403 });
     }
 
-    const url = (process.env.ZOOM_BACKUP_URL ?? '').trim();
-    if (!url) {
-      return NextResponse.json({ error: 'ZOOM_BACKUP_URL not configured' }, { status: 503 });
+    const slotId = req.nextUrl.searchParams.get('slotId');
+
+    // 1. Try slot-specific zoom_url
+    if (slotId) {
+      const db = createSupabaseServiceRole();
+      const { data: slot } = await db
+        .from('booking_slots')
+        .select('zoom_url')
+        .eq('id', slotId)
+        .single();
+
+      if (slot?.zoom_url) {
+        return NextResponse.json({ url: slot.zoom_url, source: 'slot' });
+      }
     }
 
-    return NextResponse.json({ url });
+    // 2. Try environment variable
+    const envUrl = (process.env.ZOOM_BACKUP_URL ?? '').trim();
+    if (envUrl) {
+      return NextResponse.json({ url: envUrl, source: 'env' });
+    }
+
+    // 3. Hardcoded backup
+    return NextResponse.json({ url: BACKUP_ZOOM_URL, source: 'backup' });
   } catch {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }

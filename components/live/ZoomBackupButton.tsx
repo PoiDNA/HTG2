@@ -6,13 +6,15 @@ import type { Room } from 'livekit-client';
 
 interface ZoomBackupButtonProps {
   room: Room;
+  /** Optional slot ID to fetch slot-specific Zoom URL */
+  slotId?: string;
   /** Icon-only compact variant for tight layouts */
   compact?: boolean;
   /** Called with the URL after successful broadcast — lets the sender also see the overlay */
   onUrlSent?: (url: string) => void;
 }
 
-export default function ZoomBackupButton({ room, compact = false, onUrlSent }: ZoomBackupButtonProps) {
+export default function ZoomBackupButton({ room, slotId, compact = false, onUrlSent }: ZoomBackupButtonProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -20,14 +22,15 @@ export default function ZoomBackupButton({ room, compact = false, onUrlSent }: Z
     if (sending || sent) return;
 
     const confirmed = window.confirm(
-      'Aktywować awaryjny link Zoom?\n\nLink zostanie natychmiast wyświetlony wszystkim uczestnikom spotkania.',
+      'Przejść do Zoom?\n\nLink zostanie natychmiast wyświetlony wszystkim uczestnikom spotkania.',
     );
     if (!confirmed) return;
 
     setSending(true);
     try {
-      // Fetch URL from server (never exposed client-side)
-      const res = await fetch('/api/live/zoom-url');
+      // Fetch URL from server (slot-specific or backup)
+      const params = slotId ? `?slotId=${slotId}` : '';
+      const res = await fetch(`/api/live/zoom-url${params}`);
       if (!res.ok) {
         const data = await res.json();
         alert(`Błąd: ${data.error ?? 'Nie udało się pobrać linku Zoom'}`);
@@ -50,18 +53,18 @@ export default function ZoomBackupButton({ room, compact = false, onUrlSent }: Z
     } finally {
       setSending(false);
     }
-  }, [room, sending, sent]);
+  }, [room, slotId, sending, sent]);
 
   if (compact) {
     return (
       <button
         onClick={handleActivate}
         disabled={sending}
-        title={sent ? 'Zoom wysłany ✓' : 'Awaryjny link Zoom — wyświetl wszystkim uczestnikom'}
+        title={sent ? 'Zoom wysłany ✓' : 'Przejdź do Zoom — wyświetl link wszystkim uczestnikom'}
         className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors active:scale-95
           ${sent
             ? 'bg-green-700/80 text-white cursor-default'
-            : 'bg-amber-600/80 text-white hover:bg-amber-500/90'
+            : 'bg-blue-600/90 text-white hover:bg-blue-500/90'
           }
           disabled:opacity-50 disabled:cursor-not-allowed`}
       >
@@ -74,16 +77,16 @@ export default function ZoomBackupButton({ room, compact = false, onUrlSent }: Z
     <button
       onClick={handleActivate}
       disabled={sending}
-      title="Awaryjny link Zoom — wyświetl wszystkim uczestnikom"
-      className={`flex items-center gap-1.5 px-3 h-10 rounded-full text-xs font-medium transition-colors
+      title="Przejdź do Zoom — wyświetl link wszystkim uczestnikom"
+      className={`flex items-center gap-1.5 px-4 h-10 rounded-full text-sm font-medium transition-colors
         ${sent
           ? 'bg-green-700/80 text-white cursor-default'
-          : 'bg-amber-600/80 text-white hover:bg-amber-500/90 active:scale-95'
+          : 'bg-blue-600/90 text-white hover:bg-blue-500/90 active:scale-95'
         }
         disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       <Video className="w-4 h-4 flex-shrink-0" />
-      {sent ? 'Zoom wysłany ✓' : sending ? 'Wysyłanie…' : 'Awaryjny Zoom'}
+      {sent ? 'Zoom wysłany ✓' : sending ? 'Wysyłanie…' : 'Przejdź do Zoom'}
     </button>
   );
 }

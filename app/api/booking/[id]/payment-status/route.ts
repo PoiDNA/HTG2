@@ -7,12 +7,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { staffMember } = await getEffectiveStaffMember();
+  const { staffMember, user: authUser } = await getEffectiveStaffMember();
 
-  if (!staffMember || (staffMember.role !== 'practitioner' && staffMember.slug !== 'admin')) {
-    // Check if user is admin
-    const admin = createSupabaseServiceRole();
-    const { data: profile } = await admin.from('profiles').select('role').eq('id', staffMember?.user_id || '').single();
+  // Allow practitioner directly
+  const isPractitioner = staffMember?.role === 'practitioner';
+
+  if (!isPractitioner) {
+    // Fallback: check profiles.role for admin (works even when staffMember is null)
+    const profileUserId = staffMember?.user_id ?? authUser?.id;
+    if (!profileUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    const db = createSupabaseServiceRole();
+    const { data: profile } = await db.from('profiles').select('role').eq('id', profileUserId).single();
     if (!profile || !['admin', 'moderator'].includes(profile?.role)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }

@@ -86,6 +86,7 @@ export default async function AccountLayout({
     { href: '/konto/admin/sesje', label: tPanel('admin_sessions'), icon: BookOpen },
     { href: '/konto/admin/zestawy', label: tPanel('admin_sets'), icon: Package },
     { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
+    { href: '/konto/admin/zgloszenia', label: 'Aktualizacje klientów', icon: ClipboardCheck },
     { href: '/konto/admin/naruszenia', label: 'Naruszenia', icon: ShieldAlert },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
@@ -94,7 +95,6 @@ export default async function AccountLayout({
     { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
     { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
-    { href: '/konto/admin/zgloszenia', label: 'Zgłoszenia aktualizacji', icon: ClipboardCheck },
   ] as const;
 
   // STAFF section (moderator/prowadzacy — NOT admin)

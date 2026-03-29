@@ -10,6 +10,7 @@ import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, Users2, BarChart2,
+  ClipboardCheck, RefreshCw,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -93,6 +94,7 @@ export default async function AccountLayout({
     { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
     { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
     { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
+    { href: '/konto/admin/zgloszenia', label: 'Zgłoszenia aktualizacji', icon: ClipboardCheck },
   ] as const;
 
   // STAFF section (moderator/prowadzacy — NOT admin)
@@ -126,6 +128,7 @@ export default async function AccountLayout({
     { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', icon: Gift },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
+    { href: '/konto/aktualizacja', label: 'Aktualizacja konta', icon: RefreshCw },
     { href: '/konto/profil', label: t('profile'), icon: UserCircle },
   ] as const;
 

@@ -1,7 +1,7 @@
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { locales, Link } from '@/i18n-config';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { ArrowLeft, Users2, PlayCircle, Clock } from 'lucide-react';
 import ActiveMeetingBanner from '@/components/meeting/ActiveMeetingBanner';
 
@@ -13,9 +13,7 @@ export default async function SpotkaniaDane({ params }: { params: Promise<{ loca
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  const { userId, supabase } = await getEffectiveUser();
 
   // Get all meeting sessions where user was a participant
   const { data: participations } = await supabase
@@ -28,7 +26,7 @@ export default async function SpotkaniaDane({ params }: { params: Promise<{ loca
         htg_meeting_recordings ( id, duration_seconds )
       )
     `)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('session_id', { ascending: false });
 
   const meetings = (participations ?? []).map((p: any) => p.htg_meeting_sessions);

@@ -1,7 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { CreditCard } from 'lucide-react';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -12,16 +12,13 @@ export default async function MySubscriptionsPage({ params }: { params: Promise<
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Account' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { userId, supabase } = await getEffectiveUser();
 
-  const { data: entitlements } = user
-    ? await supabase
-        .from('entitlements')
-        .select('id, type, scope_month, valid_from, valid_until, is_active, stripe_subscription_id, product:products ( name )')
-        .eq('user_id', user.id)
-        .order('valid_until', { ascending: false })
-    : { data: null };
+  const { data: entitlements } = await supabase
+    .from('entitlements')
+    .select('id, type, scope_month, valid_from, valid_until, is_active, stripe_subscription_id, product:products ( name )')
+    .eq('user_id', userId)
+    .order('valid_until', { ascending: false });
 
   const subscriptions = entitlements || [];
 

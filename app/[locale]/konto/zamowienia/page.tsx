@@ -1,7 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { FileText } from 'lucide-react';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { getEffectiveUser } from '@/lib/admin/effective-user';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -12,16 +12,13 @@ export default async function OrdersPage({ params }: { params: Promise<{ locale:
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Account' });
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { userId, supabase } = await getEffectiveUser();
 
-  const { data: orders } = user
-    ? await supabase
-        .from('orders')
-        .select('id, status, total_amount, currency, invoice_url, created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-    : { data: null };
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('id, status, total_amount, currency, invoice_url, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
 
   const orderList = orders || [];
 

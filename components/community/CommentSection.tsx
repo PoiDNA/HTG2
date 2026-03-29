@@ -4,7 +4,8 @@ import { useComments } from '@/lib/community/hooks/useComments';
 import { PostEditor } from './PostEditor';
 import { CommentItem } from './CommentItem';
 import { Loader2 } from 'lucide-react';
-import type { TipTapContent, Attachment } from '@/lib/community/types';
+import { toast } from 'sonner';
+import type { TipTapContent, Attachment, CommentWithAuthor } from '@/lib/community/types';
 
 interface CommentSectionProps {
   postId: string;
@@ -19,7 +20,7 @@ export function CommentSection({ postId, groupId, currentUserId, canModerate }: 
     enabled: true,
   });
 
-  const handleSubmitComment = async (content: TipTapContent, attachments: Attachment[]) => {
+  const submitComment = async (content: TipTapContent, attachments: Attachment[], parentId?: string) => {
     const res = await fetch('/api/community/comments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,6 +28,7 @@ export function CommentSection({ postId, groupId, currentUserId, canModerate }: 
         post_id: postId,
         content,
         attachments,
+        parent_id: parentId || null,
       }),
     });
 
@@ -35,6 +37,25 @@ export function CommentSection({ postId, groupId, currentUserId, canModerate }: 
       throw new Error(data.error || 'Nie udało się dodać komentarza');
     }
   };
+
+  const handleTopLevelSubmit = async (content: TipTapContent, attachments: Attachment[]) => {
+    await submitComment(content, attachments);
+  };
+
+  const handleReplySubmit = async (parentId: string, content: TipTapContent, attachments: Attachment[]) => {
+    await submitComment(content, attachments, parentId);
+  };
+
+  // Group comments: top-level + their replies
+  const topLevel = comments.filter(c => !c.parent_id);
+  const repliesMap = new Map<string, CommentWithAuthor[]>();
+  for (const c of comments) {
+    if (c.parent_id) {
+      const existing = repliesMap.get(c.parent_id) || [];
+      existing.push(c);
+      repliesMap.set(c.parent_id, existing);
+    }
+  }
 
   return (
     <div className="border-t border-htg-card-border">
@@ -46,12 +67,15 @@ export function CommentSection({ postId, groupId, currentUserId, canModerate }: 
           </div>
         )}
 
-        {comments.map(comment => (
+        {topLevel.map(comment => (
           <CommentItem
             key={comment.id}
             comment={comment}
             currentUserId={currentUserId}
             canModerate={canModerate}
+            groupId={groupId}
+            replies={repliesMap.get(comment.id) || []}
+            onReplySubmit={handleReplySubmit}
           />
         ))}
 
@@ -71,7 +95,7 @@ export function CommentSection({ postId, groupId, currentUserId, canModerate }: 
         <PostEditor
           groupId={groupId}
           compact
-          onSubmit={handleSubmitComment}
+          onSubmit={handleTopLevelSubmit}
         />
       </div>
     </div>

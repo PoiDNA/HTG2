@@ -14,6 +14,7 @@ export function CreateGroupForm({ locale }: CreateGroupFormProps) {
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'private' | 'staff_only'>('private');
+  const [autoJoin, setAutoJoin] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -48,7 +49,7 @@ export function CreateGroupForm({ locale }: CreateGroupFormProps) {
       const res = await fetch('/api/community/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), description: description.trim(), visibility }),
+        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), description: description.trim(), visibility, auto_join: autoJoin }),
       });
 
       if (!res.ok) {
@@ -147,6 +148,20 @@ export function CreateGroupForm({ locale }: CreateGroupFormProps) {
           })}
         </div>
       </div>
+
+      {/* Auto-join toggle */}
+      <label className="flex items-center gap-3 mb-6 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={autoJoin}
+          onChange={(e) => setAutoJoin(e.target.checked)}
+          className="w-4 h-4 rounded border-htg-card-border text-htg-sage focus:ring-htg-sage/50"
+        />
+        <div>
+          <span className="text-sm font-medium text-htg-fg">Auto-join dla nowych użytkowników</span>
+          <p className="text-xs text-htg-fg-muted">Nowi użytkownicy automatycznie dołączą do tej grupy po rejestracji</p>
+        </div>
+      </label>
 
       {/* Error / Success */}
       {error && (

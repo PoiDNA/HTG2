@@ -18,7 +18,7 @@ export function useComments({ postId, limit = 20, enabled = true }: UseCommentsO
   const cursorRef = useRef<string | null>(null);
 
   const fetchComments = useCallback(async (cursor?: string | null) => {
-    const params = new URLSearchParams({ post_id: postId, limit: String(limit) });
+    const params = new URLSearchParams({ post_id: postId, limit: String(limit), include_replies: 'true' });
     if (cursor) params.set('cursor', cursor);
 
     const res = await fetch(`/api/community/comments?${params}`);

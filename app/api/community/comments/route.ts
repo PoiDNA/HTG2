@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
   if ('error' in groupAuth) return groupAuth.error;
 
   const parentId = req.nextUrl.searchParams.get('parent_id');
+  const includeReplies = req.nextUrl.searchParams.get('include_replies') === 'true';
 
   let query = supabase
     .from('community_comments')
@@ -49,12 +50,15 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: true })
     .limit(limit + 1);
 
-  // If parent_id param given, fetch replies to that comment
-  // Otherwise fetch top-level comments (parent_id IS NULL)
-  if (parentId) {
-    query = query.eq('parent_id', parentId);
-  } else {
-    query = query.is('parent_id', null);
+  // include_replies=true: fetch ALL comments (top-level + replies) for client-side grouping
+  // parent_id: fetch replies to a specific comment
+  // default: fetch top-level only
+  if (!includeReplies) {
+    if (parentId) {
+      query = query.eq('parent_id', parentId);
+    } else {
+      query = query.is('parent_id', null);
+    }
   }
 
   if (cursor) {

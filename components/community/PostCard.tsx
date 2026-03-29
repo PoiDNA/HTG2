@@ -5,6 +5,7 @@ import { MessageCircle, Pin, MoreHorizontal, Trash2, Flag, Clock } from 'lucide-
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
 import { ReactionButton } from './ReactionButton';
+import { BookmarkButton } from './BookmarkButton';
 import { CommentSection } from './CommentSection';
 import { MediaGallery } from './MediaGallery';
 import { VoicePlayer } from './VoicePlayer';
@@ -178,6 +179,10 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
             {post.comment_count === 0 ? 'Komentuj' : ''}
           </span>
         </button>
+
+        <div className="ml-auto">
+          <BookmarkButton postId={post.id} />
+        </div>
       </div>
 
       {/* Comments */}

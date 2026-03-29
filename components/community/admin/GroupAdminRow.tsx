@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Users, MessageSquare, Lock, Globe, Shield, Archive, Loader2, UserPlus, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import { AddMemberForm } from './AddMemberForm';
+import { InviteLinkManager } from './InviteLinkManager';
 
 interface GroupAdminRowProps {
   group: {
@@ -110,12 +111,15 @@ export function GroupAdminRow({ group, locale }: GroupAdminRowProps) {
 
       {/* Expanded: Add members */}
       {expanded && (
-        <div className="border-t border-htg-card-border p-4 bg-htg-surface/50">
-          <h4 className="text-sm font-medium text-htg-fg mb-3 flex items-center gap-1">
-            <UserPlus className="w-4 h-4" />
-            Dodaj członków
-          </h4>
-          <AddMemberForm groupId={group.id} groupSlug={group.slug} />
+        <div className="border-t border-htg-card-border p-4 bg-htg-surface/50 space-y-6">
+          <div>
+            <h4 className="text-sm font-medium text-htg-fg mb-3 flex items-center gap-1">
+              <UserPlus className="w-4 h-4" />
+              Dodaj członków po email
+            </h4>
+            <AddMemberForm groupId={group.id} groupSlug={group.slug} />
+          </div>
+          <InviteLinkManager groupId={group.id} groupSlug={group.slug} />
         </div>
       )}
     </div>

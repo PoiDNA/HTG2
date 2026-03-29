@@ -11,10 +11,14 @@ import { notifyReaction } from '@/lib/community/notifications';
  */
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { target_type, target_id } = body;
+  const { target_type, target_id, reaction_type = 'heart' } = body;
 
+  const VALID_REACTIONS = ['heart', 'thumbs_up', 'pray', 'wow', 'sad'];
   if (!target_type || !target_id || !['post', 'comment'].includes(target_type)) {
     return NextResponse.json({ error: 'target_type and target_id are required' }, { status: 400 });
+  }
+  if (!VALID_REACTIONS.includes(reaction_type)) {
+    return NextResponse.json({ error: 'Invalid reaction type' }, { status: 400 });
   }
 
   const auth = await requireCommunityAuth();
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       target_type,
       target_id,
-      reaction_type: 'heart',
+      reaction_type,
     });
 
   if (error) {

@@ -4,7 +4,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 import { GroupCard } from '@/components/community/GroupCard';
 import { PushConsentBanner } from '@/components/community/PushConsentBanner';
-import { Users2, Plus } from 'lucide-react';
+import { Users2, Plus, Bookmark } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import type { GroupWithMeta } from '@/lib/community/types';
 import type { Metadata } from 'next';
@@ -106,11 +106,17 @@ export default async function CommunityPage({
         <h1 className="text-3xl font-serif font-bold text-htg-fg">
           {t('title')}
         </h1>
-        {isAdmin && (
-          <Link href="/konto/admin/spolecznosc" className="text-xs text-htg-sage hover:underline">
-            Zarządzaj grupami →
+        <div className="flex items-center gap-3">
+          <Link href="/spolecznosc/zapisane" className="flex items-center gap-1 text-sm text-htg-fg-muted hover:text-htg-warm transition-colors">
+            <Bookmark className="w-4 h-4" />
+            <span className="hidden sm:inline">Zapisane</span>
           </Link>
-        )}
+          {isAdmin && (
+            <Link href="/konto/admin/spolecznosc" className="text-xs text-htg-sage hover:underline">
+              Zarządzaj →
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* My groups */}

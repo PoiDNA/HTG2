@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { name, description, slug, visibility, type, image_url } = body;
+  const { name, description, slug, visibility, type, image_url, auto_join } = body;
 
   if (!name || !slug) {
     return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
       visibility: visibility || 'private',
       type: type || 'topic',
       image_url: image_url || null,
+      auto_join: auto_join || false,
       created_by: auth.user.id,
     })
     .select()

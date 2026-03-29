@@ -135,8 +135,8 @@ export default async function SessionDetailPage({
         </div>
       </div>
 
-      {/* Session type selector — for natalia_asysta, admin/practitioner can assign assistant */}
-      {canEditPayment && ['natalia_asysta', 'natalia_agata', 'natalia_justyna'].includes(booking.session_type) && (
+      {/* Session type selector — practitioner only */}
+      {isPractitioner && ['natalia_asysta', 'natalia_agata', 'natalia_justyna'].includes(booking.session_type) && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-3">
           <h2 className="text-base font-serif font-bold text-htg-fg">Typ sesji / Przypisanie asystentki</h2>
           <SessionTypeSelector bookingId={booking.id} initialType={booking.session_type} />
@@ -156,16 +156,16 @@ export default async function SessionDetailPage({
         )}
       </div>
 
-      {/* Payment comment — admin/practitioner only */}
-      {canEditPayment && (
+      {/* Payment comment — practitioner only */}
+      {isPractitioner && (
         <PaymentCommentEditor
           bookingId={booking.id}
           initialComment={booking.payment_comment || ''}
         />
       )}
 
-      {/* Delete session — admin only */}
-      {isAdmin && (
+      {/* Delete session — strict admin only (not practitioner/assistants) */}
+      {isAdmin && !isPractitioner && (
         <DeleteSessionButton bookingId={booking.id} locale={locale} />
       )}
 

@@ -1,5 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { locales, Link } from '@/i18n-config';
+import { Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
@@ -10,9 +10,7 @@ import {
 } from 'lucide-react';
 import AdminUserActions from './AdminUserActions';
 
-export function generateStaticParams() {
-  return locales.map((locale) => ({ locale }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function AdminUserDetailPage({
   params,

@@ -5,6 +5,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
 import { redirect } from 'next/navigation';
 import { Users, Search, Crown, Shield, User } from 'lucide-react';
+import CreateUserButton from './CreateUserButton';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -74,9 +75,12 @@ export default async function AdminUsersPage({ params, searchParams }: {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Users className="w-6 h-6 text-htg-indigo" />
-        <h2 className="text-2xl font-serif font-bold text-htg-fg">{t('users')}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Users className="w-6 h-6 text-htg-indigo" />
+          <h2 className="text-2xl font-serif font-bold text-htg-fg">{t('users')}</h2>
+        </div>
+        <CreateUserButton />
       </div>
 
       {/* Stats */}

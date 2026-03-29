@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   RefreshCw, CheckCircle, XCircle, Clock, FileText, ChevronDown,
-  BookOpen, Users, Heart, Calendar, Download, Eye, MessageSquare,
+  BookOpen, Users, Heart, Calendar, Download, MessageSquare, Paperclip,
 } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 
@@ -22,7 +22,7 @@ type Request = {
   profiles?: {
     email: string;
     display_name: string | null;
-  };
+  } | null;
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -41,21 +41,35 @@ const STATUS_CONFIG = {
 };
 
 export default function AdminZgloszeniaPage() {
-  const [requests, setRequests] = useState<Request[]>([]);
+  const [allRequests, setAllRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState<string | null>(null);
 
-  useEffect(() => { loadRequests(); }, [filter]);
+  useEffect(() => { loadRequests(); }, []);
 
   async function loadRequests() {
     setLoading(true);
-    const res = await fetch(`/api/account-update?status=${filter}`);
-    if (res.ok) setRequests(await res.json());
+    // Always fetch ALL to get correct counts
+    const res = await fetch('/api/account-update?status=all');
+    if (res.ok) {
+      const data = await res.json();
+      setAllRequests(Array.isArray(data) ? data : []);
+    }
     setLoading(false);
   }
+
+  // Filtered view
+  const filteredRequests = filter === 'all'
+    ? allRequests
+    : allRequests.filter(r => r.status === filter);
+
+  // Counts from ALL requests
+  const pendingCount = allRequests.filter(r => r.status === 'pending').length;
+  const approvedCount = allRequests.filter(r => r.status === 'approved').length;
+  const rejectedCount = allRequests.filter(r => r.status === 'rejected').length;
 
   async function handleAction(id: string, status: 'approved' | 'rejected') {
     setProcessing(id);
@@ -71,15 +85,13 @@ export default function AdminZgloszeniaPage() {
     setProcessing(null);
   }
 
-  async function downloadProof(proofUrl: string, filename: string) {
+  async function downloadProof(proofUrl: string) {
     const supabase = createSupabaseBrowser();
     const { data } = await supabase.storage.from('account-proofs').createSignedUrl(proofUrl, 3600);
     if (data?.signedUrl) {
       window.open(data.signedUrl, '_blank');
     }
   }
-
-  const pendingCount = requests.filter(r => r.status === 'pending').length;
 
   return (
     <div className="space-y-6">
@@ -100,20 +112,21 @@ export default function AdminZgloszeniaPage() {
         </button>
       </div>
 
-      {/* Stats */}
+      {/* Stats — always from ALL data */}
       <div className="grid grid-cols-3 gap-3">
-        {(['pending', 'approved', 'rejected'] as const).map(s => {
-          const sc = STATUS_CONFIG[s];
+        {([
+          { key: 'pending' as const, count: pendingCount },
+          { key: 'approved' as const, count: approvedCount },
+          { key: 'rejected' as const, count: rejectedCount },
+        ]).map(({ key, count }) => {
+          const sc = STATUS_CONFIG[key];
           const Icon = sc.icon;
-          const count = filter === 'all'
-            ? requests.filter(r => r.status === s).length
-            : s === filter ? requests.length : 0;
           return (
             <button
-              key={s}
-              onClick={() => setFilter(s)}
+              key={key}
+              onClick={() => setFilter(key)}
               className={`p-3 rounded-xl border text-center transition-colors ${
-                filter === s ? sc.bg + ' border-current' : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-htg-fg-muted/50'
+                filter === key ? sc.bg + ' border-current' : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-htg-fg-muted/50'
               }`}
             >
               <Icon className="w-5 h-5 mx-auto mb-1" />
@@ -124,17 +137,22 @@ export default function AdminZgloszeniaPage() {
         })}
       </div>
 
-      {/* Filter */}
+      {/* Filter tabs */}
       <div className="flex gap-2">
-        {(['all', 'pending', 'approved', 'rejected'] as const).map(f => (
+        {([
+          { key: 'all' as const, label: `Wszystkie (${allRequests.length})` },
+          { key: 'pending' as const, label: `Oczekujące (${pendingCount})` },
+          { key: 'approved' as const, label: `Zaakceptowane (${approvedCount})` },
+          { key: 'rejected' as const, label: `Odrzucone (${rejectedCount})` },
+        ]).map(({ key, label }) => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
+            key={key}
+            onClick={() => setFilter(key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filter === f ? 'bg-htg-indigo text-white' : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
+              filter === key ? 'bg-htg-indigo text-white' : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
             }`}
           >
-            {f === 'all' ? 'Wszystkie' : STATUS_CONFIG[f].label}
+            {label}
           </button>
         ))}
       </div>
@@ -144,14 +162,14 @@ export default function AdminZgloszeniaPage() {
         <div className="flex items-center justify-center py-20">
           <RefreshCw className="w-6 h-6 animate-spin text-htg-fg-muted" />
         </div>
-      ) : requests.length === 0 ? (
+      ) : filteredRequests.length === 0 ? (
         <div className="text-center py-12 text-htg-fg-muted">
           <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p>Brak zgłoszeń{filter !== 'all' ? ` ze statusem "${STATUS_CONFIG[filter as keyof typeof STATUS_CONFIG]?.label || filter}"` : ''}</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {requests.map(r => {
+          {filteredRequests.map(r => {
             const sc = STATUS_CONFIG[r.status];
             const Icon = sc.icon;
             const isExpanded = expandedId === r.id;
@@ -178,7 +196,7 @@ export default function AdminZgloszeniaPage() {
                     <p className="text-sm text-htg-fg-muted truncate mt-0.5">{r.description}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {r.proof_url && <span title="Ma załącznik"><FileText className="w-4 h-4 text-htg-sage" /></span>}
+                    {r.proof_url && <Paperclip className="w-4 h-4 text-htg-sage" title="Ma załącznik" />}
                     <span className="text-xs text-htg-fg-muted">{new Date(r.created_at).toLocaleDateString('pl')}</span>
                     <ChevronDown className={`w-4 h-4 text-htg-fg-muted transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </div>
@@ -187,13 +205,11 @@ export default function AdminZgloszeniaPage() {
                 {/* Expanded details */}
                 {isExpanded && (
                   <div className="px-4 pb-4 border-t border-htg-card-border pt-4 space-y-4">
-                    {/* Full description */}
                     <div>
                       <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">Opis zgłoszenia</p>
                       <p className="text-sm text-htg-fg bg-htg-surface p-3 rounded-lg">{r.description}</p>
                     </div>
 
-                    {/* Purchase date */}
                     {r.purchase_date && (
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-htg-fg-muted" />
@@ -201,12 +217,11 @@ export default function AdminZgloszeniaPage() {
                       </div>
                     )}
 
-                    {/* Proof */}
                     {r.proof_url && r.proof_filename && (
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-htg-sage" />
+                        <Paperclip className="w-4 h-4 text-htg-sage" />
                         <button
-                          onClick={() => downloadProof(r.proof_url!, r.proof_filename!)}
+                          onClick={() => downloadProof(r.proof_url!)}
                           className="text-sm text-htg-sage hover:underline flex items-center gap-1"
                         >
                           <Download className="w-3 h-3" />
@@ -215,7 +230,6 @@ export default function AdminZgloszeniaPage() {
                       </div>
                     )}
 
-                    {/* Admin notes */}
                     {r.status === 'pending' ? (
                       <div>
                         <label className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1 block">
@@ -237,7 +251,6 @@ export default function AdminZgloszeniaPage() {
                       </div>
                     )}
 
-                    {/* Action buttons */}
                     {r.status === 'pending' && (
                       <div className="flex gap-3 pt-2">
                         <button
@@ -259,7 +272,6 @@ export default function AdminZgloszeniaPage() {
                       </div>
                     )}
 
-                    {/* Review info */}
                     {r.reviewed_at && (
                       <p className="text-xs text-htg-fg-muted">
                         Rozpatrzone: {new Date(r.reviewed_at).toLocaleString('pl')}

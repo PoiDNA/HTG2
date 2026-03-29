@@ -534,6 +534,7 @@
     "notif_reaction": "liked your post",
     "notif_mention": "mentioned you",
     "notif_new_post": "added a new post",
-    "notif_group_invite": "invited you to a group"
+    "notif_group_invite": "invited you to a group",
+    "meta_description": "Join the HTG community. Discuss, share experiences, and grow with others."
   }
 }

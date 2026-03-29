@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { Loader2, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { useFeed } from '@/lib/community/hooks/useFeed';
 import { PostCard } from './PostCard';
 import { PostEditor } from './PostEditor';
@@ -15,8 +16,25 @@ interface PostFeedProps {
 }
 
 export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: PostFeedProps) {
-  const { posts, loading, loadingMore, hasMore, loadMore } = useFeed({ groupId });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { posts, loading, loadingMore, hasMore, error, loadMore } = useFeed({
+    groupId,
+    search: debouncedSearch || undefined,
+  });
+
+  // Toast on error
+  useEffect(() => {
+    if (error) toast.error('Nie udało się załadować postów');
+  }, [error]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -46,12 +64,26 @@ export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: Post
       const data = await res.json();
       throw new Error(data.error || 'Nie udało się opublikować');
     }
+
+    toast.success('Post opublikowany');
   }, [groupId]);
 
   return (
     <div className="space-y-4">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Szukaj postów..."
+          className="w-full pl-10 pr-4 py-2.5 bg-htg-card border border-htg-card-border rounded-lg text-sm text-htg-fg placeholder:text-htg-fg-muted focus:outline-none focus:ring-1 focus:ring-htg-sage/50"
+        />
+      </div>
+
       {/* Post composer */}
-      {canWrite && (
+      {canWrite && !debouncedSearch && (
         <PostEditor
           groupId={groupId}
           onSubmit={handleCreatePost}
@@ -69,7 +101,9 @@ export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: Post
       {!loading && posts.length === 0 && (
         <div className="text-center py-12">
           <p className="text-htg-fg-muted">
-            {canWrite
+            {debouncedSearch
+              ? `Brak wyników dla "${debouncedSearch}"`
+              : canWrite
               ? 'Brak postów. Bądź pierwszy i napisz coś!'
               : 'Brak postów w tej grupie.'}
           </p>

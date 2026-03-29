@@ -7,6 +7,7 @@ import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useState, useCallback, useRef } from 'react';
 import { Image as ImageIcon, Send, Loader2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { MediaUpload } from './MediaUpload';
 import { MentionSuggestion } from './MentionSuggestion';
 import type { Attachment, TipTapContent } from '@/lib/community/types';
@@ -52,7 +53,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
       attributes: {
         class: compact
           ? 'prose prose-sm max-w-none focus:outline-none min-h-[40px] px-3 py-2'
-          : 'prose prose-sm max-w-none focus:outline-none min-h-[80px] px-4 py-3',
+          : 'prose prose-sm max-w-none focus:outline-none min-h-[60px] sm:min-h-[80px] px-4 py-3',
       },
     },
   });
@@ -69,7 +70,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
       setAttachments([]);
       setShowUpload(false);
     } catch (err) {
-      console.error('Submit error:', err);
+      toast.error('Nie udało się opublikować posta');
     } finally {
       setSubmitting(false);
     }
@@ -155,7 +156,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
           ) : (
             <Send className="w-4 h-4" />
           )}
-          {compact ? '' : 'Opublikuj'}
+          {compact ? '' : <span className="hidden sm:inline">Opublikuj</span>}
         </button>
       </div>
     </div>

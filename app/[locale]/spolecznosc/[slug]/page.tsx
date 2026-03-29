@@ -6,6 +6,25 @@ import { redirect } from 'next/navigation';
 import { PostFeed } from '@/components/community/PostFeed';
 import { GroupHeader } from '@/components/community/GroupHeader';
 import type { CommunityGroup } from '@/lib/community/types';
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const db = createSupabaseServiceRole();
+  const { data: group } = await db
+    .from('community_groups')
+    .select('name, description')
+    .eq('slug', slug)
+    .single();
+
+  const title = group?.name ?? 'Grupa';
+  const description = group?.description ?? '';
+  return {
+    title,
+    description,
+    openGraph: { title: `${title} | HTG Społeczność`, description },
+  };
+}
 
 export default async function GroupPage({
   params,

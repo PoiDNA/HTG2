@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { MoreHorizontal, Trash2, Flag, Clock } from 'lucide-react';
+import { toast } from 'sonner';
+import { UserAvatar } from './UserAvatar';
 import { ReportModal } from './ReportModal';
 import type { CommentWithAuthor } from '@/lib/community/types';
 
@@ -22,17 +24,18 @@ export function CommentItem({ comment, currentUserId, canModerate }: CommentItem
 
   const handleDelete = async () => {
     if (!confirm('Czy na pewno chcesz usunąć ten komentarz?')) return;
-    const res = await fetch(`/api/community/comments/${comment.id}`, { method: 'DELETE' });
-    if (res.ok) setIsDeleted(true);
+    try {
+      const res = await fetch(`/api/community/comments/${comment.id}`, { method: 'DELETE' });
+      if (res.ok) { setIsDeleted(true); toast.success('Komentarz usunięty'); }
+      else toast.error('Nie udało się usunąć komentarza');
+    } catch { toast.error('Nie udało się usunąć komentarza'); }
   };
 
   const timeAgo = formatTimeAgo(comment.created_at);
 
   return (
     <div className="flex gap-2 py-2 group">
-      <div className="w-8 h-8 rounded-full bg-htg-surface flex items-center justify-center text-htg-fg font-medium text-xs shrink-0">
-        {comment.author?.display_name?.[0]?.toUpperCase() || '?'}
-      </div>
+      <UserAvatar avatarUrl={comment.author?.avatar_url} displayName={comment.author?.display_name} size="sm" className="shrink-0" />
 
       <div className="flex-1 min-w-0">
         <div className="bg-htg-surface rounded-lg px-3 py-2">

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { MessageCircle, Pin, MoreHorizontal, Pencil, Trash2, Flag, Clock } from 'lucide-react';
+import { MessageCircle, Pin, MoreHorizontal, Trash2, Flag, Clock } from 'lucide-react';
+import { toast } from 'sonner';
+import { UserAvatar } from './UserAvatar';
 import { ReactionButton } from './ReactionButton';
 import { CommentSection } from './CommentSection';
 import { MediaGallery } from './MediaGallery';
@@ -36,13 +38,18 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
 
   const handleDelete = async () => {
     if (!confirm('Czy na pewno chcesz usunąć ten post?')) return;
-
-    const res = await fetch(`/api/community/posts/${post.id}`, { method: 'DELETE' });
-    if (res.ok) setIsDeleted(true);
+    try {
+      const res = await fetch(`/api/community/posts/${post.id}`, { method: 'DELETE' });
+      if (res.ok) { setIsDeleted(true); toast.success('Post usunięty'); }
+      else toast.error('Nie udało się usunąć posta');
+    } catch { toast.error('Nie udało się usunąć posta'); }
   };
 
   const handlePin = async () => {
-    await fetch(`/api/community/posts/${post.id}/pin`, { method: 'PATCH' });
+    try {
+      const res = await fetch(`/api/community/posts/${post.id}/pin`, { method: 'PATCH' });
+      if (!res.ok) toast.error('Nie udało się przypiąć posta');
+    } catch { toast.error('Nie udało się przypiąć posta'); }
     setShowMenu(false);
   };
 
@@ -51,9 +58,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
       {/* Header */}
       <div className="flex items-start justify-between p-4 pb-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-htg-surface flex items-center justify-center text-htg-fg font-medium text-sm">
-            {post.author?.display_name?.[0]?.toUpperCase() || '?'}
-          </div>
+          <UserAvatar avatarUrl={post.author?.avatar_url} displayName={post.author?.display_name} />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-medium text-htg-fg text-sm">

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Upload, Loader2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Attachment } from '@/lib/community/types';
 
 interface MediaUploadProps {

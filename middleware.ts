@@ -31,19 +31,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Skip auth callback from i18n (no locale prefix needed)
-  if (pathname.startsWith('/auth/')) {
+  // Skip auth callback from i18n — BUT let PKCE code exchange through
+  if (pathname.startsWith('/auth/') && !searchParams.get('code')) {
     return NextResponse.next();
   }
 
   // ─── PKCE Code Exchange ───────────────────────────────────────
-  // If ?code= is present, exchange it for a session BEFORE anything else
+  // If ?code= is present (on any path including /auth/confirm), exchange it
   const authCode = searchParams.get('code');
   if (authCode && authCode.length > 20) {
-    const locale = getLocaleFromPath(pathname);
+    const nextParam = searchParams.get('next');
+    const locale = nextParam?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || getLocaleFromPath(pathname);
     const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/konto`;
+    url.pathname = nextParam || `/${locale}/konto`;
     url.searchParams.delete('code');
+    url.searchParams.delete('next');
+    url.searchParams.delete('consent');
+    url.searchParams.delete('type');
 
     const response = NextResponse.redirect(url);
 

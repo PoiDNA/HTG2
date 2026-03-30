@@ -42,15 +42,12 @@ export async function POST(req: NextRequest) {
     }
   } catch { /* Non-blocking */ }
 
-  // 3. Check if new user (no display_name)
+  // 3. Check if new user — account created within the last 2 minutes
   let isNew = false;
   try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .single();
-    isNew = !profile?.display_name;
+    const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
+    const ageMs = Date.now() - createdAt;
+    isNew = ageMs < 2 * 60 * 1000; // less than 2 minutes old
   } catch { /* Non-blocking */ }
 
   // 4. Link pending gifts

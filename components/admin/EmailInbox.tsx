@@ -293,7 +293,7 @@ export default function EmailInbox() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] gap-0 rounded-xl border border-htg-card-border overflow-hidden bg-htg-card">
+    <div className="flex h-[calc(100vh-4rem)] gap-0 rounded-xl border border-htg-card-border overflow-hidden bg-htg-card">
       {/* Left panel: Filters + Thread list (full width on mobile when no thread selected) */}
       <div className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-72 lg:w-80 shrink-0 border-r border-htg-card-border flex-col`}>
         {/* Status tabs — icon-only with tooltip */}
@@ -346,7 +346,7 @@ export default function EmailInbox() {
             {([
               { value: '' as const, label: 'Wszystkie', icon: Mail },
               { value: 'email' as const, label: 'Email', icon: Mail },
-              { value: 'portal' as const, label: 'Portal', icon: MessageSquare },
+              { value: 'portal' as const, label: 'HTG', icon: MessageSquare },
             ]).map(ch => (
               <button
                 key={ch.value}
@@ -416,7 +416,7 @@ export default function EmailInbox() {
                     <p className="text-xs text-htg-fg-muted truncate mt-0.5">
                       {thread.channel === 'portal' && (
                         <span className="inline-flex items-center gap-0.5 mr-1 text-[9px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-600">
-                          <MessageSquare className="w-2.5 h-2.5" />Portal
+                          <MessageSquare className="w-2.5 h-2.5" />HTG
                         </span>
                       )}
                       {thread.subject || '(bez tematu)'}
@@ -621,7 +621,7 @@ export default function EmailInbox() {
                     }`}
                   >
                     <Send className="w-4 h-4" />
-                    {detail.channel === 'portal' ? 'Odpowiedz (portal)' : 'Wyślij'}
+                    {detail.channel === 'portal' ? 'Odpowiedz (HTG)' : 'Wyślij'}
                   </button>
                 </div>
               </div>

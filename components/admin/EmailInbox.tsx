@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Inbox, Clock, CheckCircle2, AlertTriangle, Ban,
   Search, Send, X, ChevronRight, Lightbulb, Paperclip,
-  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2, UserCircle, Maximize2, Minimize2, ChevronsUp, ChevronsDown, Type,
+  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2, UserCircle, Maximize2, Minimize2, ChevronsUp, ChevronsDown, Type, Bold, Printer, FileDown, Eye,
 } from 'lucide-react';
 import CustomerCard from './CustomerCard';
 import TemplateInsert from './TemplateInsert';
@@ -128,6 +128,15 @@ export default function EmailInbox() {
   // Editor enhancements
   const [editorExpanded, setEditorExpanded] = useState(false);
   const [editorLargeText, setEditorLargeText] = useState(false);
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Preview text (shown next to subject in recipient's inbox)
+  const [replyPreviewText, setReplyPreviewText] = useState('');
+  const [showPreviewText, setShowPreviewText] = useState(false);
+  const [composePreviewText, setComposePreviewText] = useState('');
+
+  // Default footer
+  const [defaultFooter, setDefaultFooter] = useState('');
 
   // Role-based view
   const [isAdmin, setIsAdmin] = useState(false);
@@ -160,6 +169,17 @@ export default function EmailInbox() {
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
+  // Fetch default footer on mount
+  useEffect(() => {
+    fetch('/api/email/templates')
+      .then(r => r.json())
+      .then(data => {
+        const footer = (data.templates || []).find((t: any) => t.category === 'footer' && t.is_default_footer);
+        if (footer) setDefaultFooter(footer.body_text);
+      })
+      .catch(() => {});
+  }, []);
+
   // Autocomplete: search users as you type in "To" field
   useEffect(() => {
     if (composeTo.length < 2) { setToSuggestions([]); return; }
@@ -176,7 +196,13 @@ export default function EmailInbox() {
 
   // Fetch thread detail
   useEffect(() => {
-    if (!selectedId) { setDetail(null); setShowCustomerCard(false); return; }
+    if (!selectedId) { setDetail(null); setShowCustomerCard(false); setReplyText(''); return; }
+    // Auto-append default footer to reply
+    if (defaultFooter) {
+      setReplyText('\n\n---\n' + defaultFooter);
+    } else {
+      setReplyText('');
+    }
     setLoadingDetail(true);
     fetch(`/api/email/threads/${selectedId}`)
       .then(r => r.json())
@@ -201,6 +227,8 @@ export default function EmailInbox() {
         });
       } else {
         // Email reply — existing endpoint
+        const previewDiv = buildPreviewDiv(replyPreviewText);
+        const htmlBody = `<p>${markdownToHtml(replyText)}</p>`;
         await fetch('/api/email/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -208,14 +236,16 @@ export default function EmailInbox() {
             conversationId: detail.id,
             to: detail.from_address,
             subject: detail.subject,
-            bodyText: replyText,
-            bodyHtml: `<p>${replyText.replace(/\n/g, '<br/>')}</p>`,
+            bodyText: replyText.replace(/\*\*/g, ''),
+            bodyHtml: previewDiv + htmlBody,
             attachments: replyAttachments.length > 0 ? replyAttachments : undefined,
           }),
         });
       }
       setReplyText('');
       setReplyAttachments([]);
+      setReplyPreviewText('');
+      setShowPreviewText(false);
       // Refresh detail
       const res = await fetch(`/api/email/threads/${detail.id}`);
       setDetail(await res.json());
@@ -267,6 +297,44 @@ export default function EmailInbox() {
   };
 
   // Send new message (compose)
+  // Bold toggle for selected text in reply textarea
+  const handleBold = () => {
+    const ta = replyTextareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    if (start === end) return; // nothing selected
+    const before = replyText.slice(0, start);
+    const selected = replyText.slice(start, end);
+    const after = replyText.slice(end);
+    // Toggle: if already wrapped in **, remove; otherwise add
+    if (before.endsWith('**') && after.startsWith('**')) {
+      setReplyText(before.slice(0, -2) + selected + after.slice(2));
+    } else {
+      setReplyText(before + '**' + selected + '**' + after);
+      // Restore selection after state update
+      setTimeout(() => { ta.selectionStart = start + 2; ta.selectionEnd = end + 2; ta.focus(); }, 0);
+    }
+  };
+
+  // Convert markdown bold to HTML for email sending
+  const markdownToHtml = (text: string): string => {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/\n/g, '<br/>');
+  };
+
+  // Build preview text hidden div for email
+  const buildPreviewDiv = (previewText: string): string => {
+    if (!previewText.trim()) return '';
+    return `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${previewText.trim()}</div>`;
+  };
+
+  // Print thread
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleComposeSend = async () => {
     if (!composeTo.trim() || !composeBody.trim()) return;
     setComposeSending(true);
@@ -278,8 +346,8 @@ export default function EmailInbox() {
           to: composeTo.trim(),
           from: composeFrom || undefined,
           subject: composeSubject.trim() || '(bez tematu)',
-          bodyText: composeBody,
-          bodyHtml: `<p>${composeBody.replace(/\n/g, '<br/>')}</p>`,
+          bodyText: composeBody.replace(/\*\*/g, ''),
+          bodyHtml: buildPreviewDiv(composePreviewText) + `<p>${markdownToHtml(composeBody)}</p>`,
           attachments: composeAttachments.length > 0 ? composeAttachments : undefined,
         }),
       });
@@ -288,6 +356,7 @@ export default function EmailInbox() {
         setShowCompose(false);
         setComposeTo('');
         setComposeSubject('');
+        setComposePreviewText('');
         setComposeBody('');
         setComposeAttachments([]);
         fetchThreads();
@@ -300,13 +369,23 @@ export default function EmailInbox() {
   };
 
   return (
-    <div className={`flex gap-0 overflow-hidden bg-htg-card ${
+    <>
+    {/* Print styles — hide everything except message timeline */}
+    <style>{`
+      @media print {
+        body > *:not(.print-inbox-root) { display: none !important; }
+        nav, header, footer, aside { display: none !important; }
+        .print-hide { display: none !important; }
+        .print-show { display: block !important; }
+      }
+    `}</style>
+    <div className={`print-inbox-root flex gap-0 overflow-hidden bg-htg-card ${
       isFullscreen
         ? 'fixed inset-0 z-50 h-screen'
         : 'h-[calc(100vh-4rem)] rounded-xl border border-htg-card-border'
     }`}>
       {/* Left panel: Filters + Thread list (full width on mobile when no thread selected) */}
-      <div className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-72 lg:w-80 shrink-0 border-r border-htg-card-border flex-col`}>
+      <div className={`print-hide ${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-72 lg:w-80 shrink-0 border-r border-htg-card-border flex-col`}>
         {/* Status tabs — icon-only with tooltip */}
         <div className="flex gap-1 p-2 border-b border-htg-card-border">
           {STATUS_TABS.map(tab => (
@@ -611,7 +690,7 @@ export default function EmailInbox() {
             {/* Compose reply */}
             <div className={`border-t border-htg-card-border space-y-2 p-3 ${editorExpanded ? 'flex-1 flex flex-col' : ''}`}>
               {/* Toolbar above textarea */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-wrap">
                 <button
                   onClick={() => setEditorExpanded(prev => !prev)}
                   title={editorExpanded ? 'Zmniejsz edytor' : 'Powiększ edytor'}
@@ -629,6 +708,14 @@ export default function EmailInbox() {
                   }`}
                 >
                   <Type className="w-4 h-4" />
+                </button>
+                <div className="w-px h-4 bg-htg-card-border mx-0.5" />
+                <button
+                  onClick={handleBold}
+                  title="Pogrubienie (zaznacz tekst)"
+                  className="p-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+                >
+                  <Bold className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -651,7 +738,37 @@ export default function EmailInbox() {
                   onInsert={(text) => setReplyText(prev => prev + text)}
                   onManage={() => setShowTemplateManager(true)}
                 />
+                <div className="w-px h-4 bg-htg-card-border mx-0.5" />
+                {detail.channel !== 'portal' && (
+                  <button
+                    onClick={() => setShowPreviewText(prev => !prev)}
+                    title="Podgląd w skrzynce odbiorcy"
+                    className={`p-1.5 rounded-lg text-xs transition-colors ${
+                      showPreviewText ? 'bg-htg-sage text-white' : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                    }`}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={handlePrint}
+                  title="Drukuj / Zapisz PDF"
+                  className="p-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
               </div>
+              {/* Preview text field (email only) */}
+              {showPreviewText && detail.channel !== 'portal' && (
+                <input
+                  type="text"
+                  value={replyPreviewText}
+                  onChange={e => setReplyPreviewText(e.target.value)}
+                  placeholder="Tekst widoczny obok tematu w skrzynce odbiorcy..."
+                  maxLength={150}
+                  className="w-full px-3 py-1.5 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-xs focus:outline-none focus:ring-1 focus:ring-htg-sage"
+                />
+              )}
               {/* Attachment list */}
               {replyAttachments.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -667,9 +784,10 @@ export default function EmailInbox() {
                 </div>
               )}
               <textarea
+                ref={replyTextareaRef}
                 value={replyText}
                 onChange={e => setReplyText(e.target.value)}
-                placeholder="Napisz odpowiedź..."
+                placeholder="Napisz odpowiedź... (użyj **tekst** dla pogrubienia)"
                 rows={editorExpanded ? 20 : 6}
                 className={`w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage resize-y ${
                   editorExpanded ? 'flex-1 min-h-0' : 'min-h-[120px]'
@@ -810,6 +928,18 @@ export default function EmailInbox() {
                   className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
                 />
               </div>
+              {/* Preview text */}
+              <div>
+                <label className="text-xs font-medium text-htg-fg-muted block mb-1">Podgląd w skrzynce <span className="font-normal">(opcjonalne — tekst obok tematu u odbiorcy)</span></label>
+                <input
+                  type="text"
+                  value={composePreviewText}
+                  onChange={e => setComposePreviewText(e.target.value)}
+                  placeholder="Krótki podgląd widoczny w skrzynce odbiorcy..."
+                  maxLength={150}
+                  className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
+                />
+              </div>
               {/* Body */}
               <div>
                 <label className="text-xs font-medium text-htg-fg-muted block mb-1">Treść *</label>
@@ -817,7 +947,7 @@ export default function EmailInbox() {
                   value={composeBody}
                   onChange={e => setComposeBody(e.target.value)}
                   rows={6}
-                  placeholder="Napisz wiadomość..."
+                  placeholder="Napisz wiadomość... (użyj **tekst** dla pogrubienia)"
                   className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
                 />
               </div>
@@ -880,5 +1010,6 @@ export default function EmailInbox() {
         </div>
       )}
     </div>
+    </>
   );
 }

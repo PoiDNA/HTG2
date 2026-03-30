@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Inbox, Clock, CheckCircle2, AlertTriangle, Ban,
   Search, Send, X, ChevronRight, Lightbulb, Paperclip,
-  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2,
+  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2, UserCircle,
 } from 'lucide-react';
 import CustomerCard from './CustomerCard';
 import TemplateInsert from './TemplateInsert';
@@ -119,6 +119,9 @@ export default function EmailInbox() {
   // Template manager modal
   const [showTemplateManager, setShowTemplateManager] = useState(false);
 
+  // Customer card slideout
+  const [showCustomerCard, setShowCustomerCard] = useState(false);
+
   // Role-based view
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState('');
@@ -166,7 +169,7 @@ export default function EmailInbox() {
 
   // Fetch thread detail
   useEffect(() => {
-    if (!selectedId) { setDetail(null); return; }
+    if (!selectedId) { setDetail(null); setShowCustomerCard(false); return; }
     setLoadingDetail(true);
     fetch(`/api/email/threads/${selectedId}`)
       .then(r => r.json())
@@ -485,6 +488,17 @@ export default function EmailInbox() {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${PRIORITY_COLORS[detail.priority]}`}>
                     {detail.priority}
                   </span>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowCustomerCard(prev => !prev)}
+                      className={`text-xs px-2.5 py-1 rounded-lg border border-htg-card-border transition-colors flex items-center gap-1 ${
+                        showCustomerCard ? 'bg-htg-sage text-white border-htg-sage' : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                      }`}
+                    >
+                      <UserCircle className="w-3.5 h-3.5" />
+                      Klient
+                    </button>
+                  )}
                   <button
                     onClick={handleClose}
                     className="text-xs px-2.5 py-1 rounded-lg border border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
@@ -595,8 +609,8 @@ export default function EmailInbox() {
                   value={replyText}
                   onChange={e => setReplyText(e.target.value)}
                   placeholder="Napisz odpowiedź..."
-                  rows={2}
-                  className="flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
+                  rows={4}
+                  className="flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-y min-h-[80px]"
                 />
                 <div className="flex flex-col gap-1 self-end">
                   <button
@@ -643,28 +657,40 @@ export default function EmailInbox() {
         ) : null}
       </div>
 
-      {/* Right panel: Customer Card — admin only */}
-      {isAdmin && detail && (
-        <div className="hidden lg:block w-64 shrink-0 border-l border-htg-card-border p-4 overflow-y-auto">
-          <CustomerCard
-            card={detail.customerCard || null}
-            isVerified={detail.user_link_verified}
-            conversationId={detail.id}
-            onLinkUser={() => {
-              const email = prompt('Email lub ID użytkownika HTG:');
-              if (!email) return;
-              // Simple: search by email first
-              fetch(`/api/email/threads/${detail.id}/link-user`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: email }), // TODO: search endpoint
-              }).then(() => {
-                // Refresh
-                fetch(`/api/email/threads/${detail.id}`).then(r => r.json()).then(setDetail);
-              });
-            }}
-            onSendVerification={handleVerify}
-          />
+      {/* Customer Card — slideout panel (on demand) */}
+      {isAdmin && detail && showCustomerCard && (
+        <div className="fixed inset-y-0 right-0 z-40 w-80 bg-htg-card border-l border-htg-card-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between p-3 border-b border-htg-card-border">
+            <h3 className="text-sm font-semibold text-htg-fg flex items-center gap-1.5">
+              <UserCircle className="w-4 h-4" />
+              Karta klienta
+            </h3>
+            <button
+              onClick={() => setShowCustomerCard(false)}
+              className="p-1 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <CustomerCard
+              card={detail.customerCard || null}
+              isVerified={detail.user_link_verified}
+              conversationId={detail.id}
+              onLinkUser={() => {
+                const email = prompt('Email lub ID użytkownika HTG:');
+                if (!email) return;
+                fetch(`/api/email/threads/${detail.id}/link-user`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: email }),
+                }).then(() => {
+                  fetch(`/api/email/threads/${detail.id}`).then(r => r.json()).then(setDetail);
+                });
+              }}
+              onSendVerification={handleVerify}
+            />
+          </div>
         </div>
       )}
       {/* Template manager modal */}

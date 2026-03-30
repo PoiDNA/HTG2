@@ -4,7 +4,7 @@
 // ============================================================
 
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import type { CustomerCard } from './types';
+import type { CustomerCard, PortalCustomerCard } from './types';
 
 /**
  * Build a Customer Card from the HTG database.
@@ -50,6 +50,52 @@ export async function getCustomerCard(
   }
 
   return card;
+}
+
+/**
+ * Build a minimal Customer Card for portal conversations.
+ * Allowlist approach: only identity + subscription status + recent threads.
+ * No financial data (orders, entitlements, bookings) — Natalia (staff) doesn't need it.
+ */
+export async function getPortalCustomerCard(userId: string): Promise<PortalCustomerCard | null> {
+  const db = createSupabaseServiceRole();
+
+  const { data: profile } = await db
+    .from('profiles')
+    .select('id, email, display_name, role, created_at')
+    .eq('id', userId)
+    .single();
+
+  if (!profile) return null;
+
+  // Check active subscription (simple boolean)
+  const { count: subCount } = await db
+    .from('entitlements')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gt('valid_until', new Date().toISOString());
+
+  // Recent threads (portal + email, last 3)
+  const { data: threads } = await db
+    .from('conversations')
+    .select('subject, status, last_message_at')
+    .eq('user_id', userId)
+    .order('last_message_at', { ascending: false })
+    .limit(3);
+
+  return {
+    userId: profile.id,
+    email: profile.email || '',
+    displayName: profile.display_name || null,
+    role: profile.role || null,
+    createdAt: profile.created_at || null,
+    hasActiveSubscription: (subCount || 0) > 0,
+    recentThreads: (threads || []).map((t: any) => ({
+      subject: t.subject || '(brak tematu)',
+      status: t.status,
+      last_message_at: t.last_message_at,
+    })),
+  };
 }
 
 /**

@@ -12,6 +12,7 @@ import TemplateManager from './TemplateManager';
 
 interface ConversationSummary {
   id: string;
+  channel: string;
   subject: string | null;
   from_address: string;
   from_name: string | null;
@@ -26,6 +27,7 @@ interface ConversationSummary {
 
 interface ConversationDetail {
   id: string;
+  channel: string;
   subject: string | null;
   from_address: string;
   from_name: string | null;
@@ -80,6 +82,7 @@ export default function EmailInbox() {
   const [threads, setThreads] = useState<ConversationSummary[]>([]);
   const [totalThreads, setTotalThreads] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
+  const [channelFilter, setChannelFilter] = useState<'' | 'email' | 'portal'>('');
   const [mailboxFilter, setMailboxFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -125,6 +128,7 @@ export default function EmailInbox() {
     setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter) params.set('status', statusFilter);
+    if (channelFilter) params.set('channel', channelFilter);
     if (mailboxFilter) params.set('mailbox_id', mailboxFilter);
     if (searchQuery) params.set('search', searchQuery);
     params.set('limit', '30');
@@ -142,7 +146,7 @@ export default function EmailInbox() {
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [statusFilter, mailboxFilter, searchQuery]);
+  }, [statusFilter, channelFilter, mailboxFilter, searchQuery]);
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
@@ -170,23 +174,36 @@ export default function EmailInbox() {
       .catch(() => setLoadingDetail(false));
   }, [selectedId]);
 
-  // Send reply
+  // Send reply — portal vs email
   const handleSend = async () => {
     if (!detail || !replyText.trim()) return;
     setSending(true);
     try {
-      await fetch('/api/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: detail.id,
-          to: detail.from_address,
-          subject: detail.subject,
-          bodyText: replyText,
-          bodyHtml: `<p>${replyText.replace(/\n/g, '<br/>')}</p>`,
-          attachments: replyAttachments.length > 0 ? replyAttachments : undefined,
-        }),
-      });
+      if (detail.channel === 'portal') {
+        // Portal reply — separate endpoint, plain text only
+        await fetch('/api/portal/admin-reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: detail.id,
+            bodyText: replyText,
+          }),
+        });
+      } else {
+        // Email reply — existing endpoint
+        await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: detail.id,
+            to: detail.from_address,
+            subject: detail.subject,
+            bodyText: replyText,
+            bodyHtml: `<p>${replyText.replace(/\n/g, '<br/>')}</p>`,
+            attachments: replyAttachments.length > 0 ? replyAttachments : undefined,
+          }),
+        });
+      }
       setReplyText('');
       setReplyAttachments([]);
       // Refresh detail
@@ -321,6 +338,27 @@ export default function EmailInbox() {
               className="w-full pl-8 pr-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-xs focus:outline-none focus:ring-1 focus:ring-htg-sage"
             />
           </div>
+          {/* Channel filter */}
+          <div className="flex gap-1 flex-wrap">
+            {([
+              { value: '' as const, label: 'Wszystkie', icon: Mail },
+              { value: 'email' as const, label: 'Email', icon: Mail },
+              { value: 'portal' as const, label: 'Portal', icon: MessageSquare },
+            ]).map(ch => (
+              <button
+                key={ch.value}
+                onClick={() => setChannelFilter(ch.value)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                  channelFilter === ch.value
+                    ? ch.value === 'portal' ? 'bg-teal-600 text-white' : 'bg-htg-sage text-white'
+                    : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
+                }`}
+              >
+                <ch.icon className="w-3 h-3" />
+                {ch.label}
+              </button>
+            ))}
+          </div>
           {/* Mailbox filter — show when multiple mailboxes */}
           {mailboxes.length > 1 && (
             <div className="flex gap-1 flex-wrap">
@@ -373,8 +411,13 @@ export default function EmailInbox() {
                       </span>
                     </div>
                     <p className="text-xs text-htg-fg-muted truncate mt-0.5">
+                      {thread.channel === 'portal' && (
+                        <span className="inline-flex items-center gap-0.5 mr-1 text-[9px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-600">
+                          <MessageSquare className="w-2.5 h-2.5" />Portal
+                        </span>
+                      )}
                       {thread.subject || '(bez tematu)'}
-                      {isAdmin && !mailboxFilter && thread.mailboxes?.name && (
+                      {isAdmin && !mailboxFilter && thread.channel !== 'portal' && thread.mailboxes?.name && (
                         <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-htg-card text-htg-fg-muted/60">
                           {thread.mailboxes.name}
                         </span>
@@ -559,14 +602,17 @@ export default function EmailInbox() {
                   <button
                     onClick={handleSend}
                     disabled={sending || !replyText.trim()}
-                    className="px-4 py-2 rounded-lg bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage-dark disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                    className={`px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center gap-1.5 ${
+                      detail.channel === 'portal' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-htg-sage hover:bg-htg-sage-dark'
+                    }`}
                   >
                     <Send className="w-4 h-4" />
-                    Wyślij
+                    {detail.channel === 'portal' ? 'Odpowiedz (portal)' : 'Wyślij'}
                   </button>
                 </div>
               </div>
-              {/* Toolbar: template + attachment */}
+              {/* Toolbar: template + attachment — hidden for portal (plain text only) */}
+              {detail.channel !== 'portal' && (
               <div className="flex items-center gap-2">
                 <TemplateInsert
                   userId={userId}
@@ -591,6 +637,7 @@ export default function EmailInbox() {
                   onChange={e => { if (e.target.files) handleFileUpload(e.target.files, 'reply'); e.target.value = ''; }}
                 />
               </div>
+              )}
             </div>
           </>
         ) : null}

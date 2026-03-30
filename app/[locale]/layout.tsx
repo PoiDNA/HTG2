@@ -115,7 +115,9 @@ export default async function LocaleLayout({
                   <span className="text-2xl font-serif font-bold text-htg-indigo">HTG</span>
                 </Link>
                 <NavLinks />
-                <SiteNav />
+                <div className="col-start-3 flex justify-end">
+                  <SiteNav />
+                </div>
               </div>
             </header>
 

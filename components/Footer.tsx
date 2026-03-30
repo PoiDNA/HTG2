@@ -7,8 +7,8 @@ export default function Footer() {
 
   return (
     <footer className="bg-htg-indigo text-white/80 mt-auto">
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="mx-auto max-w-6xl px-6 py-6 md:py-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-8">
           {/* Brand */}
           <div>
             <h3 className="text-lg font-serif font-bold text-white mb-2">HTG</h3>
@@ -34,7 +34,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-8 pt-6 text-center text-sm text-white/40">
+        <div className="border-t border-white/10 mt-5 pt-4 md:mt-8 md:pt-6 text-center text-sm text-white/40">
           {t('copyright', { year: String(year) })}
         </div>
       </div>

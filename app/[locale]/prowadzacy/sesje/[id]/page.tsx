@@ -17,6 +17,7 @@ import SessionTypeSelector from './SessionTypeSelector';
 import ClientNameEditor from './ClientNameEditor';
 import DeleteSessionButton from './DeleteSessionButton';
 import BookingUserEditor from './BookingUserEditor';
+import SessionTimeEditor from './SessionTimeEditor';
 
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
@@ -106,7 +107,14 @@ export default async function SessionDetailPage({
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <Clock className="w-4 h-4" />
-            <span className="text-htg-fg">{slot?.start_time?.slice(0,5)}</span>
+            {isAdmin ? (
+              <SessionTimeEditor
+                bookingId={booking.id}
+                initialTime={slot?.start_time?.slice(0, 5) || '09:00'}
+              />
+            ) : (
+              <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
+            )}
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <User className="w-4 h-4" />

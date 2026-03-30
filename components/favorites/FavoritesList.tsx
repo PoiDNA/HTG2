@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Heart, UserMinus, UserPlus, Search, Users } from 'lucide-react';
+import { UserMinus, UserPlus, Search, Users } from 'lucide-react';
 
 interface UserInfo {
   id: string;
@@ -39,7 +39,7 @@ export default function FavoritesList() {
     const data = await res.json();
     if (data.success) {
       setSearchEmail('');
-      setMessage('Dodano do polubionych ✓');
+      setMessage('Dodano do znajomych ✓');
       loadData();
     } else {
       setMessage(data.error || 'Błąd');
@@ -64,7 +64,7 @@ export default function FavoritesList() {
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
         <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-htg-sage" />
-          Dodaj do polubionych
+          Dodaj do znajomych
         </h2>
         <div className="flex gap-3">
           <div className="relative flex-1">
@@ -96,11 +96,11 @@ export default function FavoritesList() {
       {/* My favorites */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
         <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
-          <Heart className="w-5 h-5 text-htg-warm" />
-          Moi polubieni ({favorites.length})
+          <Users className="w-5 h-5 text-htg-warm" />
+          Moi znajomi ({favorites.length})
         </h2>
         {favorites.length === 0 ? (
-          <p className="text-htg-fg-muted text-sm">Nie masz jeszcze polubionych użytkowników.</p>
+          <p className="text-htg-fg-muted text-sm">Nie masz jeszcze znajomych.</p>
         ) : (
           <div className="space-y-3">
             {favorites.map(fav => (
@@ -112,7 +112,7 @@ export default function FavoritesList() {
                 <button
                   onClick={() => handleRemove(fav.id)}
                   className="text-red-400 hover:text-red-300 transition-colors p-2"
-                  title="Usuń z polubionych"
+                  title="Usuń ze znajomych"
                 >
                   <UserMinus className="w-4 h-4" />
                 </button>
@@ -129,7 +129,7 @@ export default function FavoritesList() {
           Obserwujący mnie ({followers.length})
         </h2>
         {followers.length === 0 ? (
-          <p className="text-htg-fg-muted text-sm">Nikt jeszcze Cię nie dodał do polubionych.</p>
+          <p className="text-htg-fg-muted text-sm">Nikt jeszcze Cię nie dodał do znajomych.</p>
         ) : (
           <div className="space-y-3">
             {followers.map(f => (
@@ -149,7 +149,7 @@ export default function FavoritesList() {
                       loadData();
                     }}
                     className="text-htg-sage hover:text-htg-sage-dark transition-colors p-2"
-                    title="Dodaj do polubionych"
+                    title="Dodaj do znajomych"
                   >
                     <UserPlus className="w-4 h-4" />
                   </button>

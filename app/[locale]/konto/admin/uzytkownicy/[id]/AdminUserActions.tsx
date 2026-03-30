@@ -12,7 +12,6 @@ interface Props {
   userEmail: string;
   initialName?: string;
   initialPhone?: string;
-  initialSecondEmail?: string;
 }
 
 type AddPurchaseType = 'session' | 'monthly' | 'yearly' | 'individual';
@@ -24,7 +23,7 @@ const INDIVIDUAL_TYPES = [
   { value: 'natalia_para', label: SESSION_CONFIG['natalia_para']?.label || 'natalia_para' },
 ];
 
-export default function AdminUserActions({ userId, userEmail, initialName = '', initialPhone = '', initialSecondEmail = '' }: Props) {
+export default function AdminUserActions({ userId, userEmail, initialName = '', initialPhone = '' }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<'add_purchase' | 'change_role' | 'edit_profile' | null>(null);
   const [purchaseType, setPurchaseType] = useState<AddPurchaseType>('session');
@@ -38,7 +37,6 @@ export default function AdminUserActions({ userId, userEmail, initialName = '', 
   const [newRole, setNewRole] = useState('user');
   const [editName, setEditName] = useState(initialName);
   const [editPhone, setEditPhone] = useState(initialPhone);
-  const [editSecondEmail, setEditSecondEmail] = useState(initialSecondEmail);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -102,7 +100,7 @@ export default function AdminUserActions({ userId, userEmail, initialName = '', 
     const res = await fetch('/api/admin/user-profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, displayName: editName, phone: editPhone, secondEmail: editSecondEmail }),
+      body: JSON.stringify({ userId, displayName: editName, phone: editPhone }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -182,12 +180,6 @@ export default function AdminUserActions({ userId, userEmail, initialName = '', 
               <input type="text" value={userEmail} disabled
                 className="w-full px-3 py-2.5 bg-htg-surface/50 border border-htg-card-border rounded-xl text-htg-fg-muted text-sm cursor-not-allowed" />
               <p className="text-xs text-htg-fg-muted mt-1">Email główny jest zarządzany przez Supabase Auth — edytuj przez panel Supabase.</p>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1 block">Email dodatkowy</label>
-              <input type="email" value={editSecondEmail} onChange={e => setEditSecondEmail(e.target.value)}
-                placeholder="alternatywny@email.pl"
-                className="w-full px-3 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-indigo/50" />
             </div>
           </div>
           <div className="flex gap-3">

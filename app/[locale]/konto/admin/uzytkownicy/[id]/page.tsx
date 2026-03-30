@@ -38,7 +38,7 @@ export default async function AdminUserDetailPage({
   // Load profile — with graceful fallback if optional columns not yet migrated
   let profileResult = await db
     .from('profiles')
-    .select('id, display_name, email, role, wix_member_id, created_at, wix_created_at, phone, second_email')
+    .select('id, display_name, email, role, wix_member_id, created_at, wix_created_at, phone')
     .eq('id', id)
     .single();
 
@@ -159,13 +159,6 @@ export default async function AdminUserDetailPage({
               {profile.phone && (
                 <p className="text-sm text-htg-fg-muted mt-0.5">{profile.phone}</p>
               )}
-              {(profile as any).second_email && (
-                <p className="text-sm text-htg-fg-muted mt-0.5 flex items-center gap-1">
-                  <Mail className="w-3 h-3" />
-                  {(profile as any).second_email}
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">dodatkowy</span>
-                </p>
-              )}
               <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   profile.role === 'admin' ? 'bg-htg-warm/20 text-htg-warm' :
@@ -229,7 +222,6 @@ export default async function AdminUserDetailPage({
         userEmail={profile.email || ''}
         initialName={profile.display_name || ''}
         initialPhone={profile.phone || ''}
-        initialSecondEmail={(profile as any).second_email || ''}
       />
 
       {/* Upcoming bookings */}

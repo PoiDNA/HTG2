@@ -146,12 +146,11 @@ export default async function AccountLayout({
     { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', icon: Gift },
     { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
     { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
-    { href: '/konto/aktualizacja', label: 'Aktualizacja konta', icon: RefreshCw },
-    { href: '/konto/profil', label: t('profile'), icon: UserCircle },
+    { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw },
   ] as const;
 
-  // Profile-only item
-  const profileItem = { href: '/konto/profil', label: t('profile'), icon: UserCircle } as const;
+  // Aktualizacja item (replaces standalone Profil)
+  const profileItem = { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw } as const;
 
   // Helper to render a nav section
   const renderSection = (title: string, items: ReadonlyArray<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>) => (

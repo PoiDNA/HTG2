@@ -84,7 +84,7 @@ export default function UserPanelNav() {
               <DropdownLink href="/konto/admin/kolejka" icon={Users} label={t('admin_queue')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/sloty" icon={Clock} label={t('admin_slots')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/subskrypcje" icon={CreditCard} label={t('admin_subscriptions')} onClick={() => setOpen(false)} />
-              <DropdownLink href="/konto/profil" icon={UserCircle} label={t('profile')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/aktualizacja" icon={UserCircle} label="Aktualizacja" onClick={() => setOpen(false)} />
             </div>
           ) : (
             <>
@@ -94,7 +94,7 @@ export default function UserPanelNav() {
                 <DropdownLink href="/konto/sesje-indywidualne" icon={CalendarDays} label={t('individual_sessions')} onClick={() => setOpen(false)} />
                 <DropdownLink href="/konto/subskrypcje" icon={CreditCard} label={t('my_subscriptions')} onClick={() => setOpen(false)} />
                 <DropdownLink href="/konto/zamowienia" icon={FileText} label={t('orders')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/profil" icon={UserCircle} label={t('profile')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/aktualizacja" icon={UserCircle} label="Aktualizacja" onClick={() => setOpen(false)} />
               </div>
 
               {/* Staff section */}

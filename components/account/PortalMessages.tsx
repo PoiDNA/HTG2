@@ -97,6 +97,28 @@ export default function PortalMessages() {
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
+  // Auto-refresh: poll conversations every 15s + messages every 10s when thread open
+  useEffect(() => {
+    const interval = setInterval(() => { fetchConversations(); }, 15000);
+    return () => clearInterval(interval);
+  }, [fetchConversations]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const interval = setInterval(() => {
+      fetch(`/api/portal/conversations/${selectedId}`)
+        .then(r => r.json())
+        .then(data => {
+          setMessages(data.messages || []);
+          setSelectedConv(data.conversation || null);
+          // Mark new outbound as read
+          fetch(`/api/portal/conversations/${selectedId}/read`, { method: 'POST' }).catch(() => {});
+        })
+        .catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [selectedId]);
+
   // Fetch thread detail
   useEffect(() => {
     if (!selectedId) {

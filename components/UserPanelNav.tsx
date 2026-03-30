@@ -90,11 +90,10 @@ export default function UserPanelNav() {
             <>
               {/* User section */}
               <div className="py-1">
-                <DropdownLink href="/konto" icon={Film} label={t('my_sessions')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/sesje-indywidualne" icon={CalendarDays} label={t('individual_sessions')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/subskrypcje" icon={CreditCard} label={t('my_subscriptions')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/zamowienia" icon={FileText} label={t('orders')} onClick={() => setOpen(false)} />
-                <DropdownLink href="/konto/aktualizacja" icon={UserCircle} label="Aktualizacja" onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto" icon={Film} label="Biblioteka sesji" onClick={() => setOpen(false)} />
+                <DropdownLink href="/sesje-indywidualne" icon={CalendarDays} label="Zamów sesję" onClick={() => setOpen(false)} />
+                <DropdownLink href="/spolecznosc" icon={MessagesSquare} label="Społeczność" onClick={() => setOpen(false)} />
+                <DropdownLink href="/nagrania" icon={BookOpen} label="Na początek" onClick={() => setOpen(false)} />
               </div>
 
               {/* Staff section */}

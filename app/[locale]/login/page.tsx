@@ -8,7 +8,7 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
   setRequestLocale(locale);
 
   return (
-    <div className="flex-grow flex items-center justify-center px-6 py-16">
+    <div className="flex items-center justify-center px-6 min-h-[calc(100dvh-73px)]">
       <div className="w-full max-w-md">
         <LoginForm />
       </div>

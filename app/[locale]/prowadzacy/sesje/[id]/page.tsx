@@ -16,6 +16,7 @@ import PaymentCommentEditor from './PaymentCommentEditor';
 import SessionTypeSelector from './SessionTypeSelector';
 import ClientNameEditor from './ClientNameEditor';
 import DeleteSessionButton from './DeleteSessionButton';
+import BookingUserEditor from './BookingUserEditor';
 
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
@@ -116,7 +117,15 @@ export default async function SessionDetailPage({
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <Mail className="w-4 h-4" />
-            <span>{clientProfile?.email || '—'}</span>
+            {isAdmin ? (
+              <BookingUserEditor
+                bookingId={booking.id}
+                currentUserId={booking.user_id}
+                currentEmail={clientProfile?.email || '—'}
+              />
+            ) : (
+              <span>{clientProfile?.email || '—'}</span>
+            )}
           </div>
         </div>
 

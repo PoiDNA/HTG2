@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Inbox, Clock, CheckCircle2, AlertTriangle, Ban,
   Search, Send, X, ChevronRight, Lightbulb, Paperclip,
-  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2, UserCircle,
+  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2, UserCircle, Maximize2, Minimize2,
 } from 'lucide-react';
 import CustomerCard from './CustomerCard';
 import TemplateInsert from './TemplateInsert';
@@ -121,6 +121,9 @@ export default function EmailInbox() {
 
   // Customer card slideout
   const [showCustomerCard, setShowCustomerCard] = useState(false);
+
+  // Fullscreen mode
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Role-based view
   const [isAdmin, setIsAdmin] = useState(false);
@@ -293,7 +296,11 @@ export default function EmailInbox() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] gap-0 rounded-xl border border-htg-card-border overflow-hidden bg-htg-card">
+    <div className={`flex gap-0 overflow-hidden bg-htg-card ${
+      isFullscreen
+        ? 'fixed inset-0 z-50 h-screen'
+        : 'h-[calc(100vh-4rem)] rounded-xl border border-htg-card-border'
+    }`}>
       {/* Left panel: Filters + Thread list (full width on mobile when no thread selected) */}
       <div className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-72 lg:w-80 shrink-0 border-r border-htg-card-border flex-col`}>
         {/* Status tabs — icon-only with tooltip */}
@@ -449,9 +456,18 @@ export default function EmailInbox() {
         {/* Footer */}
         <div className="p-2 border-t border-htg-card-border flex items-center justify-between">
           <span className="text-xs text-htg-fg-muted">{totalThreads} wątków</span>
-          <button onClick={fetchThreads} className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted" title="Odśwież">
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={fetchThreads} className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted" title="Odśwież">
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setIsFullscreen(prev => !prev)}
+              className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted"
+              title={isFullscreen ? 'Zamknij pełny ekran' : 'Pełny ekran'}
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
       </div>
 

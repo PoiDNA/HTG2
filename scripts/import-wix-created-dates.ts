@@ -59,18 +59,31 @@ async function main() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Fetch all profiles that have a wix_member_id (to build a lookup map)
-  const { data: profiles, error: fetchErr } = await supabase
-    .from('profiles')
-    .select('id, wix_member_id, wix_created_at')
-    .not('wix_member_id', 'is', null);
+  // Fetch ALL profiles that have a wix_member_id — paginate to avoid 1000-row default limit
+  const allProfiles: Array<{ id: string; wix_member_id: string | null; wix_created_at: string | null }> = [];
+  const PAGE_SIZE = 1000;
+  let page = 0;
 
-  if (fetchErr) {
-    console.error('Failed to fetch profiles:', fetchErr.message);
-    process.exit(1);
+  while (true) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, wix_member_id, wix_created_at')
+      .not('wix_member_id', 'is', null)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (error) {
+      console.error('Failed to fetch profiles:', error.message);
+      process.exit(1);
+    }
+
+    if (!data || data.length === 0) break;
+    allProfiles.push(...data);
+    if (data.length < PAGE_SIZE) break;
+    page++;
   }
 
-  console.log(`Fetched ${profiles?.length ?? 0} profiles with wix_member_id`);
+  const profiles = allProfiles;
+  console.log(`Fetched ${profiles.length} profiles with wix_member_id`);
 
   // Build map: wix_member_id → profile id
   const profileMap = new Map<string, { id: string; wix_created_at: string | null }>();

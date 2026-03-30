@@ -9,7 +9,7 @@ import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
-  ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, Users2, BarChart2,
+  ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, BarChart2,
   MessagesSquare, ClipboardCheck, RefreshCw,
 } from 'lucide-react';
 
@@ -134,18 +134,13 @@ export default async function AccountLayout({
 
   // USER section (regular clients only)
   const userItems = [
-    { href: '/konto', label: t('my_sessions'), icon: Film },
-    { href: '/konto/sesje-indywidualne', label: tPanel('individual_sessions'), icon: CalendarDays },
-    { href: '/konto/spotkania-grupowe', label: 'Spotkania grupowe', icon: Users2 },
-    { href: '/konto/spotkania-grupowe/dostepne', label: 'Dostępne spotkania', icon: CalendarDays },
+    { href: '/konto', label: 'Biblioteka sesji', icon: Film },
+    { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', icon: CalendarDays },
     { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
-    { href: '/konto/subskrypcje', label: t('my_subscriptions'), icon: CreditCard },
-    { href: '/konto/zamowienia', label: t('orders'), icon: FileText },
-    { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Film },
+    { href: '/konto/aktywacje', label: 'Twoje Aktywacje', icon: FileText },
+    { href: '/konto/subskrypcje', label: 'Subskrypcje', icon: CreditCard },
     { href: '/konto/polubieni', label: 'Polubieni', icon: Heart },
     { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', icon: Gift },
-    { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
-    { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
     { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw },
   ] as const;
 

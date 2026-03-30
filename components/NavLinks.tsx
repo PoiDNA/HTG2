@@ -15,8 +15,8 @@ export default function NavLinks() {
   const pathname = usePathname();
   const { isLoggedIn, loading } = useUserRole();
 
-  // Hide nav links when logged in (any role)
-  if (!loading && isLoggedIn) return <div />;
+  // Hide nav links when logged in or while auth state is loading
+  if (loading || isLoggedIn) return <div />;
 
   return (
     <div className="hidden md:flex items-center justify-center gap-5">

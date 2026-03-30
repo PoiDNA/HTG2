@@ -646,13 +646,11 @@ export default function EmailInbox() {
                   className="hidden"
                   onChange={e => { if (e.target.files) handleFileUpload(e.target.files, 'reply'); e.target.value = ''; }}
                 />
-                {detail.channel !== 'portal' && (
-                  <TemplateInsert
-                    userId={userId}
-                    onInsert={(text) => setReplyText(prev => prev + text)}
-                    onManage={() => setShowTemplateManager(true)}
-                  />
-                )}
+                <TemplateInsert
+                  userId={userId}
+                  onInsert={(text) => setReplyText(prev => prev + text)}
+                  onManage={() => setShowTemplateManager(true)}
+                />
               </div>
               {/* Attachment list */}
               {replyAttachments.length > 0 && (

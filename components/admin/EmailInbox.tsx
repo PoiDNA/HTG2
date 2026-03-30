@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Inbox, Clock, CheckCircle2, AlertTriangle, Ban,
   Search, Send, X, ChevronRight, Lightbulb, Paperclip,
-  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2, UserCircle, Maximize2, Minimize2,
+  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2, UserCircle, Maximize2, Minimize2, ChevronsUp, ChevronsDown, Type,
 } from 'lucide-react';
 import CustomerCard from './CustomerCard';
 import TemplateInsert from './TemplateInsert';
@@ -124,6 +124,10 @@ export default function EmailInbox() {
 
   // Fullscreen mode
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Editor enhancements
+  const [editorExpanded, setEditorExpanded] = useState(false);
+  const [editorLargeText, setEditorLargeText] = useState(false);
 
   // Role-based view
   const [isAdmin, setIsAdmin] = useState(false);
@@ -605,7 +609,51 @@ export default function EmailInbox() {
             )}
 
             {/* Compose reply */}
-            <div className="p-3 border-t border-htg-card-border space-y-2">
+            <div className={`border-t border-htg-card-border space-y-2 p-3 ${editorExpanded ? 'flex-1 flex flex-col' : ''}`}>
+              {/* Toolbar above textarea */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setEditorExpanded(prev => !prev)}
+                  title={editorExpanded ? 'Zmniejsz edytor' : 'Powiększ edytor'}
+                  className={`p-1.5 rounded-lg text-xs transition-colors ${
+                    editorExpanded ? 'bg-htg-sage text-white' : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                  }`}
+                >
+                  {editorExpanded ? <ChevronsDown className="w-4 h-4" /> : <ChevronsUp className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => setEditorLargeText(prev => !prev)}
+                  title={editorLargeText ? 'Normalny tekst' : 'Większy tekst'}
+                  className={`p-1.5 rounded-lg text-xs transition-colors ${
+                    editorLargeText ? 'bg-htg-sage text-white' : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                  }`}
+                >
+                  <Type className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => replyFileRef.current?.click()}
+                  disabled={uploading}
+                  title="Dodaj załącznik"
+                  className="p-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+                <input
+                  ref={replyFileRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={e => { if (e.target.files) handleFileUpload(e.target.files, 'reply'); e.target.value = ''; }}
+                />
+                {detail.channel !== 'portal' && (
+                  <TemplateInsert
+                    userId={userId}
+                    onInsert={(text) => setReplyText(prev => prev + text)}
+                    onManage={() => setShowTemplateManager(true)}
+                  />
+                )}
+              </div>
               {/* Attachment list */}
               {replyAttachments.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -624,9 +672,10 @@ export default function EmailInbox() {
                 value={replyText}
                 onChange={e => setReplyText(e.target.value)}
                 placeholder="Napisz odpowiedź..."
-                rows={6}
-                className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-y min-h-[120px]"
-                style={{ direction: 'ltr' }}
+                rows={editorExpanded ? 20 : 6}
+                className={`w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage resize-y ${
+                  editorExpanded ? 'flex-1 min-h-0' : 'min-h-[120px]'
+                } ${editorLargeText ? 'text-base leading-relaxed' : 'text-sm'}`}
               />
               <div className="flex justify-end">
                 <button
@@ -640,33 +689,6 @@ export default function EmailInbox() {
                   {detail.channel === 'portal' ? 'Odpowiedz (HTG)' : 'Wyślij'}
                 </button>
               </div>
-              {/* Toolbar: template + attachment — hidden for portal (plain text only) */}
-              {detail.channel !== 'portal' && (
-              <div className="flex items-center gap-2">
-                <TemplateInsert
-                  userId={userId}
-                  onInsert={(text) => setReplyText(prev => prev + text)}
-                  onManage={() => setShowTemplateManager(true)}
-                />
-                <button
-                  type="button"
-                  onClick={() => replyFileRef.current?.click()}
-                  disabled={uploading}
-                  title="Dodaj załącznik"
-                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface border border-htg-card-border transition-colors"
-                >
-                  <Paperclip className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{uploading ? 'Wgrywanie...' : 'Załącznik'}</span>
-                </button>
-                <input
-                  ref={replyFileRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={e => { if (e.target.files) handleFileUpload(e.target.files, 'reply'); e.target.value = ''; }}
-                />
-              </div>
-              )}
             </div>
           </>
         ) : null}

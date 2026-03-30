@@ -30,9 +30,15 @@ type Product = {
   prices: { amount: number; currency: string }[];
 };
 
+function formatMonth(scope: string): string {
+  const [y, m] = scope.split('-');
+  const names = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+  return `${names[parseInt(m, 10) - 1] || m} ${y}`;
+}
+
 function typeLabel(ent: Entitlement): string {
   if (ent.type === 'yearly') return 'Pakiet Roczny';
-  if (ent.type === 'monthly') return `Pakiet Miesięczny${ent.scope_month ? ` — ${ent.scope_month}` : ''}`;
+  if (ent.type === 'monthly') return `Pakiet Miesięczny${ent.scope_month ? ` — ${formatMonth(ent.scope_month)}` : ''}`;
   return 'Sesja pojedyncza';
 }
 

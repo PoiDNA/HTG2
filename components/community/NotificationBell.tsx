@@ -14,13 +14,14 @@ interface NotificationBellProps {
 
 export function NotificationBell({ userId, alwaysShow = false }: NotificationBellProps) {
   const { count, resetCount } = useNotificationCount(userId);
-
-  // Hide bell when no notifications unless on community page
-  if (count === 0 && !alwaysShow) return null;
   const { notifications, loading, fetchNotifications, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Hide bell when no notifications unless on community page
+  // (must be AFTER all hooks to respect Rules of Hooks)
+  if (count === 0 && !alwaysShow) return null;
 
   const handleOpen = useCallback(() => {
     if (!open) {

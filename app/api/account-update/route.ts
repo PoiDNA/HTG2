@@ -125,6 +125,15 @@ export async function PATCH(req: NextRequest) {
   }
 
   const db = createSupabaseServiceRole();
+
+  // Fetch the request details for fulfillment
+  const { data: request } = await db
+    .from('account_update_requests')
+    .select('user_id, category, purchase_date')
+    .eq('id', id)
+    .single();
+
+  // Update the request status
   const { data, error } = await db
     .from('account_update_requests')
     .update({
@@ -139,5 +148,72 @@ export async function PATCH(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // ── Fulfillment: create entitlement when approved ─────────────────────────
+  if (newStatus === 'approved' && request) {
+    const { user_id, category, purchase_date } = request;
+    const fromDate = purchase_date ? new Date(purchase_date) : new Date();
+    const fiveYearsOut = new Date(fromDate);
+    fiveYearsOut.setFullYear(fiveYearsOut.getFullYear() + 5);
+
+    try {
+      if (category === 'session_single') {
+        // One VOD session credit
+        await db.from('entitlements').insert({
+          user_id,
+          type: 'session',
+          valid_from: fromDate.toISOString(),
+          valid_until: fiveYearsOut.toISOString(),
+          is_active: true,
+          source: 'admin_approved',
+        });
+
+      } else if (category === 'session_monthly') {
+        // Monthly package — scope_month from purchase_date (YYYY-MM)
+        const scopeMonth = fromDate.toISOString().slice(0, 7); // "YYYY-MM"
+        const endOfMonth = new Date(fromDate.getFullYear(), fromDate.getMonth() + 1, 0, 23, 59, 59);
+        await db.from('entitlements').insert({
+          user_id,
+          type: 'monthly',
+          scope_month: scopeMonth,
+          valid_from: fromDate.toISOString(),
+          valid_until: endOfMonth.toISOString(),
+          is_active: true,
+          source: 'admin_approved',
+        });
+
+      } else if (category === 'session_yearly') {
+        // Yearly package — valid 1 year from purchase date
+        const oneYearOut = new Date(fromDate);
+        oneYearOut.setFullYear(oneYearOut.getFullYear() + 1);
+        await db.from('entitlements').insert({
+          user_id,
+          type: 'yearly',
+          valid_from: fromDate.toISOString(),
+          valid_until: oneYearOut.toISOString(),
+          is_active: true,
+          source: 'admin_approved',
+        });
+
+      } else if (['individual_1on1', 'individual_asysta', 'individual_para'].includes(category)) {
+        // Individual session credit — creates a booking entitlement (VOD access)
+        const sessionTypeMap: Record<string, string> = {
+          individual_1on1:   'natalia_solo',
+          individual_asysta: 'natalia_asysta',
+          individual_para:   'natalia_para',
+        };
+        await db.from('entitlements').insert({
+          user_id,
+          type: 'booking',
+          scope_month: sessionTypeMap[category] || category,
+          valid_from: fromDate.toISOString(),
+          valid_until: fiveYearsOut.toISOString(),
+          is_active: true,
+          source: 'admin_approved',
+        });
+      }
+    } catch { /* Entitlement creation error is non-blocking — status is already updated */ }
+  }
+
   return NextResponse.json(data);
 }

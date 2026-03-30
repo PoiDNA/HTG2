@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { staffMember } = await getEffectiveStaffMember();
 
-  // Only admin or practitioner can delete
+  // Auth: use direct session check (getEffectiveStaffMember unreliable in route handlers)
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const supabase = createSupabaseServiceRole();
-  let authorized = staffMember?.role === 'practitioner';
-  if (!authorized && staffMember?.user_id) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', staffMember.user_id).single();
-    authorized = ['admin', 'moderator'].includes(profile?.role || '');
-  }
-  if (!authorized) {
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  const { data: staffMember } = await supabase.from('staff_members').select('role').eq('user_id', user.id).eq('is_active', true).maybeSingle();
+
+  const isAdmin = profile?.role === 'admin';
+  const isPractitioner = staffMember?.role === 'practitioner';
+
+  if (!isAdmin && !isPractitioner) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

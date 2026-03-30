@@ -604,26 +604,25 @@ export default function EmailInbox() {
                   ))}
                 </div>
               )}
-              <div className="flex gap-2">
-                <textarea
-                  value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
-                  placeholder="Napisz odpowiedź..."
-                  rows={4}
-                  className="flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-y min-h-[80px]"
-                />
-                <div className="flex flex-col gap-1 self-end">
-                  <button
-                    onClick={handleSend}
-                    disabled={sending || !replyText.trim()}
-                    className={`px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center gap-1.5 ${
-                      detail.channel === 'portal' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-htg-sage hover:bg-htg-sage-dark'
-                    }`}
-                  >
-                    <Send className="w-4 h-4" />
-                    {detail.channel === 'portal' ? 'Odpowiedz (HTG)' : 'Wyślij'}
-                  </button>
-                </div>
+              <textarea
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                placeholder="Napisz odpowiedź..."
+                rows={6}
+                className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-y min-h-[120px]"
+                style={{ direction: 'ltr' }}
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSend}
+                  disabled={sending || !replyText.trim()}
+                  className={`px-5 py-2.5 rounded-lg text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center gap-1.5 ${
+                    detail.channel === 'portal' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-htg-sage hover:bg-htg-sage-dark'
+                  }`}
+                >
+                  <Send className="w-4 h-4" />
+                  {detail.channel === 'portal' ? 'Odpowiedz (HTG)' : 'Wyślij'}
+                </button>
               </div>
               {/* Toolbar: template + attachment — hidden for portal (plain text only) */}
               {detail.channel !== 'portal' && (

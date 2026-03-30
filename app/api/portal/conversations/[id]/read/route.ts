@@ -33,15 +33,12 @@ export async function POST(
   }
 
   // Mark all unread outbound messages as read
-  const { count } = await db
+  await db
     .from('messages')
     .update({ read_at: new Date().toISOString() })
     .eq('conversation_id', id)
     .eq('direction', 'outbound')
-    .is('read_at', null)
-    .select('id', { count: 'exact', head: true });
+    .is('read_at', null);
 
-  // Supabase update doesn't return count easily, use a separate query
-  // The update above works, but we'll return a simple success
   return NextResponse.json({ marked: true });
 }

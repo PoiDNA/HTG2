@@ -1,7 +1,7 @@
 {
   "Metadata": {
     "title": "HTG — Hacking The Game",
-    "description": "Spiritual development sessions led by Natalia HTG. Recordings, workshops and individual sessions online."
+    "description": "HTG — Hacking The Game. Recordings, workshops and individual sessions online."
   },
   "Landing": {
     "status": "Service update",
@@ -28,7 +28,7 @@
     "contact": "Contact",
     "copyright": "© {year} HTG. All rights reserved.",
     "email": "sesje@htg.cyou",
-    "tagline": "Spiritual development sessions"
+    "tagline": "Hacking The Game"
   },
   "Home": {
     "hero_title": "Your path of spiritual development",

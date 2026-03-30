@@ -1,56 +1,70 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { getRoleForEmail } from '@/lib/roles';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
+  const tokenHash = searchParams.get('token_hash');
+  const type = (searchParams.get('type') ?? 'email') as 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email';
 
   // Detect locale from 'next' param or default to 'pl'
   const next = searchParams.get('next') ?? '/pl/konto';
   const localeMatch = next.match(/^\/([a-z]{2})(?:\/|$)/);
   const locale = localeMatch ? localeMatch[1] : 'pl';
 
-  if (code) {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => cookieStore.getAll(),
-          setAll: (cookiesToSet) => {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          },
-        },
-      }
-    );
+  const successRedirect = new URL(`/${locale}/konto`, origin);
+  const failRedirect = new URL(`/${locale}/login?error=auth_failed`, origin);
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      // Auto-set role based on email
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          const expectedRole = getRoleForEmail(user.email);
-          if (expectedRole) {
-            await supabase
-              .from('profiles')
-              .update({ role: expectedRole })
-              .eq('id', user.id);
-          }
-        }
-      } catch {
-        // Non-blocking — role sync may fail if profiles table isn't ready
-      }
-
-      // Always redirect to /konto after login
-      return NextResponse.redirect(`${origin}/${locale}/konto`);
-    }
+  if (!code && !tokenHash) {
+    return NextResponse.redirect(failRedirect);
   }
 
-  return NextResponse.redirect(`${origin}/${locale}/login?error=auth_failed`);
+  // Build redirect response first — cookies must be set on THIS response object
+  const response = NextResponse.redirect(successRedirect);
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  let error = null;
+
+  if (code) {
+    // PKCE / OAuth code exchange
+    ({ error } = await supabase.auth.exchangeCodeForSession(code));
+  } else if (tokenHash) {
+    // Magic link / email OTP token_hash flow (modern Supabase default)
+    ({ error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type }));
+  }
+
+  if (error) {
+    console.error('Auth confirm error:', error.message);
+    return NextResponse.redirect(failRedirect);
+  }
+
+  // Auto-set role based on email
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      const expectedRole = getRoleForEmail(user.email);
+      if (expectedRole) {
+        await supabase.from('profiles').update({ role: expectedRole }).eq('id', user.id);
+      }
+    }
+  } catch {
+    // Non-blocking — role sync may fail if profiles table isn't ready
+  }
+
+  return response;
 }

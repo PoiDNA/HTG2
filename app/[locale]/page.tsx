@@ -29,8 +29,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { ExternalLink, LogIn } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -56,31 +55,21 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const t = await getTranslations({ locale, namespace: 'Landing' });
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] px-6 text-center">
-      <div className="max-w-lg mx-auto">
+    <div className="fixed inset-0 z-[60] bg-htg-bg flex flex-col items-center justify-center px-6 text-center">
+      <div className="max-w-sm mx-auto">
         {/* Logo */}
-        <div className="mb-8">
+        <div className="mb-6">
           <span className="text-5xl font-serif font-bold text-htg-fg tracking-tight">HTG</span>
         </div>
 
         {/* Status */}
-        <div className="inline-flex items-center gap-2 bg-htg-sage/10 text-htg-sage px-4 py-2 rounded-full text-sm font-medium mb-6">
+        <div className="inline-flex items-center gap-2 bg-htg-sage/10 text-htg-sage px-4 py-2 rounded-full text-sm font-medium mb-10">
           <span className="w-2 h-2 bg-htg-sage rounded-full animate-pulse" />
           {t('status')}
         </div>
 
-        {/* Heading */}
-        <h1 className="text-2xl md:text-3xl font-serif font-bold text-htg-fg mb-4">
-          {t('title')}
-        </h1>
-
-        {/* Description */}
-        <p className="text-htg-fg-muted text-base md:text-lg leading-relaxed mb-10">
-          {t('description')}
-        </p>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        {/* Single CTA */}
+        <div>
           <a
             href="https://htgcyou.com"
             target="_blank"
@@ -90,14 +79,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             <ExternalLink className="w-5 h-5" />
             {t('enter_service')}
           </a>
-
-          <Link
-            href={`/${locale}/login`}
-            className="inline-flex items-center justify-center gap-2 bg-htg-surface text-htg-fg border border-htg-card-border px-8 py-3.5 rounded-xl font-medium text-base hover:bg-htg-card transition-colors"
-          >
-            <LogIn className="w-5 h-5" />
-            {t('login')}
-          </Link>
         </div>
       </div>
     </div>

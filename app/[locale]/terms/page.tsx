@@ -50,7 +50,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
       <h1 className="text-3xl md:text-4xl font-serif font-bold text-htg-fg mb-2">
         Regulamin Sesji Hacking&nbsp;The&nbsp;Game
       </h1>
-      <p className="text-htg-fg-muted text-sm mb-8">Warszawa, 01 marca 2023 r. | Aktualizacja: marzec 2026</p>
+      <p className="text-htg-fg-muted text-sm mb-8">Warszawa, 01 marca 2023 r.</p>
 
       {/* ── Table of Contents ── */}
       <nav className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-10">
@@ -207,20 +207,146 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           </UL>
         </Section>
 
-        {/* ── Wzór odstąpienia ── */}
+        {/* ══════════════════════════════════════════════════════════ */}
+        {/* ZAŁĄCZNIK NR 1                                            */}
+        {/* ══════════════════════════════════════════════════════════ */}
+        <div className="mt-16 border-t-2 border-htg-card-border pt-10">
+          <h2 className="text-2xl font-serif font-bold text-htg-fg mb-1">
+            Załącznik nr&nbsp;1 do „Regulaminu Sesji Hacking The Game"
+          </h2>
+          <p className="text-sm text-htg-fg-muted mb-8 italic">
+            „Dodatkowe warunki świadczenia jednorazowej Usługi Sesji HTG"
+          </p>
+          <P>Niniejszy Załącznik stanowi integralną część Regulaminu Sesji Hacking The Game i stosuje się do każdej jednorazowej sesji osobistej HTG („Sesja HTG").</P>
+
+          <Section id="zal1-definicje" title="1. Definicje uzupełniające">
+            <UL>
+              <li><strong>Operator</strong> — Pilot PSA z siedzibą w Warszawie, ul.&nbsp;RONDO ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249 — administrator Sesji HTG.</li>
+              <li><strong>Uczestnik</strong> — osoba fizyczna zawierająca umowę o świadczenie Sesji HTG.</li>
+              <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie online o charakterze rozwoju osobistego.</li>
+              <li><strong>Zespół HTG</strong> — osoby prowadzące Sesje HTG, posługujące się adresami e‑mail w domenie @htg.cyou.</li>
+              <li><strong>Dzień roboczy</strong> — poniedziałek–piątek z wyłączeniem dni ustawowo wolnych od pracy.</li>
+            </UL>
+          </Section>
+
+          <Section id="zal1-platnosci" title="2. Zawarcie umowy i płatności">
+            <UL>
+              <li>Umowa zostaje zawarta z momentem zaksięgowania pełnej opłaty.</li>
+              <li>Płatność dokonywana jest z góry za pośrednictwem operatora płatniczego lub przelewem.</li>
+              <li>Brak zapłaty w ciągu 24&nbsp;h od złożenia zamówienia anuluje rezerwację.</li>
+            </UL>
+          </Section>
+
+          <Section id="zal1-odstapienie" title="3. Prawo odstąpienia">
+            <UL>
+              <li>Uczestnik ma <strong>14 dni</strong> na odstąpienie od umowy bez podania przyczyny (e‑mail: htg@htg.cyou).</li>
+              <li>Jeżeli Sesja HTG zostanie w pełni wykonana przed upływem 14 dni, prawo odstąpienia wygasa.</li>
+            </UL>
+          </Section>
+
+          <Section id="zal1-zmiana-uczestnik" title="4. Zmiana terminu z inicjatywy Uczestnika">
+            <UL>
+              <li>Jednorazowa zmiana terminu możliwa <strong>najpóźniej 7 dni</strong> przed pierwotną datą.</li>
+              <li>Zespół HTG proponuje pierwszy wolny termin; czas oczekiwania bywa 6–8 miesięcy.</li>
+            </UL>
+          </Section>
+
+          <Section id="zal1-zmiana-operator" title="5. Zmiana lub odwołanie Sesji przez Usługodawcę">
+            <UL>
+              <li>Usługodawca może przesunąć Sesję z ważnych przyczyn, proponując alternatywną datę.</li>
+              <li>Jeśli termin nie odpowiada Uczestnikowi, może on przyjąć voucher ważny 12&nbsp;miesięcy.</li>
+            </UL>
+          </Section>
+
+          <Section id="zal1-przebieg" title="6. Zasady przebiegu Sesji HTG">
+            <UL>
+              <li>Uczestnik zapewnia stabilne łącze, kamerę i mikrofon.</li>
+              <li>Opóźnienie powyżej 15&nbsp;minut nie przedłuża Sesji ani nie uprawnia do zwrotu.</li>
+              <li>Sesja jest nagrywana i udostępniana Uczestnikowi w ciągu 7&nbsp;dni.</li>
+              <li>Nagranie ma charakter poufny; zakaz rozpowszechniania bez pisemnej zgody Zespołu HTG.</li>
+              <li>Zastrzegamy sobie prawo do zmiany operatora sesji w każdym momencie.</li>
+            </UL>
+          </Section>
+
+          <Section id="zal1-odpowiedzialnosc" title="7. Odpowiedzialność Usługodawcy">
+            <UL>
+              <li>Sesja ma charakter rozwojowy; Operator nie gwarantuje konkretnego rezultatu.</li>
+              <li>Łączna odpowiedzialność ograniczona do wysokości ceny Sesji.</li>
+            </UL>
+          </Section>
+
+          <Section id="zal1-reklamacje" title="8. Reklamacje">
+            <UL>
+              <li>Reklamacje: <strong>htg@htg.cyou</strong> w ciągu 14&nbsp;dni od zdarzenia.</li>
+              <li>Rozpatrzenie reklamacji w 30&nbsp;dni.</li>
+            </UL>
+          </Section>
+
+          <Section id="zal1-sila-wyzsza" title="9. Siła wyższa">
+            <P>Strony nie odpowiadają za niewykonanie wynikające z siły wyższej.</P>
+          </Section>
+
+          <Section id="zal1-zmiany" title="10. Zmiany Załącznika">
+            <P>Operator może zmienić Załącznik z ważnych przyczyn (np. zmiana prawa).</P>
+          </Section>
+
+          <Section id="zal1-postanowienia" title="11. Pozostałe postanowienia">
+            <UL>
+              <li>W sprawach nieuregulowanych stosuje się prawo polskie.</li>
+              <li>Załącznik wchodzi w życie z dniem publikacji.</li>
+            </UL>
+          </Section>
+        </div>
+
+        {/* ── Załącznik A — Wzór odstąpienia ── */}
         <div className="mt-12 border-t border-htg-card-border pt-8">
           <h2 className="text-lg font-serif font-semibold text-htg-fg mb-4">
-            Załącznik — Wzór oświadczenia o odstąpieniu od umowy
+            Załącznik A – Wzór oświadczenia o odstąpieniu od umowy
           </h2>
           <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-sm text-htg-fg font-mono leading-relaxed space-y-2">
             <p><strong>Tytuł maila:</strong> Rezygnacja z sesji</p>
             <p className="mt-3">Ja, [imię i nazwisko], niniejszym informuję o moim odstąpieniu od umowy o pojedynczą Sesję HTG zawartą w dniu opłacenia sesji.</p>
             <p className="mt-2">Data wpłaty: ___/___/20__</p>
             <p>Imię i nazwisko: ___________________</p>
-            <p>Adres: _____________________________</p>
-            <p>E‑mail: _____________________________</p>
-            <p>Podpis (tylko wersja papierowa / skan)</p>
+            <p>Adres: _______________________________</p>
+            <p>E‑mail: _______________________________</p>
+            <p>Podpis (tylko wersja papierowa, skan)</p>
             <p>Data: ___/___/20__</p>
+          </div>
+        </div>
+
+        {/* ── Klauzula informacyjna RODO ── */}
+        <div className="mt-12 border-t border-htg-card-border pt-8">
+          <h2 className="text-lg font-serif font-semibold text-htg-fg mb-4">
+            Klauzula informacyjna (art.&nbsp;13 RODO)
+          </h2>
+          <div className="space-y-4 text-sm text-htg-fg leading-relaxed">
+            <P><strong>Administrator danych:</strong> Pilot PSA z siedzibą w Warszawie, ul.&nbsp;RONDO ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249 (e‑mail: htg@htg.cyou).</P>
+            <div>
+              <p className="font-semibold mb-2">Cel i podstawa przetwarzania</p>
+              <UL>
+                <li>Realizacja umowy Sesji HTG (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;b RODO).</li>
+                <li>Obowiązki księgowe (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;c RODO).</li>
+                <li>Informowanie — wyłącznie za zgodą (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;a RODO).</li>
+              </UL>
+            </div>
+            <div>
+              <p className="font-semibold mb-2">Odbiorcy danych</p>
+              <P>Dostawcy IT i płatności (m.in. Vercel, Supabase, Stripe, Cloudflare, Bunny.net, Resend).</P>
+            </div>
+            <div>
+              <p className="font-semibold mb-2">Okres przechowywania</p>
+              <P>Do 5 lat od zakończenia roku podatkowego lub do przedawnienia roszczeń.</P>
+            </div>
+            <div>
+              <p className="font-semibold mb-2">Twoje prawa</p>
+              <UL>
+                <li>Dostęp, sprostowanie, usunięcie.</li>
+                <li>Ograniczenie, sprzeciw, przeniesienie danych.</li>
+                <li>Skarga do Prezesa UODO.</li>
+              </UL>
+            </div>
+            <P>Podanie danych jest dobrowolne, lecz niezbędne do rezerwacji terminu Sesji HTG. Dane nie będą wykorzystywane do zautomatyzowanego podejmowania decyzji ani profilowania.</P>
           </div>
         </div>
 

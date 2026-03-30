@@ -86,7 +86,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         <Section id="definicje" title="1. Definicje">
           <UL>
             <li><strong>Sesja HTG</strong> — konsultacja prowadzona przez dwie osoby w ramach inicjatywy Hacking&nbsp;The&nbsp;Game (serwisy YouTube oraz htgcyou.com), mająca na celu rozwój osobisty, z udziałem osoby posługującej się postrzeganiem pozazmysłowym.</li>
-            <li><strong>Operator</strong> — XX Operator PSA z siedzibą w Warszawie, KRS&nbsp;0001086847, NIP&nbsp;9512589259, REGON&nbsp;527748673 — administrator Sesji HTG.</li>
+            <li><strong>Operator</strong> — Pilot PSA z siedzibą w Warszawie, ul.&nbsp;RONDO ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249 — administrator Sesji HTG.</li>
             <li><strong>Uczestnik</strong> — osoba fizyczna zawierająca umowę o świadczenie Sesji HTG.</li>
             <li><strong>Zespół HTG</strong> — osoby prowadzące Sesje HTG, posługujące się adresami e‑mail w domenie @htg.cyou.</li>
             <li><strong>Dzień roboczy</strong> — poniedziałek–piątek z wyłączeniem dni ustawowo wolnych od pracy.</li>
@@ -154,7 +154,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         <Section id="platnosci" title="10. Płatności">
           <UL>
             <li>Płatność za Sesję HTG odbywa się poprzez stronę htgcyou.com (Stripe — karty, BLIK, P24), przelew lub gotówkę.</li>
-            <li>Przetwarzanie płatności obsługuje XX Operator PSA.</li>
+            <li>Przetwarzanie płatności obsługuje Pilot PSA.</li>
             <li>Faktury generowane automatycznie — dostępne w panelu klienta i wysyłane e-mailem.</li>
           </UL>
         </Section>
@@ -228,8 +228,8 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         <div className="mt-10 bg-htg-surface rounded-xl p-6 text-center">
           <p className="text-sm text-htg-fg-muted mb-1">Kontakt w sprawie regulaminu:</p>
           <p className="font-semibold text-htg-fg">htg@htg.cyou</p>
-          <p className="text-xs text-htg-fg-muted mt-2">XX Operator PSA · KRS 0001086847 · NIP 951-258-92-59</p>
-          <p className="text-xs text-htg-fg-muted">ul. Sarmacka 1A/145, 02-962 Warszawa</p>
+          <p className="text-xs text-htg-fg-muted mt-2">Pilot PSA · NIP 525-308-51-01 · REGON 544401249</p>
+          <p className="text-xs text-htg-fg-muted">ul. RONDO ONZ 1, 00-124 Warszawa</p>
         </div>
       </div>
     </div>

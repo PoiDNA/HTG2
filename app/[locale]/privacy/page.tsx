@@ -43,9 +43,9 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
       <div className="space-y-2">
         <Section id="administrator" title="1. Administrator danych">
           <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-4">
-            <p className="font-semibold text-htg-fg">XX Operator PSA</p>
-            <p className="text-sm text-htg-fg-muted mt-1">ul. Sarmacka 1A/145, 02-962 Warszawa</p>
-            <p className="text-sm text-htg-fg-muted">KRS 0001086847 · NIP 951-258-92-59</p>
+            <p className="font-semibold text-htg-fg">Pilot PSA</p>
+            <p className="text-sm text-htg-fg-muted mt-1">ul. RONDO ONZ 1, 00-124 Warszawa</p>
+            <p className="text-sm text-htg-fg-muted">NIP 525-308-51-01 · REGON 544401249</p>
             <p className="text-sm text-htg-fg-muted mt-1">E-mail: <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a></p>
           </div>
         </Section>
@@ -191,7 +191,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
           <p className="font-semibold text-htg-fg">
             <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>
           </p>
-          <p className="text-xs text-htg-fg-muted mt-2">XX Operator PSA · ul. Sarmacka 1A/145, 02-962 Warszawa</p>
+          <p className="text-xs text-htg-fg-muted mt-2">Pilot PSA · ul. RONDO ONZ 1, 00-124 Warszawa</p>
         </div>
       </div>
     </div>

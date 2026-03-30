@@ -23,7 +23,6 @@ type Entitlement = {
   id: string;
   type: string;
   scope_month: string | null;
-  source: string;
   created_at: string;
 };
 
@@ -90,22 +89,24 @@ export default function AccountUpdateClient() {
 
   async function loadData() {
     setLoading(true);
-    const supabase = createSupabaseBrowser();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
+    try {
+      const supabase = createSupabaseBrowser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    const [reqRes, entRes, bookRes] = await Promise.all([
-      fetch('/api/account-update'),
-      supabase.from('entitlements').select('id, type, scope_month, source, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('bookings').select('id, session_type, session_date, start_time, status, payment_status').eq('user_id', user.id).order('session_date', { ascending: false }),
-    ]);
+      const [reqRes, entRes, bookRes] = await Promise.all([
+        fetch('/api/account-update'),
+        supabase.from('entitlements').select('id, type, scope_month, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('bookings').select('id, session_type, session_date, start_time, status, payment_status').eq('user_id', user.id).order('session_date', { ascending: false }),
+      ]);
 
-    if (reqRes.ok) {
-      const data = await reqRes.json();
-      setRequests(Array.isArray(data) ? data : []);
-    }
-    if (entRes.data) setEntitlements(entRes.data);
-    if (bookRes.data) setBookings(bookRes.data as Booking[]);
+      if (reqRes.ok) {
+        const data = await reqRes.json();
+        setRequests(Array.isArray(data) ? data : []);
+      }
+      if (entRes.data) setEntitlements(entRes.data);
+      if (bookRes.data) setBookings(bookRes.data as Booking[]);
+    } catch { /* prevent infinite spinner */ }
     setLoading(false);
   }
 
@@ -410,8 +411,7 @@ export default function AccountUpdateClient() {
                         <span className="text-sm text-htg-fg">{formatEntitlementType(e)}</span>
                       </div>
                       <span className="text-xs text-htg-fg-muted">
-                        {e.source === 'wix' ? 'z WIX' : e.source === 'stripe' ? 'Stripe' : e.source}
-                        {' · '}{new Date(e.created_at).toLocaleDateString('pl')}
+                        {new Date(e.created_at).toLocaleDateString('pl')}
                       </span>
                     </div>
                   ))}

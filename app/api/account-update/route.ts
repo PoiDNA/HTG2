@@ -158,28 +158,27 @@ export async function PATCH(req: NextRequest) {
 
     try {
       if (category === 'session_single') {
-        // One VOD session credit
+        // One VOD session credit — valid 5 years
         await db.from('entitlements').insert({
           user_id,
           type: 'session',
           valid_from: fromDate.toISOString(),
           valid_until: fiveYearsOut.toISOString(),
           is_active: true,
-          source: 'admin_approved',
         });
 
       } else if (category === 'session_monthly') {
-        // Monthly package — scope_month from purchase_date (YYYY-MM)
+        // Monthly package — scope_month from purchase_date (YYYY-MM), valid 24 months
         const scopeMonth = fromDate.toISOString().slice(0, 7); // "YYYY-MM"
-        const endOfMonth = new Date(fromDate.getFullYear(), fromDate.getMonth() + 1, 0, 23, 59, 59);
+        const twoYearsOut = new Date(fromDate);
+        twoYearsOut.setFullYear(twoYearsOut.getFullYear() + 2);
         await db.from('entitlements').insert({
           user_id,
           type: 'monthly',
           scope_month: scopeMonth,
           valid_from: fromDate.toISOString(),
-          valid_until: endOfMonth.toISOString(),
+          valid_until: twoYearsOut.toISOString(),
           is_active: true,
-          source: 'admin_approved',
         });
 
       } else if (category === 'session_yearly') {
@@ -192,24 +191,6 @@ export async function PATCH(req: NextRequest) {
           valid_from: fromDate.toISOString(),
           valid_until: oneYearOut.toISOString(),
           is_active: true,
-          source: 'admin_approved',
-        });
-
-      } else if (['individual_1on1', 'individual_asysta', 'individual_para'].includes(category)) {
-        // Individual session credit — creates a booking entitlement (VOD access)
-        const sessionTypeMap: Record<string, string> = {
-          individual_1on1:   'natalia_solo',
-          individual_asysta: 'natalia_asysta',
-          individual_para:   'natalia_para',
-        };
-        await db.from('entitlements').insert({
-          user_id,
-          type: 'booking',
-          scope_month: sessionTypeMap[category] || category,
-          valid_from: fromDate.toISOString(),
-          valid_until: fiveYearsOut.toISOString(),
-          is_active: true,
-          source: 'admin_approved',
         });
       }
     } catch { /* Entitlement creation error is non-blocking — status is already updated */ }

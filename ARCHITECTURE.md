@@ -1,7 +1,7 @@
-# HTG Platform — Architektura v3
+# HTG Platform — Architektura v4
 
 ## Przegląd
-Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesje live + system rezerwacji + pipeline publikacji audio + spotkania wstępne + spotkania grupowe + sesje dla par + prezenty sesyjne + Communication Hub (email/SMS).
+Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesje live + system rezerwacji + pipeline publikacji audio + spotkania wstępne + spotkania grupowe + sesje dla par + prezenty sesyjne + Communication Hub (email/SMS) + Centrum Kontaktu (portal klient-obsługa).
 
 **URL:** htgcyou.com | **Repo:** github.com/PoiDNA/HTG2
 
@@ -93,14 +93,14 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 |--------|------|
 | `session_gifts` | Podarowane sesje (entitlement_id, purchased_by, recipient_email, claim_token, status: pending/claimed/revoked) |
 
-### Communication Hub (email + przyszły SMS)
+### Communication Hub (email + portal + przyszły SMS)
 | Tabela | Opis |
 |--------|------|
-| `mailboxes` | Skrzynki odbiorcze (kontakt@htgcyou.com, sesje@, htg@htg.cyou, natalia@htg.cyou) |
+| `mailboxes` | Skrzynki odbiorcze (kontakt@, sesje@, htg@, natalia@, portal@htg.internal) |
 | `mailbox_members` | Uprawnienia per skrzynka (user_id + role: owner/member) |
-| `conversations` | Wątki — kanał-agnostyczne (channel: email/sms/internal, status, priority, AI labels) |
-| `messages` | Wiadomości (direction: inbound/outbound/internal, SMTP threading, attachments JSONB, processing queue) |
-| `message_templates` | Szablony wiadomości (multi-channel, created_by per user) |
+| `conversations` | Wątki — kanał-agnostyczne (channel: email/sms/internal/**portal**, status, priority, AI labels) |
+| `messages` | Wiadomości (direction: inbound/outbound/internal, SMTP threading, attachments JSONB, processing queue, **read_at** per-message) |
+| `message_templates` | Szablony wiadomości (multi-channel, created_by per user, **is_default_footer** dla stopek) |
 | `autoresponders` | Autoresponders z trigger_conditions JSONB |
 | `auto_reply_log` | Rate limiter + magic link cooldown |
 
@@ -144,6 +144,10 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 | `021_session_gifts.sql` | Prezenty sesyjne (session_gifts, claim_token) |
 | `022_entitlement_type_booking.sql` | Extend entitlements.type → individual_booking |
 | `023_communication_hub.sql` | Communication Hub: mailboxes, conversations, messages, templates, autoresponders, RPC (claim_pending_messages, get_customer_card) |
+| `024–034` | Importy, płatności, community, auth, site_settings |
+| `035_portal_messaging.sql` | Centrum Kontaktu: channel 'portal', RPC `create_portal_conversation()`, portal mailbox, indeksy, read_at |
+| `036_portal_rodo_onboarding.sql` | RODO: `delete_user_portal_data()`, `export_user_portal_data()`, trigger `auto_manage_portal_mailbox_member()` |
+| `037_footer_templates.sql` | Stopki email: `is_default_footer` na message_templates, unique partial index |
 
 ---
 
@@ -360,6 +364,15 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 - GET /api/email/search-users — autocomplete (email/imię)
 - GET /api/email/verify — magic link callback (weryfikacja powiązania konta)
 
+### Centrum Kontaktu (portal klient→obsługa)
+- GET /api/portal/conversations — lista konwersacji usera (cursor pagination, auto-refresh 15s)
+- POST /api/portal/conversations — nowa konwersacja (atomic RPC, rate limit 5/24h)
+- GET /api/portal/conversations/[id] — wątek + messages (pure read, 403 IDOR defense)
+- POST /api/portal/conversations/[id]/messages — follow-up (rate limit 20/h, 409 na closed)
+- POST /api/portal/conversations/[id]/read — mark outbound as read
+- GET /api/portal/unread-count — nieprzeczytane konwersacje
+- POST /api/portal/admin-reply — admin odpowiada (plain text, after() email notification)
+
 ### Email Notifications (Resend outbound)
 - sendOrderConfirmation — po Stripe checkout
 - sendBookingConfirmation — po rezerwacji slotu
@@ -368,6 +381,7 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 - sendWelcomeEmail — po pierwszym logowaniu
 - sendPaymentFailedNotification — po nieudanej płatności
 - sendEarlierSlotNotification — wcześniejszy termin
+- Portal reply notification — after() best-effort: "Masz nową wiadomość od zespołu HTG"
 
 ### Cron (Vercel)
 - */5 * * * * — /api/cron/prepare-sessions (tworzenie live_sessions + expire slotów)
@@ -397,9 +411,10 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 | /konto/podarowane-sesje | Wysłane/otrzymane prezenty (claim, transfer, revoke) |
 | /konto/odbierz-prezent/[token] | Strona odbioru prezentu (magic link) |
 | /konto/sesje-indywidualne/dolacz-jako-partner/[token] | Akceptacja zaproszenia na sesję par |
+| /konto/wiadomosci | **Centrum Kontaktu** — user UI: lista wątków, chat timeline, nowa wiadomość, auto-refresh 10/15s |
 | /konto/admin | Panel admina (użytkownicy, sloty, zestawy) |
 | /konto/admin/naruszenia | Dashboard naruszeń (flagi, blokady, historia odtworzeń) |
-| /konto/admin/skrzynka | Communication Hub — 3-panelowy inbox (admin: +AI+CustomerCard; staff: prosty) |
+| /konto/admin/skrzynka | Communication Hub — fullscreen inbox, email+portal, channel filter, slideout CustomerCard, toolbar (bold/drukuj/preview/stopki) |
 
 ### Panel prowadzącego (/prowadzacy)
 | Ścieżka | Opis |
@@ -445,6 +460,7 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 | sesje@htgcyou.com | owner | member | na życzenie |
 | htg@htg.cyou | owner | — | — |
 | natalia@htg.cyou | owner | owner | — |
+| portal@htg.internal (Centrum Kontaktu) | owner (auto-trigger) | member (ręcznie) | — |
 
 ### Przepływ inbound
 ```
@@ -464,16 +480,20 @@ Klient → Resend webhook → POST /api/email/inbound (Svix verify, 0 DB queries
 3. **Magic link** → user klika weryfikację → `verified = true`
 
 ### Role-based inbox
-- **Admin**: 3-panel (lista + wątek + CustomerCard), AI sugestie, sentiment/priority, kategoria
-- **Staff**: 2-panel (lista + wątek), szablony, załączniki, bez AI
+- **Admin**: fullscreen inbox, channel filter (Email/HTG), slideout CustomerCard na żądanie, AI sugestie, toolbar (bold/drukuj/PDF/preview text/stopki)
+- **Staff (z membership)**: 2-panel (lista + wątek), szablony, załączniki, bez AI
+- **User**: Centrum Kontaktu (/konto/wiadomosci) — dedykowany UI, auto-refresh 10/15s
 
 ### Customer Card (RPC `get_customer_card`)
 Jedno zapytanie SQL zwraca: profil, zamówienia (6 mies.), aktywne entitlements, nadchodzące rezerwacje, subskrypcja, poprzednie wątki.
 
-### Szablony
+### Szablony + Stopki
 - Każdy user tworzy własne; admin widzi/edytuje globalne
 - "Wstaw szablon" dropdown w compose/reply — wstawia tekst (nie zastępuje)
-- CRUD: create, edit, delete via modal TemplateManager
+- CRUD: create, edit, delete via modal TemplateManager (tab Szablony | Stopki)
+- **Stopki (sygnatury)**: category='footer', toggle ★ domyślna (is_default_footer), auto-append do nowej odpowiedzi
+- **Bold**: `**tekst**` → `<b>tekst</b>` w HTML emaila
+- **Preview text**: ukryty div na początku HTML — tekst widoczny obok tematu w Gmailu
 
 ### Zabezpieczenia
 - Svix HMAC-SHA256 webhook verification
@@ -483,6 +503,58 @@ Jedno zapytanie SQL zwraca: profil, zamówienia (6 mies.), aktywne entitlements,
 - Rate-limiter: auto_reply_log (autoresponder + magic link cooldown 15 min)
 - Zombie protection: locked_until + auto-reset
 - Attachment: prywatne Bunny Storage paths
+
+---
+
+## Centrum Kontaktu (portal messaging)
+
+Kanał `'portal'` w istniejącym Communication Hub. Klient pisze krótkie wiadomości z panelu konta, admin/Natalia odpowiadają w tej samej Skrzynce co email.
+
+### Architektura
+- **Zero nowych tabel** — reuse `conversations` + `messages` z channel='portal'
+- **Osobne API endpointy** — `/api/portal/*` (nie branchowanie w email handlers)
+- **Osobny admin-reply** — `/api/portal/admin-reply` (nie modyfikuje `/api/email/send`)
+- **Plain text only** — brak HTML, brak attachmentów, auto-linkify w UI (whitelist: https/http/mailto)
+
+### Bezpieczeństwo
+- Auth: `user_id === auth.uid` w każdym endpoint (service role + code auth, spójne z resztą huba)
+- IDOR defense: 403 (nie 404) na cudzych zasobach
+- Rate limiting: 5 konwersacji/24h, 20 wiadomości/h (COUNT query per user_id)
+- Walidacja: trim, min/max, UUID regex, channel allowlist
+- RPC `create_portal_conversation()`: SECURITY DEFINER + search_path + walidacja wewnątrz
+
+### Lifecycle statusów
+| Status | Kto | Kiedy |
+|--------|-----|-------|
+| `open` | System | Nowa konwersacja lub user follow-up |
+| `pending` | System | Admin odpowiedział |
+| `closed` | Admin | Ręcznie (finalny dla usera → 409) |
+
+### RODO
+- `delete_user_portal_data(user_id)` — kasuje portal conversations + messages przed usunięciem konta
+- `export_user_portal_data(user_id)` — eksportuje jako JSON
+- Trigger `auto_manage_portal_mailbox_member()` — auto-dodaje adminów do portal mailbox
+
+### User UI (`/konto/wiadomosci`)
+- `PortalMessages.tsx` — lista, wątek (chat timeline), nowa wiadomość
+- Auto-refresh: lista co 15s, otwarty wątek co 10s + auto mark-as-read
+- Zamknięte wątki: disabled input + sugestia "Napisz nową wiadomość"
+
+### Admin UI (w Skrzynce)
+- Channel filter: "Wszystkie" | "Email" | "HTG"
+- Badge kanału na wątkach (teal ikona MessageSquare)
+- Slideout CustomerCard (przycisk "Klient" w nagłówku)
+- Reply: plain textarea + "Odpowiedz (HTG)"
+- Email notification via `after()` (best-effort, Resend)
+
+### Skrzynka — toolbar
+- **Bold** (B) — `**tekst**` → `<b>` w HTML emaila
+- **Drukuj/PDF** — `window.print()` z @media print CSS
+- **Preview text** (Eye) — tekst obok tematu w Gmailu (ukryty div)
+- **Stopki** — domyślna auto-append, zarządzanie w TemplateManager (tab Stopki)
+- **Expand** — textarea na pełną wysokość
+- **Duży tekst** — toggle text-base
+- **Załącznik** — upload pliku
 
 ---
 
@@ -594,4 +666,4 @@ Jedno zapytanie SQL zwraca: profil, zamówienia (6 mies.), aktywne entitlements,
 
 ---
 
-*Ostatnia aktualizacja: 2026-03-28*
+*Ostatnia aktualizacja: 2026-03-30*

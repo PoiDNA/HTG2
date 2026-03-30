@@ -38,6 +38,7 @@ type Booking = {
 const CATEGORIES = [
   { value: 'session_monthly', label: 'Pakiet miesięczny', icon: Calendar },
   { value: 'session_yearly', label: 'Pakiet roczny (12M)', icon: Calendar },
+  { value: 'missing_recording', label: 'Brak nagrania z sesji', icon: BookOpen },
 ] as const;
 
 // Generate month options from Jan 2024 to current month
@@ -292,7 +293,7 @@ export default function AccountUpdateClient() {
             {/* Category */}
             <div>
               <label className="block text-sm font-medium text-htg-fg mb-2">Jaki pakiet kupiłeś/aś?</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {CATEGORIES.map(c => {
                   const Icon = c.icon;
                   return (
@@ -332,17 +333,35 @@ export default function AccountUpdateClient() {
               </div>
             )}
 
+            {/* Recording date — only for missing_recording */}
+            {category === 'missing_recording' && (
+              <div>
+                <label className="block text-sm font-medium text-htg-fg mb-1">
+                  <Calendar className="w-4 h-4 inline mr-1" />Data sesji (nagrania)
+                </label>
+                <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)}
+                  required
+                  className="w-full sm:w-auto px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/50" />
+                <p className="text-xs text-htg-fg-muted mt-1">Podaj datę sesji, z której nie masz nagrania.</p>
+              </div>
+            )}
+
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-htg-fg mb-1">Opis zakupu</label>
+              <label className="block text-sm font-medium text-htg-fg mb-1">
+                {category === 'missing_recording' ? 'Opis problemu' : 'Opis zakupu'}
+              </label>
               <textarea value={description} onChange={e => setDescription(e.target.value)}
-                placeholder="Np. Kupiłem pakiet miesięczny za kwiecień 2025 na WIX..."
+                placeholder={category === 'missing_recording'
+                  ? 'Np. Nie otrzymałem nagrania z sesji 1:1 z Natalią...'
+                  : 'Np. Kupiłem pakiet miesięczny za kwiecień 2025 na WIX...'}
                 rows={3}
                 className="w-full px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-sage/50 resize-none"
                 required />
             </div>
 
-            {/* Purchase date */}
+            {/* Purchase date — hidden for missing_recording (uses its own date field above) */}
+            {category !== 'missing_recording' && (
             <div>
               <label className="block text-sm font-medium text-htg-fg mb-1">
                 <Calendar className="w-4 h-4 inline mr-1" />Data zakupu (przybliżona)
@@ -350,6 +369,7 @@ export default function AccountUpdateClient() {
               <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)}
                 className="w-full sm:w-auto px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/50" />
             </div>
+            )}
 
             {/* Proof upload */}
             <div>
@@ -379,7 +399,7 @@ export default function AccountUpdateClient() {
 
             {/* Actions */}
             <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={!category || !description || submitting || (category === 'session_monthly' && !scopeMonth)}
+              <button type="submit" disabled={!category || !description || submitting || (category === 'session_monthly' && !scopeMonth) || (category === 'missing_recording' && !purchaseDate)}
                 className="px-6 py-2.5 bg-htg-sage text-white rounded-xl text-sm font-medium hover:bg-htg-sage/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? 'Wysyłanie...' : 'Wyślij zgłoszenie'}
               </button>

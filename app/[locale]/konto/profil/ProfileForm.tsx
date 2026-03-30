@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 
 interface ConsentRecord {
@@ -16,6 +17,7 @@ interface ProfileFormProps {
   displayName: string;
   phone: string;
   consents: ConsentRecord[];
+  accountCreatedAt: string;
   labels: {
     name: string;
     email: string;
@@ -29,7 +31,7 @@ interface ProfileFormProps {
   };
 }
 
-export function ProfileForm({ email, displayName, phone, consents, labels }: ProfileFormProps) {
+export function ProfileForm({ email, displayName, phone, consents, accountCreatedAt, labels }: ProfileFormProps) {
   const [name, setName] = useState(displayName);
   const [phoneVal, setPhoneVal] = useState(phone);
   const [saved, setSaved] = useState(false);
@@ -127,38 +129,30 @@ export function ProfileForm({ email, displayName, phone, consents, labels }: Pro
       {/* GDPR Consents */}
       <div className="border-t border-htg-card-border pt-6">
         <h3 className="text-lg font-semibold text-htg-fg mb-4">{labels.gdprConsents}</h3>
-        {uniqueConsents.length === 0 ? (
-          <p className="text-sm text-htg-fg-muted">Brak zarejestrowanych zgód.</p>
-        ) : (
-          <div className="space-y-3">
-            {uniqueConsents.map((consent) => {
-              const date = new Date(consent.created_at).toLocaleDateString('pl', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              });
-
-              return (
-                <div
-                  key={consent.id}
-                  className="flex items-center justify-between bg-htg-surface rounded-lg p-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-htg-fg">
-                      {consentLabels[consent.consent_type] || consent.consent_type}
-                    </p>
-                    <p className="text-xs text-htg-fg-muted">
-                      Udzielona: {date}
-                    </p>
-                  </div>
-                  <span className="text-xs font-medium bg-htg-sage/10 text-htg-sage px-2 py-1 rounded">
-                    Aktywna
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div className="space-y-3">
+          {/* Static: Privacy policy — always shown with account creation date */}
+          <ConsentRow
+            label="Akceptacja Polityki prywatności (RODO)"
+            date={accountCreatedAt}
+            href="/privacy"
+          />
+          {/* Static: Terms of service — always shown with account creation date */}
+          <ConsentRow
+            label="Akceptacja Regulaminu serwisu"
+            date={accountCreatedAt}
+            href="/terms"
+          />
+          {/* Dynamic: any additional consent_records from DB */}
+          {uniqueConsents
+            .filter(c => !['terms', 'privacy'].includes(c.consent_type))
+            .map((consent) => (
+              <ConsentRow
+                key={consent.id}
+                label={consentLabels[consent.consent_type] || consent.consent_type}
+                date={consent.created_at}
+              />
+            ))}
+        </div>
       </div>
 
       {/* Danger zone */}
@@ -167,6 +161,40 @@ export function ProfileForm({ email, displayName, phone, consents, labels }: Pro
           {labels.deleteAccount}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+
+function ConsentRow({ label, date, href }: { label: string; date: string; href?: string }) {
+  const formatted = new Date(date).toLocaleDateString('pl', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return (
+    <div className="flex items-center justify-between bg-htg-surface rounded-lg p-3 gap-3">
+      <div className="min-w-0">
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-htg-fg hover:text-htg-indigo transition-colors inline-flex items-center gap-1"
+          >
+            {label}
+            <ExternalLink className="w-3 h-3 shrink-0" />
+          </a>
+        ) : (
+          <p className="text-sm font-medium text-htg-fg">{label}</p>
+        )}
+        <p className="text-xs text-htg-fg-muted mt-0.5">Udzielona: {formatted}</p>
+      </div>
+      <span className="text-xs font-medium bg-htg-sage/10 text-htg-sage px-2 py-1 rounded shrink-0">
+        Aktywna
+      </span>
     </div>
   );
 }

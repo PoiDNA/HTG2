@@ -18,9 +18,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   // Fetch profile
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, phone, email')
+    .select('display_name, phone, email, created_at, wix_created_at')
     .eq('id', userId)
     .single();
+
+  // Effective account creation date: WIX original date takes precedence
+  const accountCreatedAt: string =
+    (profile as any)?.wix_created_at ?? profile?.created_at ?? new Date().toISOString();
 
   // Fetch consents
   const { data: consents } = await supabase
@@ -39,6 +43,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
         displayName={profile?.display_name || ''}
         phone={profile?.phone || ''}
         consents={consents || []}
+        accountCreatedAt={accountCreatedAt}
         labels={{
           name: t('profile_name'),
           email: t('profile_email'),

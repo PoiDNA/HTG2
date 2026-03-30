@@ -1,7 +1,7 @@
 {
   "Metadata": {
     "title": "HTG — Hacking The Game",
-    "description": "Sesje rozwoju duchowego prowadzone przez Natalię HTG. Nagrania, warsztaty i sesje indywidualne online."
+    "description": "HTG — Hacking The Game. Nagrania, warsztaty i sesje indywidualne online."
   },
   "Landing": {
     "status": "Aktualizacja serwisu",
@@ -28,7 +28,7 @@
     "contact": "Kontakt",
     "copyright": "© {year} HTG. Wszelkie prawa zastrzeżone.",
     "email": "sesje@htg.cyou",
-    "tagline": "Sesje rozwoju duchowego"
+    "tagline": "Hacking The Game"
   },
   "Home": {
     "hero_title": "Zgłębiaj swoją drogę rozwoju duchowego",

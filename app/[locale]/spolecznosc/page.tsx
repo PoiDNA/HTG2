@@ -6,6 +6,7 @@ import { GroupCard } from '@/components/community/GroupCard';
 import { PushConsentBanner } from '@/components/community/PushConsentBanner';
 import { Users2, Plus, Bookmark } from 'lucide-react';
 import { Link } from '@/i18n-config';
+import { redirect } from 'next/navigation';
 import type { GroupWithMeta } from '@/lib/community/types';
 import type { Metadata } from 'next';
 
@@ -31,7 +32,7 @@ export default async function CommunityPage({
   // Auth
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect(`/${locale}/login`);
 
   const email = user.email ?? '';
   const isAdmin = isAdminEmail(email);
@@ -85,14 +86,17 @@ export default async function CommunityPage({
     (memberships ?? []).map(m => [m.group_id, m.role])
   );
 
-  const enrichedGroups: GroupWithMeta[] = (groups ?? []).map(group => ({
-    ...group,
-    member_count: group.community_memberships?.[0]?.count ?? 0,
-    is_member: membershipMap.has(group.id) || isAdmin || isStaff,
-    membership_role: membershipMap.get(group.id) ?? null,
-    last_post_at: lastPostMap.get(group.id) ?? null,
-    community_memberships: undefined,
-  }));
+  const enrichedGroups: GroupWithMeta[] = (groups ?? []).map(group => {
+    const rawCount = group.community_memberships?.[0]?.count;
+    return {
+      ...group,
+      member_count: typeof rawCount === 'number' ? rawCount : Number(rawCount) || 0,
+      is_member: membershipMap.has(group.id) || isAdmin || isStaff,
+      membership_role: membershipMap.get(group.id) ?? null,
+      last_post_at: lastPostMap.get(group.id) ?? null,
+      community_memberships: undefined,
+    };
+  });
 
   // Split into "my groups" and "discover"
   const myGroups = enrichedGroups.filter(g => g.is_member);

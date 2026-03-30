@@ -21,14 +21,14 @@ export interface CustomerCard {
 export interface Conversation {
   id: string;
   mailbox_id: string | null;
-  channel: 'email' | 'sms' | 'internal';
+  channel: 'email' | 'sms' | 'internal' | 'portal';
   subject: string | null;
   from_address: string;
   from_name: string | null;
   to_address: string | null;
   user_id: string | null;
   user_link_verified: boolean;
-  user_link_method: 'auto_spf' | 'manual' | 'magic_link' | null;
+  user_link_method: 'auto_spf' | 'manual' | 'magic_link' | 'portal_auth' | null;
   status: 'open' | 'pending' | 'closed' | 'spam';
   priority: 'low' | 'normal' | 'high' | 'urgent';
   ai_category: string | null;
@@ -69,6 +69,7 @@ export interface Message {
   processing_status: 'pending' | 'processing' | 'done' | 'failed' | 'spam';
   locked_until: string | null;
   retry_count: number;
+  read_at: string | null;
   created_at: string;
 }
 
@@ -117,9 +118,21 @@ export interface ThreadFilter {
   status?: string;
   priority?: string;
   category?: string;
+  channel?: string;
   mailbox_id?: string;
   assigned_to?: string;
   search?: string;
   page?: number;
   limit?: number;
+}
+
+/** Minimal customer card for portal — no financial data */
+export interface PortalCustomerCard {
+  userId: string;
+  email: string;
+  displayName: string | null;
+  role: string | null;
+  createdAt: string | null;
+  hasActiveSubscription: boolean;
+  recentThreads: { subject: string; status: string; last_message_at: string }[];
 }

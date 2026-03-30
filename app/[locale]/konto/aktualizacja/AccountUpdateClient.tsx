@@ -23,7 +23,6 @@ type Entitlement = {
   id: string;
   type: string;
   scope_month: string | null;
-  source: string;
   created_at: string;
 };
 
@@ -37,13 +36,27 @@ type Booking = {
 };
 
 const CATEGORIES = [
-  { value: 'session_single', label: 'Sesja pojedyncza', group: 'Biblioteka Sesji', icon: BookOpen },
-  { value: 'session_monthly', label: 'Pakiet miesięczny', group: 'Biblioteka Sesji', icon: Calendar },
-  { value: 'session_yearly', label: 'Pakiet roczny (12M)', group: 'Biblioteka Sesji', icon: Calendar },
-  { value: 'individual_1on1', label: 'Sesja 1:1 z Natalią', group: 'Sesje indywidualne', icon: Users },
-  { value: 'individual_asysta', label: 'Sesja z Asystą', group: 'Sesje indywidualne', icon: Users },
-  { value: 'individual_para', label: 'Sesja dla Par', group: 'Sesje indywidualne', icon: Heart },
+  { value: 'session_monthly', label: 'Pakiet miesięczny', icon: Calendar },
+  { value: 'session_yearly', label: 'Pakiet roczny (12M)', icon: Calendar },
 ] as const;
+
+// Generate month options from Jan 2024 to current month
+function getMonthOptions(): { value: string; label: string }[] {
+  const months: { value: string; label: string }[] = [];
+  const now = new Date();
+  const startYear = 2024;
+  const startMonth = 0; // January
+  const monthNames = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+  for (let y = startYear; y <= now.getFullYear(); y++) {
+    const mEnd = y === now.getFullYear() ? now.getMonth() : 11;
+    const mStart = y === startYear ? startMonth : 0;
+    for (let m = mStart; m <= mEnd; m++) {
+      const val = `${y}-${String(m + 1).padStart(2, '0')}`;
+      months.push({ value: val, label: `${monthNames[m]} ${y}` });
+    }
+  }
+  return months.reverse(); // newest first
+}
 
 const STATUS_CONFIG = {
   pending: { label: 'W oczekiwaniu', icon: Clock, color: 'text-yellow-500 bg-yellow-500/10 border border-yellow-500/30' },
@@ -65,31 +78,35 @@ export default function AccountUpdateClient() {
 
   // Form state
   const [category, setCategory] = useState('');
+  const [scopeMonth, setScopeMonth] = useState('');
   const [description, setDescription] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const monthOptions = getMonthOptions();
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     setLoading(true);
-    const supabase = createSupabaseBrowser();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
+    try {
+      const supabase = createSupabaseBrowser();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    const [reqRes, entRes, bookRes] = await Promise.all([
-      fetch('/api/account-update'),
-      supabase.from('entitlements').select('id, type, scope_month, source, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('bookings').select('id, session_type, session_date, start_time, status, payment_status').eq('user_id', user.id).order('session_date', { ascending: false }),
-    ]);
+      const [reqRes, entRes, bookRes] = await Promise.all([
+        fetch('/api/account-update'),
+        supabase.from('entitlements').select('id, type, scope_month, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('bookings').select('id, session_type, session_date, start_time, status, payment_status').eq('user_id', user.id).order('session_date', { ascending: false }),
+      ]);
 
-    if (reqRes.ok) {
-      const data = await reqRes.json();
-      setRequests(Array.isArray(data) ? data : []);
-    }
-    if (entRes.data) setEntitlements(entRes.data);
-    if (bookRes.data) setBookings(bookRes.data as Booking[]);
+      if (reqRes.ok) {
+        const data = await reqRes.json();
+        setRequests(Array.isArray(data) ? data : []);
+      }
+      if (entRes.data) setEntitlements(entRes.data);
+      if (bookRes.data) setBookings(bookRes.data as Booking[]);
+    } catch { /* prevent infinite spinner */ }
     setLoading(false);
   }
 
@@ -119,13 +136,19 @@ export default function AccountUpdateClient() {
       }
     }
 
+    // For monthly packages, derive purchase_date from selected month if not explicitly set
+    let effectivePurchaseDate = purchaseDate || null;
+    if (category === 'session_monthly' && scopeMonth && !purchaseDate) {
+      effectivePurchaseDate = `${scopeMonth}-01`;
+    }
+
     const res = await fetch('/api/account-update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         category,
         description,
-        purchase_date: purchaseDate || null,
+        purchase_date: effectivePurchaseDate,
         proof_url,
         proof_filename,
       }),
@@ -134,6 +157,7 @@ export default function AccountUpdateClient() {
     if (res.ok) {
       setShowForm(false);
       setCategory('');
+      setScopeMonth('');
       setDescription('');
       setPurchaseDate('');
       setProofFile(null);
@@ -159,8 +183,10 @@ export default function AccountUpdateClient() {
     return e.type;
   };
 
-  const formatCategoryLabel = (cat: string) =>
-    CATEGORIES.find(c => c.value === cat)?.label || cat;
+  const formatCategoryLabel = (cat: string) => {
+    const found = CATEGORIES.find(c => c.value === cat);
+    return found ? found.label : cat;
+  };
 
   if (loading) {
     return (
@@ -265,42 +291,46 @@ export default function AccountUpdateClient() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-htg-fg mb-2">Co kupiłeś/aś?</label>
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">Biblioteka Sesji</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {CATEGORIES.filter(c => c.group === 'Biblioteka Sesji').map(c => {
-                    const Icon = c.icon;
-                    return (
-                      <button key={c.value} type="button" onClick={() => setCategory(c.value)}
-                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                          category === c.value
-                            ? 'bg-htg-sage/20 border-htg-sage text-htg-sage'
-                            : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-htg-sage/50'
-                        }`}>
-                        <Icon className="w-4 h-4" />{c.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mt-3">Sesje indywidualne</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {CATEGORIES.filter(c => c.group === 'Sesje indywidualne').map(c => {
-                    const Icon = c.icon;
-                    return (
-                      <button key={c.value} type="button" onClick={() => setCategory(c.value)}
-                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                          category === c.value
-                            ? 'bg-htg-indigo/20 border-htg-indigo text-htg-indigo'
-                            : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-htg-indigo/50'
-                        }`}>
-                        <Icon className="w-4 h-4" />{c.label}
-                      </button>
-                    );
-                  })}
-                </div>
+              <label className="block text-sm font-medium text-htg-fg mb-2">Jaki pakiet kupiłeś/aś?</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {CATEGORIES.map(c => {
+                  const Icon = c.icon;
+                  return (
+                    <button key={c.value} type="button" onClick={() => { setCategory(c.value); setScopeMonth(''); }}
+                      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${
+                        category === c.value
+                          ? 'bg-htg-sage/20 border-htg-sage text-htg-sage'
+                          : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-htg-sage/50'
+                      }`}>
+                      <Icon className="w-4 h-4" />{c.label}
+                    </button>
+                  );
+                })}
               </div>
+              <p className="text-xs text-htg-fg-muted mt-2">
+                Inny typ zakupu? Opisz go poniżej — admin przydzieli dostęp ręcznie.
+              </p>
             </div>
+
+            {/* Month picker — only for monthly */}
+            {category === 'session_monthly' && (
+              <div>
+                <label className="block text-sm font-medium text-htg-fg mb-1">
+                  <Calendar className="w-4 h-4 inline mr-1" />Który miesiąc?
+                </label>
+                <select
+                  value={scopeMonth}
+                  onChange={e => setScopeMonth(e.target.value)}
+                  required
+                  className="w-full sm:w-auto px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/50"
+                >
+                  <option value="">— Wybierz miesiąc —</option>
+                  {monthOptions.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Description */}
             <div>
@@ -349,12 +379,12 @@ export default function AccountUpdateClient() {
 
             {/* Actions */}
             <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={!category || !description || submitting}
+              <button type="submit" disabled={!category || !description || submitting || (category === 'session_monthly' && !scopeMonth)}
                 className="px-6 py-2.5 bg-htg-sage text-white rounded-xl text-sm font-medium hover:bg-htg-sage/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? 'Wysyłanie...' : 'Wyślij zgłoszenie'}
               </button>
               <button type="button"
-                onClick={() => { setShowForm(false); setCategory(''); setDescription(''); setPurchaseDate(''); setProofFile(null); }}
+                onClick={() => { setShowForm(false); setCategory(''); setScopeMonth(''); setDescription(''); setPurchaseDate(''); setProofFile(null); }}
                 className="px-6 py-2.5 bg-htg-surface text-htg-fg-muted rounded-xl text-sm font-medium hover:bg-htg-card-border transition-colors">
                 Anuluj
               </button>
@@ -381,8 +411,7 @@ export default function AccountUpdateClient() {
                         <span className="text-sm text-htg-fg">{formatEntitlementType(e)}</span>
                       </div>
                       <span className="text-xs text-htg-fg-muted">
-                        {e.source === 'wix' ? 'z WIX' : e.source === 'stripe' ? 'Stripe' : e.source}
-                        {' · '}{new Date(e.created_at).toLocaleDateString('pl')}
+                        {new Date(e.created_at).toLocaleDateString('pl')}
                       </span>
                     </div>
                   ))}

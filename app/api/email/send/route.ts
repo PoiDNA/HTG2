@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { requireAdmin } from '@/lib/admin/auth';
+import { isAdminOrMailboxMember } from '@/lib/email/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { downloadFile } from '@/lib/bunny-storage';
 
@@ -132,19 +133,3 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ sent: true, messageId: msg?.id, resendId: sentEmail?.id });
 }
 
-// Helper: check if user is admin or member of a mailbox
-async function isAdminOrMailboxMember(db: any, userId: string, mailboxId: string | null): Promise<boolean> {
-  // Admin check (already done by requireAdmin, but for staff access)
-  const { data: profile } = await db.from('profiles').select('role').eq('id', userId).single();
-  if (profile?.role === 'admin') return true;
-
-  // Mailbox member check
-  if (!mailboxId) return false;
-  const { data } = await db
-    .from('mailbox_members')
-    .select('id')
-    .eq('mailbox_id', mailboxId)
-    .eq('user_id', userId)
-    .maybeSingle();
-  return !!data;
-}

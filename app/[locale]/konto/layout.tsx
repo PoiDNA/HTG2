@@ -95,6 +95,7 @@ export default async function AccountLayout({
     { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
     { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
     { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
+    { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', icon: MessagesSquare },
     { href: '/konto/admin', label: tPanel('admin_panel'), icon: LayoutDashboard },
     { href: '/konto/admin/kalendarz', label: tPanel('admin_calendar'), icon: Calendar },
     { href: '/konto/admin/kolejka', label: tPanel('admin_queue'), icon: Users },
@@ -121,6 +122,7 @@ export default async function AccountLayout({
     { href: '/prowadzacy/sesje', label: tPanel('staff_sessions'), icon: Presentation },
     { href: '/prowadzacy/klienci', label: tPanel('staff_clients'), icon: Users },
     { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
+    { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', icon: MessagesSquare },
   ] as const;
 
   // PUBLIKACJA section (admin, moderator, publikacja)
@@ -137,6 +139,7 @@ export default async function AccountLayout({
     { href: '/konto', label: 'Biblioteka sesji', icon: Film },
     { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', icon: CalendarDays },
     { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
+    { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', icon: Mail },
     { href: '/konto/subskrypcje', label: 'Twoje Aktywacje', icon: CreditCard },
     { href: '/konto/polubieni', label: 'Twoi Znajomi', icon: Users },
     { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', icon: Gift },

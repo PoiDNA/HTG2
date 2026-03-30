@@ -34,6 +34,17 @@ const CATEGORY_LABELS: Record<string, string> = {
   individual_para: 'Sesja dla Par',
 };
 
+const MONTH_NAMES = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+function getCategoryDisplay(r: Request): string {
+  const base = CATEGORY_LABELS[r.category] || r.category;
+  if (r.category === 'session_monthly' && r.purchase_date) {
+    const d = new Date(r.purchase_date);
+    return `${base} — ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  return base;
+}
+
 const STATUS_CONFIG = {
   pending: { label: 'Oczekujące', icon: Clock, bg: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30' },
   approved: { label: 'Zaakceptowane', icon: CheckCircle, bg: 'bg-green-500/10 text-green-500 border-green-500/30' },
@@ -202,7 +213,7 @@ export default function AdminZgloszeniaPage() {
                       <span className="text-sm font-semibold text-htg-fg">{userDisplay}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${sc.bg}`}>{sc.label}</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">
-                        {CATEGORY_LABELS[r.category] || r.category}
+                        {getCategoryDisplay(r)}
                       </span>
                     </div>
                     <p className="text-sm text-htg-fg-muted truncate mt-0.5">{r.description}</p>

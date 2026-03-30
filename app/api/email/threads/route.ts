@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const status = url.searchParams.get('status');
   const priority = url.searchParams.get('priority');
   const category = url.searchParams.get('category');
+  const channel = url.searchParams.get('channel');
   const mailboxId = url.searchParams.get('mailbox_id');
   const search = url.searchParams.get('search');
   const page = parseInt(url.searchParams.get('page') || '1', 10);
@@ -29,6 +30,11 @@ export async function GET(req: NextRequest) {
   // Filter by accessible mailboxes (admin sees all, staff sees only their mailboxes)
   if (!isAdmin && accessibleMailboxIds.length > 0) {
     query = query.in('mailbox_id', accessibleMailboxIds);
+  }
+
+  // Channel filter (allowlisted)
+  if (channel && ['email', 'portal', 'sms', 'internal'].includes(channel)) {
+    query = query.eq('channel', channel);
   }
 
   if (status) query = query.eq('status', status);

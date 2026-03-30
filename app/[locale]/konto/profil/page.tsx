@@ -2,6 +2,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { ProfileForm } from './ProfileForm';
+import { PasskeySection } from '@/components/konto/PasskeySection';
 import { NotificationPreferences } from '@/components/community/NotificationPreferences';
 
 export function generateStaticParams() {
@@ -51,6 +52,29 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
           deleteAccount: t('delete_account'),
         }}
       />
+
+      <div className="mt-8">
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
+          <PasskeySection
+            labels={{
+              title: t('passkey_title'),
+              add: t('passkey_add'),
+              remove: t('passkey_remove'),
+              noPasskeys: t('passkey_none'),
+              namePrompt: t('passkey_name_prompt'),
+              namePlaceholder: t('passkey_name_placeholder'),
+              added: t('passkey_added'),
+              lastUsed: t('passkey_last_used'),
+              never: t('passkey_never'),
+              confirm_remove: t('passkey_confirm_remove'),
+              success_added: t('passkey_success_added'),
+              success_removed: t('passkey_success_removed'),
+              error_generic: t('passkey_error'),
+              not_supported: t('passkey_not_supported'),
+            }}
+          />
+        </div>
+      </div>
 
       <div className="mt-8">
         <h2 className="text-xl font-serif font-semibold text-htg-fg mb-4">Powiadomienia społeczności</h2>

@@ -138,7 +138,7 @@ export default async function AccountLayout({
     { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', icon: CalendarDays },
     { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
     { href: '/konto/subskrypcje', label: 'Twoje Aktywacje', icon: CreditCard },
-    { href: '/konto/polubieni', label: 'Znajomi', icon: Users },
+    { href: '/konto/polubieni', label: 'Twoi Znajomi', icon: Users },
     { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', icon: Gift },
     { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw },
   ] as const;

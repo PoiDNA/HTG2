@@ -9,7 +9,7 @@ export default async function FavoritesPage({ params }: { params: Promise<{ loca
 
   return (
     <div>
-      <h1 className="text-2xl font-serif font-bold text-htg-fg mb-6">Znajomi</h1>
+      <h1 className="text-2xl font-serif font-bold text-htg-fg mb-6">Twoi Znajomi</h1>
       <FavoritesList />
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserMinus, UserPlus, Search, Users } from 'lucide-react';
+import { UserMinus, UserPlus, Search, Users, Mail } from 'lucide-react';
 
 interface UserInfo {
   id: string;
@@ -60,15 +60,15 @@ export default function FavoritesList() {
 
   return (
     <div className="space-y-8">
-      {/* Add favorite */}
+      {/* Dodaj znajomego */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
         <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-htg-sage" />
-          Dodaj do znajomych
+          Dodaj znajomego
         </h2>
         <div className="flex gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
             <input
               type="email"
               value={searchEmail}
@@ -93,14 +93,14 @@ export default function FavoritesList() {
         )}
       </div>
 
-      {/* My favorites */}
+      {/* Lista znajomych */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
         <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-htg-warm" />
-          Moi znajomi ({favorites.length})
+          <Users className="w-5 h-5 text-htg-sage" />
+          Lista znajomych
         </h2>
         {favorites.length === 0 ? (
-          <p className="text-htg-fg-muted text-sm">Nie masz jeszcze znajomych.</p>
+          <p className="text-htg-fg-muted text-sm">Bez znajomych</p>
         ) : (
           <div className="space-y-3">
             {favorites.map(fav => (
@@ -122,14 +122,14 @@ export default function FavoritesList() {
         )}
       </div>
 
-      {/* Followers */}
+      {/* Zaproszenia */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
         <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-htg-indigo" />
-          Obserwujący mnie ({followers.length})
+          <UserPlus className="w-5 h-5 text-htg-indigo" />
+          Zaproszenia
         </h2>
         {followers.length === 0 ? (
-          <p className="text-htg-fg-muted text-sm">Nikt jeszcze Cię nie dodał do znajomych.</p>
+          <p className="text-htg-fg-muted text-sm">Bez zaproszeń</p>
         ) : (
           <div className="space-y-3">
             {followers.map(f => (

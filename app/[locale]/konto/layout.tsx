@@ -178,8 +178,6 @@ export default async function AccountLayout({
           </form>
         </div>
       )}
-      <h1 className="text-3xl font-serif font-bold text-htg-fg mb-8">{t('title')}</h1>
-
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar nav */}
         <nav className="md:w-56 shrink-0">

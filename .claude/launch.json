@@ -5,7 +5,8 @@
       "name": "htg2",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3003
+      "port": 3003,
+      "autoPort": true
     }
   ]
 }

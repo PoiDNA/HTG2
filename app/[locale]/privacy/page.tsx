@@ -101,6 +101,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
           <UL>
             <li><strong>Realizacja umowy Sesji HTG</strong> — art. 6 ust. 1 lit. b RODO</li>
             <li><strong>Dane wrażliwe</strong> (przekonania, zdrowie) — art. 9 ust. 2 lit. a RODO (wyraźna zgoda)</li>
+            <li><strong>Nagrywanie sesji</strong> (wizerunek, głos) — odrębna zgoda wyrażana przed sesją</li>
             <li><strong>Obowiązki księgowe</strong> — art. 6 ust. 1 lit. c RODO</li>
             <li><strong>Ochrona praw</strong> (uzasadniony interes) — art. 6 ust. 1 lit. f RODO</li>
             <li><strong>Marketing</strong> — art. 6 ust. 1 lit. a RODO (wyłącznie za zgodą)</li>

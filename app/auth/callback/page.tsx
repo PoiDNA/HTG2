@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 
 /**
  * Auth callback page — handles both:
- * 1. PKCE flow (code in query params, handled by route.ts)
+ * 1. PKCE flow (code in query params, handled by middleware/route.ts)
  * 2. Implicit flow / magic link (access_token in URL fragment #)
  *
  * The URL fragment (#access_token=...) is NOT visible to the server,
@@ -23,7 +23,6 @@ export default function AuthCallbackPage() {
       // Check if we have a hash fragment with access_token
       const hash = window.location.hash;
       if (hash && hash.includes('access_token')) {
-        // Parse the fragment
         const params = new URLSearchParams(hash.substring(1));
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
@@ -50,8 +49,17 @@ export default function AuthCallbackPage() {
             }
           } catch {}
 
-          // Redirect to konto
-          window.location.href = '/pl/konto';
+          // Call centralized post-login hook
+          try {
+            await fetch('/api/auth/post-login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ consent: true }),
+            });
+          } catch {}
+
+          const locale = window.location.pathname.split('/')[1] || 'pl';
+          window.location.href = `/${locale}/konto`;
           return;
         }
       }
@@ -59,7 +67,8 @@ export default function AuthCallbackPage() {
       // If no hash fragment, check if we already have a session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        window.location.href = '/pl/konto';
+        const locale = window.location.pathname.split('/')[1] || 'pl';
+        window.location.href = `/${locale}/konto`;
         return;
       }
 

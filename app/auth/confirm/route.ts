@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const tokenHash = searchParams.get('token_hash');
   const type = (searchParams.get('type') ?? 'email') as 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email';
+  const consentFromUrl = searchParams.get('consent') === '1';
 
   // Detect locale from 'next' param or default to 'pl'
   const next = searchParams.get('next') ?? '/pl/konto';
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     // PKCE / OAuth code exchange
     ({ error } = await supabase.auth.exchangeCodeForSession(code));
   } else if (tokenHash) {
-    // Magic link / email OTP token_hash flow (modern Supabase default)
+    // Magic link / email OTP token_hash flow
     ({ error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type }));
   }
 
@@ -62,9 +63,36 @@ export async function GET(request: NextRequest) {
         await supabase.from('profiles').update({ role: expectedRole }).eq('id', user.id);
       }
     }
-  } catch {
-    // Non-blocking — role sync may fail if profiles table isn't ready
+  } catch { /* Non-blocking */ }
+
+  // Record GDPR consent if passed via URL (magic link / SSO flow)
+  if (consentFromUrl) {
+    try {
+      await supabase.from('consent_records').insert({
+        consent_type: 'sensitive_data',
+        granted: true,
+        consent_text: 'GDPR Art. 9 consent (via auth redirect)',
+      });
+    } catch { /* Non-blocking */ }
   }
+
+  // Trigger post-login actions (welcome email, gifts, community join) — non-blocking
+  try {
+    const postLoginUrl = new URL('/api/auth/post-login', origin);
+    // We need to forward the auth cookies to the post-login endpoint
+    const cookieHeader = request.cookies.getAll()
+      .map(c => `${c.name}=${c.value}`)
+      .join('; ');
+
+    fetch(postLoginUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookieHeader,
+      },
+      body: JSON.stringify({ consent: consentFromUrl }),
+    }).catch(() => {}); // Fire and forget
+  } catch { /* Non-blocking */ }
 
   return response;
 }

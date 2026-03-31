@@ -34,6 +34,13 @@ const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
   natalia_asysta:  { className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
 
+const DAY_NAMES_SHORT = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+function getDayShort(dateStr: string): string {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return DAY_NAMES_SHORT[d.getDay()] || '';
+}
+
 const PAYMENT_STATUS_OPTIONS = [
   { value: 'pending_verification', label: 'Do potwierdzenia' },
   { value: 'confirmed_paid',       label: 'Opłacona' },
@@ -426,6 +433,7 @@ tr:nth-child(even){background:#f9f9f9}
                     {isToday && statusTab === 'upcoming' && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
                     )}
+                    <span className="text-xs text-htg-fg-muted font-normal">{getDayShort(slot?.slot_date)}</span>
                     <span className="font-bold text-htg-fg">{slot?.slot_date || '—'}</span>
                     <span className="text-htg-fg">{slot?.start_time?.slice(0, 5) || ''}</span>
                     {typeTab === 'all' && <TypeBadge type={b.session_type} />}

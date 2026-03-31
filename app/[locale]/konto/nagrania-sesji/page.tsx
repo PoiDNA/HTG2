@@ -36,12 +36,12 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
 
   // Flatten and filter
   const items = (recordings ?? [])
-    .map((r) => (Array.isArray(r.recording) ? r.recording[0] : r.recording) as unknown as Record<string, unknown>)
+    .map((r) => (Array.isArray(r.recording) ? r.recording[0] : r.recording) as Record<string, any>)
     .filter(Boolean)
     .filter((r) => ['queued', 'preparing', 'uploading', 'processing', 'ready'].includes(r.status as string));
 
   // Group by booking_id
-  const grouped = new Map<string, typeof items>();
+  const grouped = new Map<string, Record<string, any>[]>();
   for (const item of items) {
     const key = (item.booking_id as string) ?? item.id as string;
     if (!grouped.has(key)) grouped.set(key, []);

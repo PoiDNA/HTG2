@@ -51,7 +51,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         Zasady naszej wspólnej przestrzeni
       </h1>
       <p className="text-htg-fg-muted text-sm mb-2">Regulamin Sesji Hacking&nbsp;The&nbsp;Game</p>
-      <p className="text-htg-fg-muted text-sm mb-8">Wersja 2.1 · obowiązuje od 1 kwietnia 2025&nbsp;r.</p>
+      <p className="text-htg-fg-muted text-sm mb-8">Wersja 2.2 · obowiązuje od 1 kwietnia 2025&nbsp;r.</p>
 
       {/* ── Intro ── */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-10 text-sm text-htg-fg leading-relaxed">
@@ -100,7 +100,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li><strong>Operator</strong> — Pilot PSA z siedzibą w Warszawie, ul.&nbsp;RONDO ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249. To my odpowiadamy za organizację Sesji HTG.</li>
             <li><strong>Zespół HTG</strong> — osoby prowadzące sesje w ramach inicjatywy Hacking&nbsp;The&nbsp;Game. Kontaktują się z Tobą z adresów e-mail w domenie @htg.cyou.</li>
             <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie online o charakterze rozwoju osobistego, prowadzone z wykorzystaniem autorskiej metodyki HTG.</li>
-            <li><strong>Uczestnik</strong> — osoba fizyczna (pełnoletnia), która zawiera z nami umowę na Sesję HTG. Osoby w wieku 16–17 lat mogą uczestniczyć za uprzednią pisemną zgodą rodzica lub opiekuna prawnego, przesłaną na nasz adres e-mail przed rozpoczęciem sesji. Operator zastrzega sobie prawo do odmowy realizacji sesji dla osoby niepełnoletniej, jeśli temat sesji tego wymaga. Sesja osoby niepełnoletniej odbywa się bez obecności opiekuna, chyba że strony ustalą inaczej.</li>
+            <li><strong>Uczestnik</strong> — osoba fizyczna (pełnoletnia), która zawiera z nami umowę na Sesję HTG. Osoby w wieku 16–17 lat mogą uczestniczyć wyłącznie po dostarczeniu pisemnego oświadczenia rodzica lub opiekuna prawnego na adres htg@htg.cyou przed rozpoczęciem sesji. Oświadczenie musi zawierać zgodę na udział oraz potwierdzenie, że opiekun rozumie niekonwencjonalny charakter pracy HTG i bierze odpowiedzialność za proces rozwojowy podopiecznego. Operator zastrzega sobie prawo do indywidualnej oceny możliwości realizacji sesji z osobą niepełnoletnią, z uwzględnieniem charakteru tematu i dobra uczestnika. Sesja osoby niepełnoletniej odbywa się bez obecności opiekuna, chyba że strony ustalą inaczej.</li>
             <li><strong>Dzień roboczy</strong> — poniedziałek–piątek z wyłączeniem dni ustawowo wolnych od pracy.</li>
           </UL>
         </Section>
@@ -119,6 +119,12 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             ale potrwa odpowiednio krócej (opłata pozostaje bez zmian), aby nie zakłócać
             sesji kolejnych osób. Zachęcamy, aby przygotować sprzęt kilka minut wcześniej.
           </Info>
+          <P>
+            Awarie sprzętu lub problemy z internetem po Twojej stronie nie przedłużają czasu
+            trwania sesji i nie stanowią podstawy do zwrotu kosztów. Jeśli jednak problemy
+            techniczne wystąpią po stronie Zespołu HTG — oczywiście zadbamy o to, by zrekompensować
+            Ci ten czas lub ustalimy nowy termin.
+          </P>
         </Section>
 
         {/* ── 3. Płatności i zwroty ── */}
@@ -152,6 +158,15 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li>Możesz jednorazowo zmienić termin <strong>najpóźniej 7 dni</strong> przed planowaną datą.</li>
             <li>Zaproponujemy pierwszy wolny termin. Z uwagi na ograniczoną dostępność prowadzących i harmonogram sesji, czas oczekiwania na nowy termin może być wydłużony (nawet do kilku miesięcy).</li>
           </UL>
+
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Nieobecność i późne odwołanie</h3>
+          <P>
+            Szanujemy czas naszych prowadzących oraz innych osób oczekujących na wolne terminy.
+            Jeśli nie pojawisz się na sesji lub zgłosisz chęć zmiany terminu na mniej niż 7 dni
+            przed spotkaniem, sesja przepada, a wniesiona opłata nie podlega zwrotowi. Zastrzegamy
+            jednak, że w wyjątkowych, udokumentowanych sytuacjach losowych zawsze staramy się
+            znaleźć wspólnie ludzkie rozwiązanie.
+          </P>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Z naszej inicjatywy</h3>
           <P>
@@ -197,9 +212,10 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           </Info>
 
           <P>
-            Akceptując ten regulamin, potwierdzasz, że masz świadomość, iż Sesja HTG nie zastępuje
-            leczenia medycznego ani terapii, a udział w niej bierzesz na własną odpowiedzialność,
-            będąc w stanie stabilności emocjonalnej pozwalającej na pracę rozwojową.
+            Sesja zakłada gotowość do udziału w rozmowie o charakterze rozwojowym. Jeśli jesteś
+            w ostrym kryzysie psychicznym, ta forma wsparcia może nie być dla Ciebie odpowiednia
+            na ten moment. Akceptując ten regulamin, potwierdzasz, że rozumiesz charakter Sesji HTG
+            i że nie zastępuje ona leczenia medycznego ani terapii.
           </P>
 
           <P>
@@ -207,8 +223,8 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             ani gwarancji osiągnięcia określonych rezultatów życiowych, zdrowotnych czy finansowych.
             Wkładamy w nasze spotkania całą wiedzę i doświadczenie — pamiętaj jednak, że ze względów
             prawnych nasza odpowiedzialność finansowa związana z realizacją sesji jest ograniczona
-            do kwoty, jaką za nią zapłaciłeś/aś (z wyłączeniem szkód wyrządzonych umyślnie, zgodnie
-            z przepisami prawa).
+            do kwoty, jaką za nią zapłaciłeś/aś (z wyłączeniem szkód wyrządzonych umyślnie
+            lub wskutek rażącego niedbalstwa, zgodnie z bezwzględnie obowiązującymi przepisami prawa).
           </P>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Bezpieczeństwo przestrzeni</h3>
@@ -226,6 +242,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             Sesja HTG jest nagrywana w formie audio i wideo. <strong>Przed rozpoczęciem sesji poprosimy
             Cię o wyraźną zgodę na nagrywanie</strong> — jest to odrębna, świadoma zgoda związana
             z konkretną sesją. Jeśli nie wyrażasz zgody — sesja odbędzie się bez nagrania.
+            <strong> Brak zgody na nagranie nie wpływa na możliwość odbycia samej sesji.</strong>
           </P>
           <Info>
             Pamiętaj, że w przypadku braku zgody na nagranie Operator i Zespół HTG nie dysponują
@@ -244,9 +261,16 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Zakaz samodzielnego nagrywania</h3>
           <P>
-            W trosce o zaufanie i swobodę procesu, obowiązuje całkowity zakaz samodzielnego
-            nagrywania sesji (audio, wideo, screen recording) przez Uczestnika. Oficjalne
-            i jedyne nagranie realizuje Zespół HTG i to ono zostaje Ci udostępnione na zasadach poufności.
+            Aby każdy mógł czuć się swobodnie — zarówno Ty, jak i Prowadzący — obowiązuje
+            całkowity zakaz samodzielnego nagrywania sesji (audio, wideo, screen recording)
+            przez Uczestnika. Oficjalne i jedyne nagranie realizuje Zespół HTG i to ono
+            zostaje Ci udostępnione na zasadach poufności.
+          </P>
+          <P>
+            Aby chronić przestrzeń zaufania, prywatność Prowadzącego oraz autorską metodykę HTG,
+            złamanie tego zakazu (np. potajemne nagrywanie) oznacza natychmiastowe przerwanie sesji
+            bez możliwości zwrotu opłaty. Zastrzegamy sobie również prawo do podjęcia kroków
+            prawnych w przypadku naruszenia naszych dóbr osobistych i praw autorskich.
           </P>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Nasza odpowiedzialność za poufność</h3>
@@ -267,7 +291,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <UL>
             <li>Nagrania sesji przechowujemy <strong>maksymalnie 24 miesiące</strong> od daty sesji.</li>
             <li>30 dni przed planowanym usunięciem nagrania otrzymasz powiadomienie e-mailem.</li>
-            <li>Możesz poprosić o wcześniejsze usunięcie nagrania, pisząc na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.</li>
+            <li>Możesz poprosić o wcześniejsze usunięcie nagrania, pisząc na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>. Co do zasady uwzględniamy taką prośbę w ciągu 30 dni, chyba że nagranie jest niezbędne do obrony roszczeń lub wymagane przepisami prawa.</li>
             <li>W przypadku usunięcia konta nagrania są kasowane, z wyjątkiem danych niezbędnych do celów księgowych (przechowywanych do 5 lat od końca roku podatkowego) lub ochrony roszczeń (do czasu ich przedawnienia).</li>
             <li>Korespondencja związana z realizacją sesji jest przechowywana przez okres obowiązywania umowy i przedawnienia roszczeń.</li>
           </UL>
@@ -356,13 +380,19 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li><strong>Publikacja nagrania</strong> — na podstawie osobnej, dobrowolnej zgody (pkt&nbsp;8).</li>
           </UL>
           <P>Każdą z powyższych zgód możesz wycofać niezależnie, w dowolnym momencie, w panelu klienta lub pisząc na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.</P>
+
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Co oznacza wycofanie zgody?</h3>
+          <UL>
+            <li>Wycofanie zgody nie wpływa na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem.</li>
+            <li>Wycofanie zgody na przetwarzanie danych wrażliwych może uniemożliwić realizację kolejnych sesji — ponieważ ich charakter wymaga otwartości na tematy osobiste.</li>
+            <li>Część danych może być nadal przechowywana, jeśli wymagają tego przepisy prawa (np. dane księgowe) lub obrona roszczeń.</li>
+          </UL>
         </Section>
 
         {/* ── 10. Reklamacje ── */}
         <Section id="reklamacje" title="10. Reklamacje">
           <UL>
-            <li>Zalecamy zgłoszenie ewentualnych uwag lub reklamacji możliwie najszybciej — np. w ciągu 14 dni od sesji — co pomoże nam sprawnie odnieść się do sytuacji.</li>
-            <li>Reklamację rozpatrzymy w ciągu <strong>14 dni</strong> od jej otrzymania i poinformujemy Cię o wyniku e-mailem.</li>
+            <li>Reklamacje prosimy zgłaszać na adres <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>. Każdą sprawę rozpatrzymy w ciągu <strong>14 dni</strong> od jej otrzymania i poinformujemy Cię o wyniku e-mailem.</li>
             <li>Jeśli nie jesteś zadowolony/a z rozstrzygnięcia, możesz skorzystać z <strong>platformy ODR</strong> (<a href="https://ec.europa.eu/odr" className="text-htg-sage hover:underline" target="_blank" rel="noopener noreferrer">ec.europa.eu/odr</a>) lub zwrócić się do właściwego <strong>rzecznika konsumentów</strong>.</li>
           </UL>
         </Section>

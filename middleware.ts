@@ -113,6 +113,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // ─── Consent Gate for /konto paths ─────────────────────────────
+  const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
+  const isKontoPath = withoutLocale.startsWith('/konto');
+  const isZgodyPath = withoutLocale.startsWith('/konto/zgody');
+  const isAdminPath = withoutLocale.startsWith('/konto/admin') || withoutLocale.startsWith('/prowadzacy');
+
+  if (isKontoPath && !isZgodyPath && !isAdminPath) {
+    const REQUIRED = ['terms_v3', 'privacy_v3', 'sensitive_data', 'recording_publication'];
+    const { data: consents } = await supabase
+      .from('consent_records')
+      .select('consent_type')
+      .eq('user_id', user.id)
+      .eq('granted', true);
+
+    const granted = new Set((consents ?? []).map((c: { consent_type: string }) => c.consent_type));
+    const missing = REQUIRED.filter(t => !granted.has(t));
+
+    if (missing.length > 0) {
+      const locale = getLocaleFromPath(pathname);
+      const url = request.nextUrl.clone();
+      url.pathname = `/${locale}/konto/zgody`;
+      return NextResponse.redirect(url);
+    }
+  }
+
   // No-cache for protected pages
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   response.headers.set('Pragma', 'no-cache');

@@ -3,8 +3,7 @@ import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
-import { cookies, headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import {
@@ -15,7 +14,6 @@ import {
 } from 'lucide-react';
 
 /* Required consent types for full panel access */
-const REQUIRED_CONSENT_TYPES = ['terms_v3', 'privacy_v3', 'sensitive_data', 'recording_publication'];
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -90,38 +88,7 @@ export default async function AccountLayout({
     } catch { /* ignore */ }
   }
 
-  // --- Consent gate: redirect to /konto/zgody if missing required consents ---
-  // Skip for admins/staff (they manage the system) and for the zgody page itself
-  if (!isAdmin && !isStaff) {
-    try {
-      const headerStore = await headers();
-      const currentPath = headerStore.get('x-next-url') || headerStore.get('x-invoke-path') || headerStore.get('referer') || '';
-      const isOnZgodyPage = currentPath.includes('/konto/zgody');
-
-      if (!isOnZgodyPage) {
-        const supabase = await createSupabaseServer();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: userConsents } = await supabase
-            .from('consent_records')
-            .select('consent_type')
-            .eq('user_id', user.id)
-            .eq('granted', true);
-
-          const grantedTypes = new Set((userConsents ?? []).map((c: { consent_type: string }) => c.consent_type));
-          const missingConsents = REQUIRED_CONSENT_TYPES.filter(t => !grantedTypes.has(t));
-
-          if (missingConsents.length > 0) {
-            redirect(`/${locale}/konto/zgody`);
-          }
-        }
-      }
-    } catch (e) {
-      // redirect() throws a special error in Next.js — re-throw it
-      if (e && typeof e === 'object' && 'digest' in e) throw e;
-      // Otherwise non-blocking
-    }
-  }
+  // --- Consent gate is handled in middleware.ts ---
 
   // --- Build sections based on role ---
 

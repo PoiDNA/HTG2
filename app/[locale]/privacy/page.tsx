@@ -117,7 +117,9 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
             <li><strong>Stripe</strong> — przetwarzanie płatności</li>
             <li><strong>Bunny.net</strong> — przechowywanie i streaming nagrań</li>
             <li><strong>Resend</strong> — wysyłka e-maili transakcyjnych</li>
+            <li><strong>Kancelarie prawne i podmioty księgowe</strong> — obsługa prawna i rachunkowa</li>
           </UL>
+          <P>Niektórzy z naszych dostawców (Vercel, Cloudflare, Stripe) mogą przetwarzać dane poza Europejskim Obszarem Gospodarczym, na podstawie standardowych klauzul umownych lub decyzji Komisji Europejskiej o adekwatności ochrony.</P>
         </Section>
 
         <Section id="przechowywanie" title="5. Okres przechowywania">
@@ -149,7 +151,8 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
               </tbody>
             </table>
           </div>
-          <P>30 dni przed usunięciem nagrania otrzymasz powiadomienie e-mailem.</P>
+          <P>30 dni przed usunięciem nagrania otrzymasz powiadomienie e-mailem. Możesz poprosić o wcześniejsze usunięcie nagrania, pisząc na htg@htg.cyou.</P>
+          <P>W przypadku usunięcia konta nagrania są kasowane, z wyjątkiem danych niezbędnych do celów księgowych lub ochrony roszczeń. Korespondencja jest przechowywana przez okres obowiązywania umowy i przedawnienia roszczeń.</P>
         </Section>
 
         <Section id="prawa" title="6. Twoje prawa">
@@ -179,7 +182,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
         </Section>
 
         <Section id="monitoring" title="8. Monitoring sesji">
-          <P>W celu ochrony przed nieautoryzowanym udostępnianiem monitorujemy:</P>
+          <P>Dbając o to, by Twoje nagrania były bezpieczne i nie wpadły w niepowołane ręce, system monitoruje:</P>
           <UL>
             <li>Liczbę aktywnych sesji uwierzytelniania — limit 3 urządzenia na konto</li>
             <li>Liczbę jednoczesnych odtwarzań — limit 1 urządzenie na konto</li>

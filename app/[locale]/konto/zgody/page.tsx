@@ -50,8 +50,9 @@ export default function ConsentGatePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setError('Sesja wygasła. Zaloguj się ponownie.'); return; }
 
-      // Insert all consent records
+      // Insert all consent records (user_id required by RLS policy)
       const records = REQUIRED_CONSENTS.map(c => ({
+        user_id: user.id,
         consent_type: c.type,
         granted: true,
         consent_text: c.text,

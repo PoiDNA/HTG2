@@ -70,6 +70,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
       if (!user) return;
 
       await supabase.from('consent_records').insert({
+        user_id: user.id,
         consent_type: 'sensitive_data',
         granted: false,
         consent_text: 'Wycofanie zgody na przetwarzanie danych wrażliwych (RODO art. 9)',

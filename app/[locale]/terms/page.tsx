@@ -371,7 +371,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <UL>
             <li><strong>Założenie konta i realizacja umowy</strong> — dane zwykłe (imię, e-mail, dane rozliczeniowe) przetwarzane na podstawie umowy (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;b RODO).</li>
             <li><strong>Dane szczególnie wrażliwe ujawniane w trakcie sesji</strong> (zdrowie, przekonania, życie osobiste) — przetwarzane wyłącznie na podstawie Twojej wyraźnej, świadomej zgody związanej z udziałem w sesji (art.&nbsp;9 ust.&nbsp;2 lit.&nbsp;a RODO). Tę zgodę wyrażasz odrębnie przed pierwszą sesją.</li>
-            <li><strong>Nagranie i publikacja sesji</strong> (wizerunek, głos) — na podstawie wyraźnej zgody wyrażonej przy rezerwacji sesji (osobny checkbox). Zgoda obejmuje nagrywanie oraz możliwość publikacji po montażu.</li>
+            <li><strong>Nagranie i publikacja sesji</strong> (wizerunek, głos) — nagrywanie i publikacja stanowią integralną część usługi Sesji HTG. Zgoda na nagrywanie i publikację jest wyrażana przy rezerwacji sesji (osobny checkbox) i stanowi warunek zawarcia umowy. Zgoda ta nie podlega odrębnemu wycofaniu, ponieważ jest nierozerwalnie związana z charakterem świadczonej usługi. Uczestnik zachowuje prawo do wskazania fragmentów do usunięcia przed publikacją (pkt&nbsp;6 i&nbsp;8).</li>
           </UL>
           <P>Każdą z powyższych zgód możesz wycofać niezależnie, w dowolnym momencie, w panelu klienta lub pisząc na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.</P>
 
@@ -379,6 +379,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <UL>
             <li>Wycofanie zgody nie wpływa na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem.</li>
             <li>Wycofanie zgody na przetwarzanie danych wrażliwych może uniemożliwić realizację kolejnych sesji — ponieważ ich charakter wymaga otwartości na tematy osobiste.</li>
+            <li>Zgoda na nagrywanie i publikację sesji jest warunkiem umowy i nie podlega odrębnemu wycofaniu. Możesz jednak wskazać fragmenty do usunięcia przed publikacją (pkt&nbsp;6 i&nbsp;8) oraz po publikacji poprosić o wycofanie materiału (pkt&nbsp;8).</li>
             <li>Część danych może być nadal przechowywana, jeśli wymagają tego przepisy prawa (np. dane księgowe) lub obrona roszczeń.</li>
           </UL>
         </Section>
@@ -453,7 +454,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
               <UL>
                 <li>Realizacja umowy Sesji HTG (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;b RODO).</li>
                 <li>Przetwarzanie danych wrażliwych ujawnianych w trakcie sesji (przekonania, zdrowie, życie osobiste) — wyłącznie za Twoją wyraźną, kontekstową zgodą (art.&nbsp;9 ust.&nbsp;2 lit.&nbsp;a RODO).</li>
-                <li>Nagrywanie i publikacja sesji (wizerunek, głos) — na podstawie wyraźnej zgody wyrażonej przy rezerwacji sesji.</li>
+                <li>Nagrywanie i publikacja sesji (wizerunek, głos) — zgoda wyrażona przy rezerwacji sesji, stanowiąca warunek zawarcia umowy. Zgoda nie podlega odrębnemu wycofaniu ze względu na nierozerwalny związek z charakterem usługi.</li>
                 <li>Obowiązki księgowe (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;c RODO).</li>
                 <li>Informowanie i marketing — wyłącznie za zgodą (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;a RODO).</li>
               </UL>

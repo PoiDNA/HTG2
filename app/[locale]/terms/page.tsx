@@ -51,7 +51,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         Zasady naszej wspólnej przestrzeni
       </h1>
       <p className="text-htg-fg-muted text-sm mb-2">Regulamin Sesji Hacking&nbsp;The&nbsp;Game</p>
-      <p className="text-htg-fg-muted text-sm mb-8">Wersja 2.2 · obowiązuje od 1 kwietnia 2025&nbsp;r.</p>
+      <p className="text-htg-fg-muted text-sm mb-8">Wersja 3.0 · obowiązuje od 1 kwietnia 2025&nbsp;r.</p>
 
       {/* ── Intro ── */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-10 text-sm text-htg-fg leading-relaxed">
@@ -239,24 +239,26 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         {/* ── 6. Nagrania i poufność ── */}
         <Section id="nagrania" title="6. Nagrania i poufność">
           <P>
-            Sesja HTG jest nagrywana w formie audio i wideo. <strong>Przed rozpoczęciem sesji poprosimy
-            Cię o wyraźną zgodę na nagrywanie</strong> — jest to odrębna, świadoma zgoda związana
-            z konkretną sesją. Jeśli nie wyrażasz zgody — sesja odbędzie się bez nagrania.
-            <strong> Brak zgody na nagranie nie wpływa na możliwość odbycia samej sesji.</strong>
+            Każda Sesja HTG jest nagrywana w formie audio i wideo. Nagrywanie stanowi integralną
+            część usługi — służy zarówno Twojemu prywatnemu użytkowi (nagranie udostępniamy
+            w panelu klienta), jak i rozwojowi inicjatywy HTG (montaż, publikacja, materiały
+            edukacyjne).
           </P>
           <Info>
-            Pamiętaj, że w przypadku braku zgody na nagranie Operator i Zespół HTG nie dysponują
-            materiałem pozwalającym na weryfikację ewentualnych uwag co do przebiegu rozmowy.
+            <strong>Przy rezerwacji sesji poprosimy Cię o potwierdzenie osobnym checkboxem:</strong> „Rozumiem,
+            że sesja jest nagrywana i może zostać opublikowana po montażu. Mogę wskazać fragmenty
+            do usunięcia w ciągu 7 dni od udostępnienia nagrania." Ta zgoda jest warunkiem realizacji
+            usługi — bez niej nie możemy przeprowadzić sesji.
           </Info>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Twoje nagranie</h3>
           <UL>
             <li>Nagranie udostępnimy Ci w panelu klienta w ciągu 7&nbsp;dni od sesji.</li>
             <li>Nagranie służy Twojemu <strong>prywatnemu użytkowi</strong> — możesz do niego swobodnie wracać.</li>
-            <li>Zależy nam na pełnej intymności i bezpieczeństwie tych spotkań, dlatego nagranie
-              udostępniamy wyłącznie do Twojego prywatnego użytku. Aby chronić przestrzeń zaufania,
-              publikowanie nagrań, ich fragmentów lub udostępnianie ich osobom trzecim bez naszej
-              pisemnej zgody jest <strong>niedozwolone</strong>.</li>
+            <li>Wszystkie prawa autorskie i majątkowe do nagrania przysługują Operatorowi.
+              Publikowanie, udostępnianie lub rozpowszechnianie nagrania (w całości lub we fragmentach)
+              przez Uczestnika jest <strong>niedozwolone</strong> — nagranie służy wyłącznie Twojemu
+              prywatnemu użytkowi.</li>
           </UL>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Zakaz samodzielnego nagrywania</h3>
@@ -277,14 +279,17 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <P>
             Zespół HTG traktuje treść każdej sesji jako poufną. Informacje, które nam powierzasz,
             nie będą udostępniane osobom trzecim — z wyjątkiem sytuacji wynikających z prawa
-            lub publikacji sesji na warunkach opisanych poniżej.
+            lub publikacji sesji na warunkach opisanych w pkt&nbsp;8.
           </P>
 
-          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Prośba o edycję nagrania</h3>
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Wskazanie fragmentów do usunięcia</h3>
           <P>
-            Jeśli po obejrzeniu nagrania chciałbyś/chciałabyś, aby jakiś fragment został usunięty
-            z ewentualnej publikacji — zgłoś to do <strong>7 dni od udostępnienia nagrania</strong> w panelu klienta.
-            Dołożymy starań, by uwzględnić Twoją prośbę.
+            Przed publikacją Twojej sesji masz prawo wskazać fragmenty, które chcesz usunąć
+            z materiału przeznaczonego do emisji. Zgłoś to do <strong>7 dni od udostępnienia
+            nagrania</strong> w panelu klienta lub pisząc na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
+            Dołożymy starań, by uwzględnić Twoje wskazania przy montażu, o ile nie uniemożliwia
+            to zachowania spójności materiału. Po upływie tego terminu uznajemy, że nie masz
+            zastrzeżeń do publikacji nagrania.
           </P>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Przechowywanie i usuwanie nagrań</h3>
@@ -300,17 +305,16 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         {/* ── 7. Prawa autorskie ── */}
         <Section id="prawa-autorskie" title="7. Prawa autorskie">
           <P>
-            Jesteśmy twórcami formatu HTG — autorskie prawa majątkowe do formy sesji i nagrania
-            pozostają przy Operatorze. Ty zachowujesz prawo do prywatnego korzystania z nagrania
-            na warunkach opisanych powyżej.
+            Operator jest wyłącznym właścicielem autorskich praw majątkowych do formatu sesji,
+            metodyki HTG oraz nagrań sesji. Uczestnikowi przysługuje wyłącznie prawo do prywatnego
+            odtwarzania nagrania własnej sesji w panelu klienta. Uczestnik nie nabywa żadnych praw
+            do nagrania poza prawem do prywatnego użytku.
           </P>
-          <P>
-            Pola eksploatacji, na których możemy wykorzystywać nagranie
-            (<strong>z zastrzeżeniem uzyskania Twojej dobrowolnej zgody, o&nbsp;której mowa w&nbsp;pkt&nbsp;8</strong>):
-          </P>
+          <P>Operator może wykorzystywać nagrania sesji na następujących polach eksploatacji:</P>
           <UL>
-            <li>Publikacja w internecie, w tym na stronach www i w mediach społecznościowych.</li>
-            <li>Wykorzystanie w materiałach edukacyjnych i informacyjnych.</li>
+            <li>Publikacja w internecie, w tym na stronach www, w mediach społecznościowych i na platformach wideo (YouTube, Vimeo itp.).</li>
+            <li>Wykorzystanie w materiałach edukacyjnych, szkoleniowych i informacyjnych.</li>
+            <li>Tworzenie kompilacji, montaży i materiałów promocyjnych.</li>
           </UL>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Ochrona metodyki HTG</h3>
@@ -323,43 +327,34 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
 
         {/* ── 8. Publikacja sesji ── */}
         <Section id="publikacja" title="8. Publikacja sesji">
-          <Info>
-            <p className="mb-3">
-              <strong>Twoja sesja jest domyślnie prywatna.</strong> Nie publikujemy żadnych materiałów
-              z Twojej sesji bez Twojej wyraźnej, odrębnej zgody.
-            </p>
-            <p>
-              Publikacja wybranych sesji (np. na YouTube lub htgcyou.com) pomaga obniżać koszty organizacji
-              sesji i inspirować inne osoby. Jeśli chcesz, aby Twoja sesja mogła zostać opublikowana,
-              poprosimy Cię o odrębną zgodę — możesz wybrać zakres:
-            </p>
-          </Info>
-          <UL>
-            <li><strong>Publikacja pełna</strong> — cała zmontowana sesja.</li>
-            <li><strong>Publikacja fragmentu</strong> — wyłącznie wybrane fragmenty.</li>
-            <li><strong>Publikacja po anonimizacji</strong> — z ukryciem Twojej tożsamości.</li>
-            <li><strong>Brak zgody na publikację</strong> — Twoja sesja pozostaje w pełni prywatna.</li>
-          </UL>
           <P>
-            <strong>Brak zgody na publikację nie wpływa w żaden sposób na możliwość zakupu
-            i odbycia sesji.</strong> Zgoda na publikację jest całkowicie dobrowolna
-            i nie stanowi warunku realizacji usługi.
+            Rezerwując sesję, wyrażasz zgodę (osobnym checkboxem) na to, że Operator może opublikować
+            nagranie Twojej sesji — w całości lub we fragmentach, po montażu — na YouTube,
+            htgcyou.com oraz w innych kanałach HTG. Publikacja sesji pomaga obniżać koszty
+            organizacji i inspirować inne osoby na ich drodze rozwoju.
+          </P>
+
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Twoje prawa przed publikacją</h3>
+          <P>
+            Przed publikacją masz prawo wskazać fragmenty, które chcesz usunąć z materiału
+            przeznaczonego do emisji. Zgłoś to do <strong>7 dni od udostępnienia nagrania</strong> w panelu
+            klienta lub pisząc na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
+            Dołożymy starań, by uwzględnić Twoje wskazania przy montażu, o ile nie uniemożliwia
+            to zachowania spójności materiału.
           </P>
           <P>
             Przed publikacją sesja przechodzi montaż, w którym dbamy o kontekst wypowiedzi
             i usuwamy treści mogące naruszyć Twoją godność lub prywatność.
           </P>
 
-          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Wycofanie zgody na publikację</h3>
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Po publikacji</h3>
           <P>
-            Zgodę na publikację możesz wycofać w dowolnym momencie, pisząc
+            Po opublikowaniu materiału możesz poprosić o jego wycofanie, pisząc
             na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
-            Wycofanie zgody działa na przyszłość — usunięcie Twojego wizerunku z materiałów,
-            które zostały już publicznie wyemitowane, nastąpi w rozsądnym terminie
-            techniczno-organizacyjnym. Wycofanie zgody nie wpływa na legalność publikacji
-            dokonanej przed jej wycofaniem. W przypadku materiałów dalej rozpowszechnionych
-            przez podmioty trzecie (np. re-uploady) Operator nie ponosi odpowiedzialności
-            za ich usunięcie z tych źródeł.
+            Materiały pozostające pod kontrolą Operatora wycofamy w rozsądnym terminie
+            techniczno-organizacyjnym. Wycofanie nie wpływa na legalność publikacji dokonanej
+            przed zgłoszeniem. Operator nie odpowiada za kopie rozpowszechnione przez podmioty
+            trzecie (np. re-uploady).
           </P>
         </Section>
 
@@ -376,8 +371,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <UL>
             <li><strong>Założenie konta i realizacja umowy</strong> — dane zwykłe (imię, e-mail, dane rozliczeniowe) przetwarzane na podstawie umowy (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;b RODO).</li>
             <li><strong>Dane szczególnie wrażliwe ujawniane w trakcie sesji</strong> (zdrowie, przekonania, życie osobiste) — przetwarzane wyłącznie na podstawie Twojej wyraźnej, świadomej zgody związanej z udziałem w sesji (art.&nbsp;9 ust.&nbsp;2 lit.&nbsp;a RODO). Tę zgodę wyrażasz odrębnie przed pierwszą sesją.</li>
-            <li><strong>Nagranie sesji</strong> (wizerunek, głos) — na podstawie odrębnej zgody wyrażanej przed każdą sesją.</li>
-            <li><strong>Publikacja nagrania</strong> — na podstawie osobnej, dobrowolnej zgody (pkt&nbsp;8).</li>
+            <li><strong>Nagranie i publikacja sesji</strong> (wizerunek, głos) — na podstawie wyraźnej zgody wyrażonej przy rezerwacji sesji (osobny checkbox). Zgoda obejmuje nagrywanie oraz możliwość publikacji po montażu.</li>
           </UL>
           <P>Każdą z powyższych zgód możesz wycofać niezależnie, w dowolnym momencie, w panelu klienta lub pisząc na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.</P>
 
@@ -459,8 +453,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
               <UL>
                 <li>Realizacja umowy Sesji HTG (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;b RODO).</li>
                 <li>Przetwarzanie danych wrażliwych ujawnianych w trakcie sesji (przekonania, zdrowie, życie osobiste) — wyłącznie za Twoją wyraźną, kontekstową zgodą (art.&nbsp;9 ust.&nbsp;2 lit.&nbsp;a RODO).</li>
-                <li>Nagrywanie sesji (wizerunek, głos) — na podstawie Twojej odrębnej zgody przed każdą sesją.</li>
-                <li>Publikacja nagrania — na podstawie osobnej, dobrowolnej zgody.</li>
+                <li>Nagrywanie i publikacja sesji (wizerunek, głos) — na podstawie wyraźnej zgody wyrażonej przy rezerwacji sesji.</li>
                 <li>Obowiązki księgowe (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;c RODO).</li>
                 <li>Informowanie i marketing — wyłącznie za zgodą (art.&nbsp;6 ust.&nbsp;1 lit.&nbsp;a RODO).</li>
               </UL>

@@ -98,7 +98,9 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         <Section id="definicje" title="1. Kim jesteśmy">
           <UL>
             <li><strong>Zespół HTG</strong> — osoby prowadzące sesje w ramach inicjatywy Hacking&nbsp;The&nbsp;Game. Kontaktują się z Tobą z adresów e-mail w domenie @htg.cyou.</li>
-            <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie online o charakterze rozwoju osobistego, prowadzone z wykorzystaniem autorskiej metodyki HTG.</li>
+            <li><strong>Prowadząca</strong> — Natalia, osoba prowadząca każdą Sesję HTG z wykorzystaniem autorskiej metodyki.</li>
+            <li><strong>Operator/ka sesji</strong> — osoba asystująca Prowadzącej podczas Sesji HTG. Uczestnik może wskazać preferowaną Operatorkę przy rezerwacji lub pozostawić wybór Zespołowi HTG.</li>
+            <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie online o charakterze rozwoju osobistego, prowadzone przez Prowadzącą samodzielnie lub w asyście Operatora/ki sesji, z wykorzystaniem autorskiej metodyki HTG.</li>
             <li><strong>Uczestnik</strong> — osoba fizyczna (pełnoletnia), która zawiera z nami umowę na Sesję HTG. Osoby w wieku 16–17 lat mogą uczestniczyć wyłącznie po dostarczeniu pisemnego oświadczenia rodzica lub opiekuna prawnego na adres htg@htg.cyou przed rozpoczęciem sesji. Oświadczenie musi zawierać zgodę na udział oraz potwierdzenie, że opiekun rozumie niekonwencjonalny charakter pracy HTG i bierze odpowiedzialność za proces rozwojowy podopiecznego. Operator zastrzega sobie prawo do indywidualnej oceny możliwości realizacji sesji z osobą niepełnoletnią, z uwzględnieniem charakteru tematu i dobra uczestnika. Sesja osoby niepełnoletniej odbywa się bez obecności opiekuna, chyba że strony ustalą inaczej.</li>
             <li><strong>Operator</strong> — podmiot administrujący Pilot PSA z siedzibą w Warszawie, ul.&nbsp;RONDO ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249.</li>
             <li><strong>Dzień roboczy</strong> — poniedziałek–piątek z wyłączeniem dni ustawowo wolnych od pracy.</li>
@@ -107,6 +109,23 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
 
         {/* ── 2. Jak działają sesje HTG ── */}
         <Section id="sesja" title="2. Jak działają sesje HTG">
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-4 mb-3">Prowadzenie sesji</h3>
+          <P>
+            Każda Sesja HTG jest prowadzona przez Natalię — samodzielnie lub w asyście
+            Operatora/ki sesji. Przy rezerwacji na stronie htgcyou.com wybierasz rodzaj sesji:
+          </P>
+          <UL>
+            <li><strong>Sesja z Natalią</strong> — prowadzona samodzielnie przez Prowadzącą.</li>
+            <li><strong>Sesja z asystą</strong> — prowadzona przez Natalię w asyście Operatora/ki sesji. Możesz wskazać preferowaną Operatorkę przy rezerwacji lub pozostawić wybór Zespołowi HTG.</li>
+          </UL>
+          <P>
+            Operator zastrzega sobie prawo do zmiany Operatora/ki sesji w każdym momencie
+            bez wskazania przyczyny — w szczególności z uwagi na interes Uczestnika,
+            nieprzewidziane okoliczności losowe, dostępność kadry lub potrzeby organizacyjne.
+            Zmiana Operatora/ki nie wpływa na cenę ani charakter sesji.
+          </P>
+
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Rezerwacja i przebieg</h3>
           <P>Sesja odbywa się online. Aby w pełni z niej skorzystać, prosimy o przygotowanie:</P>
           <UL>
             <li>Stabilnego łącza internetowego.</li>
@@ -128,11 +147,17 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         </Section>
 
         {/* ── 3. Płatności i zwroty ── */}
-        <Section id="platnosci" title="3. Płatności i zwroty">
+        <Section id="platnosci" title="3. Zakup sesji, płatności i zwroty">
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-4 mb-3">Jak kupić sesję</h3>
+          <P>
+            Sesję HTG rezerwujesz na stronie htgcyou.com. Przy rezerwacji wybierasz rodzaj sesji
+            (samodzielna lub z asystą), dostępny termin z kalendarza oraz — w przypadku sesji
+            z asystą — opcjonalnie preferowaną Operatorkę. Po dokonaniu wyboru przechodzisz do płatności.
+          </P>
           <UL>
             <li>Sesja HTG jest opłacana z góry. Umowa zostaje zawarta z momentem zaksięgowania pełnej opłaty.</li>
             <li>Płatność odbywa się przez stronę htgcyou.com (Stripe — karty, BLIK, Przelewy24), przelew bankowy lub gotówkę.</li>
-            <li>Brak zapłaty w ciągu 24&nbsp;godzin od złożenia zamówienia anuluje rezerwację.</li>
+            <li>Brak zapłaty w ciągu 24&nbsp;godzin od złożenia zamówienia anuluje rezerwację wybranego terminu.</li>
             <li>Faktury generowane są automatycznie — znajdziesz je w panelu klienta i otrzymasz e-mailem.</li>
           </UL>
 
@@ -154,9 +179,9 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         <Section id="terminy" title="4. Zmiany terminów">
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-4 mb-3">Z Twojej inicjatywy</h3>
           <UL>
-            <li>Termin sesji uzgadniamy po opłaceniu — otrzymasz propozycję e-mailem.</li>
+            <li>Termin sesji wybierasz z dostępnych slotów w kalendarzu przy rezerwacji na htgcyou.com.</li>
             <li>Możesz jednorazowo zmienić termin <strong>najpóźniej 7 dni</strong> przed planowaną datą.</li>
-            <li>Zaproponujemy pierwszy wolny termin. Z uwagi na ograniczoną dostępność prowadzących i harmonogram sesji, czas oczekiwania na nowy termin może być wydłużony (nawet do kilku miesięcy).</li>
+            <li>Przy zmianie terminu zaproponujemy pierwszy wolny slot. Z uwagi na ograniczoną dostępność Prowadzącej, czas oczekiwania na nowy termin może być wydłużony (nawet do kilku miesięcy).</li>
           </UL>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Nieobecność i późne odwołanie</h3>

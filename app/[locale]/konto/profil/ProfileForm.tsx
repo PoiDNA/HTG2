@@ -271,7 +271,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
 
           {/* Dynamic: any other consent_records from DB */}
           {uniqueConsents
-            .filter(c => !['terms', 'privacy', 'sensitive_data', 'recording_publication'].includes(c.consent_type) && c.granted)
+            .filter(c => !['terms', 'privacy', 'terms_v3', 'privacy_v3', 'sensitive_data', 'recording_publication'].includes(c.consent_type) && c.granted)
             .map((consent) => (
               <ConsentRow
                 key={consent.id}

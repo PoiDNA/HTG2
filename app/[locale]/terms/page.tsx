@@ -102,6 +102,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li><strong>Operator/ka sesji</strong> — osoba asystująca Prowadzącej podczas Sesji HTG. Uczestnik może wskazać preferowaną Operatorkę przy rezerwacji lub pozostawić wybór Zespołowi HTG.</li>
             <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie online o charakterze rozwoju osobistego, prowadzone przez Prowadzącą samodzielnie lub w asyście Operatora/ki sesji, z wykorzystaniem autorskiej metodyki HTG.</li>
             <li><strong>Uczestnik</strong> — osoba fizyczna (pełnoletnia), która zawiera z nami umowę na Sesję HTG. Osoby w wieku 16–17 lat mogą uczestniczyć wyłącznie po dostarczeniu pisemnego oświadczenia rodzica lub opiekuna prawnego na adres htg@htg.cyou przed rozpoczęciem sesji. Oświadczenie musi zawierać zgodę na udział oraz potwierdzenie, że opiekun rozumie niekonwencjonalny charakter pracy HTG i bierze odpowiedzialność za proces rozwojowy podopiecznego. Operator zastrzega sobie prawo do indywidualnej oceny możliwości realizacji sesji z osobą niepełnoletnią, z uwzględnieniem charakteru tematu i dobra uczestnika. Sesja osoby niepełnoletniej odbywa się bez obecności opiekuna, chyba że strony ustalą inaczej.</li>
+            <li><strong>Subskrypcja</strong> — dostęp do biblioteki nagrań sesji HTG w panelu klienta na htgcyou.com. Dostępne warianty: pojedyncza sesja, pakiet miesięczny lub pakiet roczny. Szczegóły w pkt&nbsp;3.</li>
             <li><strong>Administrator Serwisu</strong> — podmiot administrujący Pilot PSA z siedzibą w Warszawie, ul.&nbsp;Rondo ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249.</li>
             <li><strong>Dzień roboczy</strong> — poniedziałek–piątek z wyłączeniem dni ustawowo wolnych od pracy.</li>
           </UL>
@@ -160,6 +161,26 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li>Brak zapłaty w ciągu 24&nbsp;godzin od złożenia zamówienia anuluje rezerwację wybranego terminu.</li>
             <li>Faktury generowane są automatycznie — znajdziesz je w panelu klienta i otrzymasz e-mailem.</li>
           </UL>
+
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Subskrypcje — dostęp do nagrań</h3>
+          <P>
+            Oprócz sesji indywidualnych oferujemy subskrypcje dające dostęp do biblioteki
+            nagrań sesji HTG w panelu klienta. Dostępne warianty:
+          </P>
+          <UL>
+            <li><strong>Pojedyncza sesja</strong> — jednorazowy dostęp do wybranego nagrania.</li>
+            <li><strong>Pakiet miesięczny</strong> — dostęp do biblioteki nagrań przez okres jednego miesiąca, odnawiany cyklicznie.</li>
+            <li><strong>Pakiet roczny</strong> — dostęp do biblioteki nagrań przez okres dwunastu miesięcy.</li>
+          </UL>
+          <P>
+            Gwarantujemy ważność każdej aktywnej subskrypcji przez co najmniej <strong>24 miesiące</strong> od
+            daty jej zakupu. Po upływie tego okresu deklarujemy przedłużanie dostępu w miarę
+            możliwości organizacyjnych i technicznych, jednak nie stanowi to zobowiązania umownego.
+          </P>
+          <Info>
+            O planowanym zakończeniu lub istotnej zmianie warunków subskrypcji poinformujemy Cię
+            z co najmniej 30-dniowym wyprzedzeniem na adres e-mail powiązany z Twoim kontem.
+          </Info>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Prawo odstąpienia (14 dni)</h3>
           <P>

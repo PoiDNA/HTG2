@@ -102,7 +102,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li><strong>Operator/ka sesji</strong> — osoba asystująca Prowadzącej podczas Sesji HTG. Uczestnik może wskazać preferowaną Operatorkę przy rezerwacji lub pozostawić wybór Zespołowi HTG.</li>
             <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie online o charakterze rozwoju osobistego, prowadzone przez Prowadzącą samodzielnie lub w asyście Operatora/ki sesji, z wykorzystaniem autorskiej metodyki HTG.</li>
             <li><strong>Uczestnik</strong> — osoba fizyczna (pełnoletnia), która zawiera z nami umowę na Sesję HTG. Osoby w wieku 16–17 lat mogą uczestniczyć wyłącznie po dostarczeniu pisemnego oświadczenia rodzica lub opiekuna prawnego na adres htg@htg.cyou przed rozpoczęciem sesji. Oświadczenie musi zawierać zgodę na udział oraz potwierdzenie, że opiekun rozumie niekonwencjonalny charakter pracy HTG i bierze odpowiedzialność za proces rozwojowy podopiecznego. Operator zastrzega sobie prawo do indywidualnej oceny możliwości realizacji sesji z osobą niepełnoletnią, z uwzględnieniem charakteru tematu i dobra uczestnika. Sesja osoby niepełnoletniej odbywa się bez obecności opiekuna, chyba że strony ustalą inaczej.</li>
-            <li><strong>Operator</strong> — podmiot administrujący Pilot PSA z siedzibą w Warszawie, ul.&nbsp;RONDO ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249.</li>
+            <li><strong>Administrator Serwisu</strong> — podmiot administrujący Pilot PSA z siedzibą w Warszawie, ul.&nbsp;Rondo ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249.</li>
             <li><strong>Dzień roboczy</strong> — poniedziałek–piątek z wyłączeniem dni ustawowo wolnych od pracy.</li>
           </UL>
         </Section>
@@ -119,7 +119,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li><strong>Sesja z asystą</strong> — prowadzona przez Natalię w asyście Operatora/ki sesji. Możesz wskazać preferowaną Operatorkę przy rezerwacji lub pozostawić wybór Zespołowi HTG.</li>
           </UL>
           <P>
-            Operator zastrzega sobie prawo do zmiany Operatora/ki sesji w każdym momencie
+            Administrator Serwisu zastrzega sobie prawo do zmiany Operatora/ki sesji w każdym momencie
             bez wskazania przyczyny — w szczególności z uwagi na interes Uczestnika,
             nieprzewidziane okoliczności losowe, dostępność kadry lub potrzeby organizacyjne.
             Zmiana Operatora/ki nie wpływa na cenę ani charakter sesji.
@@ -244,7 +244,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           </P>
 
           <P>
-            Sesje HTG mają charakter rozwojowy i subiektywny, dlatego Operator nie składa obietnic
+            Sesje HTG mają charakter rozwojowy i subiektywny, dlatego Administrator Serwisu nie składa obietnic
             ani gwarancji osiągnięcia określonych rezultatów życiowych, zdrowotnych czy finansowych.
             Wkładamy w nasze spotkania całą wiedzę i doświadczenie — pamiętaj jednak, że ze względów
             prawnych nasza odpowiedzialność finansowa związana z realizacją sesji jest ograniczona
@@ -280,7 +280,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <UL>
             <li>Nagranie udostępnimy Ci w panelu klienta w ciągu 7&nbsp;dni od sesji.</li>
             <li>Nagranie służy Twojemu <strong>prywatnemu użytkowi</strong> — możesz do niego swobodnie wracać.</li>
-            <li>Wszystkie prawa autorskie i majątkowe do nagrania przysługują Operatorowi.
+            <li>Wszystkie prawa autorskie i majątkowe do nagrania przysługują Administratorowi Serwisu.
               Publikowanie, udostępnianie lub rozpowszechnianie nagrania (w całości lub we fragmentach)
               przez Uczestnika jest <strong>niedozwolone</strong> — nagranie służy wyłącznie Twojemu
               prywatnemu użytkowi.</li>
@@ -330,12 +330,12 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         {/* ── 7. Prawa autorskie ── */}
         <Section id="prawa-autorskie" title="7. Prawa autorskie">
           <P>
-            Operator jest wyłącznym właścicielem autorskich praw majątkowych do formatu sesji,
+            Administrator Serwisu jest wyłącznym właścicielem autorskich praw majątkowych do formatu sesji,
             metodyki HTG oraz nagrań sesji. Uczestnikowi przysługuje wyłącznie prawo do prywatnego
             odtwarzania nagrania własnej sesji w panelu klienta. Uczestnik nie nabywa żadnych praw
             do nagrania poza prawem do prywatnego użytku.
           </P>
-          <P>Operator może wykorzystywać nagrania sesji na następujących polach eksploatacji:</P>
+          <P>Administrator Serwisu może wykorzystywać nagrania sesji na następujących polach eksploatacji:</P>
           <UL>
             <li>Publikacja w internecie, w tym na stronach www, w mediach społecznościowych i na platformach wideo (YouTube, Vimeo itp.).</li>
             <li>Wykorzystanie w materiałach edukacyjnych, szkoleniowych i informacyjnych.</li>
@@ -353,7 +353,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         {/* ── 8. Publikacja sesji ── */}
         <Section id="publikacja" title="8. Publikacja sesji">
           <P>
-            Rezerwując sesję, wyrażasz zgodę (osobnym checkboxem) na to, że Operator może opublikować
+            Rezerwując sesję, wyrażasz zgodę (osobnym checkboxem) na to, że Administrator Serwisu może opublikować
             nagranie Twojej sesji — w całości lub we fragmentach, po montażu — na YouTube,
             htgcyou.com oraz w innych kanałach HTG. Publikacja sesji pomaga obniżać koszty
             organizacji i inspirować inne osoby na ich drodze rozwoju.
@@ -376,9 +376,9 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <P>
             Po opublikowaniu materiału możesz poprosić o jego wycofanie, pisząc
             na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
-            Materiały pozostające pod kontrolą Operatora wycofamy w rozsądnym terminie
+            Materiały pozostające pod kontrolą Administratora Serwisu wycofamy w rozsądnym terminie
             techniczno-organizacyjnym. Wycofanie nie wpływa na legalność publikacji dokonanej
-            przed zgłoszeniem. Operator nie odpowiada za kopie rozpowszechnione przez podmioty
+            przed zgłoszeniem. Administrator Serwisu nie odpowiada za kopie rozpowszechnione przez podmioty
             trzecie (np. re-uploady).
           </P>
         </Section>

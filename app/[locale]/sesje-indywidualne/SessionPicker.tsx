@@ -184,11 +184,13 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
       // Record recording/publication consent
       const { createSupabaseBrowser } = await import('@/lib/supabase/client');
       const supabase = createSupabaseBrowser();
-      await supabase.from('consent_records').insert({
-        consent_type: 'recording_publication',
-        granted: true,
-        consent_text: 'Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu. Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.',
-      }).catch(() => {}); // Non-blocking
+      try {
+        await supabase.from('consent_records').insert({
+          consent_type: 'recording_publication',
+          granted: true,
+          consent_text: 'Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu. Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.',
+        });
+      } catch { /* Non-blocking */ }
 
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',

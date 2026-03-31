@@ -10,6 +10,7 @@ interface VideoPlayerProps {
   sessionId: string;
   userEmail: string;
   userId: string;
+  tokenEndpoint?: string;
 }
 
 function getDeviceId(): string {
@@ -111,7 +112,7 @@ function setupAudioProtection(video: HTMLVideoElement): (() => void) | null {
   }
 }
 
-export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlayerProps) {
+export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoint }: VideoPlayerProps) {
   const t = useTranslations('Player');
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -159,7 +160,7 @@ export default function VideoPlayer({ sessionId, userEmail, userId }: VideoPlaye
     setStatus('loading');
 
     try {
-      const res = await fetch('/api/video/token', {
+      const res = await fetch(tokenEndpoint ?? '/api/video/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, deviceId }),

@@ -9,6 +9,7 @@ import { useRouter } from '@/i18n-config';
 import {
   ChevronDown,
   Film,
+  Headphones,
   CalendarDays,
   CreditCard,
   FileText,
@@ -91,6 +92,7 @@ export default function UserPanelNav() {
               {/* User section */}
               <div className="py-1">
                 <DropdownLink href="/konto" icon={Film} label="Biblioteka sesji" onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/nagrania-sesji" icon={Headphones} label="Nagrania z sesji" onClick={() => setOpen(false)} />
                 <DropdownLink href="/sesje-indywidualne" icon={CalendarDays} label="Zamów sesję" onClick={() => setOpen(false)} />
                 <DropdownLink href="/spolecznosc" icon={MessagesSquare} label="Społeczność" onClick={() => setOpen(false)} />
                 <DropdownLink href="/nagrania" icon={BookOpen} label="Na początek" onClick={() => setOpen(false)} />

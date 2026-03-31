@@ -13,6 +13,8 @@ interface PhaseControlsProps {
   onPhaseChanged?: (newPhase: Phase) => void;
   /** Compact single-column variant for circle row */
   compact?: boolean;
+  /** True when session is in 'sesja' phase but recording hasn't started yet (waiting for partner consent) */
+  recordingPending?: boolean;
 }
 
 const PHASE_ICONS: Partial<Record<Phase, React.ReactNode>> = {
@@ -29,6 +31,7 @@ export default function PhaseControls({
   isStaff,
   onPhaseChanged,
   compact = false,
+  recordingPending = false,
 }: PhaseControlsProps) {
   const t = useTranslations('Live');
   const [loading, setLoading] = useState(false);
@@ -88,18 +91,25 @@ export default function PhaseControls({
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <button
-        onClick={handleAdvance}
-        disabled={loading}
-        className="flex items-center gap-2 px-6 py-3 rounded-xl
-          bg-htg-warm text-white font-medium
-          hover:bg-htg-warm/90 transition-colors
-          disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {PHASE_ICONS[currentPhase]}
-        {loading ? t('loading') : t(buttonLabel)}
-      </button>
+    <div className="flex flex-col gap-2">
+      {recordingPending && (
+        <p className="text-xs text-amber-300/80 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2">
+          Czekamy na potwierdzenie od drugiej osoby. Sesja nie jest jeszcze nagrywana.
+        </p>
+      )}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleAdvance}
+          disabled={loading}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl
+            bg-htg-warm text-white font-medium
+            hover:bg-htg-warm/90 transition-colors
+            disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {PHASE_ICONS[currentPhase]}
+          {loading ? t('loading') : t(buttonLabel)}
+        </button>
+      </div>
     </div>
   );
 }

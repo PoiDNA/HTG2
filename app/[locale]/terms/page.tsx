@@ -188,10 +188,13 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             bez podania przyczyny. Wystarczy napisać na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a> (wzór
             oświadczenia znajdziesz na końcu tego regulaminu).
           </P>
+          <P>Prawo odstąpienia wygasa wcześniej w następujących przypadkach:</P>
+          <UL>
+            <li><strong>Sesja indywidualna:</strong> jeśli Sesja HTG zostanie w pełni wykonana przed upływem 14 dni — pod warunkiem, że przed rozpoczęciem sesji wyraziłeś/aś wyraźną zgodę na rozpoczęcie świadczenia usługi i przyjąłeś/aś do wiadomości utratę prawa do odstąpienia.</li>
+            <li><strong>Subskrypcja (treści cyfrowe):</strong> jeśli uzyskałeś/aś dostęp do biblioteki nagrań przed upływem 14 dni — pod warunkiem, że przy zakupie wyraziłeś/aś wyraźną zgodę na natychmiastowe udostępnienie treści cyfrowych i przyjąłeś/aś do wiadomości utratę prawa do odstąpienia (art.&nbsp;38 pkt&nbsp;13 ustawy o prawach konsumenta).</li>
+          </UL>
           <Info>
-            <strong>Ważne:</strong> Jeśli Sesja HTG zostanie w pełni zrealizowana przed upływem 14 dni,
-            prawo odstąpienia wygasa — pod warunkiem, że wyraziłeś/aś na to wyraźną zgodę przed rozpoczęciem sesji
-            i przyjąłeś/aś do wiadomości utratę prawa do odstąpienia. Taki checkbox pojawi się przy rezerwacji.
+            W obu przypadkach odpowiedni checkbox z informacją o utracie prawa odstąpienia pojawi się przy zakupie.
           </Info>
           <P>Zwrot środków nastąpi w ciągu 14 dni od otrzymania Twojego oświadczenia, tą samą metodą, jaką dokonałeś/aś płatności.</P>
         </Section>

@@ -167,7 +167,7 @@ export default async function SessionDetailPage({
       </div>
 
       {/* Session type selector — practitioner or admin */}
-      {canEditPayment && ['natalia_asysta', 'natalia_agata', 'natalia_justyna'].includes(booking.session_type) && (
+      {canEditPayment && ['natalia_asysta', 'natalia_agata', 'natalia_justyna', 'natalia_solo'].includes(booking.session_type) && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-3">
           <h2 className="text-base font-serif font-bold text-htg-fg">Typ sesji / Przypisanie asystentki</h2>
           <SessionTypeSelector bookingId={booking.id} initialType={booking.session_type} />

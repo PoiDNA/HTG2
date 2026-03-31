@@ -8,6 +8,7 @@ const SESSION_TYPE_OPTIONS = [
   { value: 'natalia_asysta' as SessionType, label: `${SESSION_CONFIG.natalia_asysta.label} (nieprzypisana)` },
   { value: 'natalia_agata' as SessionType, label: SESSION_CONFIG.natalia_agata.label },
   { value: 'natalia_justyna' as SessionType, label: SESSION_CONFIG.natalia_justyna.label },
+  { value: 'natalia_solo' as SessionType, label: SESSION_CONFIG.natalia_solo.label },
 ];
 
 export default function SessionTypeSelector({

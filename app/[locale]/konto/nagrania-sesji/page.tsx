@@ -36,7 +36,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
 
   // Flatten and filter
   const items = (recordings ?? [])
-    .map((r) => r.recording as Record<string, unknown>)
+    .map((r) => (Array.isArray(r.recording) ? r.recording[0] : r.recording) as unknown as Record<string, unknown>)
     .filter(Boolean)
     .filter((r) => ['queued', 'preparing', 'uploading', 'processing', 'ready'].includes(r.status as string));
 

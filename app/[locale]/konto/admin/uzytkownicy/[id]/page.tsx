@@ -236,7 +236,7 @@ export default async function AdminUserDetailPage({
               const ps = b.payment_status ? PAYMENT_STATUS_BADGE[b.payment_status] : null;
               const bs = BOOKING_STATUS_LABELS[b.status] || { label: b.status, color: 'text-htg-fg-muted' };
               return (
-                <Link key={b.id} href={`/prowadzacy/sesje/${b.id}`} className="flex items-center justify-between py-2.5 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap hover:bg-htg-surface/70 transition-colors">
+                <Link key={b.id} href={`/konto/admin/sesje/${b.id}`} className="flex items-center justify-between py-2.5 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap hover:bg-htg-surface/70 transition-colors">
                   <div className="flex items-center gap-3">
                     <div>
                       <p className="text-sm font-medium text-htg-fg">
@@ -344,7 +344,7 @@ export default async function AdminUserDetailPage({
             {pastBookings.map(b => {
               const ps = b.payment_status ? PAYMENT_STATUS_BADGE[b.payment_status] : null;
               return (
-                <Link key={b.id} href={`/prowadzacy/sesje/${b.id}`} className="flex items-center justify-between py-2 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap hover:bg-htg-surface/70 transition-colors">
+                <Link key={b.id} href={`/konto/admin/sesje/${b.id}`} className="flex items-center justify-between py-2 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap hover:bg-htg-surface/70 transition-colors">
                   <div>
                     <p className="text-sm text-htg-fg">{SESSION_CONFIG[b.session_type as SessionType]?.label || b.session_type}</p>
                     <p className="text-xs text-htg-fg-muted">{getBookingDate(b)} · {getBookingTime(b)?.slice(0,5)}</p>

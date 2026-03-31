@@ -428,7 +428,7 @@ tr:nth-child(even){background:#f9f9f9}
                     ? 'bg-htg-sage/5 border-htg-sage/30'
                     : 'bg-htg-card border-htg-card-border'
                 } ${statusTab === 'past' ? 'opacity-70' : ''}`}>
-                <Link href={`/${locale}/prowadzacy/sesje/${b.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                <Link href={`/${locale}/konto/admin/sesje/${b.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
                   <div className="flex items-center gap-2 flex-wrap">
                     {isToday && statusTab === 'upcoming' && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>

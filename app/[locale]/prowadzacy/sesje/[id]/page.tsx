@@ -2,7 +2,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n-config';
-import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History, ExternalLink } from 'lucide-react';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
 
@@ -130,6 +130,15 @@ export default async function SessionDetailPage({
               userId={booking.user_id}
               initialName={clientProfile?.display_name || ''}
             />
+            {isAdmin && (
+              <Link
+                href={`/konto/admin/uzytkownicy/${booking.user_id}`}
+                className="text-htg-indigo hover:text-htg-indigo/70 transition-colors"
+                title="Profil użytkownika"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            )}
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <Mail className="w-4 h-4" />

@@ -163,7 +163,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Prawo odstąpienia (14 dni)</h3>
           <P>
-            Jako konsument masz prawo odstąpić od umowy w ciągu <strong>14 dni</strong> od jej zawarcia,
+            Masz prawo odstąpić od umowy w ciągu <strong>14 dni</strong> od jej zawarcia,
             bez podania przyczyny. Wystarczy napisać na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a> (wzór
             oświadczenia znajdziesz na końcu tego regulaminu).
           </P>

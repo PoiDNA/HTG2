@@ -19,10 +19,6 @@ export function NotificationBell({ userId, alwaysShow = false }: NotificationBel
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Hide bell when no notifications unless on community page
-  // (must be AFTER all hooks to respect Rules of Hooks)
-  if (count === 0 && !alwaysShow) return null;
-
   const handleOpen = useCallback(() => {
     if (!open) {
       fetchNotifications();
@@ -45,6 +41,10 @@ export function NotificationBell({ userId, alwaysShow = false }: NotificationBel
     if (open) document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [open]);
+
+  // Hide bell when no notifications unless on community page
+  // Must be AFTER all hooks to respect Rules of Hooks
+  if (count === 0 && !alwaysShow) return null;
 
   const handleNotificationClick = (n: NotificationWithActor) => {
     if (n.group_slug) {

@@ -28,6 +28,7 @@ export interface RecordingGroup {
   expiresLabel: string | null;
   recordingStartedLabel: string | null;
   legalHoldMessage: string | null;
+  recordingEmail?: string | null;
   parts: RecordingPart[];
 }
 
@@ -61,8 +62,11 @@ export default function FullRecordingList({ groups, userEmail, userId }: Props) 
                 
                 <h3 className="font-medium text-htg-fg truncate">{group.title}</h3>
                 
-                <div className="flex items-center gap-3 mt-1 text-sm text-htg-fg-muted">
+                <div className="flex items-center gap-3 mt-1 text-sm text-htg-fg-muted flex-wrap">
                   {group.dateLabel && <span>{group.dateLabel}</span>}
+                  {group.recordingEmail && (
+                    <span className="text-htg-fg-muted/70 text-xs">{group.recordingEmail}</span>
+                  )}
                   {group.durationLabel && (
                     <span className="flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />

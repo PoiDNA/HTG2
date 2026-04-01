@@ -85,6 +85,10 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       ?? (rawTitle && !rawTitle.startsWith('Import') ? rawTitle : null)
       ?? 'Sesja indywidualna';
 
+    // Extract email from raw title
+    const emailMatch = rawTitle?.match(/[\w.+-]+@[\w.-]+\.\w+/);
+    const recordingEmail = emailMatch?.[0] ?? null;
+
     return {
       bookingId,
       mainId: main.id as string,
@@ -99,6 +103,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       expiresLabel: expiresAt && isReady && !isLegalHold ? `Dostępne do ${format.dateTime(new Date(expiresAt), { dateStyle: 'medium' })}` : null,
       recordingStartedLabel,
       legalHoldMessage,
+      recordingEmail,
       parts: recs.map(r => ({
         id: r.id as string,
         durationLabel: r.duration_seconds ? `${Math.floor((r.duration_seconds as number) / 60)} min` : null,

@@ -172,7 +172,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
             <label className="text-sm font-medium text-htg-fg">Klient</label>
             <div className="relative">
               <input
-                type="email"
+                type="text"
                 value={userQuery}
                 onChange={handleUserQuery}
                 placeholder="Wpisz e-mail..."
@@ -183,7 +183,9 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
               {suggestions.length > 0 && (
                 <div className="absolute left-0 top-full mt-1 w-full bg-htg-card border border-htg-card-border rounded-lg shadow-lg z-10 overflow-hidden">
                   {suggestions.map(u => (
-                    <button key={u.id} type="button" onMouseDown={e => { e.preventDefault(); selectUser(u); }}
+                    <button key={u.id} type="button"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={() => selectUser(u)}
                       className="w-full text-left px-3 py-2 hover:bg-htg-surface text-sm flex flex-col gap-0.5">
                       <span className="text-htg-fg">{u.email}</span>
                       {u.display_name && <span className="text-xs text-htg-fg-muted">{u.display_name}</span>}

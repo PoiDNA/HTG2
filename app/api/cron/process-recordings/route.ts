@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
 }
 
 type DB = ReturnType<typeof createSupabaseServiceRole>;
-type Stats = typeof import('.').prototype extends never ? never : Record<string, number>;
 
 // ── Section 1: UPLOAD WORKER — queued → preparing → uploading ──────────────
 async function section1UploadWorker(db: DB, stats: Record<string, number>) {

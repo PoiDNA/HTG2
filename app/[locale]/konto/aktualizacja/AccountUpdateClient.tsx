@@ -36,8 +36,13 @@ type Booking = {
 };
 
 const CATEGORIES = [
-  { value: 'session_monthly', label: 'Pakiet miesięczny', icon: Calendar },
-  { value: 'session_yearly', label: 'Pakiet roczny (12M)', icon: Calendar },
+  { value: 'session_single', label: 'Sesja pojedyncza', group: 'Biblioteka Sesji', icon: BookOpen },
+  { value: 'session_monthly', label: 'Pakiet miesięczny', group: 'Biblioteka Sesji', icon: Calendar },
+  { value: 'session_yearly', label: 'Pakiet roczny (12M)', group: 'Biblioteka Sesji', icon: Calendar },
+  { value: 'individual_1on1', label: 'Sesja 1:1 z Natalią', group: 'Sesje indywidualne', icon: Users },
+  { value: 'individual_asysta', label: 'Sesja z Asystą', group: 'Sesje indywidualne', icon: Users },
+  { value: 'individual_para', label: 'Sesja dla Par', group: 'Sesje indywidualne', icon: Heart },
+  { value: 'missing_recording', label: 'Brak nagrania z sesji', group: 'Inne', icon: BookOpen },
 ] as const;
 
 // Generate month options from Jan 2024 to current month
@@ -291,25 +296,57 @@ export default function AccountUpdateClient() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-htg-fg mb-2">Jaki pakiet kupiłeś/aś?</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {CATEGORIES.map(c => {
-                  const Icon = c.icon;
-                  return (
-                    <button key={c.value} type="button" onClick={() => { setCategory(c.value); setScopeMonth(''); }}
-                      className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border transition-colors ${
-                        category === c.value
-                          ? 'bg-htg-sage/20 border-htg-sage text-htg-sage'
-                          : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-htg-sage/50'
-                      }`}>
-                      <Icon className="w-4 h-4" />{c.label}
-                    </button>
-                  );
-                })}
+              <label className="block text-sm font-medium text-htg-fg mb-2">Co chcesz zgłosić?</label>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">Biblioteka Sesji</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {CATEGORIES.filter(c => c.group === 'Biblioteka Sesji').map(c => {
+                    const Icon = c.icon;
+                    return (
+                      <button key={c.value} type="button" onClick={() => { setCategory(c.value); setScopeMonth(''); }}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                          category === c.value
+                            ? 'bg-htg-sage/20 border-htg-sage text-htg-sage'
+                            : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-htg-sage/50'
+                        }`}>
+                        <Icon className="w-4 h-4" />{c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mt-3">Sesje indywidualne</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {CATEGORIES.filter(c => c.group === 'Sesje indywidualne').map(c => {
+                    const Icon = c.icon;
+                    return (
+                      <button key={c.value} type="button" onClick={() => { setCategory(c.value); setScopeMonth(''); }}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                          category === c.value
+                            ? 'bg-htg-indigo/20 border-htg-indigo text-htg-indigo'
+                            : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-htg-indigo/50'
+                        }`}>
+                        <Icon className="w-4 h-4" />{c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mt-3">Inne</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {CATEGORIES.filter(c => c.group === 'Inne').map(c => {
+                    const Icon = c.icon;
+                    return (
+                      <button key={c.value} type="button" onClick={() => { setCategory(c.value); setScopeMonth(''); }}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                          category === c.value
+                            ? 'bg-amber-500/20 border-amber-500 text-amber-500'
+                            : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:border-amber-500/50'
+                        }`}>
+                        <Icon className="w-4 h-4" />{c.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <p className="text-xs text-htg-fg-muted mt-2">
-                Inny typ zakupu? Opisz go poniżej — admin przydzieli dostęp ręcznie.
-              </p>
             </div>
 
             {/* Month picker — only for monthly */}
@@ -332,17 +369,35 @@ export default function AccountUpdateClient() {
               </div>
             )}
 
+            {/* Recording date — only for missing_recording */}
+            {category === 'missing_recording' && (
+              <div>
+                <label className="block text-sm font-medium text-htg-fg mb-1">
+                  <Calendar className="w-4 h-4 inline mr-1" />Data sesji (nagrania)
+                </label>
+                <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)}
+                  required
+                  className="w-full sm:w-auto px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/50" />
+                <p className="text-xs text-htg-fg-muted mt-1">Podaj datę sesji, z której nie masz nagrania.</p>
+              </div>
+            )}
+
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-htg-fg mb-1">Opis zakupu</label>
+              <label className="block text-sm font-medium text-htg-fg mb-1">
+                {category === 'missing_recording' ? 'Opis problemu' : 'Opis zakupu'}
+              </label>
               <textarea value={description} onChange={e => setDescription(e.target.value)}
-                placeholder="Np. Kupiłem pakiet miesięczny za kwiecień 2025 na WIX..."
+                placeholder={category === 'missing_recording'
+                  ? 'Np. Nie otrzymałem nagrania z sesji 1:1 z Natalią...'
+                  : 'Np. Kupiłem pakiet miesięczny za kwiecień 2025 na WIX...'}
                 rows={3}
                 className="w-full px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-sage/50 resize-none"
                 required />
             </div>
 
-            {/* Purchase date */}
+            {/* Purchase date — hidden for missing_recording (uses its own date field above) */}
+            {category !== 'missing_recording' && (
             <div>
               <label className="block text-sm font-medium text-htg-fg mb-1">
                 <Calendar className="w-4 h-4 inline mr-1" />Data zakupu (przybliżona)
@@ -350,6 +405,7 @@ export default function AccountUpdateClient() {
               <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)}
                 className="w-full sm:w-auto px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/50" />
             </div>
+            )}
 
             {/* Proof upload */}
             <div>
@@ -379,7 +435,7 @@ export default function AccountUpdateClient() {
 
             {/* Actions */}
             <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={!category || !description || submitting || (category === 'session_monthly' && !scopeMonth)}
+              <button type="submit" disabled={!category || !description || submitting || (category === 'session_monthly' && !scopeMonth) || (category === 'missing_recording' && !purchaseDate)}
                 className="px-6 py-2.5 bg-htg-sage text-white rounded-xl text-sm font-medium hover:bg-htg-sage/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? 'Wysyłanie...' : 'Wyślij zgłoszenie'}
               </button>

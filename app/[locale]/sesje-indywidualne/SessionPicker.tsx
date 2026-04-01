@@ -61,6 +61,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   const [isGift, setIsGift] = useState(false);
   const [giftEmail, setGiftEmail] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
+  const [recordingConsent, setRecordingConsent] = useState(false);
   const router = useRouter();
 
   // Derive sessions
@@ -176,9 +177,25 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
 
   async function handleCheckout() {
     if (!selectedSession || payAmount <= 0) return;
-    if (!selectedSession.priceId) return; // product not yet configured in Stripe
+    if (!selectedSession.priceId) return;
+    if (!recordingConsent) return;
     setLoading(true);
     try {
+      // Record recording/publication consent
+      const { createSupabaseBrowser } = await import('@/lib/supabase/client');
+      const supabase = createSupabaseBrowser();
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        try {
+          await supabase.from('consent_records').insert({
+            user_id: currentUser.id,
+            consent_type: 'recording_publication',
+            granted: true,
+            consent_text: 'Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu. Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.',
+          });
+        } catch { /* Non-blocking */ }
+      }
+
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -617,11 +634,29 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
             )}
           </div>
 
+          {/* Recording & publication consent */}
+          <label className="flex items-start gap-3 cursor-pointer bg-htg-surface border border-htg-card-border rounded-lg p-4">
+            <input
+              type="checkbox"
+              checked={recordingConsent}
+              onChange={(e) => setRecordingConsent(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-htg-card-border text-htg-sage focus:ring-htg-sage shrink-0 accent-htg-sage"
+            />
+            <span className="text-sm text-htg-fg leading-relaxed">
+              Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu.
+              Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.
+              <span className="text-xs text-htg-fg-muted block mt-1">
+                Zgoda jest warunkiem realizacji usługi — szczegóły w{' '}
+                <a href="/terms#nagrania" target="_blank" rel="noopener" className="text-htg-indigo hover:underline">regulaminie</a> (pkt 6 i 8).
+              </span>
+            </span>
+          </label>
+
           {/* Buy button */}
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration) || !selectedSession?.priceId || (isGift && !giftEmail.trim())}
+              disabled={loading || (!selectedSlotId && !wantAcceleration) || !selectedSession?.priceId || (isGift && !giftEmail.trim()) || !recordingConsent}
               className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -650,6 +685,9 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
               <p className="text-xs text-htg-fg-muted text-center mt-2">
                 Płatność online dla sesji par wkrótce. Skontaktuj się z nami bezpośrednio.
               </p>
+            )}
+            {!recordingConsent && selectedSession?.priceId && (
+              <p className="text-xs text-htg-warm text-center mt-2">Potwierdź zgodę na nagrywanie i publikację sesji</p>
             )}
             <p className="text-xs text-htg-fg-muted text-center mt-3">{labels.cancel_policy}</p>
           </div>

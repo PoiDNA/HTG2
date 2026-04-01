@@ -20,7 +20,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { name, category, subject, bodyHtml, bodyText } = await req.json();
+  const { name, category, subject, bodyHtml, bodyText, isDefaultFooter } = await req.json();
+
+  // If setting as default footer, clear other defaults first
+  if (isDefaultFooter === true) {
+    await supabase
+      .from('message_templates')
+      .update({ is_default_footer: false })
+      .eq('is_default_footer', true)
+      .neq('id', id);
+  }
 
   const { data, error } = await supabase
     .from('message_templates')
@@ -30,6 +39,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       ...(subject !== undefined && { subject }),
       ...(bodyHtml !== undefined && { body_html: bodyHtml }),
       ...(bodyText !== undefined && { body_text: bodyText }),
+      ...(isDefaultFooter !== undefined && { is_default_footer: isDefaultFooter }),
     })
     .eq('id', id)
     .select()

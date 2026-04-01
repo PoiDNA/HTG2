@@ -1,10 +1,21 @@
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
+import { createSupabaseServer } from '@/lib/supabase/server';
+import { isAdminEmail } from '@/lib/roles';
 import { setRequestLocale } from 'next-intl/server';
+import { redirect } from 'next/navigation';
 import { Link } from '@/i18n-config';
 import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History, ExternalLink } from 'lucide-react';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
-import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
+import { PAYMENT_STATUS_LABELS, SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
+
+import PaymentCommentEditor from '@/app/[locale]/prowadzacy/sesje/[id]/PaymentCommentEditor';
+import SessionTypeSelector from '@/app/[locale]/prowadzacy/sesje/[id]/SessionTypeSelector';
+import ClientNameEditor from '@/app/[locale]/prowadzacy/sesje/[id]/ClientNameEditor';
+import DeleteSessionButton from '@/app/[locale]/prowadzacy/sesje/[id]/DeleteSessionButton';
+import BookingUserEditor from '@/app/[locale]/prowadzacy/sesje/[id]/BookingUserEditor';
+import SessionTimeEditor from '@/app/[locale]/prowadzacy/sesje/[id]/SessionTimeEditor';
+import SessionDateEditor from '@/app/[locale]/prowadzacy/sesje/[id]/SessionDateEditor';
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
@@ -12,18 +23,8 @@ const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }>
   partial_payment:      { label: PAYMENT_STATUS_LABELS.partial_payment,      className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
   pending_verification: { label: PAYMENT_STATUS_LABELS.pending_verification, className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
 };
-import PaymentCommentEditor from './PaymentCommentEditor';
-import SessionTypeSelector from './SessionTypeSelector';
-import ClientNameEditor from './ClientNameEditor';
-import DeleteSessionButton from './DeleteSessionButton';
-import BookingUserEditor from './BookingUserEditor';
-import SessionTimeEditor from './SessionTimeEditor';
-import SessionDateEditor from './SessionDateEditor';
 
-import { SESSION_CONFIG } from '@/lib/booking/constants';
-import type { SessionType } from '@/lib/booking/types';
-
-export default async function SessionDetailPage({
+export default async function AdminSessionDetailPage({
   params,
 }: {
   params: Promise<{ locale: string; id: string }>;
@@ -31,22 +32,15 @@ export default async function SessionDetailPage({
   const { locale, id } = await params;
   setRequestLocale(locale);
 
-  const { staffMember, user: authUser } = await getEffectiveStaffMember();
-  const admin = createSupabaseServiceRole();
+  // Admin auth
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
+  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
 
-  const isPractitioner = staffMember?.role === 'practitioner';
-
-  // Check admin: use staffMember.user_id when impersonating, otherwise the actual logged-in user
-  let isAdmin = false;
-  const profileUserId = staffMember?.user_id ?? authUser?.id;
-  if (profileUserId) {
-    const { data: profile } = await admin.from('profiles').select('role').eq('id', profileUserId).single();
-    isAdmin = profile?.role === 'admin';
-  }
-  const canEditPayment = isPractitioner || isAdmin;
+  const db = createSupabaseServiceRole();
 
   // Fetch booking
-  const { data: booking } = await admin
+  const { data: booking } = await db
     .from('bookings')
     .select(`
       id, session_type, status, topics, user_id, payment_status, payment_comment, created_at,
@@ -58,7 +52,7 @@ export default async function SessionDetailPage({
   if (!booking) {
     return (
       <div className="p-8">
-        <Link href="/prowadzacy/sesje" className="text-htg-fg-muted hover:text-htg-fg text-sm flex items-center gap-1 mb-4">
+        <Link href="/konto/admin/sesje" className="text-htg-fg-muted hover:text-htg-fg text-sm flex items-center gap-1 mb-4">
           <ArrowLeft className="w-4 h-4" /> Wróć
         </Link>
         <p className="text-htg-fg-muted">Sesja nie znaleziona.</p>
@@ -66,15 +60,15 @@ export default async function SessionDetailPage({
     );
   }
 
-  // Fetch client profile
-  const { data: clientProfile } = await admin
+  // Client profile
+  const { data: clientProfile } = await db
     .from('profiles')
     .select('id, email, display_name')
     .eq('id', booking.user_id)
     .single();
 
-  // Fetch client session history
-  const { data: clientHistory } = await admin
+  // Client history
+  const { data: clientHistory } = await db
     .from('bookings')
     .select(`
       id, session_type, status, payment_status, created_at,
@@ -86,12 +80,11 @@ export default async function SessionDetailPage({
     .limit(50);
 
   const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
-  const ps = PAYMENT_STATUS_BADGE[booking.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Back */}
-      <Link href="/prowadzacy/sesje" className="text-htg-fg-muted hover:text-htg-fg text-sm flex items-center gap-1">
+      {/* Back — to admin sessions */}
+      <Link href="/konto/admin/sesje" className="text-htg-fg-muted hover:text-htg-fg text-sm flex items-center gap-1">
         <ArrowLeft className="w-4 h-4" /> Wróć do listy sesji
       </Link>
 
@@ -104,70 +97,47 @@ export default async function SessionDetailPage({
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <Calendar className="w-4 h-4" />
-            {isAdmin ? (
-              <SessionDateEditor
-                bookingId={booking.id}
-                initialDate={slot?.slot_date || ''}
-              />
-            ) : (
-              <span className="text-htg-fg font-medium">{slot?.slot_date || '—'}</span>
-            )}
+            <SessionDateEditor bookingId={booking.id} initialDate={slot?.slot_date || ''} />
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <Clock className="w-4 h-4" />
-            {isAdmin ? (
-              <SessionTimeEditor
-                bookingId={booking.id}
-                initialTime={slot?.start_time?.slice(0, 5) || '09:00'}
-              />
-            ) : (
-              <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
-            )}
+            <SessionTimeEditor bookingId={booking.id} initialTime={slot?.start_time?.slice(0, 5) || '09:00'} />
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <User className="w-4 h-4" />
-            <ClientNameEditor
-              userId={booking.user_id}
-              initialName={clientProfile?.display_name || ''}
-            />
-            {isAdmin && (
-              <Link
-                href={`/konto/admin/uzytkownicy/${booking.user_id}`}
-                className="text-htg-indigo hover:text-htg-indigo/70 transition-colors"
-                title="Profil użytkownika"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
-            )}
+            <ClientNameEditor userId={booking.user_id} initialName={clientProfile?.display_name || ''} />
+            <Link
+              href={`/konto/admin/uzytkownicy/${booking.user_id}`}
+              className="text-htg-indigo hover:text-htg-indigo/70 transition-colors"
+              title="Profil użytkownika"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Link>
           </div>
           <div className="flex items-center gap-2 text-htg-fg-muted">
             <Mail className="w-4 h-4" />
-            {isAdmin ? (
-              <BookingUserEditor
-                bookingId={booking.id}
-                currentUserId={booking.user_id}
-                currentEmail={clientProfile?.email || '—'}
-              />
-            ) : (
-              <span>{clientProfile?.email || '—'}</span>
-            )}
+            <BookingUserEditor
+              bookingId={booking.id}
+              currentUserId={booking.user_id}
+              currentEmail={clientProfile?.email || '—'}
+            />
           </div>
         </div>
 
-        {/* Payment status */}
+        {/* Payment */}
         <div className="flex items-center gap-3">
           <CreditCard className="w-4 h-4 text-htg-fg-muted" />
           <span className="text-sm text-htg-fg-muted">Płatność:</span>
           <PaymentStatusBadge
             bookingId={booking.id}
             initialStatus={booking.payment_status || 'pending_verification'}
-            canEdit={canEditPayment}
+            canEdit={true}
           />
         </div>
       </div>
 
-      {/* Session type selector — practitioner or admin */}
-      {canEditPayment && ['natalia_asysta', 'natalia_agata', 'natalia_justyna', 'natalia_solo'].includes(booking.session_type) && (
+      {/* Session type selector */}
+      {['natalia_asysta', 'natalia_agata', 'natalia_justyna', 'natalia_solo'].includes(booking.session_type) && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-3">
           <h2 className="text-base font-serif font-bold text-htg-fg">Typ sesji / Przypisanie asystentki</h2>
           <SessionTypeSelector bookingId={booking.id} initialType={booking.session_type} />
@@ -187,26 +157,18 @@ export default async function SessionDetailPage({
         )}
       </div>
 
-      {/* Payment comment — practitioner or admin */}
-      {canEditPayment && (
-        <PaymentCommentEditor
-          bookingId={booking.id}
-          initialComment={booking.payment_comment || ''}
-        />
-      )}
+      {/* Payment comment */}
+      <PaymentCommentEditor bookingId={booking.id} initialComment={booking.payment_comment || ''} />
 
-      {/* Delete session — strict admin only (not practitioner/assistants) */}
-      {isAdmin && !isPractitioner && (
-        <DeleteSessionButton bookingId={booking.id} locale={locale} />
-      )}
+      {/* Delete */}
+      <DeleteSessionButton bookingId={booking.id} locale={locale} />
 
-      {/* Client session history */}
+      {/* Client history */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
         <h2 className="text-base font-serif font-bold text-htg-fg mb-3 flex items-center gap-2">
           <History className="w-4 h-4 text-htg-indigo" />
           Historia sesji klienta ({clientHistory?.length || 0})
         </h2>
-
         {!clientHistory || clientHistory.length === 0 ? (
           <p className="text-sm text-htg-fg-muted">Brak historii sesji.</p>
         ) : (
@@ -216,18 +178,19 @@ export default async function SessionDetailPage({
               const isCurrent = h.id === id;
               const hPs = PAYMENT_STATUS_BADGE[h.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
               return (
-                <div
+                <Link
                   key={h.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg text-sm ${
+                  href={`/konto/admin/sesje/${h.id}`}
+                  className={`flex items-center gap-3 p-2 rounded-lg text-sm transition-colors ${
                     isCurrent ? 'bg-htg-sage/10 border border-htg-sage/30' : 'hover:bg-htg-surface/50'
                   }`}
                 >
                   <span className="text-htg-fg-muted w-24 shrink-0">{hSlot?.slot_date || '—'}</span>
-                  <span className="text-htg-fg w-14 shrink-0">{hSlot?.start_time?.slice(0,5) || ''}</span>
+                  <span className="text-htg-fg w-14 shrink-0">{hSlot?.start_time?.slice(0, 5) || ''}</span>
                   <span className="text-xs text-htg-fg-muted flex-1">{SESSION_CONFIG[h.session_type as SessionType]?.labelShort || h.session_type}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${hPs.className}`}>{hPs.label}</span>
                   {isCurrent && <span className="text-xs text-htg-sage font-bold">← ta sesja</span>}
-                </div>
+                </Link>
               );
             })}
           </div>

@@ -31,19 +31,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Skip auth callback from i18n (no locale prefix needed)
-  if (pathname.startsWith('/auth/')) {
+  // Skip auth callback from i18n — BUT let PKCE code exchange through
+  if (pathname.startsWith('/auth/') && !searchParams.get('code')) {
     return NextResponse.next();
   }
 
   // ─── PKCE Code Exchange ───────────────────────────────────────
-  // If ?code= is present, exchange it for a session BEFORE anything else
+  // If ?code= is present (on any path including /auth/confirm), exchange it
   const authCode = searchParams.get('code');
   if (authCode && authCode.length > 20) {
-    const locale = getLocaleFromPath(pathname);
+    const nextParam = searchParams.get('next');
+    const locale = nextParam?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || getLocaleFromPath(pathname);
     const url = request.nextUrl.clone();
-    url.pathname = `/${locale}/konto`;
+    url.pathname = nextParam || `/${locale}/konto`;
     url.searchParams.delete('code');
+    url.searchParams.delete('next');
+    url.searchParams.delete('consent');
+    url.searchParams.delete('type');
 
     const response = NextResponse.redirect(url);
 
@@ -107,6 +111,31 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
     return NextResponse.redirect(url);
+  }
+
+  // ─── Consent Gate for /konto paths ─────────────────────────────
+  const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
+  const isKontoPath = withoutLocale.startsWith('/konto');
+  const isZgodyPath = withoutLocale.startsWith('/konto/zgody');
+  const isAdminPath = withoutLocale.startsWith('/konto/admin') || withoutLocale.startsWith('/prowadzacy');
+
+  if (isKontoPath && !isZgodyPath && !isAdminPath) {
+    const REQUIRED = ['terms_v3', 'privacy_v3', 'sensitive_data', 'recording_publication'];
+    const { data: consents } = await supabase
+      .from('consent_records')
+      .select('consent_type')
+      .eq('user_id', user.id)
+      .eq('granted', true);
+
+    const granted = new Set((consents ?? []).map((c: { consent_type: string }) => c.consent_type));
+    const missing = REQUIRED.filter(t => !granted.has(t));
+
+    if (missing.length > 0) {
+      const locale = getLocaleFromPath(pathname);
+      const url = request.nextUrl.clone();
+      url.pathname = `/${locale}/konto/zgody`;
+      return NextResponse.redirect(url);
+    }
   }
 
   // No-cache for protected pages

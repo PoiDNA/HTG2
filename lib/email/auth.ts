@@ -42,6 +42,28 @@ export async function requireEmailAccess() {
 }
 
 /**
+ * Check if a user is admin or member of a specific mailbox.
+ * Used by send/route.ts and portal/admin-reply to verify mailbox access.
+ */
+export async function isAdminOrMailboxMember(
+  db: ReturnType<typeof createSupabaseServiceRole>,
+  userId: string,
+  mailboxId: string | null
+): Promise<boolean> {
+  const { data: profile } = await db.from('profiles').select('role').eq('id', userId).single();
+  if (profile?.role === 'admin') return true;
+
+  if (!mailboxId) return false;
+  const { data } = await db
+    .from('mailbox_members')
+    .select('id')
+    .eq('mailbox_id', mailboxId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  return !!data;
+}
+
+/**
  * Get mailbox IDs this user has access to.
  * Admins get all mailboxes. Staff get only their memberships.
  */

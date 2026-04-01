@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Mail, Inbox, Clock, CheckCircle2, AlertTriangle, Ban,
   Search, Send, X, ChevronRight, Lightbulb, Paperclip,
-  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2,
+  MessageSquare, RefreshCw, PenSquare, ChevronDown, FileUp, Trash2, UserCircle, Maximize2, Minimize2, ChevronsUp, ChevronsDown, Type, Bold, Printer, FileDown, Eye,
 } from 'lucide-react';
 import CustomerCard from './CustomerCard';
 import TemplateInsert from './TemplateInsert';
@@ -12,6 +12,7 @@ import TemplateManager from './TemplateManager';
 
 interface ConversationSummary {
   id: string;
+  channel: string;
   subject: string | null;
   from_address: string;
   from_name: string | null;
@@ -26,6 +27,7 @@ interface ConversationSummary {
 
 interface ConversationDetail {
   id: string;
+  channel: string;
   subject: string | null;
   from_address: string;
   from_name: string | null;
@@ -80,6 +82,7 @@ export default function EmailInbox() {
   const [threads, setThreads] = useState<ConversationSummary[]>([]);
   const [totalThreads, setTotalThreads] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
+  const [channelFilter, setChannelFilter] = useState<'' | 'email' | 'portal'>('');
   const [mailboxFilter, setMailboxFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -116,6 +119,25 @@ export default function EmailInbox() {
   // Template manager modal
   const [showTemplateManager, setShowTemplateManager] = useState(false);
 
+  // Customer card slideout
+  const [showCustomerCard, setShowCustomerCard] = useState(false);
+
+  // Fullscreen mode
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Editor enhancements
+  const [editorExpanded, setEditorExpanded] = useState(false);
+  const [editorLargeText, setEditorLargeText] = useState(false);
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Preview text (shown next to subject in recipient's inbox)
+  const [replyPreviewText, setReplyPreviewText] = useState('');
+  const [showPreviewText, setShowPreviewText] = useState(false);
+  const [composePreviewText, setComposePreviewText] = useState('');
+
+  // Default footer
+  const [defaultFooter, setDefaultFooter] = useState('');
+
   // Role-based view
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState('');
@@ -125,6 +147,7 @@ export default function EmailInbox() {
     setLoading(true);
     const params = new URLSearchParams();
     if (statusFilter) params.set('status', statusFilter);
+    if (channelFilter) params.set('channel', channelFilter);
     if (mailboxFilter) params.set('mailbox_id', mailboxFilter);
     if (searchQuery) params.set('search', searchQuery);
     params.set('limit', '30');
@@ -142,9 +165,20 @@ export default function EmailInbox() {
       }
     } catch { /* ignore */ }
     setLoading(false);
-  }, [statusFilter, mailboxFilter, searchQuery]);
+  }, [statusFilter, channelFilter, mailboxFilter, searchQuery]);
 
   useEffect(() => { fetchThreads(); }, [fetchThreads]);
+
+  // Fetch default footer on mount
+  useEffect(() => {
+    fetch('/api/email/templates')
+      .then(r => r.json())
+      .then(data => {
+        const footer = (data.templates || []).find((t: any) => t.category === 'footer' && t.is_default_footer);
+        if (footer) setDefaultFooter(footer.body_text);
+      })
+      .catch(() => {});
+  }, []);
 
   // Autocomplete: search users as you type in "To" field
   useEffect(() => {
@@ -162,7 +196,13 @@ export default function EmailInbox() {
 
   // Fetch thread detail
   useEffect(() => {
-    if (!selectedId) { setDetail(null); return; }
+    if (!selectedId) { setDetail(null); setShowCustomerCard(false); setReplyText(''); return; }
+    // Auto-append default footer to reply
+    if (defaultFooter) {
+      setReplyText('\n\n---\n' + defaultFooter);
+    } else {
+      setReplyText('');
+    }
     setLoadingDetail(true);
     fetch(`/api/email/threads/${selectedId}`)
       .then(r => r.json())
@@ -170,25 +210,42 @@ export default function EmailInbox() {
       .catch(() => setLoadingDetail(false));
   }, [selectedId]);
 
-  // Send reply
+  // Send reply — portal vs email
   const handleSend = async () => {
     if (!detail || !replyText.trim()) return;
     setSending(true);
     try {
-      await fetch('/api/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: detail.id,
-          to: detail.from_address,
-          subject: detail.subject,
-          bodyText: replyText,
-          bodyHtml: `<p>${replyText.replace(/\n/g, '<br/>')}</p>`,
-          attachments: replyAttachments.length > 0 ? replyAttachments : undefined,
-        }),
-      });
+      if (detail.channel === 'portal') {
+        // Portal reply — separate endpoint, plain text only
+        await fetch('/api/portal/admin-reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: detail.id,
+            bodyText: replyText,
+          }),
+        });
+      } else {
+        // Email reply — existing endpoint
+        const previewDiv = buildPreviewDiv(replyPreviewText);
+        const htmlBody = `<p>${markdownToHtml(replyText)}</p>`;
+        await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: detail.id,
+            to: detail.from_address,
+            subject: detail.subject,
+            bodyText: replyText.replace(/\*\*/g, ''),
+            bodyHtml: previewDiv + htmlBody,
+            attachments: replyAttachments.length > 0 ? replyAttachments : undefined,
+          }),
+        });
+      }
       setReplyText('');
       setReplyAttachments([]);
+      setReplyPreviewText('');
+      setShowPreviewText(false);
       // Refresh detail
       const res = await fetch(`/api/email/threads/${detail.id}`);
       setDetail(await res.json());
@@ -240,6 +297,44 @@ export default function EmailInbox() {
   };
 
   // Send new message (compose)
+  // Bold toggle for selected text in reply textarea
+  const handleBold = () => {
+    const ta = replyTextareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    if (start === end) return; // nothing selected
+    const before = replyText.slice(0, start);
+    const selected = replyText.slice(start, end);
+    const after = replyText.slice(end);
+    // Toggle: if already wrapped in **, remove; otherwise add
+    if (before.endsWith('**') && after.startsWith('**')) {
+      setReplyText(before.slice(0, -2) + selected + after.slice(2));
+    } else {
+      setReplyText(before + '**' + selected + '**' + after);
+      // Restore selection after state update
+      setTimeout(() => { ta.selectionStart = start + 2; ta.selectionEnd = end + 2; ta.focus(); }, 0);
+    }
+  };
+
+  // Convert markdown bold to HTML for email sending
+  const markdownToHtml = (text: string): string => {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/\n/g, '<br/>');
+  };
+
+  // Build preview text hidden div for email
+  const buildPreviewDiv = (previewText: string): string => {
+    if (!previewText.trim()) return '';
+    return `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${previewText.trim()}</div>`;
+  };
+
+  // Print thread
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleComposeSend = async () => {
     if (!composeTo.trim() || !composeBody.trim()) return;
     setComposeSending(true);
@@ -251,8 +346,8 @@ export default function EmailInbox() {
           to: composeTo.trim(),
           from: composeFrom || undefined,
           subject: composeSubject.trim() || '(bez tematu)',
-          bodyText: composeBody,
-          bodyHtml: `<p>${composeBody.replace(/\n/g, '<br/>')}</p>`,
+          bodyText: composeBody.replace(/\*\*/g, ''),
+          bodyHtml: buildPreviewDiv(composePreviewText) + `<p>${markdownToHtml(composeBody)}</p>`,
           attachments: composeAttachments.length > 0 ? composeAttachments : undefined,
         }),
       });
@@ -261,6 +356,7 @@ export default function EmailInbox() {
         setShowCompose(false);
         setComposeTo('');
         setComposeSubject('');
+        setComposePreviewText('');
         setComposeBody('');
         setComposeAttachments([]);
         fetchThreads();
@@ -273,9 +369,23 @@ export default function EmailInbox() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] gap-0 rounded-xl border border-htg-card-border overflow-hidden bg-htg-card">
+    <>
+    {/* Print styles — hide everything except message timeline */}
+    <style>{`
+      @media print {
+        body > *:not(.print-inbox-root) { display: none !important; }
+        nav, header, footer, aside { display: none !important; }
+        .print-hide { display: none !important; }
+        .print-show { display: block !important; }
+      }
+    `}</style>
+    <div className={`print-inbox-root flex gap-0 overflow-hidden bg-htg-card ${
+      isFullscreen
+        ? 'fixed inset-0 z-50 h-screen'
+        : 'h-[calc(100vh-4rem)] rounded-xl border border-htg-card-border'
+    }`}>
       {/* Left panel: Filters + Thread list (full width on mobile when no thread selected) */}
-      <div className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-72 lg:w-80 shrink-0 border-r border-htg-card-border flex-col`}>
+      <div className={`print-hide ${selectedId ? 'hidden md:flex' : 'flex'} w-full md:w-72 lg:w-80 shrink-0 border-r border-htg-card-border flex-col`}>
         {/* Status tabs — icon-only with tooltip */}
         <div className="flex gap-1 p-2 border-b border-htg-card-border">
           {STATUS_TABS.map(tab => (
@@ -320,6 +430,27 @@ export default function EmailInbox() {
               placeholder="Szukaj..."
               className="w-full pl-8 pr-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-xs focus:outline-none focus:ring-1 focus:ring-htg-sage"
             />
+          </div>
+          {/* Channel filter */}
+          <div className="flex gap-1 flex-wrap">
+            {([
+              { value: '' as const, label: 'Wszystkie', icon: Mail },
+              { value: 'email' as const, label: 'Email', icon: Mail },
+              { value: 'portal' as const, label: 'HTG', icon: MessageSquare },
+            ]).map(ch => (
+              <button
+                key={ch.value}
+                onClick={() => setChannelFilter(ch.value)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                  channelFilter === ch.value
+                    ? ch.value === 'portal' ? 'bg-teal-600 text-white' : 'bg-htg-sage text-white'
+                    : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
+                }`}
+              >
+                <ch.icon className="w-3 h-3" />
+                {ch.label}
+              </button>
+            ))}
           </div>
           {/* Mailbox filter — show when multiple mailboxes */}
           {mailboxes.length > 1 && (
@@ -373,8 +504,13 @@ export default function EmailInbox() {
                       </span>
                     </div>
                     <p className="text-xs text-htg-fg-muted truncate mt-0.5">
+                      {thread.channel === 'portal' && (
+                        <span className="inline-flex items-center gap-0.5 mr-1 text-[9px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-600">
+                          <MessageSquare className="w-2.5 h-2.5" />HTG
+                        </span>
+                      )}
                       {thread.subject || '(bez tematu)'}
-                      {isAdmin && !mailboxFilter && thread.mailboxes?.name && (
+                      {isAdmin && !mailboxFilter && thread.channel !== 'portal' && thread.mailboxes?.name && (
                         <span className="ml-1 text-[9px] px-1 py-0.5 rounded bg-htg-card text-htg-fg-muted/60">
                           {thread.mailboxes.name}
                         </span>
@@ -403,9 +539,18 @@ export default function EmailInbox() {
         {/* Footer */}
         <div className="p-2 border-t border-htg-card-border flex items-center justify-between">
           <span className="text-xs text-htg-fg-muted">{totalThreads} wątków</span>
-          <button onClick={fetchThreads} className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted" title="Odśwież">
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={fetchThreads} className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted" title="Odśwież">
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setIsFullscreen(prev => !prev)}
+              className="p-1.5 rounded hover:bg-htg-surface text-htg-fg-muted"
+              title={isFullscreen ? 'Zamknij pełny ekran' : 'Pełny ekran'}
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -442,6 +587,17 @@ export default function EmailInbox() {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${PRIORITY_COLORS[detail.priority]}`}>
                     {detail.priority}
                   </span>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowCustomerCard(prev => !prev)}
+                      className={`text-xs px-2.5 py-1 rounded-lg border border-htg-card-border transition-colors flex items-center gap-1 ${
+                        showCustomerCard ? 'bg-htg-sage text-white border-htg-sage' : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                      }`}
+                    >
+                      <UserCircle className="w-3.5 h-3.5" />
+                      Klient
+                    </button>
+                  )}
                   <button
                     onClick={handleClose}
                     className="text-xs px-2.5 py-1 rounded-lg border border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
@@ -532,7 +688,87 @@ export default function EmailInbox() {
             )}
 
             {/* Compose reply */}
-            <div className="p-3 border-t border-htg-card-border space-y-2">
+            <div className={`border-t border-htg-card-border space-y-2 p-3 ${editorExpanded ? 'flex-1 flex flex-col' : ''}`}>
+              {/* Toolbar above textarea */}
+              <div className="flex items-center gap-1 flex-wrap">
+                <button
+                  onClick={() => setEditorExpanded(prev => !prev)}
+                  title={editorExpanded ? 'Zmniejsz edytor' : 'Powiększ edytor'}
+                  className={`p-1.5 rounded-lg text-xs transition-colors ${
+                    editorExpanded ? 'bg-htg-sage text-white' : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                  }`}
+                >
+                  {editorExpanded ? <ChevronsDown className="w-4 h-4" /> : <ChevronsUp className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => setEditorLargeText(prev => !prev)}
+                  title={editorLargeText ? 'Normalny tekst' : 'Większy tekst'}
+                  className={`p-1.5 rounded-lg text-xs transition-colors ${
+                    editorLargeText ? 'bg-htg-sage text-white' : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                  }`}
+                >
+                  <Type className="w-4 h-4" />
+                </button>
+                <div className="w-px h-4 bg-htg-card-border mx-0.5" />
+                <button
+                  onClick={handleBold}
+                  title="Pogrubienie (zaznacz tekst)"
+                  className="p-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+                >
+                  <Bold className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => replyFileRef.current?.click()}
+                  disabled={uploading}
+                  title="Dodaj załącznik"
+                  className="p-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+                <input
+                  ref={replyFileRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={e => { if (e.target.files) handleFileUpload(e.target.files, 'reply'); e.target.value = ''; }}
+                />
+                <TemplateInsert
+                  userId={userId}
+                  onInsert={(text) => setReplyText(prev => prev + text)}
+                  onManage={() => setShowTemplateManager(true)}
+                />
+                <div className="w-px h-4 bg-htg-card-border mx-0.5" />
+                {detail.channel !== 'portal' && (
+                  <button
+                    onClick={() => setShowPreviewText(prev => !prev)}
+                    title="Podgląd w skrzynce odbiorcy"
+                    className={`p-1.5 rounded-lg text-xs transition-colors ${
+                      showPreviewText ? 'bg-htg-sage text-white' : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                    }`}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={handlePrint}
+                  title="Drukuj / Zapisz PDF"
+                  className="p-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
+              </div>
+              {/* Preview text field (email only) */}
+              {showPreviewText && detail.channel !== 'portal' && (
+                <input
+                  type="text"
+                  value={replyPreviewText}
+                  onChange={e => setReplyPreviewText(e.target.value)}
+                  placeholder="Tekst widoczny obok tematu w skrzynce odbiorcy..."
+                  maxLength={150}
+                  className="w-full px-3 py-1.5 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-xs focus:outline-none focus:ring-1 focus:ring-htg-sage"
+                />
+              )}
               {/* Attachment list */}
               {replyAttachments.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -547,77 +783,67 @@ export default function EmailInbox() {
                   ))}
                 </div>
               )}
-              <div className="flex gap-2">
-                <textarea
-                  value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
-                  placeholder="Napisz odpowiedź..."
-                  rows={2}
-                  className="flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
-                />
-                <div className="flex flex-col gap-1 self-end">
-                  <button
-                    onClick={handleSend}
-                    disabled={sending || !replyText.trim()}
-                    className="px-4 py-2 rounded-lg bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage-dark disabled:opacity-50 transition-colors flex items-center gap-1.5"
-                  >
-                    <Send className="w-4 h-4" />
-                    Wyślij
-                  </button>
-                </div>
-              </div>
-              {/* Toolbar: template + attachment */}
-              <div className="flex items-center gap-2">
-                <TemplateInsert
-                  userId={userId}
-                  onInsert={(text) => setReplyText(prev => prev + text)}
-                  onManage={() => setShowTemplateManager(true)}
-                />
+              <textarea
+                ref={replyTextareaRef}
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                placeholder="Napisz odpowiedź... (użyj **tekst** dla pogrubienia)"
+                rows={editorExpanded ? 20 : 6}
+                className={`w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage resize-y ${
+                  editorExpanded ? 'flex-1 min-h-0' : 'min-h-[120px]'
+                } ${editorLargeText ? 'text-base leading-relaxed' : 'text-sm'}`}
+              />
+              <div className="flex justify-end">
                 <button
-                  type="button"
-                  onClick={() => replyFileRef.current?.click()}
-                  disabled={uploading}
-                  title="Dodaj załącznik"
-                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface border border-htg-card-border transition-colors"
+                  onClick={handleSend}
+                  disabled={sending || !replyText.trim()}
+                  className={`px-5 py-2.5 rounded-lg text-white text-sm font-medium disabled:opacity-50 transition-colors flex items-center gap-1.5 ${
+                    detail.channel === 'portal' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-htg-sage hover:bg-htg-sage-dark'
+                  }`}
                 >
-                  <Paperclip className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{uploading ? 'Wgrywanie...' : 'Załącznik'}</span>
+                  <Send className="w-4 h-4" />
+                  {detail.channel === 'portal' ? 'Odpowiedz (HTG)' : 'Wyślij'}
                 </button>
-                <input
-                  ref={replyFileRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={e => { if (e.target.files) handleFileUpload(e.target.files, 'reply'); e.target.value = ''; }}
-                />
               </div>
             </div>
           </>
         ) : null}
       </div>
 
-      {/* Right panel: Customer Card — admin only */}
-      {isAdmin && detail && (
-        <div className="hidden lg:block w-64 shrink-0 border-l border-htg-card-border p-4 overflow-y-auto">
-          <CustomerCard
-            card={detail.customerCard || null}
-            isVerified={detail.user_link_verified}
-            conversationId={detail.id}
-            onLinkUser={() => {
-              const email = prompt('Email lub ID użytkownika HTG:');
-              if (!email) return;
-              // Simple: search by email first
-              fetch(`/api/email/threads/${detail.id}/link-user`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: email }), // TODO: search endpoint
-              }).then(() => {
-                // Refresh
-                fetch(`/api/email/threads/${detail.id}`).then(r => r.json()).then(setDetail);
-              });
-            }}
-            onSendVerification={handleVerify}
-          />
+      {/* Customer Card — slideout panel (on demand) */}
+      {isAdmin && detail && showCustomerCard && (
+        <div className="fixed inset-y-0 right-0 z-40 w-80 bg-htg-card border-l border-htg-card-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between p-3 border-b border-htg-card-border">
+            <h3 className="text-sm font-semibold text-htg-fg flex items-center gap-1.5">
+              <UserCircle className="w-4 h-4" />
+              Karta klienta
+            </h3>
+            <button
+              onClick={() => setShowCustomerCard(false)}
+              className="p-1 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <CustomerCard
+              card={detail.customerCard || null}
+              isVerified={detail.user_link_verified}
+              conversationId={detail.id}
+              onLinkUser={() => {
+                const email = prompt('Email lub ID użytkownika HTG:');
+                if (!email) return;
+                fetch(`/api/email/threads/${detail.id}/link-user`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: email }),
+                }).then(() => {
+                  fetch(`/api/email/threads/${detail.id}`).then(r => r.json()).then(setDetail);
+                });
+              }}
+              onSendVerification={handleVerify}
+            />
+          </div>
         </div>
       )}
       {/* Template manager modal */}
@@ -702,6 +928,18 @@ export default function EmailInbox() {
                   className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
                 />
               </div>
+              {/* Preview text */}
+              <div>
+                <label className="text-xs font-medium text-htg-fg-muted block mb-1">Podgląd w skrzynce <span className="font-normal">(opcjonalne — tekst obok tematu u odbiorcy)</span></label>
+                <input
+                  type="text"
+                  value={composePreviewText}
+                  onChange={e => setComposePreviewText(e.target.value)}
+                  placeholder="Krótki podgląd widoczny w skrzynce odbiorcy..."
+                  maxLength={150}
+                  className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
+                />
+              </div>
               {/* Body */}
               <div>
                 <label className="text-xs font-medium text-htg-fg-muted block mb-1">Treść *</label>
@@ -709,7 +947,7 @@ export default function EmailInbox() {
                   value={composeBody}
                   onChange={e => setComposeBody(e.target.value)}
                   rows={6}
-                  placeholder="Napisz wiadomość..."
+                  placeholder="Napisz wiadomość... (użyj **tekst** dla pogrubienia)"
                   className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
                 />
               </div>
@@ -772,5 +1010,6 @@ export default function EmailInbox() {
         </div>
       )}
     </div>
+    </>
   );
 }

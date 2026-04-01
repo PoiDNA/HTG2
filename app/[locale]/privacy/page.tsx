@@ -43,9 +43,9 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
       <div className="space-y-2">
         <Section id="administrator" title="1. Administrator danych">
           <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-4">
-            <p className="font-semibold text-htg-fg">XX Operator PSA</p>
-            <p className="text-sm text-htg-fg-muted mt-1">ul. Sarmacka 1A/145, 02-962 Warszawa</p>
-            <p className="text-sm text-htg-fg-muted">KRS 0001086847 · NIP 951-258-92-59</p>
+            <p className="font-semibold text-htg-fg">Pilot PSA</p>
+            <p className="text-sm text-htg-fg-muted mt-1">ul. RONDO ONZ 1, 00-124 Warszawa</p>
+            <p className="text-sm text-htg-fg-muted">NIP 525-308-51-01 · REGON 544401249</p>
             <p className="text-sm text-htg-fg-muted mt-1">E-mail: <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a></p>
           </div>
         </Section>
@@ -101,6 +101,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
           <UL>
             <li><strong>Realizacja umowy Sesji HTG</strong> — art. 6 ust. 1 lit. b RODO</li>
             <li><strong>Dane wrażliwe</strong> (przekonania, zdrowie) — art. 9 ust. 2 lit. a RODO (wyraźna zgoda)</li>
+            <li><strong>Nagrywanie i publikacja sesji</strong> (wizerunek, głos) — zgoda wyrażona przy rezerwacji sesji, stanowiąca warunek zawarcia umowy</li>
             <li><strong>Obowiązki księgowe</strong> — art. 6 ust. 1 lit. c RODO</li>
             <li><strong>Ochrona praw</strong> (uzasadniony interes) — art. 6 ust. 1 lit. f RODO</li>
             <li><strong>Marketing</strong> — art. 6 ust. 1 lit. a RODO (wyłącznie za zgodą)</li>
@@ -116,7 +117,9 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
             <li><strong>Stripe</strong> — przetwarzanie płatności</li>
             <li><strong>Bunny.net</strong> — przechowywanie i streaming nagrań</li>
             <li><strong>Resend</strong> — wysyłka e-maili transakcyjnych</li>
+            <li><strong>Kancelarie prawne i podmioty księgowe</strong> — obsługa prawna i rachunkowa</li>
           </UL>
+          <P>Niektórzy z naszych dostawców (Vercel, Cloudflare, Stripe) mogą przetwarzać dane poza Europejskim Obszarem Gospodarczym, na podstawie standardowych klauzul umownych lub decyzji Komisji Europejskiej o adekwatności ochrony.</P>
         </Section>
 
         <Section id="przechowywanie" title="5. Okres przechowywania">
@@ -148,7 +151,8 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
               </tbody>
             </table>
           </div>
-          <P>30 dni przed usunięciem nagrania otrzymasz powiadomienie e-mailem.</P>
+          <P>30 dni przed usunięciem nagrania otrzymasz powiadomienie e-mailem. Możesz poprosić o wcześniejsze usunięcie nagrania, pisząc na htg@htg.cyou.</P>
+          <P>W przypadku usunięcia konta nagrania są kasowane, z wyjątkiem danych niezbędnych do celów księgowych lub ochrony roszczeń. Korespondencja jest przechowywana przez okres obowiązywania umowy i przedawnienia roszczeń.</P>
         </Section>
 
         <Section id="prawa" title="6. Twoje prawa">
@@ -178,7 +182,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
         </Section>
 
         <Section id="monitoring" title="8. Monitoring sesji">
-          <P>W celu ochrony przed nieautoryzowanym udostępnianiem monitorujemy:</P>
+          <P>Dbając o to, by Twoje nagrania były bezpieczne i nie wpadły w niepowołane ręce, system monitoruje:</P>
           <UL>
             <li>Liczbę aktywnych sesji uwierzytelniania — limit 3 urządzenia na konto</li>
             <li>Liczbę jednoczesnych odtwarzań — limit 1 urządzenie na konto</li>
@@ -191,7 +195,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
           <p className="font-semibold text-htg-fg">
             <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>
           </p>
-          <p className="text-xs text-htg-fg-muted mt-2">XX Operator PSA · ul. Sarmacka 1A/145, 02-962 Warszawa</p>
+          <p className="text-xs text-htg-fg-muted mt-2">Pilot PSA · ul. RONDO ONZ 1, 00-124 Warszawa</p>
         </div>
       </div>
     </div>

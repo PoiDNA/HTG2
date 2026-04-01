@@ -58,39 +58,27 @@ export default function SiteNav() {
       {/* Mobile menu overlay */}
       {open && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-htg-card border-b border-htg-card-border shadow-lg z-40">
-          <div className="flex flex-col p-4 gap-2">
-            {navLinks.map(({ href, key }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setOpen(false)}
-                className={`py-3 px-4 rounded-lg text-base font-medium transition-colors ${
-                  pathname.startsWith(href)
-                    ? 'bg-htg-surface text-htg-indigo'
-                    : 'text-htg-fg hover:bg-htg-surface'
-                }`}
-              >
-                {t(key)}
-              </Link>
-            ))}
+          <div className="flex flex-col p-4 gap-1">
+            {/* Main navigation */}
+            <MobileLink href="/sesje" label="Biblioteka sesji" pathname={pathname} onClick={() => setOpen(false)} />
+            <MobileLink href="/sesje-indywidualne" label="Sesje z Natalią" pathname={pathname} onClick={() => setOpen(false)} />
+            <MobileLink href="/spolecznosc" label="Społeczność" pathname={pathname} onClick={() => setOpen(false)} />
+            <MobileLink href="/wiadomosci" label="Centrum Kontaktu" pathname={pathname} onClick={() => setOpen(false)} />
 
-            {/* Community link in mobile menu */}
+            {/* User section */}
             {isLoggedIn && (
-              <Link
-                href="/spolecznosc"
-                onClick={() => setOpen(false)}
-                className={`py-3 px-4 rounded-lg text-base font-medium transition-colors flex items-center gap-2 ${
-                  isCommunityActive
-                    ? 'bg-htg-surface text-htg-indigo'
-                    : 'text-htg-fg hover:bg-htg-surface'
-                }`}
-              >
-                <Users2 className="w-5 h-5" />
-                {t('community')}
-              </Link>
+              <>
+                <div className="border-t border-htg-card-border my-2" />
+                <MobileLink href="/konto/subskrypcje" label="Twoje Aktywacje" pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/polubieni" label="Twoi Znajomi" pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/podarowane-sesje" label="Podarowane sesje" pathname={pathname} onClick={() => setOpen(false)} />
+
+                <div className="border-t border-htg-card-border my-2" />
+                <MobileLink href="/konto/aktualizacja" label="Aktualizacja" pathname={pathname} onClick={() => setOpen(false)} />
+              </>
             )}
 
-            {/* Staff: show staff panel first, then profile only */}
+            {/* Staff section */}
             {isStaff && !isAdmin && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
@@ -98,25 +86,10 @@ export default function SiteNav() {
                 <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/prowadzacy/sesje" label={tPanel('staff_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/subskrypcje" label={tPanel('my_subscriptions')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/aktualizacja" label="Aktualizacja" pathname={pathname} onClick={() => setOpen(false)} />
               </>
             )}
 
-            {/* Regular user: full user menu */}
-            {isLoggedIn && !isStaff && !isAdmin && (
-              <>
-                <div className="border-t border-htg-card-border my-2" />
-                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{t('account')}</p>
-                <MobileLink href="/konto" label={tPanel('my_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/sesje-indywidualne" label={tPanel('individual_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/subskrypcje" label={tPanel('my_subscriptions')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/zamowienia" label={tPanel('orders')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/aktualizacja" label="Aktualizacja" pathname={pathname} onClick={() => setOpen(false)} />
-              </>
-            )}
-
-            {/* Admin: all sections */}
+            {/* Admin section */}
             {isAdmin && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
@@ -130,10 +103,6 @@ export default function SiteNav() {
                 <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{tPanel('staff_panel')}</p>
                 <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />
                 <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setOpen(false)} />
-                <div className="border-t border-htg-card-border my-2" />
-                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{t('account')}</p>
-                <MobileLink href="/konto" label={tPanel('my_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/aktualizacja" label="Aktualizacja" pathname={pathname} onClick={() => setOpen(false)} />
               </>
             )}
 

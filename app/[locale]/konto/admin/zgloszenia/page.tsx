@@ -32,6 +32,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   individual_1on1: 'Sesja 1:1 z Natalią',
   individual_asysta: 'Sesja z Asystą',
   individual_para: 'Sesja dla Par',
+  missing_recording: 'Brak nagrania',
 };
 
 const MONTH_NAMES = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];

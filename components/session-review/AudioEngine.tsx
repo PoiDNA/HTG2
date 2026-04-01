@@ -240,12 +240,13 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           hls.loadSource(data.url);
           hls.attachMedia(audio);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            // Create audio graph on first play gesture
             tryCreateGraph();
+            emitDuration();
             if (snapshot && !snapshot.paused) {
               audio.play().catch(() => {});
-            } else if (!isRefresh) {
-              // Don't autoplay on initial load — wait for user gesture
+            } else {
+              // Source ready — transition to paused so controls show
+              emitState({ status: 'paused' });
             }
           });
           hls.on(Hls.Events.ERROR, (_, errData) => {
@@ -262,6 +263,8 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
             emitDuration();
             if (snapshot && !snapshot.paused) {
               audio.play().catch(() => {});
+            } else {
+              emitState({ status: 'paused' });
             }
           }, { once: true });
         }

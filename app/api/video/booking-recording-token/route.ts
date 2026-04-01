@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { signBunnyUrl, signPrivateCdnUrl } from '@/lib/bunny';
+import { isAdminEmail } from '@/lib/roles';
+import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 
 /**
  * POST /api/video/booking-recording-token
  * Returns a signed HLS URL for a booking recording.
  * Checks: auth, blocked, access, para-revoke, status, hybrid retention, concurrent streams.
+ * Supports admin impersonation via IMPERSONATE_USER_COOKIE.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -24,11 +27,18 @@ export async function POST(request: NextRequest) {
 
     const db = createSupabaseServiceRole();
 
+    // Admin impersonation: use impersonated user's ID for access checks
+    let effectiveUserId = user.id;
+    const impersonateId = request.cookies.get(IMPERSONATE_USER_COOKIE)?.value;
+    if (impersonateId && isAdminEmail(user.email ?? '')) {
+      effectiveUserId = impersonateId;
+    }
+
     // 1. Account blocked?
     const { data: profile } = await db
       .from('profiles')
       .select('is_blocked, blocked_reason')
-      .eq('id', user.id)
+      .eq('id', effectiveUserId)
       .single();
 
     if (profile?.is_blocked) {
@@ -44,7 +54,7 @@ export async function POST(request: NextRequest) {
       .from('booking_recording_access')
       .select('id, revoked_at')
       .eq('recording_id', recordingId)
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .maybeSingle();
 
     if (!access || access.revoked_at) {
@@ -142,10 +152,10 @@ export async function POST(request: NextRequest) {
 
     // 8. Concurrent streams — separate limit for booking recordings
     const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
-    const { data: activeStreams } = await supabase
+    const { data: activeStreams } = await db
       .from('active_streams')
       .select('device_id')
-      .eq('user_id', user.id)
+      .eq('user_id', effectiveUserId)
       .not('booking_recording_id', 'is', null)
       .gt('last_heartbeat', cutoff);
 
@@ -163,11 +173,11 @@ export async function POST(request: NextRequest) {
     const durationSeconds = (recording as Record<string, unknown>).duration_seconds as number | null;
     const tokenTtl = Math.max(MIN_TTL, (durationSeconds ?? 0) + MIN_TTL);
 
-    // Register stream
-    await supabase
+    // Register stream (service role — bypasses RLS)
+    await db
       .from('active_streams')
       .upsert({
-        user_id: user.id,
+        user_id: effectiveUserId,
         device_id: deviceId,
         booking_recording_id: recordingId,
         last_heartbeat: new Date().toISOString(),
@@ -175,15 +185,19 @@ export async function POST(request: NextRequest) {
 
     // 10. Sign URL — Bunny Stream (HLS) or Private CDN (direct file)
     let url: string;
+    let type: 'hls' | 'direct';
     if (hasStreamVideo) {
       url = signBunnyUrl(recording.bunny_video_id!, recording.bunny_library_id!, tokenTtl);
+      type = 'hls';
     } else {
       url = signPrivateCdnUrl(recording.source_url!, tokenTtl);
+      type = 'direct';
     }
 
     return NextResponse.json({
       allowed: true,
       url,
+      type,
       expiresIn: tokenTtl,
     });
   } catch (error: unknown) {

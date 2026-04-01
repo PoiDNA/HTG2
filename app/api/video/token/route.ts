@@ -91,20 +91,22 @@ export async function POST(request: NextRequest) {
     // If bunny_video_id looks like a CDN path (contains /) → Storage file
     let url: string;
     let expiresIn: number;
+    let type: 'hls' | 'direct';
 
     if (session.bunny_library_id) {
-      // Bunny Stream Video — HLS playlist, 15 min token refresh
       url = signBunnyUrl(session.bunny_video_id, session.bunny_library_id);
       expiresIn = 900;
+      type = 'hls';
     } else {
-      // Bunny Storage — direct file via private CDN, 4 hour token
       url = signPrivateCdnUrl(session.bunny_video_id, 14400);
       expiresIn = 14400;
+      type = 'direct';
     }
 
     return NextResponse.json({
       allowed: true,
       url,
+      type,
       expiresIn,
     });
   } catch (error: any) {

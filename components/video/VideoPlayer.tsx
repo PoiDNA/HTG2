@@ -200,7 +200,9 @@ export default function VideoPlayer({ playbackId, idFieldName, userEmail, userId
         audioCleanupRef.current = null;
       }
 
-      if (Hls.isSupported()) {
+      const isHls = data.type !== 'direct';
+
+      if (isHls && Hls.isSupported()) {
         const hls = new Hls({
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
@@ -208,7 +210,6 @@ export default function VideoPlayer({ playbackId, idFieldName, userEmail, userId
         hls.loadSource(data.url);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          // Set up Web Audio API protection BEFORE playing
           if (!audioCleanupRef.current) {
             audioCleanupRef.current = setupAudioProtection(video);
           }
@@ -220,7 +221,7 @@ export default function VideoPlayer({ playbackId, idFieldName, userEmail, userId
           }
         });
         hlsRef.current = hls;
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
         // Safari native HLS
         video.src = data.url;
         video.addEventListener('loadedmetadata', () => {
@@ -228,6 +229,18 @@ export default function VideoPlayer({ playbackId, idFieldName, userEmail, userId
             audioCleanupRef.current = setupAudioProtection(video);
           }
           video.play().catch(() => {});
+        }, { once: true });
+      } else {
+        // Direct file (mp4/m4v/webm) — no HLS needed
+        video.src = data.url;
+        video.addEventListener('loadedmetadata', () => {
+          if (!audioCleanupRef.current) {
+            audioCleanupRef.current = setupAudioProtection(video);
+          }
+          video.play().catch(() => {});
+        }, { once: true });
+        video.addEventListener('error', () => {
+          setStatus('error');
         }, { once: true });
       }
 

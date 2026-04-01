@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { signBunnyUrl } from '@/lib/bunny';
+import { signBunnyUrl, signPrivateCdnUrl } from '@/lib/bunny';
 
 /**
  * POST /api/video/booking-recording-token
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     // 3. Recording details
     const { data: recording } = await db
       .from('booking_recordings')
-      .select('bunny_video_id, bunny_library_id, status, expires_at, session_type, session_date, legal_hold, duration_seconds')
+      .select('bunny_video_id, bunny_library_id, source_url, status, expires_at, session_type, session_date, legal_hold, duration_seconds')
       .eq('id', recordingId)
       .single();
 
@@ -115,17 +115,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. Concurrent streams — separate limit for booking recordings
-    if (!recording.bunny_video_id || !recording.bunny_library_id) {
+    // 7. Check video availability — supports both Bunny Stream and Storage
+    const hasStreamVideo = recording.bunny_video_id && recording.bunny_library_id;
+    const hasStorageFile = recording.source_url; // CDN path like "htg-sessions-arch-03-2026/file.m4v"
+
+    if (!hasStreamVideo && !hasStorageFile) {
       return NextResponse.json({ error: 'Video not available' }, { status: 404 });
     }
 
+    // 8. Concurrent streams — separate limit for booking recordings
     const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
     const { data: activeStreams } = await supabase
       .from('active_streams')
       .select('device_id')
       .eq('user_id', user.id)
-      .not('booking_recording_id', 'is', null) // only check recording streams
+      .not('booking_recording_id', 'is', null)
       .gt('last_heartbeat', cutoff);
 
     const otherDeviceActive = activeStreams?.some(s => s.device_id !== deviceId);
@@ -136,10 +140,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 8. Compute token TTL
-    // Token must outlive the entire recording playback.
-    // Bunny HLS: token authorises segment key fetching throughout playback.
-    // MIN 1h, or duration + 1h buffer (e.g. 2h recording → 3h token).
+    // 9. Compute token TTL
     const MIN_TTL = 3600; // 1 hour
     const durationSeconds = (recording as Record<string, unknown>).duration_seconds as number | null;
     const tokenTtl = Math.max(MIN_TTL, (durationSeconds ?? 0) + MIN_TTL);
@@ -154,8 +155,13 @@ export async function POST(request: NextRequest) {
         last_heartbeat: new Date().toISOString(),
       }, { onConflict: 'user_id,device_id' });
 
-    // 9. Sign URL with computed TTL
-    const url = signBunnyUrl(recording.bunny_video_id, recording.bunny_library_id, tokenTtl);
+    // 10. Sign URL — Bunny Stream (HLS) or Private CDN (direct file)
+    let url: string;
+    if (hasStreamVideo) {
+      url = signBunnyUrl(recording.bunny_video_id!, recording.bunny_library_id!, tokenTtl);
+    } else {
+      url = signPrivateCdnUrl(recording.source_url!, tokenTtl);
+    }
 
     return NextResponse.json({
       allowed: true,

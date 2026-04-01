@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { signBunnyUrl } from '@/lib/bunny';
+import { signBunnyUrl, signPrivateCdnUrl } from '@/lib/bunny';
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,16 +82,30 @@ export async function POST(request: NextRequest) {
       .eq('id', sessionId)
       .single();
 
-    if (!session?.bunny_video_id || !session?.bunny_library_id) {
+    if (!session?.bunny_video_id) {
       return NextResponse.json({ error: 'Video not found' }, { status: 404 });
     }
 
-    const url = signBunnyUrl(session.bunny_video_id, session.bunny_library_id);
+    // Determine URL type: Bunny Stream (HLS) or Storage CDN (direct file)
+    // If bunny_library_id is set → Bunny Stream Video (HLS playlist)
+    // If bunny_video_id looks like a CDN path (contains /) → Storage file
+    let url: string;
+    let expiresIn: number;
+
+    if (session.bunny_library_id) {
+      // Bunny Stream Video — HLS playlist, 15 min token refresh
+      url = signBunnyUrl(session.bunny_video_id, session.bunny_library_id);
+      expiresIn = 900;
+    } else {
+      // Bunny Storage — direct file via private CDN, 4 hour token
+      url = signPrivateCdnUrl(session.bunny_video_id, 14400);
+      expiresIn = 14400;
+    }
 
     return NextResponse.json({
       allowed: true,
       url,
-      expiresIn: 900, // 15 minutes
+      expiresIn,
     });
   } catch (error: any) {
     console.error('Video token error:', error);

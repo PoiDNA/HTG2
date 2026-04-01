@@ -6,8 +6,9 @@ import { isAdminEmail } from '@/lib/roles';
 import { redirect } from 'next/navigation';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
-import { Headphones, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Headphones, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import AuditPageView from './AuditPageView';
+import RecordingActions from './RecordingActions';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -15,7 +16,6 @@ export function generateStaticParams() {
 
 const PAGE_SIZE = 50;
 
-// Status options for filter
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Wszystkie' },
   { value: 'ready', label: 'Gotowe' },
@@ -23,12 +23,6 @@ const STATUS_OPTIONS = [
   { value: 'failed', label: 'Nieudane' },
   { value: 'manual_review', label: 'Do przeglądu (import)' },
 ] as const;
-
-interface Participant {
-  display_name: string;
-  email: string | null;
-  revoked: boolean;
-}
 
 export default async function AdminRecordingsPage({
   params,
@@ -40,7 +34,6 @@ export default async function AdminRecordingsPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  // Admin check
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
   if (!user || !isAdminEmail(user.email ?? '')) {
@@ -55,17 +48,15 @@ export default async function AdminRecordingsPage({
 
   const db = createSupabaseServiceRole();
 
-  // Build query
   let query = db
     .from('booking_recordings')
     .select(`
       id, title, session_type, session_date, status, duration_seconds,
-      source, import_confidence, legal_hold,
+      source, import_confidence, legal_hold, metadata,
       booking_recording_access(user_id, revoked_at)
     `, { count: 'exact' })
     .order('session_date', { ascending: false, nullsFirst: false });
 
-  // Status filter
   if (statusFilter === 'manual_review') {
     query = query.eq('import_confidence', 'manual_review');
   } else if (statusFilter !== 'all') {
@@ -74,7 +65,7 @@ export default async function AdminRecordingsPage({
 
   const { data: allData, count: totalCount } = await query.range(offset, offset + PAGE_SIZE - 1);
 
-  // Collect all user_ids from access rows, then fetch profiles in one query
+  // Fetch profiles for all user_ids
   const allUserIds = new Set<string>();
   for (const rec of allData ?? []) {
     const accessRows = (rec.booking_recording_access ?? []) as unknown as Array<{ user_id: string }>;
@@ -94,7 +85,7 @@ export default async function AdminRecordingsPage({
     }
   }
 
-  // Map participants per recording
+  // Build rows
   type RecordingRow = NonNullable<typeof allData>[number];
   const rows = (allData ?? []).map((rec: RecordingRow) => {
     const accessRows = (rec.booking_recording_access ?? []) as unknown as Array<{
@@ -102,23 +93,28 @@ export default async function AdminRecordingsPage({
       revoked_at: string | null;
     }>;
 
-    const participants: Participant[] = accessRows.map((a) => {
+    const participants = accessRows.map((a) => {
       const profile = profileMap.get(a.user_id);
       return {
-        display_name: profile?.display_name ?? profile?.email ?? '—',
+        user_id: a.user_id,
+        display_name: profile?.display_name ?? null,
         email: profile?.email ?? null,
         revoked: !!a.revoked_at,
       };
     });
 
-    return { ...rec, participants };
+    const meta = rec.metadata as Record<string, unknown> | null;
+    const sourceEmail = (meta?.parsed_email as string) ?? null;
+
+    return { ...rec, participants, sourceEmail };
   });
 
-  // Client-side search filter (simple substring match on participant names)
+  // Search filter
   const filteredRows = searchQuery
     ? rows.filter((r) =>
+        r.sourceEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.participants.some((p) =>
-          p.display_name.toLowerCase().includes(searchQuery.toLowerCase())
+          (p.display_name ?? p.email ?? '').toLowerCase().includes(searchQuery.toLowerCase())
         )
       )
     : rows;
@@ -151,7 +147,7 @@ export default async function AdminRecordingsPage({
           name="q"
           type="text"
           defaultValue={searchQuery}
-          placeholder="Szukaj po nazwie klienta..."
+          placeholder="Szukaj po emailu lub nazwie..."
           className="bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg w-64"
         />
 
@@ -168,13 +164,11 @@ export default async function AdminRecordingsPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-htg-card-border text-left text-htg-fg-muted">
-              <th className="pb-3 pr-4 font-medium">Dostęp</th>
+              <th className="pb-3 pr-4 font-medium">Email z nagrania</th>
               <th className="pb-3 pr-4 font-medium">Typ</th>
               <th className="pb-3 pr-4 font-medium">Data sesji</th>
-              <th className="pb-3 pr-4 font-medium">Status</th>
-              <th className="pb-3 pr-4 font-medium">Czas</th>
-              <th className="pb-3 pr-4 font-medium">Źródło</th>
-              <th className="pb-3 font-medium">Confidence</th>
+              <th className="pb-3 pr-4 font-medium">Przydzielono</th>
+              <th className="pb-3 font-medium w-20"></th>
             </tr>
           </thead>
           <tbody>
@@ -183,28 +177,12 @@ export default async function AdminRecordingsPage({
               const config = sessionType ? SESSION_CONFIG[sessionType] : null;
 
               return (
-                <tr key={rec.id} className="border-b border-htg-card-border/50 hover:bg-htg-surface/50 transition-colors">
-                  {/* Dostęp */}
+                <tr key={rec.id} className="border-b border-htg-card-border/50 hover:bg-htg-surface/50 transition-colors group">
+                  {/* Email z nagrania */}
                   <td className="py-3 pr-4">
-                    {rec.participants.length === 0 ? (
-                      <span className="text-htg-fg-muted italic">Brak</span>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {rec.participants.map((p, i) => (
-                          <div key={i} className="flex items-center gap-1">
-                            <span
-                              className={`text-xs ${p.revoked ? 'line-through text-htg-fg-muted' : 'text-htg-fg'}`}
-                              title={p.email ?? undefined}
-                            >
-                              {p.display_name}
-                            </span>
-                            {p.revoked && (
-                              <span className="text-[10px] text-red-400">cofnięty</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <span className="text-htg-fg text-xs">
+                      {rec.sourceEmail ?? <span className="text-htg-fg-muted italic">brak</span>}
+                    </span>
                   </td>
 
                   {/* Typ */}
@@ -218,51 +196,52 @@ export default async function AdminRecordingsPage({
                     )}
                   </td>
 
-                  {/* Data */}
+                  {/* Data sesji */}
                   <td className="py-3 pr-4 text-htg-fg whitespace-nowrap">
                     {rec.session_date
                       ? new Date(rec.session_date).toLocaleDateString('pl-PL')
                       : '—'}
                   </td>
 
-                  {/* Status */}
+                  {/* Przydzielono */}
                   <td className="py-3 pr-4">
-                    <StatusBadge status={rec.status} />
-                  </td>
-
-                  {/* Czas */}
-                  <td className="py-3 pr-4 text-htg-fg-muted whitespace-nowrap">
-                    {rec.duration_seconds
-                      ? `${Math.floor(rec.duration_seconds / 60)} min`
-                      : '—'}
-                  </td>
-
-                  {/* Źródło */}
-                  <td className="py-3 pr-4">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      rec.source === 'live'
-                        ? 'bg-green-500/10 text-green-400'
-                        : 'bg-amber-500/10 text-amber-400'
-                    }`}>
-                      {rec.source === 'live' ? 'Live' : 'Import'}
-                    </span>
-                  </td>
-
-                  {/* Confidence */}
-                  <td className="py-3">
-                    {rec.source === 'import' && rec.import_confidence ? (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        rec.import_confidence === 'exact_email'
-                          ? 'bg-green-500/10 text-green-400'
-                          : rec.import_confidence === 'admin_assigned'
-                          ? 'bg-blue-500/10 text-blue-400'
-                          : 'bg-amber-500/10 text-amber-400'
-                      }`}>
-                        {rec.import_confidence}
-                      </span>
+                    {rec.participants.length === 0 ? (
+                      <span className="text-htg-fg-muted italic text-xs">Brak przydziału</span>
                     ) : (
-                      <span className="text-htg-fg-muted">—</span>
+                      <div className="space-y-0.5">
+                        {rec.participants.map((p, i) => (
+                          <div key={i} className="flex items-center gap-1">
+                            <span
+                              className={`text-xs ${p.revoked ? 'line-through text-htg-fg-muted' : 'text-htg-fg'}`}
+                            >
+                              {p.display_name ?? p.email ?? '—'}
+                            </span>
+                            <span className="text-[10px] text-htg-fg-muted">
+                              {p.email ? `(${p.email})` : ''}
+                            </span>
+                            {p.revoked ? (
+                              <span className="text-[10px] text-red-400">cofnięty</span>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
                     )}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="py-3 text-right">
+                    <RecordingActions
+                      recordingId={rec.id}
+                      sourceEmail={rec.sourceEmail}
+                      participants={rec.participants}
+                      details={{
+                        status: rec.status,
+                        source: rec.source,
+                        import_confidence: rec.import_confidence,
+                        duration_seconds: rec.duration_seconds,
+                        legal_hold: rec.legal_hold,
+                      }}
+                    />
                   </td>
                 </tr>
               );
@@ -270,7 +249,7 @@ export default async function AdminRecordingsPage({
 
             {filteredRows.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-htg-fg-muted">
+                <td colSpan={5} className="py-8 text-center text-htg-fg-muted">
                   Brak nagrań spełniających kryteria.
                 </td>
               </tr>
@@ -314,35 +293,5 @@ export default async function AdminRecordingsPage({
         </div>
       )}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    ready: 'bg-green-500/10 text-green-400',
-    processing: 'bg-blue-500/10 text-blue-400',
-    uploading: 'bg-blue-500/10 text-blue-400',
-    preparing: 'bg-blue-500/10 text-blue-400',
-    queued: 'bg-gray-500/10 text-gray-400',
-    failed: 'bg-red-500/10 text-red-400',
-    expired: 'bg-gray-500/10 text-gray-500',
-    ignored: 'bg-gray-500/10 text-gray-500',
-  };
-
-  const labels: Record<string, string> = {
-    ready: 'Gotowe',
-    processing: 'Przetwarzane',
-    uploading: 'Wysyłane',
-    preparing: 'Przygotowywane',
-    queued: 'W kolejce',
-    failed: 'Nieudane',
-    expired: 'Wygasłe',
-    ignored: 'Zignorowane',
-  };
-
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full ${styles[status] ?? 'bg-gray-500/10 text-gray-400'}`}>
-      {labels[status] ?? status}
-    </span>
   );
 }

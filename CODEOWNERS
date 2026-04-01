@@ -1,0 +1,10 @@
+# CODEOWNERS — minimalna lista najdroższych w naprawie plików
+# Każdy nowy wpis musi uzasadniać koszt ręcznego review.
+# Hot-zones (app/api/auth/**, layout.tsx) są w CLAUDE.md jako reguły agenta,
+# ale NIE tutaj — żeby nie blokować codziennej pracy.
+
+/middleware.ts           @PoiDNA
+/next.config.*           @PoiDNA
+/lib/supabase/client.ts  @PoiDNA
+/lib/supabase/server.ts  @PoiDNA
+/lib/supabase/service.ts @PoiDNA

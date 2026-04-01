@@ -1,0 +1,42 @@
+# HTG2 — Wytyczne dla Cursor
+
+## Stack
+Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS 4, Supabase (PostgreSQL + RLS + Auth), Stripe, Bunny Stream (HLS), LiveKit Cloud (WebRTC), Resend, Vercel.
+
+## Branch workflow
+
+### ZANIM zaczniesz pracę
+- `git fetch origin`
+- Utwórz nowy branch z `origin/main`: `ai/<owner>/cursor/<YYYY-MM-DD>-<cel>` (max 3 słowa w celu)
+- Nigdy nie kontynuuj pracy na starym branchu
+
+### Zakazy
+- ZAKAZ `git pull` i `git merge` — tylko `git fetch origin` + `git rebase origin/main`
+- ZAKAZ globalnego formatowania (Prettier, import sort na całym repo)
+- ZAKAZ instalowania npm packages bez zgody usera
+- Konflikt w `package-lock.json`: NIE rozwiązuj → abort → nowy branch → odtwórz zmianę deps osobno
+
+### Po squash merge
+Branch zamknięty — żadnego dalszego commita. Usuń i zacznij nowy.
+
+## Synchronizacja z main
+
+ZAWSZE `git fetch origin` przed oceną behind/ahead. Porównuj do `origin/main`.
+
+1. Mały drift (≤10), bez hot-zones → rebase
+2. Średni (11-49) LUB hot-zones → rebase jeśli brak konfliktów; przy konflikcie → nowy branch
+3. Duży (>50) LUB duże konflikty → abort → nowy branch → cherry-pick min scope
+
+## Hot-zone files (ostrożność, wcześniejszy refresh)
+- middleware.ts, app/layout.tsx, app/[locale]/layout.tsx
+- next.config.ts, package.json, package-lock.json
+- lib/supabase/*.ts, app/api/auth/**
+
+## Przed commitem
+- `git diff --stat` + `git status --short` — brak plików poza zakresem
+
+## Przed PR
+- `npm run build` musi przejść
+
+## Definition of Done
+- Po merge/porzuceniu: usuń worktree i branch

@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true });
       }
 
-      const sessionType = (recSession.booking as Record<string, unknown>)?.session_type as string | undefined;
+      const sessionType = (recSession.booking as unknown as Record<string, unknown>)?.session_type as string | undefined;
       if (!sessionType || !RECORDING_TYPES.includes(sessionType)) {
         return NextResponse.json({ ok: true });
       }
@@ -278,7 +278,7 @@ export async function POST(request: NextRequest) {
         console.log(`[webhook] Updated booking recording ${existing.id} with duration=${durationSeconds}s`);
       } else {
         // egress_started webhook was lost — create record flagged for manual review
-        const slotDate = (recSession.slot as Record<string, unknown>)?.slot_date as string | undefined;
+        const slotDate = (recSession.slot as unknown as Record<string, unknown>)?.slot_date as string | undefined;
         const retentionDays = 365;
 
         const { data: newRec, error: insertErr } = await db

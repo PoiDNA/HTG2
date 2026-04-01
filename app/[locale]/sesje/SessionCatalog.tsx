@@ -738,7 +738,7 @@ export default function SessionCatalog({
                   {/* Price (hidden if purchased) OR listen button */}
                   {isPurchased ? (
                     <a
-                      href="/pl/konto/sesje"
+                      href="/pl/konto"
                       className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium shrink-0 hover:text-emerald-300 transition-colors"
                       onClick={e => e.stopPropagation()}
                     >
@@ -765,7 +765,7 @@ export default function SessionCatalog({
                     <div className="flex items-center gap-3 mt-4">
                       {isPurchased ? (
                         <a
-                          href="/pl/konto/sesje"
+                          href="/pl/konto"
                           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
                         >
                           <Headphones className="w-4 h-4" />
@@ -944,7 +944,7 @@ export default function SessionCatalog({
               )}
               {isPurchasedMonth(spotlightSet.id) && (
                 <a
-                  href="/pl/konto/sesje"
+                  href="/pl/konto"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
                 >
                   <Headphones className="w-4 h-4" />

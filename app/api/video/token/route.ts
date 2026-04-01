@@ -29,23 +29,64 @@ export async function POST(request: NextRequest) {
     if (profile?.is_blocked) {
       return NextResponse.json({
         allowed: false,
+        title: 'Konto zablokowane',
         message: 'Dostęp do materiałów został zawieszony. Skontaktuj się z supportem.',
       });
     }
 
     // Check entitlement
-    const { data: entitlement } = await supabase
-      .from('entitlements')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('session_id', sessionId)
-      .eq('is_active', true)
-      .gt('valid_until', new Date().toISOString())
-      .limit(1)
-      .single();
+    const now = new Date().toISOString();
+    
+    // 1. Direct session entitlement (bez zmian)
+    const { data: entitlement } = await db
+      .from('entitlements').select('id')
+      .eq('user_id', user.id).eq('session_id', sessionId)
+      .eq('is_active', true).gt('valid_until', now)
+      .limit(1).maybeSingle();
 
-    if (!entitlement) {
-      return NextResponse.json({ error: 'No valid entitlement' }, { status: 403 });
+    let hasAccess = !!entitlement;
+
+    if (!hasAccess) {
+      // 2. Znajdź zestawy tej sesji
+      const { data: sessionSets } = await db
+        .from('set_sessions')
+        .select('set_id, monthly_set:monthly_sets(month_label)')
+        .eq('session_id', sessionId);
+      const setIds = (sessionSets || []).map(ss => ss.set_id);
+
+      if (setIds.length > 0) {
+        // 3. Entitlement z monthly_set_id
+        const { data: setEnt } = await db
+          .from('entitlements').select('id')
+          .eq('user_id', user.id).in('type', ['yearly', 'monthly'])
+          .in('monthly_set_id', setIds)
+          .eq('is_active', true).gt('valid_until', now)
+          .limit(1).maybeSingle();
+        hasAccess = !!setEnt;
+
+        // 4. Fallback legacy (monthly_set_id IS NULL + scope_month)
+        if (!hasAccess) {
+          const setMonths = (sessionSets || [])
+            .map(ss => (ss as any).monthly_set?.month_label).filter(Boolean);
+          if (setMonths.length > 0) {
+            const { data: legacyEnt } = await db
+              .from('entitlements').select('id')
+              .eq('user_id', user.id).in('type', ['yearly', 'monthly'])
+              .is('monthly_set_id', null).in('scope_month', setMonths)
+              .eq('is_active', true).gt('valid_until', now)
+              .limit(1).maybeSingle();
+            hasAccess = !!legacyEnt;
+          }
+        }
+      }
+    }
+
+    if (!hasAccess) {
+      return NextResponse.json({
+        allowed: false,
+        title: 'Brak dostępu',
+        message: 'Nie masz aktywnego dostępu do tej sesji.',
+      });
     }
 
     // Check concurrent streams — only 1 device at a time
@@ -61,7 +102,8 @@ export async function POST(request: NextRequest) {
     if (otherDeviceActive) {
       return NextResponse.json({
         allowed: false,
-        message: 'Twoje konto odtwarza już materiał na innym urządzeniu. Zatrzymaj odtwarzanie tam, aby rozpocząć tutaj.',
+        title: 'Odtwarzanie na innym urządzeniu',
+        message: 'Odtwarzasz już nagranie na innym urządzeniu. Zatrzymaj odtwarzanie tam, aby rozpocząć tutaj.',
       });
     }
 
@@ -83,34 +125,60 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!session?.bunny_video_id) {
-      return NextResponse.json({ error: 'Video not found' }, { status: 404 });
+      return NextResponse.json({
+        allowed: false,
+        title: 'Nagranie niedostępne',
+        message: 'Plik nagrania nie został odnaleziony.',
+      });
     }
 
-    // Determine URL type: Bunny Stream (HLS) or Storage CDN (direct file)
-    // If bunny_library_id is set → Bunny Stream Video (HLS playlist)
-    // If bunny_video_id looks like a CDN path (contains /) → Storage file
+    // Determine delivery type: Bunny Stream (HLS) or Storage CDN (direct file)
     let url: string;
     let expiresIn: number;
-    let type: 'hls' | 'direct';
+    let deliveryType: 'hls' | 'direct';
 
     if (session.bunny_library_id) {
       url = signBunnyUrl(session.bunny_video_id, session.bunny_library_id);
       expiresIn = 900;
-      type = 'hls';
+      deliveryType = 'hls';
     } else {
       url = signPrivateCdnUrl(session.bunny_video_id, 14400);
       expiresIn = 14400;
-      type = 'direct';
+      deliveryType = 'direct';
+    }
+
+    // Guess MIME type for direct files
+    let mimeType: string | null = null;
+    if (deliveryType === 'direct' && session.bunny_video_id) {
+      const ext = session.bunny_video_id.split('.').pop()?.toLowerCase();
+      const mimeMap: Record<string, string> = {
+        'm4a': 'audio/mp4',
+        'mp3': 'audio/mpeg',
+        'ogg': 'audio/ogg',
+        'wav': 'audio/wav',
+        'aac': 'audio/aac',
+        'webm': 'audio/webm',
+        'mp4': 'video/mp4',
+        'm4v': 'video/mp4',
+        'mov': 'video/quicktime',
+      };
+      mimeType = (ext && mimeMap[ext]) ?? null;
     }
 
     return NextResponse.json({
       allowed: true,
       url,
-      type,
+      mediaKind: 'audio' as const,  // VOD sessions are audio-first
+      deliveryType,
+      mimeType,
       expiresIn,
     });
   } catch (error: any) {
-    console.error('Video token error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Recording token error:', error);
+    return NextResponse.json({
+      allowed: false,
+      title: 'Błąd',
+      message: error.message || 'Wystąpił nieoczekiwany błąd.',
+    });
   }
 }

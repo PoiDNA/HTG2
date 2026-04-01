@@ -6,6 +6,16 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 const nextConfig: NextConfig = {
   output: "standalone",
 
+  async redirects() {
+    return [
+      {
+        source: '/:locale/konto/sesje',
+        destination: '/:locale/konto',
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

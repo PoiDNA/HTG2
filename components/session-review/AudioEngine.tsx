@@ -178,11 +178,16 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
       message: string,
       title?: string
     ) => {
+      // Deduplication: don't overwrite existing terminal error/unsupported
+      // Allow blocked → error (more precise info)
+      const s = stateRef.current.status;
+      if (s === 'error' || s === 'unsupported') return;
+
       clearLoadingGuard();
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
       stopPlayEvent();
-      
+
       if (status === 'error') {
         emitState({ status: 'error', message });
       } else if (status === 'unsupported') {
@@ -290,8 +295,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
             maxBufferLength: 30,
             maxMaxBufferLength: 60,
           });
-          hls.loadSource(data.url);
-          hls.attachMedia(audio);
+          // Register handlers BEFORE loadSource/attachMedia to prevent race conditions
           hls.on(Hls.Events.MANIFEST_PARSED, onSourceReady);
           hls.on(Hls.Events.ERROR, (_, errData) => {
             if (errData.fatal) {
@@ -303,6 +307,8 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
               console.warn('[AudioEngine] HLS non-fatal:', errData.type, errData.details);
             }
           });
+          hls.loadSource(data.url);
+          hls.attachMedia(audio);
           hlsRef.current = hls;
         } else if (audio.canPlayType('application/vnd.apple.mpegurl') || data.deliveryType === 'direct') {
           // Safari native HLS or direct file
@@ -418,6 +424,11 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         emitState({ status: 'ended' });
       };
       const onError = () => {
+        if (hlsRef.current) {
+          // HLS.js active — it manages its own error recovery; don't destroy it
+          console.warn('[AudioEngine] video error while HLS active, code:', audio.error?.code);
+          return;
+        }
         enterTerminalError('error', `Błąd elementu media (kod ${audio.error?.code ?? '?'})`);
       };
       const onTimeUpdate = () => emitTime(audio.currentTime);
@@ -521,7 +532,6 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     return (
       <video
         ref={audioRef}
-        crossOrigin="anonymous"
         playsInline
         preload="auto"
         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }}

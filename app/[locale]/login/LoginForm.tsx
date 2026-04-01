@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Mail, KeyRound, ArrowLeft, Loader2, User, Fingerprint } from 'lucide-react';
+import { Mail, KeyRound, ArrowLeft, Loader2, User, Fingerprint, LogOut } from 'lucide-react';
+import { Link } from '@/i18n-config';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { getRoleForEmail } from '@/lib/roles';
 import type { Provider } from '@supabase/supabase-js';
 
@@ -23,12 +25,20 @@ export default function LoginForm() {
   const [isNewUser, setIsNewUser] = useState(false);
   const [returnTo, setReturnTo] = useState('');
   const [supportsPasskey, setSupportsPasskey] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState<SupabaseUser | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
 
   const supabase = createSupabaseBrowser();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setReturnTo(params.get('returnTo') || '');
+
+    // Check if user is already logged in
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setLoggedInUser(user);
+      setCheckingSession(false);
+    });
 
     // Check if browser supports WebAuthn
     if (typeof window !== 'undefined' && window.PublicKeyCredential) {
@@ -239,7 +249,52 @@ export default function LoginForm() {
     await finishLogin(displayName.trim());
   }
 
+  async function handleLogoutFromLogin() {
+    setLoading(true);
+    await supabase.auth.signOut();
+    setLoggedInUser(null);
+    setLoading(false);
+  }
+
   const allDisabled = loading || !consent;
+
+  // Show logged-in state
+  if (checkingSession) {
+    return (
+      <div className="p-4 md:bg-htg-card md:border md:border-htg-card-border md:rounded-2xl md:p-8 md:shadow-sm flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-htg-fg-muted" />
+      </div>
+    );
+  }
+
+  if (loggedInUser) {
+    return (
+      <div className="p-4 md:bg-htg-card md:border md:border-htg-card-border md:rounded-2xl md:p-8 md:shadow-sm">
+        <h1 className="text-2xl font-serif font-bold text-htg-fg mb-6">{t('login_title')}</h1>
+        <div className="bg-htg-surface rounded-lg p-6 text-center mb-6">
+          <User className="w-10 h-10 text-htg-sage mx-auto mb-3" />
+          <p className="text-sm text-htg-fg-muted mb-1">Zalogowano jako</p>
+          <p className="text-base font-medium text-htg-fg">{loggedInUser.user_metadata?.full_name || loggedInUser.email}</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/konto"
+            className="bg-htg-sage text-white py-3 px-6 rounded-lg font-medium text-base hover:bg-htg-sage-dark transition-colors text-center"
+          >
+            Przejdź do konta
+          </Link>
+          <button
+            onClick={handleLogoutFromLogin}
+            disabled={loading}
+            className="py-3 px-6 rounded-lg font-medium text-base text-red-600 dark:text-red-400 border border-htg-card-border hover:bg-htg-surface transition-colors flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
+            Wyloguj
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:bg-htg-card md:border md:border-htg-card-border md:rounded-2xl md:p-8 md:shadow-sm">

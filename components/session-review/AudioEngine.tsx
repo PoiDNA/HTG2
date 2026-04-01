@@ -91,6 +91,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     const refreshRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const playEventIdRef = useRef<string | null>(null);
     const playStartRef = useRef(0);
+    const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Subscription sets
     const timeListeners = useRef(new Set<(t: number) => void>());
@@ -165,11 +166,38 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
       }
     }, []);
 
+    const clearLoadingGuard = useCallback(() => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    }, []);
+
+    const enterTerminalError = useCallback((
+      status: 'error' | 'unsupported' | 'blocked',
+      message: string,
+      title?: string
+    ) => {
+      clearLoadingGuard();
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+      stopPlayEvent();
+      
+      if (status === 'error') {
+        emitState({ status: 'error', message });
+      } else if (status === 'unsupported') {
+        emitState({ status: 'unsupported', message });
+      } else {
+        emitState({ status: 'blocked', title: title ?? '', message });
+      }
+    }, [clearLoadingGuard, emitState, stopPlayEvent]);
+
     // -----------------------------------------------------------------------
     // Load audio (initial + refresh)
     // -----------------------------------------------------------------------
     const loadAudio = useCallback(async (isRefresh = false) => {
       const deviceId = deviceIdRef.current;
+      clearLoadingGuard();
 
       // Save state for refresh restore
       let snapshot: AudioSnapshot | null = null;
@@ -184,6 +212,11 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         emitState({ status: 'refreshing' });
       } else {
         emitState({ status: 'loading' });
+        loadingTimeoutRef.current = setTimeout(() => {
+          if (stateRef.current.status === 'loading') {
+            enterTerminalError('error', 'Nie udało się załadować nagrania — przekroczono limit czasu.');
+          }
+        }, 15000);
       }
 
       try {
@@ -202,9 +235,9 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
 
         if (!data.allowed) {
           if (data.title) {
-            emitState({ status: 'blocked', title: data.title, message: data.message || '' });
+            enterTerminalError('blocked', data.message || '', data.title);
           } else {
-            emitState({ status: 'error', message: data.message || 'Brak dostępu' });
+            enterTerminalError('error', data.message || 'Brak dostępu');
           }
           return;
         }
@@ -213,13 +246,14 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         if (!audio) return;
 
         // Capability check for unsupported direct files
-        if (data.deliveryType === 'direct' && data.mimeType) {
+        if (data.deliveryType === 'direct') {
+          if (!data.mimeType) {
+            enterTerminalError('unsupported', 'Format nagrania nie jest obsługiwany przez tę przeglądarkę.');
+            return;
+          }
           const canPlay = audio.canPlayType(data.mimeType);
           if (canPlay === '') {
-            emitState({
-              status: 'unsupported',
-              message: 'Format nagrania nie jest obsługiwany przez tę przeglądarkę.',
-            });
+            enterTerminalError('unsupported', 'Format nagrania nie jest obsługiwany przez tę przeglądarkę.');
             return;
           }
         }
@@ -230,6 +264,25 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           hlsRef.current = null;
         }
 
+        const onSourceReady = () => {
+          clearLoadingGuard();
+          tryCreateGraph();
+          emitDuration();
+          if (snapshot) {
+            audio.currentTime = snapshot.currentTime;
+            audio.volume = snapshot.volume;
+            audio.muted = snapshot.muted;
+            emitTime(snapshot.currentTime);
+            if (!snapshot.paused) {
+              audio.play().catch(() => {
+                emitState({ status: 'paused' });
+              });
+              return;
+            }
+          }
+          emitState({ status: 'paused' });
+        };
+
         // Setup source
         if (data.deliveryType === 'hls' && Hls.isSupported()) {
           // HLS.js path (Chrome, Firefox, etc.)
@@ -239,113 +292,42 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           });
           hls.loadSource(data.url);
           hls.attachMedia(audio);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            tryCreateGraph();
-            emitDuration();
-            if (snapshot && !snapshot.paused) {
-              audio.play().catch(() => {});
-            } else {
-              // Source ready — transition to paused so controls show
-              emitState({ status: 'paused' });
-            }
-          });
+          hls.on(Hls.Events.MANIFEST_PARSED, onSourceReady);
           hls.on(Hls.Events.ERROR, (_, errData) => {
             if (errData.fatal) {
-              emitState({ status: 'error', message: 'Błąd odtwarzania strumienia.' });
+              console.warn('[AudioEngine] HLS fatal:', errData.type, errData.details);
+              enterTerminalError('error', 'Błąd odtwarzania strumienia.');
+              return;
+            }
+            if (errData.type === Hls.ErrorTypes.NETWORK_ERROR || process.env.NODE_ENV !== 'production') {
+              console.warn('[AudioEngine] HLS non-fatal:', errData.type, errData.details);
             }
           });
           hlsRef.current = hls;
         } else if (audio.canPlayType('application/vnd.apple.mpegurl') || data.deliveryType === 'direct') {
           // Safari native HLS or direct file
           audio.src = data.url;
-          audio.addEventListener('loadedmetadata', () => {
-            tryCreateGraph();
-            emitDuration();
-            if (snapshot && !snapshot.paused) {
-              audio.play().catch(() => {});
-            } else {
-              emitState({ status: 'paused' });
-            }
-          }, { once: true });
+          audio.addEventListener('loadedmetadata', onSourceReady, { once: true });
+        } else {
+          enterTerminalError('unsupported', 'Twoja przeglądarka nie obsługuje tego formatu nagrania.');
+          return;
         }
-
-        // Restore state after refresh
-        if (snapshot) {
-          const restoreOnce = () => {
-            audio.currentTime = snapshot!.currentTime;
-            audio.volume = snapshot!.volume;
-            audio.muted = snapshot!.muted;
-            emitTime(snapshot!.currentTime);
-            audio.removeEventListener('loadedmetadata', restoreOnce);
-          };
-          audio.addEventListener('loadedmetadata', restoreOnce);
-        }
-
-        // Start play event logging (non-refresh only)
-        if (!isRefresh) {
-          playStartRef.current = Date.now();
-          fetch('/api/video/play-event', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'start',
-              [idFieldName]: playbackId,
-              sessionType: idFieldName === 'recordingId' ? 'booking_recording' : 'vod',
-              deviceId,
-            }),
-          })
-            .then(r => r.json())
-            .then(d => { if (d.eventId) playEventIdRef.current = d.eventId; })
-            .catch(() => {});
-        }
-
-        // Start heartbeat
-        if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-        heartbeatRef.current = setInterval(async () => {
-          try {
-            // 1. Concurrent stream check
-            const hbRes = await fetch('/api/video/heartbeat', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ deviceId }),
-            });
-            const hbData = await hbRes.json().catch(() => ({}));
-            if (!hbData.allowed) {
-              audio.pause();
-              emitState({
-                status: 'blocked',
-                title: hbData.title ?? 'Odtwarzanie na innym urządzeniu',
-                message: hbData.message || 'Odtwarzasz już nagranie na innym urządzeniu.',
-              });
-              return;
-            }
-
-            // 2. Play position heartbeat (fire-and-forget)
-            if (!audio.paused && audio.currentTime > 0) {
-              fetch('/api/video/play-position', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  playEventId: playEventIdRef.current,
-                  [idFieldName]: playbackId,
-                  positionSeconds: Math.floor(audio.currentTime),
-                  totalDurationSeconds: normalizeDuration(audio.duration) ?? undefined,
-                }),
-              }).catch(() => {});
-            }
-          } catch {}
-        }, 30000);
 
         // Schedule token refresh
         if (refreshRef.current) clearTimeout(refreshRef.current);
         const refreshIn = ((data.expiresIn || 900) - 60) * 1000;
         refreshRef.current = setTimeout(() => {
+          loadingTimeoutRef.current = setTimeout(() => {
+            if (stateRef.current.status === 'refreshing') {
+              enterTerminalError('error', 'Nie udało się odświeżyć nagrania.');
+            }
+          }, 15000); // 15s refresh guard
           loadAudio(true);
         }, refreshIn);
       } catch {
-        emitState({ status: 'error', message: 'Nie udało się załadować nagrania.' });
+        enterTerminalError('error', 'Nie udało się załadować nagrania.');
       }
-    }, [playbackId, idFieldName, tokenEndpoint, emitState, emitTime, emitDuration, tryCreateGraph]);
+    }, [playbackId, idFieldName, tokenEndpoint, emitState, emitTime, emitDuration, tryCreateGraph, clearLoadingGuard, enterTerminalError]);
 
     // -----------------------------------------------------------------------
     // Audio event handlers
@@ -366,16 +348,78 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         canSetVolumeRef.current = false;
       }
 
+      const heartbeatFn = async () => {
+        try {
+          const deviceId = deviceIdRef.current;
+          // 1. Concurrent stream check
+          const hbRes = await fetch('/api/video/heartbeat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceId }),
+          });
+          const hbData = await hbRes.json().catch(() => ({}));
+          if (!hbData.allowed) {
+            audio.pause();
+            enterTerminalError('blocked', hbData.message || 'Odtwarzasz już nagranie na innym urządzeniu.', hbData.title ?? 'Odtwarzanie na innym urządzeniu');
+            return;
+          }
+
+          // 2. Play position heartbeat
+          if (!audio.paused && audio.currentTime > 0) {
+            fetch('/api/video/play-position', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                playEventId: playEventIdRef.current,
+                [idFieldName]: playbackId,
+                positionSeconds: Math.floor(audio.currentTime),
+                totalDurationSeconds: normalizeDuration(audio.duration) ?? undefined,
+              }),
+            }).catch(() => {});
+          }
+        } catch {}
+      };
+
       const onPlaying = () => {
-        if (stateRef.current.status === 'refreshing') return; // don't override refreshing
+        clearLoadingGuard();
         emitState({ status: 'playing' });
+
+        // Play-event: otwórz nowy event jeśli nie istnieje
+        if (!playEventIdRef.current) {
+          playStartRef.current = Date.now();
+          fetch('/api/video/play-event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'start',
+              [idFieldName]: playbackId,
+              sessionType: idFieldName === 'recordingId' ? 'booking_recording' : 'vod',
+              deviceId: deviceIdRef.current,
+            }),
+          })
+            .then(r => r.json())
+            .then(d => { if (d.eventId) playEventIdRef.current = d.eventId; })
+            .catch(() => {});
+        }
+
+        // Heartbeat: clear stary, start nowy
+        if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+        heartbeatRef.current = setInterval(heartbeatFn, 30000);
       };
       const onPause = () => {
-        if (stateRef.current.status === 'refreshing') return;
         if (stateRef.current.status === 'blocked') return;
+        if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+        stopPlayEvent(); // Zamknij play-event na pauzie
         emitState({ status: 'paused' });
       };
-      const onEnded = () => emitState({ status: 'ended' });
+      const onEnded = () => {
+        if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+        stopPlayEvent(); // Zamknij play-event na końcu
+        emitState({ status: 'ended' });
+      };
+      const onError = () => {
+        enterTerminalError('error', `Błąd elementu media (kod ${audio.error?.code ?? '?'})`);
+      };
       const onTimeUpdate = () => emitTime(audio.currentTime);
       const onDurationChange = () => emitDuration();
       const onLoadedMetadata = () => emitDuration();
@@ -383,6 +427,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
       audio.addEventListener('playing', onPlaying);
       audio.addEventListener('pause', onPause);
       audio.addEventListener('ended', onEnded);
+      audio.addEventListener('error', onError);
       audio.addEventListener('timeupdate', onTimeUpdate);
       audio.addEventListener('durationchange', onDurationChange);
       audio.addEventListener('loadedmetadata', onLoadedMetadata);
@@ -394,10 +439,12 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         audio.removeEventListener('playing', onPlaying);
         audio.removeEventListener('pause', onPause);
         audio.removeEventListener('ended', onEnded);
+        audio.removeEventListener('error', onError);
         audio.removeEventListener('timeupdate', onTimeUpdate);
         audio.removeEventListener('durationchange', onDurationChange);
         audio.removeEventListener('loadedmetadata', onLoadedMetadata);
 
+        clearLoadingGuard();
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);
         if (refreshRef.current) clearTimeout(refreshRef.current);
         if (hlsRef.current) hlsRef.current.destroy();
@@ -405,7 +452,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         stopPlayEvent();
         stopStream();
       };
-    }, [loadAudio, emitState, emitTime, emitDuration, stopPlayEvent, stopStream]);
+    }, [loadAudio, emitState, emitTime, emitDuration, stopPlayEvent, stopStream, clearLoadingGuard, enterTerminalError, idFieldName, playbackId]);
 
     // -----------------------------------------------------------------------
     // Imperative handle
@@ -477,7 +524,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         crossOrigin="anonymous"
         playsInline
         preload="auto"
-        style={{ display: 'none', width: 0, height: 0 }}
+        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }}
       />
     );
   },

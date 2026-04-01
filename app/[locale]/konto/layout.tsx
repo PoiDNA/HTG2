@@ -10,7 +10,7 @@ import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, BarChart2,
-  MessagesSquare, ClipboardCheck, RefreshCw,
+  MessagesSquare, ClipboardCheck, RefreshCw, Headphones,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -100,6 +100,7 @@ export default async function AccountLayout({
     { href: '/konto/admin/kolejka', label: tPanel('admin_queue'), icon: Users },
     { href: '/konto/admin/sloty', label: tPanel('admin_slots'), icon: Clock },
     { href: '/konto/admin/subskrypcje', label: tPanel('admin_subscriptions'), icon: CreditCard },
+    { href: '/konto/admin/nagrania-klientow', label: 'Nagrania klientów', icon: Headphones },
   ] as const;
 
   // PIASKOWNICA section (admin only — narzędzia i testy)

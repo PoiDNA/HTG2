@@ -85,6 +85,7 @@ export default function UserPanelNav() {
               <DropdownLink href="/konto/admin/kolejka" icon={Users} label={t('admin_queue')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/sloty" icon={Clock} label={t('admin_slots')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/subskrypcje" icon={CreditCard} label={t('admin_subscriptions')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/nagrania-klientow" icon={Headphones} label="Nagrania klientów" onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/aktualizacja" icon={UserCircle} label="Aktualizacja" onClick={() => setOpen(false)} />
             </div>
           ) : (

@@ -198,6 +198,18 @@ async function getUserIdByEmail(
   return _userEmailCache.get(email) ?? null;
 }
 
+// ── Safe date helpers ──────────────────────────────────────────────────────
+
+/** Offset a date by N days, normalised to noon UTC to avoid timezone edge cases. */
+function safeDateStr(date: Date, offsetDays: number): string {
+  const d = new Date(date);
+  d.setUTCHours(12, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+const BOOKING_DATE_RANGE_DAYS = 7;
+
 // ── Booking lookup ─────────────────────────────────────────────────────────
 
 interface BookingMatch {
@@ -208,56 +220,75 @@ interface BookingMatch {
 }
 
 /**
- * Find booking for a user on a specific date.
- * Checks both as main booker and as companion.
- * Returns null if not found or ambiguous.
+ * Find booking for a user within ±7 days of the file date.
  *
- * ASSUMPTION: bookings.user_id = main booker's user_id
- * ASSUMPTION: booking_companions.booking_id + user_id for para partners
- * ASSUMPTION: booking_slots.booking_id + slot_date for session date
+ * HARD RULES:
+ * - Session type must match if parsedSessionType is provided
+ * - >1 candidate → returns 'ambiguous' (caller must set manual_review)
+ * - Exactly 1 candidate → returns BookingMatch
+ * - 0 candidates → returns null
  */
 async function findBookingByUserAndDate(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   date: Date,
   sessionType: string | null,
-): Promise<BookingMatch | null> {
-  const dateStr = date.toISOString().slice(0, 10);
+): Promise<BookingMatch | 'ambiguous' | null> {
+  const rangeBefore = safeDateStr(date, -BOOKING_DATE_RANGE_DAYS);
+  const rangeAfter = safeDateStr(date, BOOKING_DATE_RANGE_DAYS);
 
-  // Check as main booker
-  const q = supabase
+  // Check as main booker — fetch ALL candidates in range
+  let q = supabase
     .from('bookings')
     .select('id, session_type, booking_slots!inner(slot_date)')
     .eq('user_id', userId)
-    .eq('booking_slots.slot_date', dateStr)
-    .limit(2);
+    .gte('booking_slots.slot_date', rangeBefore)
+    .lte('booking_slots.slot_date', rangeAfter)
+    .limit(10);
 
-  const { data: asClient } = sessionType
-    ? await q.eq('session_type', sessionType)
-    : await q;
-
-  if (asClient && asClient.length === 1) {
-    return { id: asClient[0].id, session_type: asClient[0].session_type, role: 'client' };
-  }
-  if (asClient && asClient.length > 1) {
-    // Ambiguous — multiple sessions same day for same user (shouldn't happen)
-    return null;
+  if (sessionType) {
+    q = q.eq('session_type', sessionType);
   }
 
-  // Check as companion (para sessions only)
-  const { data: companionRows } = await supabase
+  const { data: asClient } = await q;
+
+  // Check as companion (para sessions only) — also in range
+  let cq = supabase
     .from('booking_companions')
     .select('booking_id, bookings!inner(id, session_type, booking_slots!inner(slot_date))')
     .eq('user_id', userId)
-    .eq('bookings.booking_slots.slot_date', dateStr)
-    .limit(2);
+    .gte('bookings.booking_slots.slot_date', rangeBefore)
+    .lte('bookings.booking_slots.slot_date', rangeAfter)
+    .limit(10);
 
-  if (companionRows && companionRows.length === 1) {
-    const b = companionRows[0].bookings as { id: string; session_type: string };
-    return { id: b.id, session_type: b.session_type, role: 'companion' };
+  if (sessionType) {
+    cq = cq.eq('bookings.session_type', sessionType);
   }
 
-  return null;
+  const { data: companionRows } = await cq;
+
+  // Merge all candidates
+  const candidates: (BookingMatch & { slotDate: string })[] = [];
+
+  for (const b of asClient ?? []) {
+    const slots = b.booking_slots as Array<{ slot_date: string }>;
+    const slotDate = slots?.[0]?.slot_date ?? '';
+    candidates.push({ id: b.id, session_type: b.session_type, role: 'client', slotDate });
+  }
+
+  for (const cr of companionRows ?? []) {
+    const b = cr.bookings as { id: string; session_type: string; booking_slots: Array<{ slot_date: string }> };
+    const slotDate = b.booking_slots?.[0]?.slot_date ?? '';
+    // Avoid duplicates (same booking found as both client and companion)
+    if (!candidates.some(c => c.id === b.id)) {
+      candidates.push({ id: b.id, session_type: b.session_type, role: 'companion', slotDate });
+    }
+  }
+
+  if (candidates.length === 0) return null;
+  if (candidates.length > 1) return 'ambiguous';
+
+  return { id: candidates[0].id, session_type: candidates[0].session_type, role: candidates[0].role };
 }
 
 /** For para sessions, find the companion's user_id (the other participant). */
@@ -284,14 +315,14 @@ async function findSuggestedBookings(
   parsedDate: Date,
   parsedSessionType: string | null,
 ): Promise<string[]> {
-  const threeDaysBefore = new Date(parsedDate.getTime() - 3 * 86400000).toISOString().slice(0, 10);
-  const threeDaysAfter = new Date(parsedDate.getTime() + 3 * 86400000).toISOString().slice(0, 10);
+  const rangeBefore = safeDateStr(parsedDate, -BOOKING_DATE_RANGE_DAYS);
+  const rangeAfter = safeDateStr(parsedDate, BOOKING_DATE_RANGE_DAYS);
 
   const query = supabase
     .from('bookings')
     .select('id, session_type, booking_slots!inner(slot_date)')
-    .gte('booking_slots.slot_date', threeDaysBefore)
-    .lte('booking_slots.slot_date', threeDaysAfter);
+    .gte('booking_slots.slot_date', rangeBefore)
+    .lte('booking_slots.slot_date', rangeAfter);
 
   const { data: bookings } = parsedSessionType
     ? await query.eq('session_type', parsedSessionType).limit(10)
@@ -446,8 +477,47 @@ async function main() {
               parsedSessionType,
             );
 
+            if (booking === 'ambiguous') {
+              // ── AMBIGUOUS: multiple bookings in ±7d window ───────
+              const manualReason = 'ambiguous_date_multiple_bookings';
+              report.manual_review.push({
+                filename,
+                parsed_date: sessionDate ?? undefined,
+                parsed_name: parsedName || undefined,
+                parsed_session_type: parsedSessionType ?? undefined,
+                reason: manualReason,
+              });
+
+              if (!dryRun) {
+                const suggestedBookings = await findSuggestedBookings(supabase, parsedDate, parsedSessionType);
+                const recId = await insertRecording(supabase, {
+                  bunnyVideoId: video.guid,
+                  libraryId,
+                  filename,
+                  sessionDate,
+                  sessionType: parsedSessionType,
+                  bookingId: null,
+                  confidence: 'manual_review',
+                  parsedName: parsedName || null,
+                  parsedEmail,
+                  durationSeconds: video.length ?? null,
+                  suggestedBookings,
+                  manualReason,
+                });
+                if (recId) {
+                  await supabase.from('booking_recording_audit').insert({
+                    recording_id: recId,
+                    action: 'import_manual_review',
+                    actor_id: SYSTEM_ACTOR,
+                    details: { reason: manualReason, email: parsedEmail, filename },
+                  });
+                }
+              }
+              continue;
+            }
+
             if (booking) {
-              // ── EXACT MATCH ──────────────────────────────────────
+              // ── EXACT MATCH (single booking in window) ───────────
               report.exact_email.push({
                 filename,
                 email: parsedEmail,

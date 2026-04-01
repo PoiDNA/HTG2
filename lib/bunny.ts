@@ -43,7 +43,10 @@ export function signPrivateCdnUrl(storagePath: string, ttlSeconds = 14400): stri
 
   const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
   // Path must start with /
-  const path = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
+  const rawPath = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
+  // URL-encode each path segment (handles spaces, special chars in filenames)
+  // so the token matches what the browser actually sends to CDN
+  const path = rawPath.split('/').map(segment => segment ? encodeURIComponent(segment) : '').join('/');
 
   const hashableBase = tokenKey + path + String(expires);
   const token = crypto

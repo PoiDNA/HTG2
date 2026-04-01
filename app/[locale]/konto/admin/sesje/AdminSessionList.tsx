@@ -82,7 +82,15 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
       setLoadingSuggestions(true);
       try {
         const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(q)}`);
-        setSuggestions(await res.json());
+        const data = await res.json();
+        const results = Array.isArray(data) ? data : [];
+        setSuggestions(results);
+        // Auto-select if exact email match found
+        const exact = results.find((u: UserSuggestion) => u.email.toLowerCase() === q.toLowerCase());
+        if (exact) {
+          setSelectedUser(exact);
+          setSuggestions([]);
+        }
       } catch { setSuggestions([]); }
       finally { setLoadingSuggestions(false); }
     }, 250);
@@ -103,16 +111,39 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedUser) { setError('Wybierz użytkownika z listy podpowiedzi.'); return; }
     if (!slotDate) { setError('Podaj datę sesji.'); return; }
     setError('');
     setSaving(true);
+
+    // Resolve user: use selectedUser or search by typed email
+    let userId = selectedUser?.id;
+    if (!userId && userQuery.includes('@')) {
+      try {
+        const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(userQuery.trim())}`);
+        const data = await res.json();
+        const exact = Array.isArray(data) ? data.find((u: UserSuggestion) => u.email.toLowerCase() === userQuery.toLowerCase().trim()) : null;
+        if (exact) {
+          userId = exact.id;
+          setSelectedUser(exact);
+        } else {
+          setSaving(false);
+          setError('Nie znaleziono użytkownika z tym adresem e-mail.');
+          return;
+        }
+      } catch {
+        setSaving(false);
+        setError('Błąd wyszukiwania użytkownika.');
+        return;
+      }
+    }
+    if (!userId) { setSaving(false); setError('Wpisz e-mail użytkownika.'); return; }
+
     try {
       const res = await fetch('/api/admin/booking/create-manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: selectedUser.id,
+          userId,
           sessionType,
           slotDate,
           startTime,
@@ -212,7 +243,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
               className="flex-1 py-2.5 rounded-lg border border-htg-card-border text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors">
               Anuluj
             </button>
-            <button type="submit" disabled={saving || !selectedUser || !slotDate}
+            <button type="submit" disabled={saving || !userQuery.trim() || !slotDate}
               className="flex-1 py-2.5 rounded-lg bg-htg-indigo text-white text-sm font-medium hover:bg-htg-indigo/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               Utwórz sesję

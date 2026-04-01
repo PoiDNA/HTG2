@@ -2,6 +2,7 @@ import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n-config';
 import { Play, Film } from 'lucide-react';
+import { formatSesjeMonthPl } from '@/lib/booking/constants';
 
 /**
  * VOD subscription library section for /konto dashboard.
@@ -18,7 +19,8 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
     .select(`
       id, type, scope_month, valid_from, valid_until, is_active,
       session:session_templates ( id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id ),
-      product:products ( name, slug )
+      product:products ( name, slug ),
+      monthly_set:monthly_sets ( title )
     `)
     .eq('user_id', userId)
     .eq('is_active', true)
@@ -58,6 +60,13 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
 
             const session = ent.session as Record<string, unknown> | null;
             const product = ent.product as Record<string, unknown> | null;
+            const monthlySet = ent.monthly_set as Record<string, unknown> | null;
+
+            // Entitlement label: monthly_sets.title → formatSesjeMonthPl → product.name → fallback
+            const entLabel = (monthlySet?.title as string)
+              || (ent.scope_month ? formatSesjeMonthPl(ent.scope_month as string) : null)
+              || (product?.name as string)
+              || (ent.type === 'yearly' ? 'Pakiet Roczny' : 'Sesja');
 
             // Yearly entitlement = full catalog access
             if (ent.type === 'yearly') {
@@ -65,7 +74,7 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
                 <div key={ent.id as string} className="md:col-span-2 bg-htg-card border-2 border-htg-sage rounded-xl p-6">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-serif font-semibold text-lg text-htg-fg">
-                      {(product?.name as string) || 'Pakiet Roczny'}
+                      {entLabel}
                     </h3>
                     <span className="text-xs font-medium bg-htg-sage/10 text-htg-sage px-3 py-1 rounded-full">
                       {t('subscription_active')}
@@ -90,7 +99,7 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-htg-fg truncate">
-                      {(session?.title as string) || (product?.name as string) || (ent.scope_month as string) || 'Sesja'}
+                      {(session?.title as string) || entLabel}
                     </h3>
                     <p className="text-sm text-htg-fg-muted">
                       {t('valid_until', { date: validDate })}

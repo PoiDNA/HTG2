@@ -182,7 +182,7 @@ export default async function AdminSubscriptionsPage({
 
   // Group by user
   const entByUser = new Map<string, Entitlement[]>();
-  for (const e of (rawEntitlements ?? []) as Entitlement[]) {
+  for (const e of (rawEntitlements ?? []) as unknown as Entitlement[]) {
     const arr = entByUser.get(e.user_id) ?? [];
     arr.push(e);
     entByUser.set(e.user_id, arr);

@@ -3,7 +3,7 @@ import { locales, Link } from '@/i18n-config';
 import { CreditCard, PlusCircle, CalendarDays, Infinity, Zap } from 'lucide-react';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { PRODUCT_SLUGS } from '@/lib/booking/constants';
+import { PRODUCT_SLUGS, formatSesjeMonthPl } from '@/lib/booking/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +20,7 @@ type Entitlement = {
   is_active: boolean;
   stripe_subscription_id: string | null;
   product: { name: string } | null;
+  monthly_set: { title: string } | null;
 };
 
 type Product = {
@@ -72,7 +73,7 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
   // Fetch entitlements
   const { data: entitlements } = await db
     .from('entitlements')
-    .select('id, type, scope_month, valid_from, valid_until, is_active, stripe_subscription_id, product:products ( name )')
+    .select('id, type, scope_month, valid_from, valid_until, is_active, stripe_subscription_id, product:products ( name ), monthly_set:monthly_sets ( title )')
     .eq('user_id', userId)
     .order('valid_until', { ascending: false });
 
@@ -117,7 +118,12 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
                   <Icon className="w-5 h-5 text-htg-sage" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-htg-fg">{ent.product?.name || typeLabel(ent)}</p>
+                  <p className="font-medium text-htg-fg">
+                    {ent.monthly_set?.title 
+                      || (ent.scope_month ? formatSesjeMonthPl(ent.scope_month) : null) 
+                      || ent.product?.name 
+                      || typeLabel(ent)}
+                  </p>
                   <p className="text-xs text-htg-fg-muted mt-0.5">
                     Ważne do: {formatDate(ent.valid_until, locale)}
                   </p>
@@ -221,7 +227,12 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
                 <div key={ent.id} className="bg-htg-card border border-htg-card-border rounded-xl p-4 flex items-center gap-3 opacity-60">
                   <Icon className="w-4 h-4 text-htg-fg-muted shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-htg-fg">{ent.product?.name || typeLabel(ent)}</p>
+                    <p className="text-sm font-medium text-htg-fg">
+                      {ent.monthly_set?.title 
+                        || (ent.scope_month ? formatSesjeMonthPl(ent.scope_month) : null) 
+                        || ent.product?.name 
+                        || typeLabel(ent)}
+                    </p>
                     <p className="text-xs text-htg-fg-muted">Wygasło: {formatDate(ent.valid_until, locale)}</p>
                   </div>
                   <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">

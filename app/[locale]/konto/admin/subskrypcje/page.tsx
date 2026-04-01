@@ -13,6 +13,8 @@ export function generateStaticParams() {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+import { formatSesjeMonthPl } from '@/lib/booking/constants';
+
 type Profile = {
   id: string;
   email: string | null;
@@ -31,6 +33,9 @@ type Entitlement = {
   is_active: boolean;
   source: string | null;
   created_at: string;
+  monthly_set_id: string | null;
+  stripe_subscription_id: string | null;
+  monthly_set: { title: string } | null;
 };
 
 export type SubscriptionGroup = {
@@ -42,6 +47,7 @@ export type SubscriptionGroup = {
   source: string;
   entitlementIds: string[];
   is_active: boolean;
+  isApproximate?: boolean;
 };
 
 // ─── Group consecutive entitlements into logical subscriptions ───────────────
@@ -54,30 +60,52 @@ function groupEntitlements(entitlements: Entitlement[]): SubscriptionGroup[] {
 
   const groups: SubscriptionGroup[] = [];
 
-  // Yearly: group consecutive 12-month blocks (each "purchase")
-  for (let i = 0; i < yearly.length; ) {
-    const block: Entitlement[] = [yearly[i]];
+  // Yearly: group by stripe_subscription_id or consecutive scope_month + source
+  let i = 0;
+  while (i < yearly.length) {
+    const startEnt = yearly[i];
+    const block: Entitlement[] = [startEnt];
+    let isApproximate = false;
     let j = i + 1;
-    while (j < yearly.length && block.length < 12) {
-      const prev = block[block.length - 1].scope_month!;
-      const curr = yearly[j].scope_month!;
-      // Check if consecutive months
-      const [py, pm] = prev.split('-').map(Number);
-      const [cy, cm] = curr.split('-').map(Number);
-      if (cy * 12 + cm === py * 12 + pm + 1) {
+
+    if (startEnt.stripe_subscription_id) {
+      // Group by stripe_subscription_id
+      while (j < yearly.length && yearly[j].stripe_subscription_id === startEnt.stripe_subscription_id) {
         block.push(yearly[j]);
         j++;
-      } else break;
+      }
+    } else {
+      // Fallback grouping for non-stripe sources
+      isApproximate = true;
+      while (j < yearly.length && block.length < 12) {
+        const prev = block[block.length - 1].scope_month!;
+        const curr = yearly[j].scope_month!;
+        const sameSource = yearly[j].source === startEnt.source;
+        
+        // Check if consecutive months
+        const [py, pm] = prev.split('-').map(Number);
+        const [cy, cm] = curr.split('-').map(Number);
+        const isConsecutive = cy * 12 + cm === py * 12 + pm + 1;
+        
+        if (sameSource && isConsecutive && !yearly[j].stripe_subscription_id) {
+          block.push(yearly[j]);
+          j++;
+        } else {
+          break;
+        }
+      }
     }
+
     groups.push({
       type: 'yearly',
-      label: 'Pakiet Roczny',
+      label: `${formatSesjeMonthPl(block[0].scope_month!)} → ${formatSesjeMonthPl(block[block.length - 1].scope_month!)}`,
       start_month: block[0].scope_month!,
       end_month: block[block.length - 1].scope_month!,
       months: block.map((e) => e.scope_month!),
       source: block[0].source ?? 'manual',
       entitlementIds: block.map((e) => e.id),
       is_active: block.some((e) => e.is_active),
+      isApproximate,
     });
     i = j;
   }
@@ -86,7 +114,7 @@ function groupEntitlements(entitlements: Entitlement[]): SubscriptionGroup[] {
   for (const e of monthly) {
     groups.push({
       type: 'monthly',
-      label: 'Pakiet Miesięczny',
+      label: e.monthly_set?.title || formatSesjeMonthPl(e.scope_month!),
       start_month: e.scope_month!,
       end_month: e.scope_month!,
       months: [e.scope_month!],
@@ -97,11 +125,6 @@ function groupEntitlements(entitlements: Entitlement[]): SubscriptionGroup[] {
   }
 
   return groups.sort((a, b) => b.start_month.localeCompare(a.start_month));
-}
-
-function formatMonth(ym: string) {
-  const [y, m] = ym.split('-');
-  return new Date(Number(y), Number(m) - 1).toLocaleDateString('pl', { month: 'short', year: 'numeric' });
 }
 
 const sourceBadge: Record<string, string> = {
@@ -152,7 +175,7 @@ export default async function AdminSubscriptionsPage({
   const { data: rawEntitlements } = userIds.length
     ? await supabase
         .from('entitlements')
-        .select('id, user_id, type, scope_month, valid_from, valid_until, is_active, source, created_at')
+        .select('id, user_id, type, scope_month, valid_from, valid_until, is_active, source, created_at, monthly_set_id, stripe_subscription_id, monthly_set:monthly_sets(title)')
         .in('user_id', userIds)
         .order('scope_month', { ascending: true })
     : { data: [] };
@@ -288,10 +311,8 @@ export default async function AdminSubscriptionsPage({
                               </span>
                               {/* Range */}
                               <span className="text-htg-fg text-xs">
-                                {g.type === 'yearly'
-                                  ? `${formatMonth(g.start_month)} → ${formatMonth(g.end_month)}`
-                                  : formatMonth(g.start_month)
-                                }
+                                {g.label}
+                                {g.isApproximate && <span className="text-[10px] text-htg-fg-muted ml-1" title="Zgrupowane automatycznie"> (przybliżone)</span>}
                               </span>
                               {/* Source */}
                               <span className={`px-1.5 py-0.5 rounded text-[10px] ${sourceBadge[g.source] ?? sourceBadge.manual}`}>

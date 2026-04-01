@@ -100,3 +100,16 @@ export function slotEndTime(startTime: string, sessionType: SessionType): string
   const endM = totalMin % 60;
   return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 }
+
+// Monthly packages naming helpers
+export const MONTH_NAMES_PL: Record<string, string> = {
+  '01': 'Styczeń', '02': 'Luty', '03': 'Marzec', '04': 'Kwiecień',
+  '05': 'Maj', '06': 'Czerwiec', '07': 'Lipiec', '08': 'Sierpień',
+  '09': 'Wrzesień', '10': 'Październik', '11': 'Listopad', '12': 'Grudzień',
+};
+
+/** "Sesje Maj 2024" — PL-only fallback when monthly_sets.title is unavailable. */
+export function formatSesjeMonthPl(scopeMonth: string): string {
+  const [y, mm] = scopeMonth.split('-');
+  return `Sesje ${MONTH_NAMES_PL[mm] || mm} ${y}`;
+}

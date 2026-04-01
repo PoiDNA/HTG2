@@ -1,7 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { PRODUCT_SLUGS } from '@/lib/booking/constants';
+import { PRODUCT_SLUGS, MONTH_NAMES_PL } from '@/lib/booking/constants';
 import SessionCatalog from './SessionCatalog';
 
 export const dynamic = 'force-dynamic';
@@ -154,12 +154,6 @@ async function getUserPurchased(supabase: Awaited<ReturnType<typeof createSupaba
 // ---------------------------------------------------------------------------
 // Yearly-month generation helper
 // ---------------------------------------------------------------------------
-
-const MONTH_NAMES_PL: Record<string, string> = {
-  '01': 'Styczeń', '02': 'Luty', '03': 'Marzec', '04': 'Kwiecień',
-  '05': 'Maj', '06': 'Czerwiec', '07': 'Lipiec', '08': 'Sierpień',
-  '09': 'Wrzesień', '10': 'Październik', '11': 'Listopad', '12': 'Grudzień',
-};
 
 /** Generate YYYY-MM strings from 2024-05 to current_month + 11 */
 function generateAllYearlyMonths(): string[] {

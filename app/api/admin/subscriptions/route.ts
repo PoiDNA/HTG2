@@ -74,30 +74,60 @@ export async function POST(req: NextRequest) {
   const VALID_UNTIL = '2099-12-31'; // bezterminowe
 
   if (type === 'monthly') {
+    const { data: monthlySet } = await supabase
+      .from('monthly_sets')
+      .select('id')
+      .eq('month_label', startMonth)
+      .maybeSingle();
+
+    if (!monthlySet) {
+      console.warn(`[admin/subscriptions] Brak monthly_set dla miesiąca ${startMonth}`);
+    }
+
     const { error } = await supabase.from('entitlements').insert({
       user_id: userId,
       product_id: product.id,
       type: 'monthly',
       scope_month: startMonth,
+      monthly_set_id: monthlySet?.id ?? null,
       valid_from: `${startMonth}-01`,
       valid_until: VALID_UNTIL,
       is_active: true,
       source: 'manual',
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ ok: true, inserted: 1 });
+    return NextResponse.json({ ok: true, inserted: 1, missingSetMonths: monthlySet ? [] : [startMonth] });
   }
 
   // Yearly — 12 consecutive months
-  const rows = Array.from({ length: 12 }, (_, i) => {
+  const missingSetMonths: string[] = [];
+  
+  // Resolve monthly_sets for the next 12 months
+  const monthsToInsert = Array.from({ length: 12 }, (_, i) => {
     const d = new Date(`${startMonth}-01T00:00:00`);
     d.setMonth(d.getMonth() + i);
-    const scopeMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  const { data: sets } = await supabase
+    .from('monthly_sets')
+    .select('id, month_label')
+    .in('month_label', monthsToInsert);
+    
+  const setMap = new Map((sets || []).map(s => [s.month_label, s.id]));
+
+  const rows = monthsToInsert.map(scopeMonth => {
+    const setId = setMap.get(scopeMonth);
+    if (!setId) {
+      console.warn(`[admin/subscriptions] Brak monthly_set dla miesiąca ${scopeMonth}`);
+      missingSetMonths.push(scopeMonth);
+    }
     return {
       user_id: userId,
       product_id: product.id,
       type: 'yearly',
       scope_month: scopeMonth,
+      monthly_set_id: setId ?? null,
       valid_from: `${scopeMonth}-01`,
       valid_until: VALID_UNTIL,
       is_active: true,
@@ -108,7 +138,7 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase.from('entitlements').insert(rows);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true, inserted: 12 });
+  return NextResponse.json({ ok: true, inserted: 12, missingSetMonths });
 }
 
 export async function DELETE(req: NextRequest) {

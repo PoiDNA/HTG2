@@ -47,7 +47,7 @@ export default async function WatchPage({
     );
   }
 
-  // Check entitlement
+  // Check session entitlement first
   const { data: entitlement } = await supabase
     .from('entitlements')
     .select('id')
@@ -56,24 +56,55 @@ export default async function WatchPage({
     .eq('is_active', true)
     .gt('valid_until', new Date().toISOString())
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  // Also check yearly entitlement (full catalog access)
-  let hasYearlyAccess = false;
+  let hasSetAccess = false;
   if (!entitlement) {
-    const { data: yearly } = await supabase
-      .from('entitlements')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('type', 'yearly')
-      .eq('is_active', true)
-      .gt('valid_until', new Date().toISOString())
-      .limit(1)
-      .single();
-    hasYearlyAccess = !!yearly;
+    // 2. Find the sets this session belongs to
+    const { data: sessionSets } = await supabase
+      .from('set_sessions')
+      .select('set_id, monthly_set:monthly_sets(month_label)')
+      .eq('session_id', sessionId);
+    const setIds = (sessionSets || []).map(ss => ss.set_id);
+
+    if (setIds.length > 0) {
+      // 3. Check for entitlement with monthly_set_id
+      const { data: setEnt } = await supabase
+        .from('entitlements')
+        .select('id')
+        .eq('user_id', userId)
+        .in('type', ['yearly', 'monthly'])
+        .in('monthly_set_id', setIds)
+        .eq('is_active', true)
+        .gt('valid_until', new Date().toISOString())
+        .limit(1)
+        .maybeSingle();
+      hasSetAccess = !!setEnt;
+
+      // 4. Fallback for legacy entitlements without monthly_set_id
+      if (!hasSetAccess) {
+        const setMonths = (sessionSets || [])
+          .map(ss => (ss as any).monthly_set?.month_label)
+          .filter(Boolean);
+        if (setMonths.length > 0) {
+          const { data: legacyEnt } = await supabase
+            .from('entitlements')
+            .select('id')
+            .eq('user_id', userId)
+            .in('type', ['yearly', 'monthly'])
+            .is('monthly_set_id', null)
+            .in('scope_month', setMonths)
+            .eq('is_active', true)
+            .gt('valid_until', new Date().toISOString())
+            .limit(1)
+            .maybeSingle();
+          hasSetAccess = !!legacyEnt;
+        }
+      }
+    }
   }
 
-  const hasAccess = !!entitlement || hasYearlyAccess;
+  const hasAccess = !!entitlement || hasSetAccess;
 
   // Fetch monthly set info if session belongs to one
   const { data: setSession } = await supabase

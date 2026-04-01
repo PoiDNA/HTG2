@@ -43,6 +43,11 @@ export default function AddSubscriptionModal({ userId, userEmail, onAdded }: Add
         setError(data.error ?? 'Błąd serwera');
         return;
       }
+      
+      if (data.missingSetMonths && data.missingSetMonths.length > 0) {
+        alert(`Dodano subskrypcję, ale brakuje zestawów w bazie (monthly_sets) dla: ${data.missingSetMonths.join(', ')}. Pamiętaj by je utworzyć.`);
+      }
+
       setOpen(false);
       onAdded();
     } catch {

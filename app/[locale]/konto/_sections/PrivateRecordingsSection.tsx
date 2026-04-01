@@ -89,15 +89,15 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
                       {item.title as string ?? `Sesja — ${item.session_date}`}
                     </h3>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-htg-fg-muted">
-                      {item.session_date && (
+                      {item.session_date ? (
                         <span>{new Date(item.session_date as string).toLocaleDateString('pl-PL')}</span>
-                      )}
-                      {item.duration_seconds && (
+                      ) : null}
+                      {item.duration_seconds ? (
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {Math.floor((item.duration_seconds as number) / 60)} min
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 

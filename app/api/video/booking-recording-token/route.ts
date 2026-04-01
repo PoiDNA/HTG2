@@ -7,9 +7,14 @@ import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 
 /**
  * POST /api/video/booking-recording-token
- * Returns a signed HLS URL for a booking recording.
+ * Returns a signed playback URL for a booking recording.
  * Checks: auth, blocked, access, para-revoke, status, hybrid retention, concurrent streams.
  * Supports admin impersonation via IMPERSONATE_USER_COOKIE.
+ *
+ * Response includes:
+ *   - mediaKind: 'audio' | 'video' — type of medium
+ *   - deliveryType: 'hls' | 'direct' — transport mechanism
+ *   - mimeType: string | null — MIME type for direct files (null for HLS)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -137,15 +142,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. Check video availability — supports both Bunny Stream and Storage
+    // 7. Check recording availability — supports both Bunny Stream (HLS) and Storage (direct file)
     const hasStreamVideo = recording.bunny_video_id && recording.bunny_library_id;
-    const hasStorageFile = recording.source_url; // CDN path like "htg-sessions-arch-03-2026/file.m4v"
+    const hasStorageFile = recording.source_url;
 
     if (!hasStreamVideo && !hasStorageFile) {
       return NextResponse.json({
         allowed: false,
         title: 'Nagranie niedostępne',
-        message: 'Plik wideo nie jest jeszcze gotowy lub został przeniesiony do archiwum offline.',
+        message: 'Nagranie nie jest jeszcze gotowe lub zostało przeniesione do archiwum offline.',
         supportContact: 'htg@htg.cyou',
       });
     }
@@ -185,19 +190,39 @@ export async function POST(request: NextRequest) {
 
     // 10. Sign URL — Bunny Stream (HLS) or Private CDN (direct file)
     let url: string;
-    let type: 'hls' | 'direct';
+    let deliveryType: 'hls' | 'direct';
     if (hasStreamVideo) {
       url = signBunnyUrl(recording.bunny_video_id!, recording.bunny_library_id!, tokenTtl);
-      type = 'hls';
+      deliveryType = 'hls';
     } else {
       url = signPrivateCdnUrl(recording.source_url!, tokenTtl);
-      type = 'direct';
+      deliveryType = 'direct';
+    }
+
+    // Guess MIME type from source_url extension for direct files
+    let mimeType: string | null = null;
+    if (deliveryType === 'direct' && recording.source_url) {
+      const ext = recording.source_url.split('.').pop()?.toLowerCase();
+      const mimeMap: Record<string, string> = {
+        'm4a': 'audio/mp4',
+        'mp3': 'audio/mpeg',
+        'ogg': 'audio/ogg',
+        'wav': 'audio/wav',
+        'aac': 'audio/aac',
+        'webm': 'audio/webm',
+        'mp4': 'video/mp4',
+        'm4v': 'video/mp4',
+        'mov': 'video/quicktime',
+      };
+      mimeType = (ext && mimeMap[ext]) ?? null;
     }
 
     return NextResponse.json({
       allowed: true,
       url,
-      type,
+      mediaKind: 'audio' as const,  // V1: booking recordings are audio — domain rule
+      deliveryType,
+      mimeType,
       expiresIn: tokenTtl,
     });
   } catch (error: unknown) {

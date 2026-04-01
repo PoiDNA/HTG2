@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { Loader2, Play, X } from 'lucide-react';
 import { ReactNode } from 'react';
 
-const VideoPlayer = dynamic(() => import('@/components/video/VideoPlayer'), {
+const SessionReviewPlayer = dynamic(() => import('@/components/session-review/SessionReviewPlayer'), {
   ssr: false,
   loading: () => (
     <div className="w-full aspect-video bg-black rounded-xl flex items-center justify-center">
@@ -62,10 +62,9 @@ export default function InlineRecordingPlayer({
 
       {isExpanded && (
         <div className="col-span-1 md:col-span-2 w-full mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-          <VideoPlayer
+          <SessionReviewPlayer
             playbackId={recordingId}
             idFieldName="recordingId"
-            sessionType="booking_recording"
             userEmail={userEmail}
             userId={userId}
             tokenEndpoint="/api/video/booking-recording-token"

@@ -3,7 +3,7 @@ import { locales, Link } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { redirect } from 'next/navigation';
 import { ArrowLeft, Lock } from 'lucide-react';
-import VideoPlayer from '@/components/video/VideoPlayer';
+import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -25,6 +25,11 @@ export default async function WatchPage({
   const t = await getTranslations({ locale, namespace: 'Account' });
 
   const { userId, supabase } = await getEffectiveUser();
+
+  // Fetch user email for watermark
+  const db = (await import('@/lib/supabase/service')).createSupabaseServiceRole();
+  const { data: authUser } = await db.auth.admin.getUserById(userId);
+  const userEmail = authUser?.user?.email ?? '';
 
   // Fetch session template
   const { data: session } = await supabase
@@ -144,11 +149,12 @@ export default async function WatchPage({
       </div>
 
       {hasAccess ? (
-        <VideoPlayer
+        <SessionReviewPlayer
           playbackId={session.id}
           idFieldName="sessionId"
-          userEmail={''}
+          userEmail={userEmail}
           userId={userId}
+          tokenEndpoint="/api/video/token"
         />
       ) : (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-8 text-center">

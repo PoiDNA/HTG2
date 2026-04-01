@@ -2,10 +2,9 @@ import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
-import { Headphones, Clock } from 'lucide-react';
+import { Headphones } from 'lucide-react';
 import { Link } from '@/i18n-config';
-import RevokeButton from '../nagrania-sesji/RevokeButton';
-import RecordingDateEditor from '../nagrania-sesji/RecordingDateEditor';
+import DashboardRecordingList, { DashboardRecordingItem } from './DashboardRecordingList';
 
 /**
  * Private session recordings section for /konto dashboard.
@@ -16,19 +15,24 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
   const { userId } = await getEffectiveUser();
   const db = createSupabaseServiceRole();
 
-  const { data: recordings } = await db
-    .from('booking_recording_access')
-    .select(`
-      granted_at,
-      recording:booking_recordings(
-        id, title, session_type, session_date, status, duration_seconds,
-        expires_at, legal_hold, booking_id, recording_started_at
-      )
-    `)
-    .eq('user_id', userId)
-    .is('revoked_at', null)
-    .order('granted_at', { ascending: false })
-    .limit(6); // fetch 6 to know if "show all" is needed
+  const [{ data: authUser }, { data: recordings }] = await Promise.all([
+    db.auth.admin.getUserById(userId),
+    db
+      .from('booking_recording_access')
+      .select(`
+        granted_at,
+        recording:booking_recordings(
+          id, title, session_type, session_date, status, duration_seconds,
+          expires_at, legal_hold, booking_id, recording_started_at
+        )
+      `)
+      .eq('user_id', userId)
+      .is('revoked_at', null)
+      .order('granted_at', { ascending: false })
+      .limit(6)
+  ]);
+
+  const userEmail = authUser?.user?.email ?? '';
 
   const items = (recordings ?? [])
     .map((r) => {
@@ -40,6 +44,33 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
 
   const hasMore = items.length > 5;
   const displayItems = items.slice(0, 5);
+
+  const formattedItems: DashboardRecordingItem[] = displayItems.map((item) => {
+    const sessionType = item.session_type as SessionType;
+    const config = SESSION_CONFIG[sessionType];
+    const isPara = sessionType === 'natalia_para';
+    const isReady = item.status === 'ready';
+    const isLegalHold = item.legal_hold === true;
+
+    // Build a readable title: prefer config label, fallback to cleaned-up DB title
+    const rawTitle = item.title as string | null;
+    const displayTitle = config?.label
+      ?? (rawTitle && !rawTitle.startsWith('Import') ? rawTitle : null)
+      ?? 'Sesja indywidualna';
+
+    return {
+      id: item.id as string,
+      title: displayTitle,
+      configColor: config?.color ?? 'bg-gray-500',
+      configLabel: config?.labelShort ?? 'Sesja',
+      isPara,
+      isReady,
+      isLegalHold,
+      sessionDate: (item.session_date as string) || null,
+      durationLabel: item.duration_seconds ? `${Math.floor((item.duration_seconds as number) / 60)} min` : null,
+      showRevoke: isReady && !isLegalHold,
+    };
+  });
 
   return (
     <section className="mb-10">
@@ -67,66 +98,7 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
         </div>
       ) : (
         <div className="space-y-3">
-          {displayItems.map((item) => {
-            const sessionType = item.session_type as SessionType;
-            const config = SESSION_CONFIG[sessionType];
-            const isPara = sessionType === 'natalia_para';
-            const isReady = item.status === 'ready';
-            const isLegalHold = item.legal_hold === true;
-
-            return (
-              <div key={item.id as string} className="bg-htg-card border border-htg-card-border rounded-xl p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs text-white ${config?.color ?? 'bg-gray-500'}`}>
-                        {config?.labelShort ?? sessionType}
-                      </span>
-                      {isPara && (
-                        <span className="text-xs text-htg-fg-muted">z partnerem/ką</span>
-                      )}
-                    </div>
-                    <h3 className="font-medium text-htg-fg text-sm truncate">
-                      {config?.label ?? sessionType}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-htg-fg-muted">
-                      {item.session_date ? (
-                        <RecordingDateEditor
-                          recordingId={item.id as string}
-                          initialDate={item.session_date as string}
-                        />
-                      ) : null}
-                      {item.duration_seconds ? (
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {Math.floor((item.duration_seconds as number) / 60)} min
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {isReady ? (
-                      <Link
-                        href={`/konto/nagrania-sesji/${item.id}`}
-                        className="bg-htg-sage text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-htg-sage/90 transition-colors"
-                      >
-                        Odsłuchaj
-                      </Link>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-htg-fg-muted text-xs">
-                        <div className="w-3 h-3 border-2 border-htg-fg-muted/30 border-t-htg-sage rounded-full animate-spin" />
-                        <span>Przetwarzane...</span>
-                      </div>
-                    )}
-                    {isReady && !isLegalHold && (
-                      <RevokeButton recordingId={item.id as string} isPara={isPara} />
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          <DashboardRecordingList items={formattedItems} userEmail={userEmail} userId={userId} />
 
           {hasMore && (
             <Link

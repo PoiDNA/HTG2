@@ -81,7 +81,7 @@ function normalizeDuration(d: number): number | null {
 
 export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
   function AudioEngine({ playbackId, idFieldName, tokenEndpoint, onStateChange }, ref) {
-    const audioRef = useRef<HTMLAudioElement>(null);
+    const audioRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const graphRef = useRef<PlaybackAudioGraph | null>(null);
     const graphCreatedRef = useRef(false);
@@ -469,12 +469,12 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     // Render hidden audio element
     // -----------------------------------------------------------------------
     return (
-      <audio
+      <video
         ref={audioRef}
         crossOrigin="anonymous"
         playsInline
         preload="auto"
-        style={{ display: 'none' }}
+        style={{ display: 'none', width: 0, height: 0 }}
       />
     );
   },

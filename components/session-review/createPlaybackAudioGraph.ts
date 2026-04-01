@@ -19,11 +19,12 @@ export interface PlaybackAudioGraph {
  * Best-effort audio graph creation.
  * Returns null if the graph cannot be created — playback must continue regardless.
  *
- * @param audioEl - The hidden <audio> element. Must have crossOrigin="anonymous".
- *                  Deliberately typed as HTMLAudioElement (audio-first V1 scope).
+ * @param mediaEl - The hidden media element. Must have crossOrigin="anonymous".
+ *                  Accepts HTMLMediaElement to support both <audio> and <video> elements
+ *                  (hidden <video> is used for HLS compatibility with video-container streams).
  */
 export function createPlaybackAudioGraph(
-  audioEl: HTMLAudioElement,
+  mediaEl: HTMLMediaElement,
 ): PlaybackAudioGraph | null {
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -31,8 +32,8 @@ export function createPlaybackAudioGraph(
 
     const ctx = new AudioCtx();
 
-    // Create source from audio element
-    const source = ctx.createMediaElementSource(audioEl);
+    // Create source from media element
+    const source = ctx.createMediaElementSource(mediaEl);
 
     // Gain node (transparent — 1:1, no degradation)
     const gain = ctx.createGain();

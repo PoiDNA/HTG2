@@ -96,14 +96,14 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
                       {t('valid_until', { date: validDate })}
                     </p>
                   </div>
-                  {session?.bunny_video_id && (
+                  {session?.bunny_video_id ? (
                     <Link
                       href={`/konto/watch/${session.id}` as string}
                       className="shrink-0 bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
                     >
                       {t('watch') || 'Odsłuchaj'}
                     </Link>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );

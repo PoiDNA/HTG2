@@ -79,7 +79,7 @@ export default async function AdminRecordingsPage({
   // Map participants per recording
   type RecordingRow = NonNullable<typeof allData>[number];
   const rows = (allData ?? []).map((rec: RecordingRow) => {
-    const accessRows = (rec.booking_recording_access ?? []) as Array<{
+    const accessRows = (rec.booking_recording_access ?? []) as unknown as Array<{
       user_id: string;
       revoked_at: string | null;
       profiles: { display_name: string | null; email: string | null } | null;

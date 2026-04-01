@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Play, ChevronDown, Clock } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
-import VideoPlayer from '@/components/video/VideoPlayer';
+import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
 
 type Props = {
   sections: MonthSection[];
@@ -215,11 +215,12 @@ function SessionCard({
       
       {isPlaying && (
         <div ref={playerRef} className="border-t border-htg-card-border bg-black">
-          <VideoPlayer
+          <SessionReviewPlayer
             playbackId={session.id}
             idFieldName="sessionId"
             userId={userId}
             userEmail={userEmail}
+            tokenEndpoint="/api/video/token"
           />
         </div>
       )}

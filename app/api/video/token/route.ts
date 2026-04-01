@@ -168,6 +168,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       allowed: true,
       url,
+      type: deliveryType,           // backward compat for old VideoPlayer
       mediaKind: 'audio' as const,  // VOD sessions are audio-first
       deliveryType,
       mimeType,

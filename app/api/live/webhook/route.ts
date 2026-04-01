@@ -172,10 +172,10 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (recSession?.booking_id) {
-        const sessionType = (recSession.booking as Record<string, unknown>)?.session_type as string | undefined;
+        const sessionType = (recSession.booking as unknown as Record<string, unknown>)?.session_type as string | undefined;
 
         if (sessionType && RECORDING_TYPES.includes(sessionType)) {
-          const slotDate = (recSession.slot as Record<string, unknown>)?.slot_date as string | undefined;
+          const slotDate = (recSession.slot as unknown as Record<string, unknown>)?.slot_date as string | undefined;
           const fileUrl = egress.fileResults?.[0]?.location ?? null;
           const sourceKey = fileUrl ? extractR2ObjectKey(fileUrl) : null;
           const retentionDays = 365; // TODO: read from site_settings

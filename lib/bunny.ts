@@ -43,11 +43,10 @@ export function signPrivateCdnUrl(storagePath: string, ttlSeconds = 14400): stri
 
   const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
   // Path must start with /
-  const rawPath = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
-  // URL-encode each path segment (handles spaces, special chars in filenames)
-  // so the token matches what the browser actually sends to CDN
-  const path = rawPath.split('/').map(segment => segment ? encodeURIComponent(segment) : '').join('/');
+  const path = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;
 
+  // Bunny CDN validates token against the RAW (unencoded) path.
+  // Do NOT URL-encode the path before hashing — CDN decodes %20 back to spaces internally.
   const hashableBase = tokenKey + path + String(expires);
   const token = crypto
     .createHash('sha256')
@@ -57,5 +56,7 @@ export function signPrivateCdnUrl(storagePath: string, ttlSeconds = 14400): stri
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 
-  return `${cdnBase}${path}?token=${token}&expires=${expires}`;
+  // encodeURI preserves path separators but encodes spaces → %20
+  // Bunny CDN internally decodes %20 back to spaces for file lookup
+  return `${cdnBase}${encodeURI(path)}?token=${token}&expires=${expires}`;
 }

@@ -61,7 +61,7 @@ export default async function AdminRecordingsPage({
     .select(`
       id, title, session_type, session_date, status, duration_seconds,
       source, import_confidence, legal_hold,
-      booking_recording_access(user_id, revoked_at, profiles(display_name, email))
+      booking_recording_access(user_id, revoked_at)
     `, { count: 'exact' })
     .order('session_date', { ascending: false, nullsFirst: false });
 
@@ -72,9 +72,27 @@ export default async function AdminRecordingsPage({
     query = query.eq('status', statusFilter);
   }
 
-  // Search by display_name (if query is provided, fetch all and filter in JS for simplicity)
-  // For production at scale, this should use a full-text search index
   const { data: allData, count: totalCount } = await query.range(offset, offset + PAGE_SIZE - 1);
+
+  // Collect all user_ids from access rows, then fetch profiles in one query
+  const allUserIds = new Set<string>();
+  for (const rec of allData ?? []) {
+    const accessRows = (rec.booking_recording_access ?? []) as unknown as Array<{ user_id: string }>;
+    for (const a of accessRows) {
+      if (a.user_id) allUserIds.add(a.user_id);
+    }
+  }
+
+  const profileMap = new Map<string, { display_name: string | null; email: string | null }>();
+  if (allUserIds.size > 0) {
+    const { data: profiles } = await db
+      .from('profiles')
+      .select('id, display_name, email')
+      .in('id', [...allUserIds]);
+    for (const p of profiles ?? []) {
+      profileMap.set(p.id, { display_name: p.display_name, email: p.email });
+    }
+  }
 
   // Map participants per recording
   type RecordingRow = NonNullable<typeof allData>[number];
@@ -82,14 +100,16 @@ export default async function AdminRecordingsPage({
     const accessRows = (rec.booking_recording_access ?? []) as unknown as Array<{
       user_id: string;
       revoked_at: string | null;
-      profiles: { display_name: string | null; email: string | null } | null;
     }>;
 
-    const participants: Participant[] = accessRows.map((a) => ({
-      display_name: a.profiles?.display_name ?? a.profiles?.email ?? '—',
-      email: a.profiles?.email ?? null,
-      revoked: !!a.revoked_at,
-    }));
+    const participants: Participant[] = accessRows.map((a) => {
+      const profile = profileMap.get(a.user_id);
+      return {
+        display_name: profile?.display_name ?? profile?.email ?? '—',
+        email: profile?.email ?? null,
+        revoked: !!a.revoked_at,
+      };
+    });
 
     return { ...rec, participants };
   });

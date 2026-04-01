@@ -4,6 +4,7 @@ import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 import { Headphones } from 'lucide-react';
 import { Link } from '@/i18n-config';
+import { getFormatter } from 'next-intl/server';
 import DashboardRecordingList, { DashboardRecordingItem } from './DashboardRecordingList';
 
 /**
@@ -45,6 +46,8 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
   const hasMore = items.length > 5;
   const displayItems = items.slice(0, 5);
 
+  const format = await getFormatter({ locale });
+
   const formattedItems: DashboardRecordingItem[] = displayItems.map((item) => {
     const sessionType = item.session_type as SessionType;
     const config = SESSION_CONFIG[sessionType];
@@ -58,6 +61,10 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
       ?? (rawTitle && !rawTitle.startsWith('Import') ? rawTitle : null)
       ?? 'Sesja indywidualna';
 
+    // Extract email from raw title (format: "Import — 2025-12-01 — email@example.com")
+    const emailMatch = rawTitle?.match(/[\w.+-]+@[\w.-]+\.\w+/);
+    const recordingEmail = emailMatch?.[0] ?? null;
+
     return {
       id: item.id as string,
       title: displayTitle,
@@ -66,9 +73,10 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
       isPara,
       isReady,
       isLegalHold,
-      sessionDate: (item.session_date as string) || null,
+      dateLabel: item.session_date ? format.dateTime(new Date(item.session_date as string), { dateStyle: 'medium' }) : '',
       durationLabel: item.duration_seconds ? `${Math.floor((item.duration_seconds as number) / 60)} min` : null,
       showRevoke: isReady && !isLegalHold,
+      recordingEmail,
     };
   });
 

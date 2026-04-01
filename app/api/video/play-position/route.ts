@@ -13,7 +13,9 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await sessionClient.auth.getUser();
     if (!user) return NextResponse.json({ ok: true }); // silently ignore for unauth
 
-    const { playEventId, sessionId, positionSeconds, totalDurationSeconds } = await request.json();
+    const body = await request.json();
+    const sessionId = body.sessionId ?? body.recordingId;
+    const { playEventId, positionSeconds, totalDurationSeconds } = body;
     if (!sessionId || positionSeconds == null) return NextResponse.json({ ok: true });
 
     const db = createSupabaseServiceRole();

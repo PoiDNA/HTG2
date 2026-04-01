@@ -119,6 +119,12 @@
     "buy": "Kup teraz",
     "subscribe": "Subskrybuj"
   },
+  "PrivateRecordings": {
+    "listen": "Odsłuchaj",
+    "close": "Zamknij",
+    "sharing_prohibited": "Udostępnianie nagrania osobom trzecim jest zabronione.",
+    "processing": "Przetwarzane..."
+  },
   "Recordings": {
     "title": "Nagrania publiczne",
     "subtitle": "Bezpłatne materiały na YouTube — poznaj naszą pracę."
@@ -172,6 +178,8 @@
     "concurrent_message": "Twoje konto odtwarza już materiał na innym urządzeniu. Zatrzymaj odtwarzanie tam, aby rozpocząć tutaj.",
     "retry": "Spróbuj ponownie",
     "loading": "Ładowanie...",
+    "load_error_title": "Nie udało się załadować",
+    "load_error": "Nie udało się załadować nagrania. Spróbuj ponownie.",
     "error": "Nie udało się załadować nagrania."
   },
   "Individual": {

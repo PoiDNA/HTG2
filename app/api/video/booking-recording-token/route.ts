@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     if (profile?.is_blocked) {
       return NextResponse.json({
         allowed: false,
+        title: 'Konto zablokowane',
         message: 'Dostęp do materiałów został zawieszony. Skontaktuj się z supportem.',
       });
     }
@@ -47,7 +48,11 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (!access || access.revoked_at) {
-      return NextResponse.json({ error: 'Brak dostępu do nagrania' }, { status: 403 });
+      return NextResponse.json({
+        allowed: false,
+        title: 'Brak dostępu',
+        message: 'Nie masz dostępu do tego nagrania.',
+      });
     }
 
     // 3. Recording details
@@ -58,7 +63,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!recording) {
-      return NextResponse.json({ error: 'Nagranie nie znalezione' }, { status: 404 });
+      return NextResponse.json({
+        allowed: false,
+        title: 'Nagranie niedostępne',
+        message: 'Nagranie nie zostało odnalezione w systemie.',
+      });
     }
 
     // 4. Para: ANY revoked → block ALL parties
@@ -74,7 +83,9 @@ export async function POST(request: NextRequest) {
       if (anyRevoked) {
         return NextResponse.json({
           allowed: false,
+          title: 'Nagranie niedostępne',
           message: 'Dostęp do nagrania został wstrzymany. Nasz zespół skontaktuje się w ciągu 48h.',
+          supportContact: 'htg@htg.cyou',
         });
       }
     }
@@ -83,6 +94,7 @@ export async function POST(request: NextRequest) {
     if (recording.status !== 'ready') {
       return NextResponse.json({
         allowed: false,
+        title: recording.status === 'expired' ? 'Nagranie wygasło' : 'Nagranie w przygotowaniu',
         message: recording.status === 'expired'
           ? 'Nagranie wygasło'
           : 'Nagranie jest w trakcie przygotowania. Spróbuj ponownie za kilka minut.',
@@ -95,7 +107,7 @@ export async function POST(request: NextRequest) {
 
       // Check snapshot expires_at
       if (recording.expires_at && new Date(recording.expires_at) < now) {
-        return NextResponse.json({ allowed: false, message: 'Nagranie wygasło' });
+        return NextResponse.json({ allowed: false, title: 'Nagranie wygasło', message: 'Nagranie wygasło' });
       }
 
       // Check global policy (may be stricter than snapshot)
@@ -110,7 +122,7 @@ export async function POST(request: NextRequest) {
         const globalExpiry = new Date(new Date(recording.session_date).getTime() + globalDays * 86400000);
 
         if (globalExpiry < now) {
-          return NextResponse.json({ allowed: false, message: 'Nagranie wygasło' });
+          return NextResponse.json({ allowed: false, title: 'Nagranie wygasło', message: 'Nagranie wygasło' });
         }
       }
     }
@@ -120,7 +132,12 @@ export async function POST(request: NextRequest) {
     const hasStorageFile = recording.source_url; // CDN path like "htg-sessions-arch-03-2026/file.m4v"
 
     if (!hasStreamVideo && !hasStorageFile) {
-      return NextResponse.json({ error: 'Video not available' }, { status: 404 });
+      return NextResponse.json({
+        allowed: false,
+        title: 'Nagranie niedostępne',
+        message: 'Plik wideo nie jest jeszcze gotowy lub został przeniesiony do archiwum offline.',
+        supportContact: 'htg@htg.cyou',
+      });
     }
 
     // 8. Concurrent streams — separate limit for booking recordings
@@ -136,6 +153,7 @@ export async function POST(request: NextRequest) {
     if (otherDeviceActive) {
       return NextResponse.json({
         allowed: false,
+        title: 'Odtwarzanie na innym urządzeniu',
         message: 'Odtwarzasz już nagranie na innym urządzeniu.',
       });
     }

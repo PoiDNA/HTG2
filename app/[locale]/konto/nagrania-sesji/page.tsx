@@ -1,4 +1,4 @@
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getFormatter } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
@@ -58,6 +58,8 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
     return dateB.localeCompare(dateA);
   });
 
+  const format = await getFormatter({ locale });
+
   const formattedGroups: RecordingGroup[] = sortedGroups.map(([bookingId, recs]) => {
     const main = recs.reduce((longest, r) =>
       ((r.duration_seconds as number) ?? 0) > ((longest.duration_seconds as number) ?? 0) ? r : longest
@@ -71,7 +73,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
     const expiresAt = main.expires_at as string | null;
 
     const recordingStartedLabel = main.recording_started_at && main.session_date && isReady
-      ? `Nagranie od ${new Date(main.recording_started_at as string).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`
+      ? `Nagranie od ${format.dateTime(new Date(main.recording_started_at as string), { hour: '2-digit', minute: '2-digit' })}`
       : null;
 
     const legalHoldMessage = isLegalHold && isReady
@@ -92,9 +94,9 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       isPara,
       isReady,
       isLegalHold,
-      sessionDate: (main.session_date as string) || null,
+      dateLabel: main.session_date ? format.dateTime(new Date(main.session_date as string), { dateStyle: 'medium' }) : '',
       durationLabel: main.duration_seconds ? `${Math.floor((main.duration_seconds as number) / 60)} min` : null,
-      expiresLabel: expiresAt && isReady && !isLegalHold ? `Dostępne do ${new Date(expiresAt).toLocaleDateString('pl-PL')}` : null,
+      expiresLabel: expiresAt && isReady && !isLegalHold ? `Dostępne do ${format.dateTime(new Date(expiresAt), { dateStyle: 'medium' })}` : null,
       recordingStartedLabel,
       legalHoldMessage,
       parts: recs.map(r => ({

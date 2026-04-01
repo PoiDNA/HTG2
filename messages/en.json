@@ -119,6 +119,12 @@
     "buy": "Buy now",
     "subscribe": "Subscribe"
   },
+  "PrivateRecordings": {
+    "listen": "Listen",
+    "close": "Close",
+    "sharing_prohibited": "Sharing this recording with third parties is prohibited.",
+    "processing": "Processing..."
+  },
   "Recordings": {
     "title": "Public recordings",
     "subtitle": "Free materials on YouTube — get to know our work."
@@ -172,6 +178,8 @@
     "concurrent_message": "Your account is already playing content on another device. Stop playback there to start here.",
     "retry": "Try again",
     "loading": "Loading...",
+    "load_error_title": "Failed to load",
+    "load_error": "Failed to load the recording. Please try again.",
     "error": "Failed to load recording."
   },
   "Individual": {

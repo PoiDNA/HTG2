@@ -7,10 +7,12 @@ import WatermarkOverlay from './WatermarkOverlay';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface VideoPlayerProps {
-  sessionId: string;
+  playbackId: string;
+  idFieldName: 'sessionId' | 'recordingId';
   userEmail: string;
   userId: string;
   tokenEndpoint?: string;
+  sessionType?: string;
 }
 
 function getDeviceId(): string {
@@ -112,7 +114,7 @@ function setupAudioProtection(video: HTMLVideoElement): (() => void) | null {
   }
 }
 
-export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoint }: VideoPlayerProps) {
+export default function VideoPlayer({ playbackId, idFieldName, userEmail, userId, tokenEndpoint, sessionType = 'vod' }: VideoPlayerProps) {
   const t = useTranslations('Player');
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -124,7 +126,9 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
   const playStartRef = useRef<number>(0);
 
   const [status, setStatus] = useState<'loading' | 'playing' | 'blocked' | 'error'>('loading');
+  const [blockTitle, setBlockTitle] = useState('');
   const [blockMessage, setBlockMessage] = useState('');
+  const [supportContact, setSupportContact] = useState('');
 
   const deviceId = typeof window !== 'undefined' ? getDeviceId() : '';
 
@@ -139,10 +143,10 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
       await fetch('/api/video/play-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'stop', sessionId, eventId, durationSeconds: duration }),
+        body: JSON.stringify({ action: 'stop', [idFieldName]: playbackId, eventId, durationSeconds: duration }),
       });
     } catch {}
-  }, [sessionId]);
+  }, [playbackId, idFieldName]);
 
   const stopStream = useCallback(async () => {
     if (!deviceId) return;
@@ -158,19 +162,31 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
 
   const loadVideo = useCallback(async () => {
     setStatus('loading');
+    setBlockTitle('');
+    setBlockMessage('');
+    setSupportContact('');
 
     try {
       const res = await fetch(tokenEndpoint ?? '/api/video/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, deviceId }),
+        body: JSON.stringify({ [idFieldName]: playbackId, deviceId }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setStatus('error');
+        return;
+      }
 
       if (!data.allowed) {
         setStatus('blocked');
+        setBlockTitle(data.title ?? t('concurrent_title'));
         setBlockMessage(data.message || t('concurrent_message'));
+        if (data.supportContact) {
+          setSupportContact(data.supportContact);
+        }
         return;
       }
 
@@ -222,7 +238,7 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
       fetch('/api/video/play-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start', sessionId, sessionType: 'vod', deviceId }),
+        body: JSON.stringify({ action: 'start', [idFieldName]: playbackId, sessionType, deviceId }),
       })
         .then((r) => r.json())
         .then((d) => { if (d.eventId) playEventIdRef.current = d.eventId; })
@@ -238,11 +254,15 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ deviceId }),
           });
-          const hbData = await hbRes.json();
+          const hbData = await hbRes.json().catch(() => ({}));
           if (!hbData.allowed) {
             video.pause();
             setStatus('blocked');
-            setBlockMessage(t('concurrent_message'));
+            setBlockTitle(hbData.title ?? t('concurrent_title'));
+            setBlockMessage(hbData.message || t('concurrent_message'));
+            if (hbData.supportContact) {
+              setSupportContact(hbData.supportContact);
+            }
             return;
           }
 
@@ -254,7 +274,7 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 playEventId: playEventIdRef.current,
-                sessionId,
+                [idFieldName]: playbackId,
                 positionSeconds: Math.floor(currentVideo.currentTime),
                 totalDurationSeconds: currentVideo.duration && isFinite(currentVideo.duration)
                   ? Math.floor(currentVideo.duration)
@@ -269,11 +289,11 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
       if (refreshRef.current) clearTimeout(refreshRef.current);
       refreshRef.current = setTimeout(() => {
         loadVideo();
-      }, (data.expiresIn - 60) * 1000);
+      }, ((data.expiresIn || 900) - 60) * 1000);
     } catch {
       setStatus('error');
     }
-  }, [sessionId, deviceId, t]);
+  }, [playbackId, idFieldName, deviceId, tokenEndpoint, t]);
 
   useEffect(() => {
     loadVideo();
@@ -325,11 +345,18 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
       )}
 
       {status === 'blocked' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-20">
           <div className="text-center text-white max-w-md px-6">
             <AlertCircle className="w-12 h-12 text-htg-warm mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t('concurrent_title')}</h3>
-            <p className="text-white/70 text-sm mb-6">{blockMessage}</p>
+            <h3 className="text-lg font-semibold mb-2">{blockTitle}</h3>
+            <p className="text-white/70 text-sm mb-4">{blockMessage}</p>
+            {supportContact && (
+              <p className="mb-6">
+                <a href={supportContact.includes('@') ? `mailto:${supportContact}` : supportContact} className="text-htg-sage hover:underline text-sm">
+                  {supportContact}
+                </a>
+              </p>
+            )}
             <button
               onClick={loadVideo}
               className="bg-htg-sage text-white px-6 py-3 rounded-lg font-medium hover:bg-htg-sage-dark transition-colors flex items-center gap-2 mx-auto"
@@ -342,10 +369,11 @@ export default function VideoPlayer({ sessionId, userEmail, userId, tokenEndpoin
       )}
 
       {status === 'error' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-20">
           <div className="text-center text-white">
             <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-            <p className="text-sm">{t('error')}</p>
+            <h3 className="text-lg font-semibold mb-2">{t('load_error_title') ?? 'Błąd'}</h3>
+            <p className="text-sm max-w-sm px-4">{t('load_error') ?? 'Nie udało się załadować nagrania. Spróbuj ponownie.'}</p>
             <button
               onClick={loadVideo}
               className="mt-4 bg-htg-sage text-white px-4 py-2 rounded-lg text-sm hover:bg-htg-sage-dark transition-colors"

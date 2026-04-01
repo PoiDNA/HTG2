@@ -148,9 +148,10 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const { action, sessionId, sessionType = 'vod', deviceId, eventId, durationSeconds } = body;
+  const sessionId = body.sessionId ?? body.recordingId;
+  const { action, sessionType = 'vod', deviceId, eventId, durationSeconds } = body;
 
-  if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
+  if (!sessionId) return NextResponse.json({ error: 'sessionId or recordingId required' }, { status: 400 });
 
   const db = createSupabaseServiceRole();
 

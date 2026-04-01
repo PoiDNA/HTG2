@@ -114,7 +114,8 @@ export default async function WatchPage({
 
       {hasAccess ? (
         <VideoPlayer
-          sessionId={session.id}
+          playbackId={session.id}
+          idFieldName="sessionId"
           userEmail={''}
           userId={userId}
         />

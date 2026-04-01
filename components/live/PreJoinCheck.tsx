@@ -5,17 +5,23 @@ import { Mic, MicOff, Camera, CameraOff, CheckCircle, XCircle, Volume2 } from 'l
 
 interface PreJoinCheckProps {
   onReady: () => void;
+  bookingId?: string;
+  sessionType?: string;
 }
 
-export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
+export default function PreJoinCheck({ onReady, bookingId, sessionType }: PreJoinCheckProps) {
   const [micOk, setMicOk] = useState<boolean | null>(null);
   const [camOk, setCamOk] = useState<boolean | null>(null);
   const [micLevel, setMicLevel] = useState(0);
   const [testing, setTesting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [consentRecording, setConsentRecording] = useState(false);
+  const [consentSubmitting, setConsentSubmitting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animRef = useRef<number>(0);
+
+  const isPara = sessionType === 'natalia_para';
 
   useEffect(() => {
     return () => {
@@ -204,20 +210,63 @@ export default function PreJoinCheck({ onReady }: PreJoinCheckProps) {
             </div>
           )}
 
+          {/* Recording consent */}
+          {allTested && bookingId && (
+            <div className="bg-white/5 rounded-xl p-4 space-y-3 border border-white/10">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consentRecording}
+                  onChange={(e) => setConsentRecording(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded accent-htg-sage"
+                />
+                <span className="text-white/80 text-xs leading-relaxed">
+                  Wyrażam zgodę na nagranie sesji, abym mógł/mogła wracać do niej
+                  w mojej prywatnej bibliotece (dostęp do 12 miesięcy).
+                  Ze względów bezpieczeństwa zastrzegamy sobie prawo do skrócenia tego czasu.
+                </span>
+              </label>
+              {isPara && (
+                <p className="text-white/40 text-xs pl-7">
+                  Pamiętajcie: nagranie należy do Was obojga. Jeśli jedna osoba wycofa zgodę
+                  lub usunie konto, nagranie zostanie trwale usunięte dla obu stron.
+                  Nagrywanie zacznie się dopiero gdy oboje potwierdzą.
+                </p>
+              )}
+            </div>
+          )}
+
           {allTested && (
             <button
-              onClick={() => {
+              disabled={consentSubmitting}
+              onClick={async () => {
                 cancelAnimationFrame(animRef.current);
                 streamRef.current?.getTracks().forEach(t => t.stop());
+
+                // Submit consent if checked
+                if (consentRecording && bookingId) {
+                  setConsentSubmitting(true);
+                  try {
+                    await fetch('/api/live/consent', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ bookingId }),
+                    });
+                  } catch (e) {
+                    console.warn('Consent submit failed:', e);
+                  }
+                  setConsentSubmitting(false);
+                }
+
                 onReady();
               }}
               className={`w-full py-3 rounded-xl font-medium transition-colors mt-2 ${
                 allOk
                   ? 'bg-htg-sage text-white hover:bg-htg-sage/90'
                   : 'bg-htg-warm/80 text-white hover:bg-htg-warm/70'
-              }`}
+              } disabled:opacity-50`}
             >
-              {allOk ? 'Wszystko gotowe — wchodzę' : 'Kontynuuj mimo to'}
+              {consentSubmitting ? 'Zapisywanie...' : allOk ? 'Wszystko gotowe — wchodzę' : 'Kontynuuj mimo to'}
             </button>
           )}
         </div>

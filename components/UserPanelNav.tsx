@@ -9,6 +9,7 @@ import { useRouter } from '@/i18n-config';
 import {
   ChevronDown,
   Film,
+  Headphones,
   CalendarDays,
   CreditCard,
   FileText,
@@ -84,6 +85,7 @@ export default function UserPanelNav() {
               <DropdownLink href="/konto/admin/kolejka" icon={Users} label={t('admin_queue')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/sloty" icon={Clock} label={t('admin_slots')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/subskrypcje" icon={CreditCard} label={t('admin_subscriptions')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/nagrania-klientow" icon={Headphones} label="Nagrania klientów" onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/aktualizacja" icon={UserCircle} label="Aktualizacja" onClick={() => setOpen(false)} />
             </div>
           ) : (
@@ -91,6 +93,7 @@ export default function UserPanelNav() {
               {/* User section */}
               <div className="py-1">
                 <DropdownLink href="/konto" icon={Film} label="Biblioteka sesji" onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/nagrania-sesji" icon={Headphones} label="Nagrania z sesji" onClick={() => setOpen(false)} />
                 <DropdownLink href="/sesje-indywidualne" icon={CalendarDays} label="Zamów sesję" onClick={() => setOpen(false)} />
                 <DropdownLink href="/spolecznosc" icon={MessagesSquare} label="Społeczność" onClick={() => setOpen(false)} />
                 <DropdownLink href="/nagrania" icon={BookOpen} label="Na początek" onClick={() => setOpen(false)} />

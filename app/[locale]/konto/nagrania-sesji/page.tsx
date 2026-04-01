@@ -7,6 +7,7 @@ import type { SessionType } from '@/lib/booking/types';
 import { Headphones, Clock, Info } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import RevokeButton from './RevokeButton';
+import RecordingDateEditor from './RecordingDateEditor';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -106,11 +107,14 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
                       )}
                     </div>
                     <h3 className="font-medium text-htg-fg truncate">
-                      {main.title as string ?? `Sesja — ${main.session_date}`}
+                      {config?.label ?? sessionType}
                     </h3>
                     <div className="flex items-center gap-3 mt-1 text-sm text-htg-fg-muted">
                       {main.session_date && (
-                        <span>{new Date(main.session_date as string).toLocaleDateString('pl-PL')}</span>
+                        <RecordingDateEditor
+                          recordingId={main.id as string}
+                          initialDate={main.session_date as string}
+                        />
                       )}
                       {main.duration_seconds && (
                         <span className="flex items-center gap-1">

@@ -5,6 +5,7 @@ import type { SessionType } from '@/lib/booking/types';
 import { Headphones, Clock } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import RevokeButton from '../nagrania-sesji/RevokeButton';
+import RecordingDateEditor from '../nagrania-sesji/RecordingDateEditor';
 
 /**
  * Private session recordings section for /konto dashboard.
@@ -86,11 +87,14 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
                       )}
                     </div>
                     <h3 className="font-medium text-htg-fg text-sm truncate">
-                      {item.title as string ?? `Sesja — ${item.session_date}`}
+                      {config?.label ?? sessionType}
                     </h3>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-htg-fg-muted">
                       {item.session_date ? (
-                        <span>{new Date(item.session_date as string).toLocaleDateString('pl-PL')}</span>
+                        <RecordingDateEditor
+                          recordingId={item.id as string}
+                          initialDate={item.session_date as string}
+                        />
                       ) : null}
                       {item.duration_seconds ? (
                         <span className="flex items-center gap-1">

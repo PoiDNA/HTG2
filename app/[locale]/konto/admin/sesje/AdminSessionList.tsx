@@ -109,8 +109,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
     setSuggestions([]);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!slotDate) { setError('Podaj datę sesji.'); return; }
     setError('');
     setSaving(true);
@@ -166,7 +165,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
           <button onClick={onClose} className="text-htg-fg-muted hover:text-htg-fg"><X className="w-5 h-5" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           {/* User */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-htg-fg">Klient</label>
@@ -217,12 +216,12 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-htg-fg">Data</label>
-              <input type="date" value={slotDate} onChange={e => setSlotDate(e.target.value)} required
+              <input type="date" value={slotDate} onChange={e => setSlotDate(e.target.value)}
                 className="w-full px-3 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-sm text-htg-fg focus:outline-none focus:ring-2 focus:ring-htg-indigo/40" />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-htg-fg">Godzina</label>
-              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required
+              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
                 className="w-full px-3 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-sm text-htg-fg focus:outline-none focus:ring-2 focus:ring-htg-indigo/40" />
             </div>
           </div>
@@ -245,13 +244,13 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
               className="flex-1 py-2.5 rounded-lg border border-htg-card-border text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors">
               Anuluj
             </button>
-            <button type="submit" disabled={saving || !userQuery.trim() || !slotDate}
+            <button type="button" onClick={handleSubmit} disabled={saving || !userQuery.trim() || !slotDate}
               className="flex-1 py-2.5 rounded-lg bg-htg-indigo text-white text-sm font-medium hover:bg-htg-indigo/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               Utwórz sesję
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

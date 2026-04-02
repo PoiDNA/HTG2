@@ -44,6 +44,8 @@ export default function SessionReviewPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [resumePosition, setResumePosition] = useState(0);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const autoplayAttemptedRef = useRef(false);
 
   // Detect prefers-reduced-motion
   useEffect(() => {
@@ -78,6 +80,28 @@ export default function SessionReviewPlayer({
   const handleStateChange = useCallback((state: PlayerState) => {
     setPlayerState(state);
   }, []);
+
+  // Autoplay: when audio is first ready (paused after load), attempt play
+  useEffect(() => {
+    if (autoplayAttemptedRef.current) return;
+    if (playerState.status === 'paused' && engineRef.current) {
+      autoplayAttemptedRef.current = true;
+      // Small delay for fade-in to start before audio kicks in
+      const timer = setTimeout(() => {
+        engineRef.current?.play();
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [playerState.status]);
+
+  // Fade-in reveal: trigger after canvas becomes visible
+  useEffect(() => {
+    if (playerState.status !== 'loading' && !isRevealed) {
+      // Start fade-in after a brief moment (let canvas mount)
+      const timer = setTimeout(() => setIsRevealed(true), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [playerState.status, isRevealed]);
 
   // Block context menu on the player
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
@@ -199,20 +223,29 @@ export default function SessionReviewPlayer({
         containerEl={containerRef.current}
       />
 
-      {/* Animated canvas — always active (ambient before play, reactive during) */}
+      {/* Animated canvas — fade-in reveal from black */}
       {showCanvas && (
-        <MandalaCanvas
-          engineHandle={engineRef.current}
-          userEmail={userEmail}
-          userId={userId}
-          isPlaying={isPlaying || status === 'refreshing'}
-          isActive={isCanvasActive}
-          motionMode={motionMode}
-        />
+        <div
+          className="absolute inset-0 transition-opacity duration-[1500ms] ease-out"
+          style={{ opacity: isRevealed ? 1 : 0 }}
+        >
+          <MandalaCanvas
+            engineHandle={engineRef.current}
+            userEmail={userEmail}
+            userId={userId}
+            isPlaying={isPlaying || status === 'refreshing'}
+            isActive={isCanvasActive}
+            motionMode={motionMode}
+          />
+        </div>
       )}
 
-      {/* Player controls */}
+      {/* Player controls — fade in with canvas */}
       {showControls && (
+        <div
+          className="transition-opacity duration-1000 ease-out delay-500"
+          style={{ opacity: isRevealed ? 1 : 0 }}
+        >
         <PlayerControls
           engineHandle={engineRef.current}
           playerState={playerState}
@@ -222,17 +255,22 @@ export default function SessionReviewPlayer({
           isMinimized={false}
           resumePosition={resumePosition}
         />
+        </div>
       )}
 
-      {/* Loading overlay */}
-      {status === 'loading' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+      {/* Loading overlay — fades out as canvas reveals */}
+      <div
+        className={`absolute inset-0 flex items-center justify-center bg-[#0D1A12] z-10
+                    transition-opacity duration-1000 ease-out pointer-events-none
+                    ${isRevealed && status !== 'loading' ? 'opacity-0' : 'opacity-100'}`}
+      >
+        {status === 'loading' && (
           <div className="text-center text-white">
             <Loader2 className="w-10 h-10 animate-spin mx-auto mb-3" />
             <p className="text-sm text-white/70">Ładowanie nagrania...</p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Blocked overlay */}
       {status === 'blocked' && (

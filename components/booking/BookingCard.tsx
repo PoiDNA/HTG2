@@ -120,8 +120,8 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
         </div>
         {countdownValue && (
           <div className="text-right shrink-0">
-            <p className="text-5xl font-bold text-htg-sage leading-none">{countdownValue}</p>
-            <p className="text-sm text-htg-sage mt-1">{countdownSuffix}</p>
+            <p className="text-5xl font-bold text-htg-sage leading-none" style={{ fontFamily: 'Nunito, sans-serif' }}>{countdownValue}</p>
+            <p className="text-sm text-htg-sage mt-1" style={{ fontFamily: 'Nunito, sans-serif' }}>{countdownSuffix}</p>
           </div>
         )}
       </div>

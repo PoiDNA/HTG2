@@ -1,16 +1,17 @@
 'use client';
 
 // ---------------------------------------------------------------------------
-// PlayerControls — custom audio controls with a11y
+// PlayerControls — redesigned controls for audio player
 //
-// Updates via subscribeToTime (immediate + post-action), NOT rAF.
-// Drag: pointer state + commit on release, no rAF in controls.
-// Volume: capability-driven (canSetVolume), not platform guess.
-// Features: play/pause, seek, skip ±15s, speed, volume, fullscreen, minimize
+// Layout:
+// - Central "green stone" play/pause button (large, pulsing, accessible)
+// - Seekbar auto-hides during playback, appears on interaction
+// - Time display bottom-right
+// - Secondary controls (skip, speed, volume, fullscreen) around edges
 // ---------------------------------------------------------------------------
 
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { LazyMotion, domAnimation, m } from 'framer-motion';
+import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import {
   Play, Pause, RotateCcw, Volume2, VolumeX,
   Maximize, Minimize, SkipBack, SkipForward, Gauge,
@@ -23,6 +24,7 @@ import type { AudioEngineHandle, PlayerState } from './AudioEngine';
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 const SKIP_SECONDS = 15;
+const CONTROLS_HIDE_DELAY = 4000; // ms after last interaction
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -46,7 +48,7 @@ interface PlayerControlsProps {
   onToggleFullscreen: () => void;
   onMinimize: () => void;
   isMinimized: boolean;
-  resumePosition?: number; // Show resume indicator
+  resumePosition?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,14 +73,54 @@ export default function PlayerControls({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showResumeHint, setShowResumeHint] = useState(!!resumePosition && resumePosition > 0);
+  const [controlsVisible, setControlsVisible] = useState(true);
 
   const seekbarRef = useRef<HTMLInputElement>(null);
   const speedMenuRef = useRef<HTMLDivElement>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const status = playerState.status;
   const isPlaying = status === 'playing';
   const isEnded = status === 'ended';
   const canInteract = isPlaying || status === 'paused' || isEnded || status === 'refreshing';
+
+  // -------------------------------------------------------------------------
+  // Auto-hide seekbar/secondary controls during playback
+  // -------------------------------------------------------------------------
+  const showControls = useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => {
+      // Only hide when playing (keep visible on pause/ended)
+      setControlsVisible(prev => prev); // force re-eval in effect below
+    }, CONTROLS_HIDE_DELAY);
+  }, []);
+
+  // Auto-hide when playing, always show when paused/ended
+  useEffect(() => {
+    if (!isPlaying) {
+      setControlsVisible(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      return;
+    }
+    // Start hide timer when playback begins
+    hideTimerRef.current = setTimeout(() => {
+      setControlsVisible(false);
+    }, CONTROLS_HIDE_DELAY);
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [isPlaying]);
+
+  const handleInteraction = useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (isPlaying) {
+      hideTimerRef.current = setTimeout(() => {
+        setControlsVisible(false);
+      }, CONTROLS_HIDE_DELAY);
+    }
+  }, [isPlaying]);
 
   // Hide resume hint after first play
   useEffect(() => {
@@ -117,6 +159,7 @@ export default function PlayerControls({
   // -------------------------------------------------------------------------
   const handlePlayPause = useCallback(() => {
     if (!engineHandle) return;
+    handleInteraction();
     if (isEnded) {
       engineHandle.seek(0);
       engineHandle.play();
@@ -125,53 +168,56 @@ export default function PlayerControls({
     } else {
       engineHandle.play();
     }
-  }, [engineHandle, isPlaying, isEnded]);
+  }, [engineHandle, isPlaying, isEnded, handleInteraction]);
 
   // -------------------------------------------------------------------------
   // Skip ±15s
   // -------------------------------------------------------------------------
   const handleSkipBack = useCallback(() => {
     if (!engineHandle) return;
+    handleInteraction();
     engineHandle.seek(Math.max(0, currentTime - SKIP_SECONDS));
-  }, [engineHandle, currentTime]);
+  }, [engineHandle, currentTime, handleInteraction]);
 
   const handleSkipForward = useCallback(() => {
     if (!engineHandle) return;
+    handleInteraction();
     engineHandle.seek(Math.min(duration ?? Infinity, currentTime + SKIP_SECONDS));
-  }, [engineHandle, currentTime, duration]);
+  }, [engineHandle, currentTime, duration, handleInteraction]);
 
   // -------------------------------------------------------------------------
-  // Seek (drag UX: previewTime on thumb, commit on release)
+  // Seek (drag UX)
   // -------------------------------------------------------------------------
   const handleSeekStart = useCallback(() => {
     setIsDragging(true);
     setPreviewTime(currentTime);
-  }, [currentTime]);
+    handleInteraction();
+  }, [currentTime, handleInteraction]);
 
   const handleSeekMove = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const t = parseFloat(e.target.value);
-    setPreviewTime(t);
+    setPreviewTime(parseFloat(e.target.value));
   }, []);
 
   const handleSeekEnd = useCallback(() => {
-    if (engineHandle) {
-      engineHandle.seek(previewTime);
-    }
+    if (engineHandle) engineHandle.seek(previewTime);
     setIsDragging(false);
-  }, [engineHandle, previewTime]);
+    handleInteraction();
+  }, [engineHandle, previewTime, handleInteraction]);
 
   // -------------------------------------------------------------------------
   // Volume & Mute
   // -------------------------------------------------------------------------
   const handleMuteToggle = useCallback(() => {
     if (!engineHandle) return;
+    handleInteraction();
     const newMuted = !isMuted;
     setIsMuted(newMuted);
     engineHandle.setMuted(newMuted);
-  }, [engineHandle, isMuted]);
+  }, [engineHandle, isMuted, handleInteraction]);
 
   const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (!engineHandle) return;
+    handleInteraction();
     const v = parseFloat(e.target.value);
     setVolume(v);
     engineHandle.setVolume(v);
@@ -179,7 +225,7 @@ export default function PlayerControls({
       setIsMuted(false);
       engineHandle.setMuted(false);
     }
-  }, [engineHandle, isMuted]);
+  }, [engineHandle, isMuted, handleInteraction]);
 
   // -------------------------------------------------------------------------
   // Playback speed
@@ -189,13 +235,15 @@ export default function PlayerControls({
     setPlaybackRate(rate);
     engineHandle.setPlaybackRate(rate);
     setShowSpeedMenu(false);
-  }, [engineHandle]);
+    handleInteraction();
+  }, [engineHandle, handleInteraction]);
 
   // -------------------------------------------------------------------------
   // Keyboard shortcuts
   // -------------------------------------------------------------------------
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (!engineHandle || !canInteract) return;
+    handleInteraction();
 
     switch (e.key) {
       case ' ':
@@ -237,7 +285,7 @@ export default function PlayerControls({
         onToggleFullscreen();
         break;
     }
-  }, [engineHandle, canInteract, handlePlayPause, handleSkipBack, handleSkipForward, volume, handleMuteToggle, onToggleFullscreen]);
+  }, [engineHandle, canInteract, handlePlayPause, handleSkipBack, handleSkipForward, volume, handleMuteToggle, onToggleFullscreen, handleInteraction]);
 
   // -------------------------------------------------------------------------
   // Render
@@ -251,208 +299,279 @@ export default function PlayerControls({
       <div
         role="group"
         aria-label="Odtwarzacz nagrania"
-        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-4 pt-8"
+        className="absolute inset-0"
         onKeyDown={handleKeyDown}
+        onClick={handleInteraction}
+        onPointerMove={handleInteraction}
       >
-        {/* Resume position indicator */}
-        {showResumeHint && resumePosition && resumePosition > 0 && duration && (
-          <div className="mb-2 text-xs text-htg-sage/80 flex items-center gap-1.5">
-            <RotateCcw className="w-3 h-3" />
-            Wznowiono od {formatTime(resumePosition)}
-          </div>
-        )}
-
-        {/* Seekbar */}
-        <div className="mb-3">
-          <input
-            ref={seekbarRef}
-            type="range"
-            min={0}
-            max={duration ?? 0}
-            step={0.1}
-            value={displayTime}
-            onChange={handleSeekMove}
-            onPointerDown={handleSeekStart}
-            onPointerUp={handleSeekEnd}
-            onTouchEnd={handleSeekEnd}
-            disabled={!canInteract || !duration}
-            aria-label="Pozycja odtwarzania"
-            aria-valuemin={0}
-            aria-valuemax={duration ?? 0}
-            aria-valuenow={displayTime}
-            aria-valuetext={formatTime(displayTime)}
-            className="w-full h-1.5 rounded-full appearance-none cursor-pointer
-                       bg-white/20 accent-htg-sage
-                       [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
-                       [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-htg-sage
-                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:cursor-pointer
-                       disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              background: `linear-gradient(to right, #5A8A4E ${progress}%, rgba(255,255,255,0.2) ${progress}%)`,
-            }}
-          />
-        </div>
-
-        {/* Controls row */}
-        <div className="flex items-center gap-2">
-          {/* Skip back 15s */}
-          <m.button
-            onClick={handleSkipBack}
-            disabled={!canInteract}
-            aria-label="Cofnij 15 sekund"
-            className="w-9 h-9 flex items-center justify-center rounded-full
-                       text-white/70 hover:text-white hover:bg-white/10 transition-colors
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage
-                       disabled:opacity-40"
-            whileTap={{ scale: 0.9 }}
-          >
-            <SkipBack className="w-4 h-4" />
-          </m.button>
-
-          {/* Play / Pause / Replay */}
+        {/* =============================================================== */}
+        {/* CENTRAL PLAY/PAUSE — "green stone" button, always visible       */}
+        {/* =============================================================== */}
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10">
           <m.button
             onClick={handlePlayPause}
             disabled={!canInteract}
             aria-label={isEnded ? 'Odtwórz ponownie' : isPlaying ? 'Pauza' : 'Odtwórz'}
-            className="w-11 h-11 flex items-center justify-center rounded-full
-                       bg-white/10 hover:bg-white/20 text-white transition-colors
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage
-                       disabled:opacity-40"
-            whileTap={{ scale: 0.9 }}
+            className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center rounded-full
+                       disabled:opacity-40 cursor-pointer
+                       focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-htg-sage/60"
+            whileTap={{ scale: 0.92 }}
+            whileHover={{ scale: 1.06 }}
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
-            {isEnded ? (
-              <RotateCcw className="w-5 h-5" />
-            ) : isPlaying ? (
-              <Pause className="w-5 h-5" />
-            ) : (
-              <Play className="w-5 h-5 ml-0.5" />
-            )}
+            {/* Outer glow — pulsing ring */}
+            <m.div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: 'radial-gradient(circle at 40% 35%, rgba(110,190,85,0.25), rgba(90,138,78,0.12) 50%, rgba(45,107,45,0.06) 80%, transparent)',
+                boxShadow: '0 0 30px rgba(90,138,78,0.3), 0 0 60px rgba(90,138,78,0.12)',
+              }}
+              animate={{
+                scale: isPlaying ? [1, 1.08, 1] : [1, 1.04, 1],
+                opacity: isPlaying ? [0.7, 1, 0.7] : [0.5, 0.7, 0.5],
+              }}
+              transition={{
+                duration: isPlaying ? 2 : 3,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            />
+
+            {/* Stone body — layered radial gradients for depth */}
+            <div
+              className="absolute inset-1 rounded-full"
+              style={{
+                background: `
+                  radial-gradient(ellipse 60% 50% at 38% 32%, rgba(150,210,130,0.45), transparent 60%),
+                  radial-gradient(ellipse 80% 80% at 50% 50%, rgba(90,138,78,0.95), rgba(61,107,50,0.9) 60%, rgba(45,85,35,0.85) 100%)
+                `,
+                boxShadow: `
+                  inset 0 2px 8px rgba(150,210,130,0.3),
+                  inset 0 -3px 6px rgba(30,60,25,0.4),
+                  0 4px 16px rgba(0,0,0,0.4),
+                  0 2px 6px rgba(0,0,0,0.3)
+                `,
+              }}
+            />
+
+            {/* Subtle inner highlight arc (top specular) */}
+            <div
+              className="absolute top-2 left-3 right-3 h-6 rounded-full opacity-20"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(200,255,180,0.6), transparent)',
+              }}
+            />
+
+            {/* Icon */}
+            <div className="relative z-10 text-white drop-shadow-lg">
+              {isEnded ? (
+                <RotateCcw className="w-8 h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
+              ) : isPlaying ? (
+                <Pause className="w-8 h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
+              ) : (
+                <Play className="w-8 h-8 sm:w-9 sm:h-9 ml-1" strokeWidth={2.2} />
+              )}
+            </div>
           </m.button>
 
-          {/* Skip forward 15s */}
-          <m.button
-            onClick={handleSkipForward}
-            disabled={!canInteract}
-            aria-label="Przewiń 15 sekund"
-            className="w-9 h-9 flex items-center justify-center rounded-full
-                       text-white/70 hover:text-white hover:bg-white/10 transition-colors
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage
-                       disabled:opacity-40"
-            whileTap={{ scale: 0.9 }}
-          >
-            <SkipForward className="w-4 h-4" />
-          </m.button>
+          {/* Skip buttons flanking the play button */}
+          <div className="absolute top-1/2 -translate-y-1/2 -left-14 sm:-left-16">
+            <m.button
+              onClick={handleSkipBack}
+              disabled={!canInteract}
+              aria-label="Cofnij 15 sekund"
+              className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full
+                         bg-black/30 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/15
+                         transition-colors disabled:opacity-30
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+              whileTap={{ scale: 0.9 }}
+            >
+              <SkipBack className="w-5 h-5" />
+            </m.button>
+          </div>
+          <div className="absolute top-1/2 -translate-y-1/2 -right-14 sm:-right-16">
+            <m.button
+              onClick={handleSkipForward}
+              disabled={!canInteract}
+              aria-label="Przewiń 15 sekund"
+              className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full
+                         bg-black/30 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/15
+                         transition-colors disabled:opacity-30
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+              whileTap={{ scale: 0.9 }}
+            >
+              <SkipForward className="w-5 h-5" />
+            </m.button>
+          </div>
+        </div>
 
-          {/* Time display */}
-          <div className="text-xs text-white/70 font-mono tabular-nums min-w-[80px] ml-1">
+        {/* =============================================================== */}
+        {/* BOTTOM BAR — seekbar + secondary controls (auto-hide)           */}
+        {/* =============================================================== */}
+        <AnimatePresence>
+          {controlsVisible && (
+            <m.div
+              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-3 pt-10"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Resume hint */}
+              {showResumeHint && resumePosition && resumePosition > 0 && duration && (
+                <div className="mb-2 text-xs text-htg-sage/80 flex items-center gap-1.5">
+                  <RotateCcw className="w-3 h-3" />
+                  Wznowiono od {formatTime(resumePosition)}
+                </div>
+              )}
+
+              {/* Seekbar */}
+              <div className="mb-2.5">
+                <input
+                  ref={seekbarRef}
+                  type="range"
+                  min={0}
+                  max={duration ?? 0}
+                  step={0.1}
+                  value={displayTime}
+                  onChange={handleSeekMove}
+                  onPointerDown={handleSeekStart}
+                  onPointerUp={handleSeekEnd}
+                  onTouchEnd={handleSeekEnd}
+                  disabled={!canInteract || !duration}
+                  aria-label="Pozycja odtwarzania"
+                  aria-valuemin={0}
+                  aria-valuemax={duration ?? 0}
+                  aria-valuenow={displayTime}
+                  aria-valuetext={formatTime(displayTime)}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer
+                             bg-white/20 accent-htg-sage
+                             [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+                             [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-htg-sage
+                             [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:cursor-pointer
+                             disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: `linear-gradient(to right, #5A8A4E ${progress}%, rgba(255,255,255,0.15) ${progress}%)`,
+                  }}
+                />
+              </div>
+
+              {/* Secondary controls row */}
+              <div className="flex items-center gap-2">
+                {/* Refreshing indicator */}
+                {status === 'refreshing' && (
+                  <div className="text-xs text-htg-warm animate-pulse">
+                    Buforowanie...
+                  </div>
+                )}
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Playback speed */}
+                <div className="relative" ref={speedMenuRef}>
+                  <button
+                    onClick={() => { setShowSpeedMenu(!showSpeedMenu); handleInteraction(); }}
+                    aria-label={`Prędkość odtwarzania: ${playbackRate}x`}
+                    className="h-8 px-2 flex items-center gap-1 rounded-md
+                               text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors
+                               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+                  >
+                    <Gauge className="w-3.5 h-3.5" />
+                    <span className="font-mono tabular-nums">{playbackRate}x</span>
+                  </button>
+
+                  {showSpeedMenu && (
+                    <div className="absolute bottom-full right-0 mb-2 bg-black/90 backdrop-blur-sm
+                                    rounded-lg border border-white/10 py-1 min-w-[80px] z-30">
+                      {PLAYBACK_RATES.map(rate => (
+                        <button
+                          key={rate}
+                          onClick={() => handleSpeedChange(rate)}
+                          className={`w-full px-3 py-1.5 text-xs text-left transition-colors
+                            ${rate === playbackRate
+                              ? 'text-htg-sage bg-white/10'
+                              : 'text-white/70 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                          {rate}x
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Volume / Mute */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handleMuteToggle}
+                    aria-label={isMuted ? 'Włącz dźwięk' : 'Wycisz'}
+                    className="w-8 h-8 flex items-center justify-center rounded-full
+                               text-white/60 hover:text-white transition-colors
+                               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+                  >
+                    {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  </button>
+
+                  {canSetVolume && (
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={isMuted ? 0 : volume}
+                      onChange={handleVolumeChange}
+                      aria-label="Głośność"
+                      className="w-16 h-1 rounded-full appearance-none cursor-pointer
+                                 bg-white/20 accent-white
+                                 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                                 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
+                                 [&::-webkit-slider-thumb]:appearance-none"
+                    />
+                  )}
+                </div>
+
+                {/* Minimize */}
+                {!isMinimized && (
+                  <button
+                    onClick={onMinimize}
+                    aria-label="Minimalizuj odtwarzacz"
+                    className="w-8 h-8 flex items-center justify-center rounded-full
+                               text-white/60 hover:text-white transition-colors
+                               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+                  >
+                    <Minimize className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Fullscreen */}
+                <button
+                  onClick={onToggleFullscreen}
+                  aria-label={isFullscreen ? 'Zamknij pełny ekran' : 'Pełny ekran'}
+                  className="w-8 h-8 flex items-center justify-center rounded-full
+                             text-white/60 hover:text-white transition-colors
+                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+                >
+                  {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+                </button>
+
+                {/* Time display — right side */}
+                <div className="text-xs text-white/60 font-mono tabular-nums ml-1">
+                  {formatTime(displayTime)} / {formatTime(duration)}
+                </div>
+              </div>
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        {/* =============================================================== */}
+        {/* TIME ALWAYS VISIBLE (bottom-right) even when controls hidden    */}
+        {/* =============================================================== */}
+        {!controlsVisible && (
+          <div className="absolute bottom-3 right-4 text-xs text-white/40 font-mono tabular-nums">
             {formatTime(displayTime)} / {formatTime(duration)}
           </div>
-
-          {/* Refreshing indicator */}
-          {status === 'refreshing' && (
-            <div className="text-xs text-htg-warm animate-pulse">
-              Buforowanie...
-            </div>
-          )}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Playback speed */}
-          <div className="relative" ref={speedMenuRef}>
-            <button
-              onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-              aria-label={`Prędkość odtwarzania: ${playbackRate}x`}
-              className="h-8 px-2 flex items-center gap-1 rounded-md
-                         text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors
-                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
-            >
-              <Gauge className="w-3.5 h-3.5" />
-              <span className="font-mono tabular-nums">{playbackRate}x</span>
-            </button>
-
-            {showSpeedMenu && (
-              <div className="absolute bottom-full right-0 mb-2 bg-black/90 backdrop-blur-sm
-                              rounded-lg border border-white/10 py-1 min-w-[80px] z-30">
-                {PLAYBACK_RATES.map(rate => (
-                  <button
-                    key={rate}
-                    onClick={() => handleSpeedChange(rate)}
-                    className={`w-full px-3 py-1.5 text-xs text-left transition-colors
-                      ${rate === playbackRate
-                        ? 'text-htg-sage bg-white/10'
-                        : 'text-white/70 hover:text-white hover:bg-white/5'
-                      }`}
-                  >
-                    {rate}x
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Volume / Mute */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleMuteToggle}
-              aria-label={isMuted ? 'Włącz dźwięk' : 'Wycisz'}
-              className="w-9 h-9 flex items-center justify-center rounded-full
-                         text-white/70 hover:text-white transition-colors
-                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
-            >
-              {isMuted ? (
-                <VolumeX className="w-4 h-4" />
-              ) : (
-                <Volume2 className="w-4 h-4" />
-              )}
-            </button>
-
-            {canSetVolume && (
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={isMuted ? 0 : volume}
-                onChange={handleVolumeChange}
-                aria-label="Głośność"
-                className="w-20 h-1 rounded-full appearance-none cursor-pointer
-                           bg-white/20 accent-white
-                           [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                           [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-                           [&::-webkit-slider-thumb]:appearance-none"
-              />
-            )}
-          </div>
-
-          {/* Minimize */}
-          {!isMinimized && (
-            <button
-              onClick={onMinimize}
-              aria-label="Minimalizuj odtwarzacz"
-              className="w-9 h-9 flex items-center justify-center rounded-full
-                         text-white/70 hover:text-white transition-colors
-                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
-            >
-              <Minimize className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Fullscreen */}
-          <button
-            onClick={onToggleFullscreen}
-            aria-label={isFullscreen ? 'Zamknij pełny ekran' : 'Pełny ekran'}
-            className="w-9 h-9 flex items-center justify-center rounded-full
-                       text-white/70 hover:text-white transition-colors
-                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
-          >
-            {isFullscreen ? (
-              <Minimize className="w-4 h-4" />
-            ) : (
-              <Maximize className="w-4 h-4" />
-            )}
-          </button>
-        </div>
+        )}
 
         {/* Screen reader announcements */}
         <div aria-live="polite" className="sr-only">

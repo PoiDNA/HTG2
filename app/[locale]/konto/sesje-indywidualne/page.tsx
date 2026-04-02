@@ -46,11 +46,17 @@ export default async function IndividualSessionsPage({
     .order('assigned_at', { ascending: false })
     .limit(20);
 
-  // Sort by slot date/time — nearest session first
+  // Sort: future sessions first (nearest first), then past sessions (most recent first)
+  const nowIso = new Date().toISOString();
   const bookings: Booking[] = ((data ?? []) as Booking[]).sort((a, b) => {
     const dateA = a.slot ? a.slot.slot_date + 'T' + a.slot.start_time : '9999';
     const dateB = b.slot ? b.slot.slot_date + 'T' + b.slot.start_time : '9999';
-    return dateA.localeCompare(dateB);
+    const aFuture = dateA >= nowIso.slice(0, 16) ? 0 : 1;
+    const bFuture = dateB >= nowIso.slice(0, 16) ? 0 : 1;
+    if (aFuture !== bFuture) return aFuture - bFuture;
+    return aFuture === 0
+      ? dateA.localeCompare(dateB)
+      : dateB.localeCompare(dateA);
   });
 
   // Fetch user's unbooked individual session entitlements

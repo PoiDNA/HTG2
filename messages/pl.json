@@ -403,6 +403,10 @@
     "success_confirmed": "Sesja potwierdzona!",
     "success_cancelled": "Sesja anulowana.",
     "success_transferred": "Sesja przeniesiona na nowy termin.",
+    "reschedule_confirm_title": "Zmiana terminu sesji",
+    "reschedule_confirm_message": "Twoja sesja zostanie przeniesiona na wybrany termin. Poprzedni termin zostanie zwolniony.",
+    "reschedule_confirm_btn": "Zmień termin",
+    "reschedule_select": "Wybierz",
     "nav_label": "Sesje indywidualne",
     "countdown": {
       "8plus": {

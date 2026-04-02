@@ -2,10 +2,9 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { ALL_SESSION_TYPES } from '@/lib/booking/constants';
 import type { Booking, AccelerationEntry } from '@/lib/booking/types';
-import BookingCalendar from '@/components/booking/BookingCalendar';
 import BookingCard from '@/components/booking/BookingCard';
+import ActiveBookingsSection from '@/components/booking/ActiveBookingsSection';
 import AccelerationRequest from '@/components/booking/AccelerationRequest';
 import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
 import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
@@ -219,9 +218,9 @@ export default async function IndividualSessionsPage({
         </div>
       )}
 
-      {/* Active bookings */}
+      {/* Active bookings with inline reschedule calendar */}
       {activeBookings.length > 0 && (
-        <div>
+        <ActiveBookingsSection locale={locale}>
           <div className="grid grid-cols-1 gap-4">
             {activeBookings.map((booking) => {
               const upsell = preSessionUpsellMap[booking.session_type];
@@ -269,7 +268,7 @@ export default async function IndividualSessionsPage({
               );
             })}
           </div>
-        </div>
+        </ActiveBookingsSection>
       )}
 
       {/* Sessions where user is a partner (companion) */}
@@ -326,16 +325,7 @@ export default async function IndividualSessionsPage({
         </div>
       )}
 
-      {/* Calendar for booking new slots */}
-      <div id="booking-calendar">
-        <h3 className="text-lg font-serif font-semibold text-htg-fg mb-2">Wybierz termin</h3>
-        <p className="text-xs text-htg-warm mb-4">
-          ⚠ Zmiana terminu poniżej 48h przed sesją uzależniona jest od przejęcia terminu przez inną osobę. Wolny termin jest ogłaszany w panelach osób oczekujących.
-        </p>
-        <BookingCalendar sessionTypes={ALL_SESSION_TYPES} locale={locale} />
-      </div>
-
-      {/* Acceleration request for users without one */}
+{/* Acceleration request for users without one */}
       {activeBookings.length > 0 && accelerationEntries.length === 0 && (
         <div>
           <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('acceleration_title')}</h3>

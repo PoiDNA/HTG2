@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Booking } from '@/lib/booking/types';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import BookingCountdown from './BookingCountdown';
+import { useReschedule } from './ActiveBookingsSection';
 
 interface BookingCardProps {
   booking: Booking;
@@ -27,6 +28,7 @@ const STATUS_STYLES: Record<string, string> = {
 export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownText, isPast }: BookingCardProps) {
   const t = useTranslations('Booking');
   const router = useRouter();
+  const { toggleReschedule, rescheduleBookingId } = useReschedule();
   const [loading, setLoading] = useState<string | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDelayOptions, setShowDelayOptions] = useState(false);
@@ -278,15 +280,17 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
               </button>
             )}
 
-            {/* Reschedule — always available */}
+            {/* Reschedule — toggle inline calendar */}
             {canReschedule && (
               <button
-                onClick={() => {
-                  document.getElementById('booking-calendar')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="bg-htg-surface text-htg-fg px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-card-border transition-colors"
+                onClick={() => toggleReschedule(booking.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  rescheduleBookingId === booking.id
+                    ? 'bg-htg-sage text-white'
+                    : 'bg-htg-surface text-htg-fg hover:bg-htg-card-border'
+                }`}
               >
-                Zmień termin
+                {rescheduleBookingId === booking.id ? 'Ukryj kalendarz' : 'Zmień termin'}
               </button>
             )}
           </div>

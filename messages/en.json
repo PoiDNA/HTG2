@@ -403,6 +403,10 @@
     "success_confirmed": "Session confirmed!",
     "success_cancelled": "Session cancelled.",
     "success_transferred": "Session moved to the new slot.",
+    "reschedule_confirm_title": "Reschedule session",
+    "reschedule_confirm_message": "Your session will be moved to the selected slot. The previous slot will be released.",
+    "reschedule_confirm_btn": "Reschedule",
+    "reschedule_select": "Select",
     "nav_label": "Individual sessions",
     "countdown": {
       "8plus": {

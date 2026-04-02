@@ -10,11 +10,15 @@ import MiniCalendar from './MiniCalendar';
 interface BookingCalendarProps {
   sessionTypes: SessionType[];
   locale: string;
+  /** When set, clicking a slot transfers this booking instead of creating a new one */
+  rescheduleBookingId?: string | null;
+  /** Called after successful transfer */
+  onRescheduleComplete?: () => void;
 }
 
 type GroupedSlots = Record<string, Pick<BookingSlot, 'id' | 'session_type' | 'slot_date' | 'start_time' | 'end_time' | 'status'>[]>;
 
-export default function BookingCalendar({ sessionTypes, locale }: BookingCalendarProps) {
+export default function BookingCalendar({ sessionTypes, locale, rescheduleBookingId, onRescheduleComplete }: BookingCalendarProps) {
   const t = useTranslations('Booking');
   const router = useRouter();
 
@@ -59,24 +63,38 @@ export default function BookingCalendar({ sessionTypes, locale }: BookingCalenda
 
   const selectedSlots = selectedDate ? (slots[selectedDate] ?? []) : [];
 
+  const isReschedule = !!rescheduleBookingId;
+
   async function handleReserve(slot: typeof selectedSlots[0]) {
     setReserving(slot.id);
     setMessage(null);
     try {
-      const res = await fetch('/api/booking/reserve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slotId: slot.id, topics: topics || undefined }),
-      });
+      let res: Response;
+      if (isReschedule) {
+        // Transfer existing booking to new slot
+        res = await fetch('/api/booking/transfer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: rescheduleBookingId, newSlotId: slot.id }),
+        });
+      } else {
+        // New reservation
+        res = await fetch('/api/booking/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slotId: slot.id, topics: topics || undefined }),
+        });
+      }
       const data = await res.json();
       if (res.ok) {
-        setMessage({ type: 'success', text: t('success_reserved') });
+        setMessage({ type: 'success', text: isReschedule ? t('success_transferred') : t('success_reserved') });
         setShowConfirmModal(null);
         setTopics('');
-        // Refresh the page to show the new booking
         router.refresh();
-        // Re-fetch slots
         fetchSlots();
+        if (isReschedule) {
+          onRescheduleComplete?.();
+        }
       } else {
         setMessage({ type: 'error', text: data.error || t('error') });
       }
@@ -89,7 +107,9 @@ export default function BookingCalendar({ sessionTypes, locale }: BookingCalenda
 
   return (
     <div id="booking-calendar" className="space-y-6">
-      <h3 className="text-lg font-serif font-semibold text-htg-fg">{t('calendar_title')}</h3>
+      {!isReschedule && (
+        <h3 className="text-lg font-serif font-semibold text-htg-fg">{t('calendar_title')}</h3>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Calendar */}
@@ -142,7 +162,7 @@ export default function BookingCalendar({ sessionTypes, locale }: BookingCalenda
                           <p className="text-xs text-htg-fg-muted">{config.labelShort}</p>
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-htg-sage">{t('book_now')}</span>
+                      <span className="text-xs font-medium text-htg-sage">{isReschedule ? t('reschedule_select') : t('book_now')}</span>
                     </button>
                   );
                 })}
@@ -169,7 +189,7 @@ export default function BookingCalendar({ sessionTypes, locale }: BookingCalenda
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-serif font-semibold text-htg-fg mb-2">
-              {t('confirm_title')}
+              {isReschedule ? t('reschedule_confirm_title') : t('confirm_title')}
             </h3>
 
             <div className="bg-htg-surface rounded-lg p-3 mb-4">
@@ -188,20 +208,24 @@ export default function BookingCalendar({ sessionTypes, locale }: BookingCalenda
               </p>
             </div>
 
-            <p className="text-sm text-htg-fg-muted mb-4">{t('confirm_message')}</p>
+            <p className="text-sm text-htg-fg-muted mb-4">
+              {isReschedule ? t('reschedule_confirm_message') : t('confirm_message')}
+            </p>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-htg-fg mb-1">
-                {t('topics_label')}
-              </label>
-              <textarea
-                value={topics}
-                onChange={(e) => setTopics(e.target.value)}
-                placeholder={t('topics_placeholder')}
-                rows={3}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-htg-card-border bg-htg-card text-htg-fg placeholder:text-htg-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-htg-sage resize-none"
-              />
-            </div>
+            {!isReschedule && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-htg-fg mb-1">
+                  {t('topics_label')}
+                </label>
+                <textarea
+                  value={topics}
+                  onChange={(e) => setTopics(e.target.value)}
+                  placeholder={t('topics_placeholder')}
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-htg-card-border bg-htg-card text-htg-fg placeholder:text-htg-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-htg-sage resize-none"
+                />
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
@@ -209,7 +233,7 @@ export default function BookingCalendar({ sessionTypes, locale }: BookingCalenda
                 disabled={reserving !== null}
                 className="flex-1 bg-htg-sage text-white py-3 rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50"
               >
-                {reserving ? t('loading') : t('confirm_slot')}
+                {reserving ? t('loading') : isReschedule ? t('reschedule_confirm_btn') : t('confirm_slot')}
               </button>
               <button
                 onClick={() => setShowConfirmModal(null)}

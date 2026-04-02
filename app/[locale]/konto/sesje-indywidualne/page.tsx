@@ -11,7 +11,7 @@ import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import CompanionInvite from '@/components/booking/CompanionInvite';
 import PastBookingAccordion from '@/components/booking/PastBookingAccordion';
-import { getSessionCountdown, formatCountdown } from '@/lib/booking/countdown-phrases';
+import { getSessionCountdown, formatCountdownParts } from '@/lib/booking/countdown-phrases';
 
 // Session type → assistant slug mapping
 const SESSION_TYPE_TO_SLUG: Record<string, string> = {
@@ -231,6 +231,7 @@ export default async function IndividualSessionsPage({
               const countdown = showCountdown
                 ? getSessionCountdown(booking.id, slot.slot_date, todayYmd)
                 : null;
+              const cdParts = countdown ? formatCountdownParts(countdown.months, countdown.days, normalizedLocale) : null;
 
               return (
                 <div key={booking.id}>
@@ -239,7 +240,8 @@ export default async function IndividualSessionsPage({
                     locale={locale}
                     hasEarlierSlots={booking.status === 'confirmed'}
                     countdownPhrase={countdown ? t(countdown.phraseKey) : null}
-                    countdownText={countdown ? formatCountdown(countdown.months, countdown.days, normalizedLocale) : null}
+                    countdownValue={cdParts?.value ?? null}
+                    countdownSuffix={cdParts?.suffix ?? null}
                   />
                   {upsell && (
                     <PreSessionUpsell

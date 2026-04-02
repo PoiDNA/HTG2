@@ -51,7 +51,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         Zasady naszej wspólnej przestrzeni
       </h1>
       <p className="text-htg-fg-muted text-sm mb-2">Regulamin Sesji Hacking&nbsp;The&nbsp;Game</p>
-      <p className="text-htg-fg-muted text-sm mb-8">Wersja 3.0 · obowiązuje od 1 kwietnia 2025&nbsp;r.</p>
+      <p className="text-htg-fg-muted text-sm mb-8">Wersja 4.0 · obowiązuje od 2 kwietnia 2026&nbsp;r.</p>
 
       {/* ── Intro ── */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-10 text-sm text-htg-fg leading-relaxed">
@@ -100,8 +100,9 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li><strong>Zespół HTG</strong> — osoby prowadzące sesje w ramach inicjatywy Hacking&nbsp;The&nbsp;Game. Kontaktują się z Tobą z adresów e-mail w domenie @htg.cyou.</li>
             <li><strong>Prowadząca</strong> — Natalia, osoba prowadząca każdą Sesję HTG z wykorzystaniem autorskiej metodyki.</li>
             <li><strong>Operator/ka sesji</strong> — osoba asystująca Prowadzącej podczas Sesji HTG. Uczestnik może wskazać preferowaną Operatorkę przy rezerwacji lub pozostawić wybór Zespołowi HTG.</li>
-            <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie online o charakterze rozwoju osobistego, prowadzone przez Prowadzącą samodzielnie lub w asyście Operatora/ki sesji, z wykorzystaniem autorskiej metodyki HTG.</li>
+            <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie o&nbsp;charakterze rozwoju osobistego, prowadzone przez Prowadzącą samodzielnie lub w&nbsp;asyście Operatora/ki sesji, z&nbsp;wykorzystaniem autorskiej metodyki HTG. Co do zasady Sesja HTG odbywa się online; w&nbsp;szczególnych przypadkach może odbyć się na żywo (stacjonarnie) — szczegóły w&nbsp;pkt&nbsp;2.</li>
             <li><strong>Uczestnik</strong> — osoba fizyczna (pełnoletnia), która zawiera z nami umowę na Sesję HTG. Osoby w wieku 16–17 lat mogą uczestniczyć wyłącznie po dostarczeniu pisemnego oświadczenia rodzica lub opiekuna prawnego na adres htg@htg.cyou przed rozpoczęciem sesji. Oświadczenie musi zawierać zgodę na udział oraz potwierdzenie, że opiekun rozumie niekonwencjonalny charakter pracy HTG i bierze odpowiedzialność za proces rozwojowy podopiecznego. Operator zastrzega sobie prawo do indywidualnej oceny możliwości realizacji sesji z osobą niepełnoletnią, z uwzględnieniem charakteru tematu i dobra uczestnika. Sesja osoby niepełnoletniej odbywa się bez obecności opiekuna, chyba że strony ustalą inaczej.</li>
+            <li><strong>Zainteresowany</strong> — osoba, która złożyła zapytanie o&nbsp;Sesję HTG za pośrednictwem htgcyou.com, ale której rezerwacja nie została jeszcze zaakceptowana przez Zespół HTG. Z&nbsp;chwilą akceptacji Zainteresowany staje się Uczestnikiem.</li>
             <li><strong>Subskrypcja</strong> — dostęp do biblioteki nagrań sesji HTG w panelu klienta na htgcyou.com. Dostępne warianty: pojedyncza sesja, pakiet miesięczny lub pakiet roczny. Szczegóły w pkt&nbsp;3.</li>
             <li><strong>Administrator Serwisu</strong> — podmiot administrujący Pilot PSA z siedzibą w Warszawie, ul.&nbsp;Rondo ONZ&nbsp;1, 00-124 Warszawa, NIP&nbsp;5253085101, REGON&nbsp;544401249.</li>
             <li><strong>Dzień roboczy</strong> — poniedziałek–piątek z wyłączeniem dni ustawowo wolnych od pracy.</li>
@@ -126,8 +127,20 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             Zmiana Operatora/ki nie wpływa na cenę ani charakter sesji.
           </P>
 
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Prawo odmowy realizacji sesji</h3>
+          <P>
+            Administrator Serwisu zastrzega sobie prawo do odmowy realizacji Sesji HTG
+            przed jej rozpoczęciem, bez podania przyczyny — w&nbsp;szczególności w&nbsp;przypadku,
+            gdy zachowanie Zainteresowanego lub Uczestnika na etapie korespondencji,
+            rezerwacji lub po przydzieleniu terminu narusza zasady wzajemnego szacunku.
+            W&nbsp;przypadku odmowy wniesiona zaliczka zostanie zwrócona w&nbsp;całości
+            w&nbsp;terminie 7&nbsp;dni roboczych. Niniejsze postanowienie nie uchybia zasadom
+            opisanym w&nbsp;pkt&nbsp;5 (Bezpieczeństwo przestrzeni), które dotyczą sytuacji
+            zaistniałych w&nbsp;trakcie trwania sesji.
+          </P>
+
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Rezerwacja i przebieg</h3>
-          <P>Sesja odbywa się online. Aby w pełni z niej skorzystać, prosimy o przygotowanie:</P>
+          <P>Co do zasady Sesja odbywa się online. Aby w&nbsp;pełni z&nbsp;niej skorzystać, prosimy o&nbsp;przygotowanie:</P>
           <UL>
             <li>Stabilnego łącza internetowego.</li>
             <li>Sprawnej kamery i mikrofonu.</li>
@@ -145,6 +158,19 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             techniczne wystąpią po stronie Zespołu HTG — oczywiście zadbamy o to, by zrekompensować
             Ci ten czas lub ustalimy nowy termin.
           </P>
+
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Sesja na żywo</h3>
+          <P>
+            Co do zasady Sesje HTG odbywają się online. W&nbsp;szczególnych przypadkach,
+            po odbyciu co najmniej <strong>3&nbsp;sesji online</strong> i&nbsp;pozytywnej
+            kwalifikacji przez Zespół HTG, Uczestnik może złożyć zapytanie
+            o&nbsp;możliwość odbycia sesji na żywo (stacjonarnie).
+          </P>
+          <P>
+            Decyzja o&nbsp;dopuszczeniu do sesji na żywo należy wyłącznie do Zespołu HTG
+            i&nbsp;nie wymaga uzasadnienia. Miejsce, termin oraz ewentualne dodatkowe warunki
+            organizacyjne sesji na żywo ustalane są indywidualnie.
+          </P>
         </Section>
 
         {/* ── 3. Płatności i zwroty ── */}
@@ -152,14 +178,23 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-4 mb-3">Jak kupić sesję</h3>
           <P>
             Sesję HTG rezerwujesz na stronie htgcyou.com. Przy rezerwacji wybierasz rodzaj sesji
-            (samodzielna lub z asystą), dostępny termin z kalendarza oraz — w przypadku sesji
-            z asystą — opcjonalnie preferowaną Operatorkę. Po dokonaniu wyboru przechodzisz do płatności.
+            (samodzielna lub z&nbsp;asystą), wskazujesz preferowany termin z&nbsp;kalendarza,
+            opcjonalnie preferowaną Operatorkę, dokonujesz płatności i&nbsp;przesyłasz zapytanie
+            o&nbsp;możliwość udziału w&nbsp;sesji.
+          </P>
+          <P>
+            Rezerwacja wymaga akceptacji przez Zespół HTG. Dopiero po potwierdzeniu terminu
+            i&nbsp;zaakceptowaniu Zainteresowanego termin zostaje przydzielony, a&nbsp;umowa zawarta.
+            Do momentu akceptacji płatność stanowi zaliczkę na poczet usługi.
+          </P>
+          <P>
+            W&nbsp;przypadku odmowy realizacji sesji przez Administratora Serwisu wpłacona zaliczka
+            zostanie zwrócona w&nbsp;całości w&nbsp;terminie 7&nbsp;dni roboczych, tą samą metodą płatności.
           </P>
           <UL>
-            <li>Sesja HTG jest opłacana z góry. Umowa zostaje zawarta z momentem zaksięgowania pełnej opłaty.</li>
-            <li>Płatność odbywa się przez stronę htgcyou.com (Stripe — karty, BLIK, Przelewy24), przelew bankowy lub gotówkę.</li>
-            <li>Brak zapłaty w ciągu 24&nbsp;godzin od złożenia zamówienia anuluje rezerwację wybranego terminu.</li>
-            <li>Faktury generowane są automatycznie — znajdziesz je w panelu klienta i otrzymasz e-mailem.</li>
+            <li>Sesja HTG opłacana jest z&nbsp;góry podczas składania zapytania o&nbsp;termin. Płatność stanowi zaliczkę i&nbsp;podlega pełnemu zwrotowi w&nbsp;przypadku odmowy realizacji sesji przez Administratora Serwisu (pkt&nbsp;2).</li>
+            <li>Płatność odbywa się przez stronę htgcyou.com (Stripe — karty, BLIK, Przelewy24) lub przelew bankowy.</li>
+            <li>Faktury i&nbsp;dokumenty księgowe udostępniane są w&nbsp;panelu klienta i&nbsp;wysyłane e-mailem.</li>
           </UL>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Subskrypcje — dostęp do nagrań</h3>
@@ -184,8 +219,8 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Prawo odstąpienia (14 dni)</h3>
           <P>
-            Masz prawo odstąpić od umowy w ciągu <strong>14 dni</strong> od jej zawarcia,
-            bez podania przyczyny. Wystarczy napisać na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a> (wzór
+            Masz prawo odstąpić od umowy w ciągu <strong>14 dni</strong> od jej zawarcia
+            (tj. od dnia akceptacji rezerwacji przez Zespół HTG), bez podania przyczyny. Wystarczy napisać na <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a> (wzór
             oświadczenia znajdziesz na końcu tego regulaminu).
           </P>
           <P>Prawo odstąpienia wygasa wcześniej w następujących przypadkach:</P>
@@ -203,7 +238,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         <Section id="terminy" title="4. Zmiany terminów">
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-4 mb-3">Z Twojej inicjatywy</h3>
           <UL>
-            <li>Termin sesji wybierasz z dostępnych slotów w kalendarzu przy rezerwacji na htgcyou.com.</li>
+            <li>Preferowany termin sesji wskazujesz przy rezerwacji na htgcyou.com. Termin zostaje przydzielony po akceptacji rezerwacji przez Zespół HTG.</li>
             <li>Możesz jednorazowo zmienić termin <strong>najpóźniej 7 dni</strong> przed planowaną datą.</li>
             <li>Przy zmianie terminu zaproponujemy pierwszy wolny slot. Z uwagi na ograniczoną dostępność Prowadzącej, czas oczekiwania na nowy termin może być wydłużony (nawet do kilku miesięcy).</li>
           </UL>
@@ -281,7 +316,9 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             Dbając o jakość przestrzeni i wzajemne bezpieczeństwo, Prowadzący ma prawo przerwać
             lub odmówić kontynuowania sesji, jeśli Uczestnik zachowuje się w sposób agresywny,
             naruszający granice osobiste lub znajduje się pod widocznym wpływem substancji
-            psychoaktywnych. W takich rażących przypadkach opłata za sesję nie podlega zwrotowi.
+            psychoaktywnych. W&nbsp;takich rażących przypadkach opłata za sesję nie podlega zwrotowi.
+            Powyższe dotyczy sytuacji zaistniałych w&nbsp;trakcie trwania sesji i&nbsp;jest niezależne
+            od prawa Administratora Serwisu do odmowy realizacji sesji przed jej rozpoczęciem (pkt&nbsp;2).
           </P>
         </Section>
 
@@ -454,7 +491,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         <Section id="zmiany" title="12. Zmiany regulaminu">
           <UL>
             <li>Możemy zmienić regulamin z ważnych przyczyn (np. zmiana przepisów prawa, zmiana zakresu usług). Nową wersję opublikujemy na htgcyou.com.</li>
-            <li>Zmiany nie dotyczą sesji już opłaconych — dla nich obowiązuje regulamin z dnia zawarcia umowy, chyba że zmiana jest wyłącznie korzystna dla Uczestnika lub wynika bezpośrednio z obowiązujących przepisów prawa.</li>
+            <li>Zmiany nie dotyczą sesji, dla których umowa została zawarta — obowiązuje regulamin z&nbsp;dnia zawarcia umowy (akceptacji rezerwacji), chyba że zmiana jest wyłącznie korzystna dla Uczestnika lub wynika bezpośrednio z&nbsp;obowiązujących przepisów prawa.</li>
             <li>Jeśli nie akceptujesz nowych warunków, możesz zrezygnować z niewykorzystanych sesji i uzyskać zwrot kosztów.</li>
           </UL>
         </Section>
@@ -478,8 +515,8 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           </h2>
           <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-sm text-htg-fg font-mono leading-relaxed space-y-2">
             <p><strong>Tytuł maila:</strong> Rezygnacja z sesji</p>
-            <p className="mt-3">Ja, [imię i nazwisko], niniejszym informuję o moim odstąpieniu od umowy o pojedynczą Sesję HTG zawartą w dniu opłacenia sesji.</p>
-            <p className="mt-2">Data wpłaty: ___/___/20__</p>
+            <p className="mt-3">Ja, [imię i nazwisko], niniejszym informuję o moim odstąpieniu od umowy o pojedynczą Sesję HTG zawartą w dniu akceptacji rezerwacji przez Zespół HTG.</p>
+            <p className="mt-2">Data akceptacji rezerwacji: ___/___/20__</p>
             <p>Imię i nazwisko: ___________________</p>
             <p>Adres: _______________________________</p>
             <p>E‑mail: _______________________________</p>

@@ -11,7 +11,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { AudioSampler, type AnalysisState } from './audioSampler';
 import { drawWatermark } from './drawWatermark';
-import { mandalaPattern } from './patterns/mandala';
+import { lotusPattern } from './patterns/lotus';
 import { concentricCirclesPattern } from './patterns/concentric-circles';
 import { SILENT_BANDS, type AudioBands, type Pattern, type RenderContext } from './patterns/types';
 import type { AudioEngineHandle } from './AudioEngine';
@@ -24,7 +24,7 @@ const MAX_DPR = 1.5;
 const FRAME_BUDGET_WARN = 12;  // ms — start reducing complexity
 const FRAME_BUDGET_HARD = 14;  // ms — disable glow/vignette
 const FRAME_AVG_WINDOW = 10;   // frames for rolling average
-const BG_COLOR = '#0D0B08';
+const BG_COLOR = '#0D1A12';
 
 // Dev benchmark flag (build-time)
 const DEV_BENCHMARK = typeof process !== 'undefined'
@@ -65,7 +65,7 @@ export default function MandalaCanvas({
   const lastFrameRef = useRef<ImageData | null>(null);
 
   // Select active pattern
-  const pattern: Pattern = DEV_BENCHMARK ? concentricCirclesPattern : mandalaPattern;
+  const pattern: Pattern = DEV_BENCHMARK ? concentricCirclesPattern : lotusPattern;
 
   const digits = userId.replace(/\D/g, '').slice(0, 8);
   const watermarkText = `HTG | ${userEmail} | ${digits}`;

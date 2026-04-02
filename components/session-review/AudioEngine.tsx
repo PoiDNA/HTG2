@@ -81,7 +81,7 @@ function normalizeDuration(d: number): number | null {
 
 export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
   function AudioEngine({ playbackId, idFieldName, tokenEndpoint, onStateChange }, ref) {
-    const audioRef = useRef<HTMLVideoElement>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const graphRef = useRef<PlaybackAudioGraph | null>(null);
     const graphCreatedRef = useRef(false);
@@ -178,6 +178,9 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
       message: string,
       title?: string
     ) => {
+      const s = stateRef.current.status;
+      if (s === 'error' || s === 'unsupported') return; // already in terminal error
+      
       clearLoadingGuard();
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
@@ -290,8 +293,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
             maxBufferLength: 30,
             maxMaxBufferLength: 60,
           });
-          hls.loadSource(data.url);
-          hls.attachMedia(audio);
+          
           hls.on(Hls.Events.MANIFEST_PARSED, onSourceReady);
           hls.on(Hls.Events.ERROR, (_, errData) => {
             if (errData.fatal) {
@@ -303,6 +305,9 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
               console.warn('[AudioEngine] HLS non-fatal:', errData.type, errData.details);
             }
           });
+          
+          hls.loadSource(data.url);
+          hls.attachMedia(audio);
           hlsRef.current = hls;
         } else if (audio.canPlayType('application/vnd.apple.mpegurl') || data.deliveryType === 'direct') {
           // Safari native HLS or direct file
@@ -418,6 +423,11 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         emitState({ status: 'ended' });
       };
       const onError = () => {
+        if (hlsRef.current) {
+          // HLS.js aktywne — loguj ale nie niszcz (HLS ma własną obsługę błędów)
+          console.warn('[AudioEngine] video error while HLS active, code:', audio.error?.code);
+          return;
+        }
         enterTerminalError('error', `Błąd elementu media (kod ${audio.error?.code ?? '?'})`);
       };
       const onTimeUpdate = () => emitTime(audio.currentTime);
@@ -519,10 +529,8 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     // Render hidden audio element
     // -----------------------------------------------------------------------
     return (
-      <video
+      <audio
         ref={audioRef}
-        crossOrigin="anonymous"
-        playsInline
         preload="auto"
         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }}
       />

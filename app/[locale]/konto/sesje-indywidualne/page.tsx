@@ -240,7 +240,8 @@ export default async function IndividualSessionsPage({
                     locale={locale}
                     hasEarlierSlots={booking.status === 'confirmed'}
                     countdownPhrase={countdown ? t(countdown.phraseKey) : null}
-                    countdownValue={cdParts?.value ?? null}
+                    countdownMonths={cdParts?.monthsLine ?? null}
+                    countdownDays={cdParts?.daysLine ?? null}
                     countdownSuffix={cdParts?.suffix ?? null}
                   />
                   {upsell && (

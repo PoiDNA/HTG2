@@ -103,6 +103,14 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     // Current state ref for internal reads (avoids stale closures)
     const stateRef = useRef<PlayerState>({ status: 'loading' });
 
+    // Attempt lifecycle and retry refs
+    const abortRef = useRef<AbortController | null>(null);
+    const attemptIdRef = useRef(0);
+    const loadedMetadataHandlerRef = useRef<(() => void) | null>(null);
+    const errorHandlerRef = useRef<(() => void) | null>(null);
+    const retryCountRef = useRef(0);
+    const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const emitState = useCallback((state: PlayerState) => {
       stateRef.current = state;
       onStateChange(state);
@@ -192,6 +200,11 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
       if (s === 'error' || s === 'unsupported') return;
 
       clearLoadingGuard();
+      abortRef.current?.abort();
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
       stopPlayEvent();
@@ -208,9 +221,33 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     // -----------------------------------------------------------------------
     // Load audio (initial + refresh)
     // -----------------------------------------------------------------------
-    const loadAudio = useCallback(async (isRefresh = false) => {
+    const loadAudio = useCallback(async (isRefresh = false, isRetry = false) => {
       const deviceId = deviceIdRef.current;
       clearLoadingGuard();
+
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+      if (!isRefresh && !isRetry) {
+        retryCountRef.current = 0;
+      }
+
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+      attemptIdRef.current += 1;
+      const currentAttempt = attemptIdRef.current;
+      const isStale = () => attemptIdRef.current !== currentAttempt;
+
+      const triggerRetry = (errMsg: string) => {
+        if (retryCountRef.current < 1) {
+          retryCountRef.current += 1;
+          emitState(isRefresh ? { status: 'refreshing' } : { status: 'loading' });
+          retryTimeoutRef.current = setTimeout(() => loadAudio(isRefresh, true), 1000);
+        } else {
+          enterTerminalError('error', errMsg);
+        }
+      };
 
       // Save state for refresh restore
       let snapshot: AudioSnapshot | null = null;
@@ -237,12 +274,22 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [idFieldName]: playbackId, deviceId }),
+          signal: abortRef.current.signal,
         });
 
+        if (isStale()) return;
+
         const data = await res.json().catch(() => ({}));
+        if (isStale()) return;
 
         if (!res.ok) {
-          emitState({ status: 'error', message: data.error || 'Błąd serwera' });
+          if (res.status === 401 || res.status === 403) {
+            enterTerminalError('error', data.error || 'Błąd dostępu');
+          } else if (res.status >= 500) {
+            triggerRetry(data.error || 'Błąd serwera podczas wczytywania nagrania');
+          } else {
+            enterTerminalError('error', data.error || 'Błąd serwera');
+          }
           return;
         }
 
@@ -258,26 +305,31 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         const audio = audioRef.current;
         if (!audio) return;
 
-        // Capability check for unsupported direct files
-        if (data.deliveryType === 'direct') {
-          if (!data.mimeType) {
-            enterTerminalError('unsupported', 'Format nagrania nie jest obsługiwany przez tę przeglądarkę.');
-            return;
-          }
-          const canPlay = audio.canPlayType(data.mimeType);
-          if (canPlay === '') {
-            enterTerminalError('unsupported', 'Format nagrania nie jest obsługiwany przez tę przeglądarkę.');
-            return;
-          }
+        // Clean up previous attempt listeners and sources
+        if (loadedMetadataHandlerRef.current) {
+          audio.removeEventListener('loadedmetadata', loadedMetadataHandlerRef.current);
+          loadedMetadataHandlerRef.current = null;
+        }
+        if (errorHandlerRef.current) {
+          audio.removeEventListener('error', errorHandlerRef.current);
+          errorHandlerRef.current = null;
         }
 
-        // Cleanup previous HLS instance
         if (hlsRef.current) {
           hlsRef.current.destroy();
           hlsRef.current = null;
         }
+        
+        // Clear native source to stop ongoing downloads
+        audio.removeAttribute('src');
+        audio.load();
 
         const onSourceReady = () => {
+          if (isStale()) return;
+          if (loadedMetadataHandlerRef.current) {
+            audio.removeEventListener('loadedmetadata', loadedMetadataHandlerRef.current);
+          }
+          retryCountRef.current = 0;
           clearLoadingGuard();
           // NOTE: Do NOT call tryCreateGraph() here.
           // createMediaElementSource() hijacks audio output from the element,
@@ -300,6 +352,26 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           emitState({ status: 'paused' });
         };
 
+        const handleNativeError = () => {
+          if (isStale()) return;
+          if (hlsRef.current) {
+            console.warn('[AudioEngine] video error while HLS active, code:', audio.error?.code);
+            return;
+          }
+          const code = audio.error?.code;
+          if (code === 4) {
+            enterTerminalError('unsupported', 'Format nagrania nie jest obsługiwany przez tę przeglądarkę.');
+          } else if (code === 2) {
+            triggerRetry('Błąd sieci podczas odtwarzania.');
+          } else {
+            enterTerminalError('error', `Błąd elementu media (kod ${code ?? '?'})`);
+          }
+        };
+
+        errorHandlerRef.current = handleNativeError;
+        audio.addEventListener('error', handleNativeError);
+        loadedMetadataHandlerRef.current = onSourceReady;
+
         // Setup source
         if (data.deliveryType === 'hls' && Hls.isSupported()) {
           // HLS.js path (Chrome, Firefox, etc.)
@@ -308,8 +380,12 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
             maxMaxBufferLength: 60,
           });
           // Register handlers BEFORE loadSource/attachMedia to prevent race conditions
-          hls.on(Hls.Events.MANIFEST_PARSED, onSourceReady);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            if (isStale()) return;
+            onSourceReady();
+          });
           hls.on(Hls.Events.ERROR, (_, errData) => {
+            if (isStale()) return;
             if (errData.fatal) {
               console.warn('[AudioEngine] HLS fatal:', errData.type, errData.details);
               enterTerminalError('error', 'Błąd odtwarzania strumienia.');
@@ -325,7 +401,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         } else if (audio.canPlayType('application/vnd.apple.mpegurl') || data.deliveryType === 'direct') {
           // Safari native HLS or direct file
           audio.src = data.url;
-          audio.addEventListener('loadedmetadata', onSourceReady, { once: true });
+          audio.addEventListener('loadedmetadata', onSourceReady);
         } else {
           enterTerminalError('unsupported', 'Twoja przeglądarka nie obsługuje tego formatu nagrania.');
           return;
@@ -342,8 +418,9 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           }, 15000); // 15s refresh guard
           loadAudio(true);
         }, refreshIn);
-      } catch {
-        enterTerminalError('error', 'Nie udało się załadować nagrania.');
+      } catch (err: any) {
+        if (err?.name === 'AbortError' || isStale()) return;
+        triggerRetry('Nie udało się załadować nagrania.');
       }
     }, [playbackId, idFieldName, tokenEndpoint, emitState, emitTime, emitDuration, tryCreateGraph, clearLoadingGuard, enterTerminalError]);
 
@@ -435,25 +512,14 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         stopPlayEvent(); // Zamknij play-event na końcu
         emitState({ status: 'ended' });
       };
-      const onError = () => {
-        if (hlsRef.current) {
-          // HLS.js active — it manages its own error recovery; don't destroy it
-          console.warn('[AudioEngine] video error while HLS active, code:', audio.error?.code);
-          return;
-        }
-        enterTerminalError('error', `Błąd elementu media (kod ${audio.error?.code ?? '?'})`);
-      };
       const onTimeUpdate = () => emitTime(audio.currentTime);
       const onDurationChange = () => emitDuration();
-      const onLoadedMetadata = () => emitDuration();
 
       audio.addEventListener('playing', onPlaying);
       audio.addEventListener('pause', onPause);
       audio.addEventListener('ended', onEnded);
-      audio.addEventListener('error', onError);
       audio.addEventListener('timeupdate', onTimeUpdate);
       audio.addEventListener('durationchange', onDurationChange);
-      audio.addEventListener('loadedmetadata', onLoadedMetadata);
 
       // Initial load
       loadAudio(false);
@@ -462,10 +528,13 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         audio.removeEventListener('playing', onPlaying);
         audio.removeEventListener('pause', onPause);
         audio.removeEventListener('ended', onEnded);
-        audio.removeEventListener('error', onError);
         audio.removeEventListener('timeupdate', onTimeUpdate);
         audio.removeEventListener('durationchange', onDurationChange);
-        audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+
+        abortRef.current?.abort();
+        if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+        if (loadedMetadataHandlerRef.current) audio.removeEventListener('loadedmetadata', loadedMetadataHandlerRef.current);
+        if (errorHandlerRef.current) audio.removeEventListener('error', errorHandlerRef.current);
 
         clearLoadingGuard();
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);

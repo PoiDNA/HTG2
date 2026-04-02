@@ -105,15 +105,15 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
           <span className={`w-2 h-2 rounded-full shrink-0 ${config.color}`} />
           <h4 className="font-semibold text-htg-fg text-sm">{config.label}</h4>
         </div>
-        <div className="flex items-center gap-2">
-          {countdownText && (
-            <span className="text-[11px] font-bold uppercase tracking-wide text-htg-sage whitespace-nowrap">
-              {countdownText}
-            </span>
-          )}
+        <div className="flex flex-col items-end gap-1">
           <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${STATUS_STYLES[booking.status] ?? ''}`}>
             {t(statusKey)}
           </span>
+          {countdownText && (
+            <span className="text-lg font-bold uppercase tracking-wide text-htg-sage whitespace-nowrap">
+              {countdownText}
+            </span>
+          )}
         </div>
       </div>
 

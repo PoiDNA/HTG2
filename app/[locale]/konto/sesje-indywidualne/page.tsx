@@ -11,6 +11,7 @@ import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
 import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import CompanionInvite from '@/components/booking/CompanionInvite';
+import PastBookingAccordion from '@/components/booking/PastBookingAccordion';
 import { getSessionCountdown, formatCountdown } from '@/lib/booking/countdown-phrases';
 
 // Session type → assistant slug mapping
@@ -235,11 +236,13 @@ export default async function IndividualSessionsPage({
                       locale={locale}
                     />
                   )}
-                  <CustomPaymentCard
-                    sessionType={booking.session_type}
-                    slotId={booking.slot?.id}
-                    locale={locale}
-                  />
+                  {booking.payment_status === 'installments' && (
+                    <CustomPaymentCard
+                      sessionType={booking.session_type}
+                      slotId={booking.slot?.id}
+                      locale={locale}
+                    />
+                  )}
                   {booking.session_type === 'natalia_para' && (
                     <CompanionInvite
                       bookingId={booking.id}
@@ -328,17 +331,13 @@ export default async function IndividualSessionsPage({
         </div>
       )}
 
-      {/* Past bookings */}
+      {/* Past bookings — accordion */}
       {pastBookings.length > 0 && (
         <div>
           <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4 text-htg-fg-muted">
             {t('status_completed')}
           </h3>
-          <div className="grid grid-cols-1 gap-3 opacity-60">
-            {pastBookings.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} locale={locale} />
-            ))}
-          </div>
+          <PastBookingAccordion bookings={pastBookings} locale={locale} />
         </div>
       )}
 

@@ -402,7 +402,72 @@
     "success_confirmed": "Session confirmed!",
     "success_cancelled": "Session cancelled.",
     "success_transferred": "Session moved to the new slot.",
-    "nav_label": "Individual sessions"
+    "nav_label": "Individual sessions",
+    "countdown": {
+      "8plus": {
+        "0": "A longer road lies ahead — and that's a beautiful thing. Each day brings you closer.",
+        "1": "Time is your ally. Let it work in your favour.",
+        "2": "Great things need time to ripen. Your session is no exception.",
+        "3": "A seed planted in silence is already growing. You're preparing too, even if you can't see it yet.",
+        "4": "It's a long walk, but every step matters. Your session waits at the end of this path."
+      },
+      "7": {
+        "0": "Seven months is a lot of time — and less than you think.",
+        "1": "Between today and your session, there's a whole world of possibility.",
+        "2": "The seasons will change before we meet. And so might you.",
+        "3": "Still far away, but the direction is clear. Your session is on the calendar.",
+        "4": "Some things are worth waiting for. Your session is one of them."
+      },
+      "6": {
+        "0": "Half a year until your session. Time you can use wisely.",
+        "1": "Six months — long enough to prepare, short enough to feel the excitement.",
+        "2": "You're at the halfway point since you booked. Balance.",
+        "3": "Six months pass faster than you expect. Especially when you know what you're waiting for.",
+        "4": "Half a year. Imagine who you'll be when the day arrives."
+      },
+      "5": {
+        "0": "Five months. The countdown is picking up speed.",
+        "1": "Getting closer. Five months is a distance you can already see on the horizon.",
+        "2": "Your session is approaching step by step. Five months is no longer abstract.",
+        "3": "In five months you'll be in a completely different place. The session is just one part of that journey.",
+        "4": "Five months — time in which you can learn a lot about yourself. And about what you're looking for."
+      },
+      "4": {
+        "0": "Four months. Your session is slowly emerging from the mist of the future.",
+        "1": "One more season will pass before we meet.",
+        "2": "Four months — close enough to start thinking about what you want to say.",
+        "3": "Time flies. Four months separate you from something important.",
+        "4": "The session is becoming more real. Four months is already concrete."
+      },
+      "3": {
+        "0": "Three months — close enough to feel the excitement.",
+        "1": "Just a little more patience. Three months will pass faster than you think.",
+        "2": "One quarter. The final stretch before your session begins now.",
+        "3": "Three months is the perfect time to gather your thoughts and prepare for the meeting.",
+        "4": "Counting down in quarters — and you only have one left."
+      },
+      "2": {
+        "0": "Two months. Your session is almost within reach.",
+        "1": "Eight weeks stand between you and your session. That's less than you think.",
+        "2": "You're approaching fast. Two months is the home stretch.",
+        "3": "In two months everything will become clearer. For now — enjoy the anticipation.",
+        "4": "The final phase of the countdown. Two months and you'll be there."
+      },
+      "1": {
+        "0": "Just one month left. You can almost hear the session knocking at the door.",
+        "1": "One month. Time for last preparations — or simply to be present.",
+        "2": "The finish line. In a month we'll meet for your session.",
+        "3": "Four weeks. That's a blink of an eye compared to how long you've already waited.",
+        "4": "The last month. Everything you need is already within you."
+      },
+      "lt1": {
+        "0": "Almost there. The final days before your session.",
+        "1": "Can you feel it? Your session is just around the corner.",
+        "2": "Counting in days now. It's truly close.",
+        "3": "Just a moment more and we'll meet. Get ready for something special.",
+        "4": "The home stretch. Days separate you from your session — not months, not weeks. Days."
+      }
+    }
   },
   "Live": {
     "waiting_title": "Waiting for the facilitator...",

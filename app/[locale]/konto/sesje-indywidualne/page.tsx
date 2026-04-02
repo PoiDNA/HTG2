@@ -11,6 +11,7 @@ import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
 import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import CompanionInvite from '@/components/booking/CompanionInvite';
+import { getSessionCountdown, formatCountdown } from '@/lib/booking/countdown-phrases';
 
 // Session type → assistant slug mapping
 const SESSION_TYPE_TO_SLUG: Record<string, string> = {
@@ -164,6 +165,16 @@ export default async function IndividualSessionsPage({
     .map((c: any) => c.bookings)
     .filter((b: any) => ['pending_confirmation', 'confirmed'].includes(b?.status));
 
+  // Countdown: today in Warsaw timezone for calendar-level comparisons
+  const todayYmd = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+  const normalizedLocale: 'pl' | 'en' = locale === 'en' ? 'en' : 'pl';
+
+  // Countdown: hours-until helper (same pattern as BookingCard for consistency)
+  function getHoursUntil(slot: { slot_date: string; start_time: string }): number {
+    const dt = new Date(slot.slot_date + 'T' + slot.start_time + '+02:00');
+    return (dt.getTime() - Date.now()) / (1000 * 60 * 60);
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -191,12 +202,22 @@ export default async function IndividualSessionsPage({
           <div className="grid grid-cols-1 gap-4">
             {activeBookings.map((booking) => {
               const upsell = preSessionUpsellMap[booking.session_type];
+              const slot = booking.slot;
+              const showCountdown = booking.status === 'confirmed'
+                && slot
+                && getHoursUntil(slot) > 24;
+              const countdown = showCountdown
+                ? getSessionCountdown(booking.id, slot.slot_date, todayYmd)
+                : null;
+
               return (
                 <div key={booking.id}>
                   <BookingCard
                     booking={booking}
                     locale={locale}
                     hasEarlierSlots={booking.status === 'confirmed'}
+                    countdownPhrase={countdown ? t(countdown.phraseKey) : null}
+                    countdownText={countdown ? formatCountdown(countdown.months, countdown.days, normalizedLocale) : null}
                   />
                   {upsell && (
                     <PreSessionUpsell

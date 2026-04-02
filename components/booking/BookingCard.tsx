@@ -13,8 +13,10 @@ interface BookingCardProps {
   locale: string;
   hasEarlierSlots?: boolean;
   countdownPhrase?: string | null;
-  /** Countdown number+unit, e.g. "14 dni" */
-  countdownValue?: string | null;
+  /** Countdown months line, e.g. "1 miesiąc" */
+  countdownMonths?: string | null;
+  /** Countdown days line, e.g. "17 dni" */
+  countdownDays?: string | null;
   /** Countdown suffix, e.g. "do sesji" */
   countdownSuffix?: string | null;
   isPast?: boolean;
@@ -28,7 +30,7 @@ const STATUS_STYLES: Record<string, string> = {
   transferred: 'bg-blue-50 text-blue-600',
 };
 
-export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownValue, countdownSuffix, isPast }: BookingCardProps) {
+export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownMonths, countdownDays, countdownSuffix, isPast }: BookingCardProps) {
   const t = useTranslations('Booking');
   const router = useRouter();
   const { toggleReschedule, rescheduleBookingId } = useReschedule();
@@ -118,9 +120,14 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
             {t(statusKey)}
           </span>
         </div>
-        {countdownValue && (
-          <div className="text-right shrink-0">
-            <p className="text-5xl font-bold text-htg-sage leading-none">{countdownValue}</p>
+        {(countdownMonths || countdownDays) && (
+          <div className="text-right shrink-0" style={{ fontFamily: 'Nunito, sans-serif' }}>
+            {countdownMonths && (
+              <p className="text-5xl font-bold text-htg-sage leading-none">{countdownMonths}</p>
+            )}
+            {countdownDays && (
+              <p className="text-5xl font-bold text-htg-sage leading-none mt-1">{countdownDays}</p>
+            )}
             <p className="text-sm text-htg-sage mt-1">{countdownSuffix}</p>
           </div>
         )}

@@ -371,6 +371,7 @@
     "status_pending": "Oczekuje na potwierdzenie",
     "status_confirmed": "Potwierdzona",
     "status_completed": "Zakończona",
+    "past_sessions_title": "Sesje zakończone",
     "status_cancelled": "Anulowana",
     "status_transferred": "Przeniesiona",
     "confirm_btn": "Potwierdź",

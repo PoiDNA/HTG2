@@ -371,6 +371,7 @@
     "status_pending": "Pending confirmation",
     "status_confirmed": "Confirmed",
     "status_completed": "Completed",
+    "past_sessions_title": "Completed sessions",
     "status_cancelled": "Cancelled",
     "status_transferred": "Transferred",
     "confirm_btn": "Confirm",

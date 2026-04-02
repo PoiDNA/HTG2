@@ -222,7 +222,6 @@ export default async function IndividualSessionsPage({
       {/* Active bookings */}
       {activeBookings.length > 0 && (
         <div>
-          <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('your_bookings')}</h3>
           <div className="grid grid-cols-1 gap-4">
             {activeBookings.map((booking) => {
               const upsell = preSessionUpsellMap[booking.session_type];
@@ -352,7 +351,7 @@ export default async function IndividualSessionsPage({
       {pastAllBookings.length > 0 && (
         <div>
           <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4 text-htg-fg-muted">
-            {t('status_completed')}
+            {t('past_sessions_title')}
           </h3>
           <PastBookingAccordion bookings={pastAllBookings} locale={locale} />
         </div>

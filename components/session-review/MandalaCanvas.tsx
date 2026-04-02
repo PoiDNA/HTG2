@@ -8,13 +8,17 @@
 // Analysis graph optional — falls back to ambient animations.
 // ---------------------------------------------------------------------------
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { AudioSampler, type AnalysisState } from './audioSampler';
 import { drawWatermark } from './drawWatermark';
 import { lotusPattern } from './patterns/lotus';
 import { concentricCirclesPattern } from './patterns/concentric-circles';
 import { SILENT_BANDS, type AudioBands, type Pattern, type RenderContext } from './patterns/types';
 import type { AudioEngineHandle } from './AudioEngine';
+
+export interface MandalaCanvasHandle {
+  triggerBurst: () => void;
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -49,14 +53,14 @@ interface MandalaCanvasProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function MandalaCanvas({
+const MandalaCanvas = forwardRef<MandalaCanvasHandle, MandalaCanvasProps>(function MandalaCanvas({
   engineHandle,
   userEmail,
   userId,
   isPlaying,
   isActive,
   motionMode,
-}: MandalaCanvasProps) {
+}, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef(0);
   const samplerRef = useRef<AudioSampler | null>(null);
@@ -67,6 +71,14 @@ export default function MandalaCanvas({
   const lastFrameRef = useRef<ImageData | null>(null);
   const interactionBurstRef = useRef(0);       // 0-1 decaying burst from flower click
   const interactionBurstTimeRef = useRef(0);   // timestamp of last burst
+
+  // Expose triggerBurst so parent can call it (e.g. from click on flower area)
+  useImperativeHandle(ref, () => ({
+    triggerBurst: () => {
+      interactionBurstRef.current = 1;
+      interactionBurstTimeRef.current = performance.now();
+    },
+  }), []);
 
   // Select active pattern
   const pattern: Pattern = DEV_BENCHMARK ? concentricCirclesPattern : lotusPattern;
@@ -289,26 +301,13 @@ export default function MandalaCanvas({
     return () => window.removeEventListener('resize', onResize);
   }, [isActive, motionMode, drawStaticFrame]);
 
-  // Click on flower area triggers interaction burst
-  const handleCanvasClick = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    // Flower is roughly centered (0.25-0.75 x, 0.15-0.75 y)
-    if (x > 0.2 && x < 0.8 && y > 0.1 && y < 0.8) {
-      interactionBurstRef.current = 1;
-      interactionBurstTimeRef.current = performance.now();
-    }
-  }, []);
-
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full cursor-pointer"
+      className="absolute inset-0 w-full h-full"
       aria-hidden="true"
-      onPointerDown={handleCanvasClick}
     />
   );
-}
+});
+
+export default MandalaCanvas;

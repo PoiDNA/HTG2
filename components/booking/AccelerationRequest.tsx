@@ -77,7 +77,7 @@ export default function AccelerationRequest({
       <div className="bg-htg-sage/5 border border-htg-sage/20 rounded-xl p-4">
         <h4 className="font-semibold text-htg-fg text-sm mb-2">{t('acceleration_offered')}</h4>
         <p className="text-sm text-htg-fg mb-3">
-          <span className="capitalize">{dateStr}</span> {slot.start_time} – {slot.end_time}
+          <span className="capitalize">{dateStr}</span> {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
         </p>
         <div className="flex gap-2">
           <button

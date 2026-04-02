@@ -53,7 +53,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
       }).format(new Date(slot.slot_date + 'T00:00:00'))
     : '';
 
-  const timeStr = slot ? `${slot.start_time} – ${slot.end_time}` : '';
+  const timeStr = slot ? `${slot.start_time.slice(0, 5)} – ${slot.end_time.slice(0, 5)}` : '';
   const statusKey = `status_${booking.status}` as const;
 
   async function handleConfirm() {

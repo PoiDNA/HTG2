@@ -91,10 +91,12 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
   const canCancel = isActive && new Date() < cancelDeadline;
   const daysLeftToCancel = Math.max(0, Math.ceil((cancelDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
 
-  // Reschedule: guaranteed >48h before, conditional <48h
-  const canReschedule = isActive;
+  // Session time calculations
   const sessionDateTime = slot ? new Date(slot.slot_date + 'T' + slot.start_time + '+02:00') : null; // CEST
   const hoursUntilSession = sessionDateTime ? (sessionDateTime.getTime() - Date.now()) / (1000 * 60 * 60) : Infinity;
+
+  // Reschedule: only for future sessions, guaranteed >48h before, conditional <48h
+  const canReschedule = isActive && hoursUntilSession > 0;
   const isGuaranteedReschedule = hoursUntilSession > 48;
   const isConditionalReschedule = hoursUntilSession <= 48 && hoursUntilSession > 0;
 

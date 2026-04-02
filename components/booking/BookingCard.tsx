@@ -6,13 +6,18 @@ import { useRouter } from 'next/navigation';
 import type { Booking } from '@/lib/booking/types';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import BookingCountdown from './BookingCountdown';
+import { useReschedule } from './ActiveBookingsSection';
 
 interface BookingCardProps {
   booking: Booking;
   locale: string;
   hasEarlierSlots?: boolean;
   countdownPhrase?: string | null;
-  countdownText?: string | null;
+  /** Countdown number+unit, e.g. "14 dni" */
+  countdownValue?: string | null;
+  /** Countdown suffix, e.g. "do sesji" */
+  countdownSuffix?: string | null;
+  isPast?: boolean;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -23,9 +28,10 @@ const STATUS_STYLES: Record<string, string> = {
   transferred: 'bg-blue-50 text-blue-600',
 };
 
-export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownText }: BookingCardProps) {
+export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownValue, countdownSuffix, isPast }: BookingCardProps) {
   const t = useTranslations('Booking');
   const router = useRouter();
+  const { toggleReschedule, rescheduleBookingId } = useReschedule();
   const [loading, setLoading] = useState<string | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDelayOptions, setShowDelayOptions] = useState(false);
@@ -103,20 +109,21 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full shrink-0 ${config.color}`} />
-          <h4 className="font-semibold text-htg-fg text-sm">{config.label}</h4>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${STATUS_STYLES[booking.status] ?? ''}`}>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${config.color}`} />
+            <h4 className="font-semibold text-htg-fg text-sm">{config.label}</h4>
+          </div>
+          <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap mt-1.5 ${STATUS_STYLES[booking.status] ?? ''}`}>
             {t(statusKey)}
           </span>
-          {countdownText && (
-            <span className="text-lg font-bold uppercase tracking-wide text-htg-sage whitespace-nowrap">
-              {countdownText}
-            </span>
-          )}
         </div>
+        {countdownValue && (
+          <div className="text-right shrink-0">
+            <p className="text-5xl font-bold text-htg-sage leading-none">{countdownValue}</p>
+            <p className="text-sm text-htg-sage mt-1">{countdownSuffix}</p>
+          </div>
+        )}
       </div>
 
       {slot && (
@@ -198,8 +205,8 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
         </div>
       )}
 
-      {/* Topics / zagadnienia */}
-      {isActive && (
+      {/* Topics / zagadnienia — hidden for past sessions */}
+      {isActive && !isPast && (
         <div className="mb-3 pt-3 border-t border-htg-card-border">
           <label className="block">
             <span className="text-xs font-medium text-htg-fg-muted mb-1 block">
@@ -237,7 +244,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
         </div>
       )}
 
-      {isActive && (
+      {isActive && !isPast && (
         <div className="space-y-3 pt-3 border-t border-htg-card-border">
           <div className="flex flex-wrap gap-2">
             {isPending && (
@@ -277,15 +284,17 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
               </button>
             )}
 
-            {/* Reschedule — always available */}
+            {/* Reschedule — toggle inline calendar */}
             {canReschedule && (
               <button
-                onClick={() => {
-                  document.getElementById('booking-calendar')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="bg-htg-surface text-htg-fg px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-card-border transition-colors"
+                onClick={() => toggleReschedule(booking.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  rescheduleBookingId === booking.id
+                    ? 'bg-htg-sage text-white'
+                    : 'bg-htg-surface text-htg-fg hover:bg-htg-card-border'
+                }`}
               >
-                Zmień termin
+                {rescheduleBookingId === booking.id ? 'Ukryj kalendarz' : 'Zmień termin'}
               </button>
             )}
           </div>

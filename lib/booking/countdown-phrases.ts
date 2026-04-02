@@ -122,19 +122,28 @@ export function formatCountdown(
   days: number,
   locale: 'pl' | 'en',
 ): string {
+  const parts = formatCountdownParts(months, days, locale);
+  return parts ? parts.value + ' ' + parts.suffix : '';
+}
+
+/** Returns countdown split into value ("14 dni") and suffix ("do sesji") */
+export function formatCountdownParts(
+  months: number,
+  days: number,
+  locale: 'pl' | 'en',
+): { value: string; suffix: string } | null {
   const fmtMonths = locale === 'pl' ? plMonths : enMonths;
   const fmtDays = locale === 'pl' ? plDays : enDays;
   const conjunction = locale === 'pl' ? ' i ' : ' and ';
+  const suffix = locale === 'pl' ? 'do sesji' : 'until session';
 
-  const suffix = locale === 'pl' ? ' do sesji' : ' until session';
-
-  let result = '';
+  let value = '';
   if (months > 0 && days > 0) {
-    result = fmtMonths(months) + conjunction + fmtDays(days);
+    value = fmtMonths(months) + conjunction + fmtDays(days);
   } else if (months > 0) {
-    result = fmtMonths(months);
+    value = fmtMonths(months);
   } else if (days > 0) {
-    result = fmtDays(days);
+    value = fmtDays(days);
   }
-  return result ? result + suffix : '';
+  return value ? { value, suffix } : null;
 }

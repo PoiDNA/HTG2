@@ -67,7 +67,8 @@ export default function MandalaCanvas({
   // Select active pattern
   const pattern: Pattern = DEV_BENCHMARK ? concentricCirclesPattern : mandalaPattern;
 
-  const watermarkText = `${userEmail} | ${userId.slice(0, 8)}`;
+  const digits = userId.replace(/\D/g, '').slice(0, 8);
+  const watermarkText = `HTG | ${userEmail} | ${digits}`;
 
   // -------------------------------------------------------------------------
   // Resize handler (also used for single redraw on pause)
@@ -121,7 +122,7 @@ export default function MandalaCanvas({
     pattern.render(renderCtx);
 
     // Watermark
-    drawWatermark(ctx, width, height, watermarkText, 0, true);
+    drawWatermark(ctx, width, height, watermarkText);
 
     ctx.restore();
   }, [sizeCanvas, pattern, watermarkText, engineHandle]);
@@ -229,7 +230,7 @@ export default function MandalaCanvas({
       }
 
       // 4. Watermark (always, with drift)
-      drawWatermark(ctx, width, height, watermarkText, time, false);
+      drawWatermark(ctx, width, height, watermarkText);
 
       ctx.restore();
 

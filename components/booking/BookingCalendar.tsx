@@ -157,7 +157,7 @@ export default function BookingCalendar({ sessionTypes, locale, rescheduleBookin
                         <span className={`w-2 h-2 rounded-full shrink-0 ${config.color}`} />
                         <div>
                           <p className="text-sm font-medium text-htg-fg">
-                            {slot.start_time} – {slot.end_time}
+                            {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
                           </p>
                           <p className="text-xs text-htg-fg-muted">{config.labelShort}</p>
                         </div>
@@ -204,7 +204,7 @@ export default function BookingCalendar({ sessionTypes, locale, rescheduleBookin
                 }).format(new Date(showConfirmModal.slot_date + 'T00:00:00'))}
               </p>
               <p className="text-sm font-medium text-htg-fg">
-                {showConfirmModal.start_time} – {showConfirmModal.end_time}
+                {showConfirmModal.start_time.slice(0, 5)} – {showConfirmModal.end_time.slice(0, 5)}
               </p>
             </div>
 

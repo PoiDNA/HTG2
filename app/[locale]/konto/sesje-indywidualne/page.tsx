@@ -131,12 +131,29 @@ export default async function IndividualSessionsPage({
 
   const accelerationEntries: AccelerationEntry[] = (accelData ?? []) as AccelerationEntry[];
 
-  const activeBookings = bookings.filter(
-    (b) => b.status === 'pending_confirmation' || b.status === 'confirmed'
-  );
-  const pastBookings = bookings.filter(
-    (b) => b.status === 'completed'
-  );
+  // Split bookings: future-active (shown as full cards) vs past (accordion)
+  // A booking is "past" if its slot date+time is in the past, regardless of status
+  const futureBookings: Booking[] = [];
+  const pastAllBookings: Booking[] = [];
+
+  for (const b of bookings) {
+    const isActiveStatus = b.status === 'pending_confirmation' || b.status === 'confirmed';
+    const isCompleted = b.status === 'completed';
+    const slot = b.slot;
+    const slotInFuture = slot ? (slot.slot_date + 'T' + slot.start_time) >= nowIso.slice(0, 16) : true;
+
+    if (isActiveStatus && slotInFuture) {
+      futureBookings.push(b);
+    } else if (isCompleted || (isActiveStatus && !slotInFuture)) {
+      // Skip pre_session bookings from past — they are not standalone sessions
+      if (b.session_type !== 'pre_session') {
+        pastAllBookings.push(b);
+      }
+    }
+  }
+
+  // Keep legacy names for downstream usage
+  const activeBookings = futureBookings;
 
   // Fetch companions for natalia_para bookings
   const paraBookingIds = activeBookings
@@ -332,12 +349,12 @@ export default async function IndividualSessionsPage({
       )}
 
       {/* Past bookings — accordion */}
-      {pastBookings.length > 0 && (
+      {pastAllBookings.length > 0 && (
         <div>
           <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4 text-htg-fg-muted">
             {t('status_completed')}
           </h3>
-          <PastBookingAccordion bookings={pastBookings} locale={locale} />
+          <PastBookingAccordion bookings={pastAllBookings} locale={locale} />
         </div>
       )}
 

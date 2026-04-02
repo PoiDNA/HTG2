@@ -7,12 +7,15 @@ export default function RevokeButton({ recordingId, isPara }: { recordingId: str
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
 
   if (done) {
-    return <span className="text-xs text-htg-fg-muted">Nagranie zostało usunięte z Twojej biblioteki</span>;
+    return <span className="text-xs text-htg-sage font-medium">Twoje nagranie zostało usunięte.</span>;
   }
 
   if (confirming) {
+    const canDelete = confirmText.trim().toLowerCase() === 'usuwam';
+
     return (
       <div className="flex flex-col gap-2">
         {isPara && (
@@ -20,9 +23,20 @@ export default function RevokeButton({ recordingId, isPara }: { recordingId: str
             Uwaga: ta akcja trwale usunie nagranie również z biblioteki Twojego partnera/partnerki.
           </p>
         )}
+        <p className="text-xs text-htg-fg-muted">
+          Potwierdź trwałe usunięcie nagrania wpisując: <strong className="text-htg-fg">usuwam</strong>
+        </p>
         <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="usuwam"
+            className="px-2 py-1.5 text-xs rounded border border-htg-card-border bg-htg-bg text-htg-fg w-24 focus:outline-none focus:ring-1 focus:ring-red-500/50"
+            autoFocus
+          />
           <button
-            disabled={loading}
+            disabled={!canDelete || loading}
             onClick={async () => {
               setLoading(true);
               try {
@@ -36,12 +50,12 @@ export default function RevokeButton({ recordingId, isPara }: { recordingId: str
                 setLoading(false);
               }
             }}
-            className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 disabled:opacity-50"
+            className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? '...' : 'Tak, cofnij zgodę'}
+            {loading ? '...' : 'Usuń'}
           </button>
           <button
-            onClick={() => setConfirming(false)}
+            onClick={() => { setConfirming(false); setConfirmText(''); }}
             className="text-xs text-htg-fg-muted hover:text-htg-fg"
           >
             Anuluj
@@ -55,12 +69,10 @@ export default function RevokeButton({ recordingId, isPara }: { recordingId: str
     <button
       onClick={() => setConfirming(true)}
       className="flex items-center gap-1 text-xs text-htg-fg-muted hover:text-red-400 transition-colors"
-      title={isPara
-        ? 'Spowoduje trwałe usunięcie nagrania dla obu uczestników'
-        : 'Cofnięcie zgody usunie nagranie z Twojej biblioteki'}
+      title="Trwale usuń nagranie"
     >
       <Trash2 className="w-3 h-3" />
-      {isPara ? 'Cofnij zgodę na udostępnianie' : 'Cofnij zgodę i usuń nagranie'}
+      Usuń
     </button>
   );
 }

@@ -210,9 +210,9 @@ export async function POST(request: NextRequest) {
         'wav': 'audio/wav',
         'aac': 'audio/aac',
         'webm': 'audio/webm',
-        'mp4': 'audio/mp4',   // Booking recordings are audio-first
-        'm4v': 'audio/mp4',   // audio in m4v container
-        'mov': 'audio/mp4',   // audio in mov container
+        'mp4': 'video/mp4',
+        'm4v': 'video/mp4',
+        'mov': 'video/quicktime',
       };
       mimeType = (ext && mimeMap[ext]) ?? null;
     }

@@ -81,7 +81,7 @@ function normalizeDuration(d: number): number | null {
 
 export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
   function AudioEngine({ playbackId, idFieldName, tokenEndpoint, onStateChange }, ref) {
-    const audioRef = useRef<HTMLAudioElement>(null);
+    const audioRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const graphRef = useRef<PlaybackAudioGraph | null>(null);
     const graphCreatedRef = useRef(false);
@@ -156,6 +156,14 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     const tryCreateGraph = useCallback(() => {
       if (graphCreatedRef.current || !audioRef.current) return;
       graphCreatedRef.current = true;
+
+      // Only create Web Audio graph when HLS.js is active (blob: URLs are same-origin).
+      // For native playback (Safari HLS, direct files), the source is cross-origin
+      // from Bunny CDN. Without crossOrigin="anonymous" on the element,
+      // createMediaElementSource() triggers a CORS hard-mute — the browser
+      // silences the element entirely at the hardware level.
+      // In that case, skip graph creation → canvas falls back to ambient mode.
+      if (!hlsRef.current) return;
 
       const graph = createPlaybackAudioGraph(audioRef.current);
       graphRef.current = graph;
@@ -545,8 +553,9 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     // Render hidden audio element
     // -----------------------------------------------------------------------
     return (
-      <audio
+      <video
         ref={audioRef}
+        playsInline
         preload="auto"
         style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', overflow: 'hidden' }}
       />

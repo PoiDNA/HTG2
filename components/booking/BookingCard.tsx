@@ -13,6 +13,7 @@ interface BookingCardProps {
   hasEarlierSlots?: boolean;
   countdownPhrase?: string | null;
   countdownText?: string | null;
+  isPast?: boolean;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -23,7 +24,7 @@ const STATUS_STYLES: Record<string, string> = {
   transferred: 'bg-blue-50 text-blue-600',
 };
 
-export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownText }: BookingCardProps) {
+export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownText, isPast }: BookingCardProps) {
   const t = useTranslations('Booking');
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -198,8 +199,8 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
         </div>
       )}
 
-      {/* Topics / zagadnienia */}
-      {isActive && (
+      {/* Topics / zagadnienia — hidden for past sessions */}
+      {isActive && !isPast && (
         <div className="mb-3 pt-3 border-t border-htg-card-border">
           <label className="block">
             <span className="text-xs font-medium text-htg-fg-muted mb-1 block">
@@ -237,7 +238,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
         </div>
       )}
 
-      {isActive && (
+      {isActive && !isPast && (
         <div className="space-y-3 pt-3 border-t border-htg-card-border">
           <div className="flex flex-wrap gap-2">
             {isPending && (

@@ -52,7 +52,7 @@ export default function PastBookingAccordion({ bookings, locale }: PastBookingAc
             </button>
             {isOpen && (
               <div className="mt-1 opacity-60">
-                <BookingCard booking={booking} locale={locale} />
+                <BookingCard booking={booking} locale={locale} isPast />
               </div>
             )}
           </div>

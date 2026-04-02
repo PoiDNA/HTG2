@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // drawWatermark — pure rendering function for player watermark
 //
-// Draws a static watermark in the bottom-left corner with a dark halo.
+// Draws a static watermark in the bottom-right corner with a dark halo.
 // Called as the last step in MandalaCanvas's rAF loop.
 // ---------------------------------------------------------------------------
 
@@ -24,13 +24,13 @@ export function drawWatermark(
   // Font setup
   const fontSize = Math.max(10, Math.min(width * 0.016, 18));
   ctx.font = `${fontSize}px system-ui, -apple-system, sans-serif`;
-  ctx.textAlign = 'left';
+  ctx.textAlign = 'right';
   ctx.textBaseline = 'bottom';
 
-  // Position: fixed bottom-left with padding
+  // Position: fixed bottom-right with padding
   const paddingX = fontSize * 0.8;
   const paddingY = fontSize * 0.8;
-  const x = paddingX;
+  const x = width - paddingX;
   const y = height - paddingY;
 
   // Measure text for halo sizing
@@ -40,7 +40,7 @@ export function drawWatermark(
   const haloPad = fontSize * 0.4;
 
   // Dark halo behind text
-  const haloX = x - haloPad;
+  const haloX = x - textWidth - haloPad;
   const haloY = y - textHeight - haloPad * 0.3;
   const haloW = textWidth + haloPad * 2;
   const haloH = textHeight + haloPad;

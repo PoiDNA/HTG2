@@ -617,8 +617,8 @@ export const lotusPattern: Pattern = {
     // 1. Background (breathing gradient)
     drawBackground(c, width, height, time, audio.totalEnergy);
 
-    // 2. Water (live, bottom area — ripple boost on burst)
-    drawWater(c, width, height, time, audio.energy + burst * 0.4, audio.totalEnergy + burst * 0.2);
+    // 2. Water (live, bottom area — gentle ripple boost on hover)
+    drawWater(c, width, height, time, audio.energy + burst * 0.15, audio.totalEnergy + burst * 0.08);
 
     // Parallax offsets per layer — creates 3D depth illusion
     // Leaves: subtle (1x), Outer petals: medium (3x), Inner/Center: strong (5x)
@@ -667,19 +667,22 @@ export const lotusPattern: Pattern = {
     // Shadow offset based on wind
     const shadowOff = 2 + audio.midEnergy * 3;
 
-    // Interaction burst: flower blooms outward, petals spread + rotate
-    const burstScale = 1 + burst * 0.12;         // 12% scale-up on click
-    const burstRotation = burst * 0.08;           // slight rotation spread
-    const burstAlphaBoost = burst * 0.15;         // brighter on click
+    // Hover interaction: gentle bloom — soft scale, upward drift, subtle rotation
+    const hoverEased = burst * burst * (3 - 2 * burst); // smoothstep for extra softness
+    const burstScale = 1 + hoverEased * 0.05;           // 5% gentle scale-up
+    const burstRotation = hoverEased * 0.025;            // very subtle fan-out
+    const burstAlphaBoost = hoverEased * 0.08;           // slight brightening
+    const burstDriftY = -hoverEased * Math.min(height, width) * 0.02;  // gentle upward float
+    const burstSpin = hoverEased * 0.04;                 // gentle whole-flower rotation
 
-    // 4. Outer petals (phase-shifted wind + contact shadows + parallax + burst)
+    // 4. Outer petals (phase-shifted wind + contact shadows + parallax + hover drift)
     const outerRadius = Math.min(width, height) * 0.14;
     const outerCx = cx + parallaxOuterX;
-    const outerCy = cy + parallaxOuterY;
+    const outerCy = cy + parallaxOuterY + burstDriftY;
 
     for (let i = 0; i < OUTER_PETALS; i++) {
-      const baseAngle = (i / OUTER_PETALS) * Math.PI * 2 - Math.PI / 2;
-      // Burst fans petals outward (each petal rotates away from center)
+      const baseAngle = (i / OUTER_PETALS) * Math.PI * 2 - Math.PI / 2 + burstSpin;
+      // Gentle fan-out on hover
       const burstFan = (baseAngle > 0 ? 1 : -1) * burstRotation;
       const windPhase = Math.sin(time * 2.0 + i * 0.7) * 0.06 * (1 + audio.midEnergy * 3) + burstFan;
       const breathScale = (1 + Math.sin(time * 1.5 + i * 0.9) * 0.04 * (1 + audio.energy * 2)) * burstScale;
@@ -689,16 +692,16 @@ export const lotusPattern: Pattern = {
         baseAngle, windPhase, breathScale, outerRadius, alpha, shadowOff);
     }
 
-    // 5. Inner petals (translucent overlaps via 'screen' + parallax + burst)
+    // 5. Inner petals (translucent overlaps via 'screen' + parallax + hover drift)
     const innerRadius = Math.min(width, height) * 0.06;
     const innerCx = cx + parallaxInnerX;
-    const innerCy = cy + parallaxInnerY;
+    const innerCy = cy + parallaxInnerY + burstDriftY;
 
     const prevCompInner = c.globalCompositeOperation;
     c.globalCompositeOperation = 'screen';
 
     for (let i = 0; i < INNER_PETALS; i++) {
-      const baseAngle = (i / INNER_PETALS) * Math.PI * 2 - Math.PI / 2 + 0.2;
+      const baseAngle = (i / INNER_PETALS) * Math.PI * 2 - Math.PI / 2 + 0.2 + burstSpin * 1.2;
       const burstFan = (baseAngle > 0 ? 1 : -1) * burstRotation * 0.6;
       const windPhase = Math.sin(time * 1.6 + i * 0.8 + 2) * 0.04 * (1 + audio.midEnergy * 2) + burstFan;
       const breathScale = (1 + Math.sin(time * 1.2 + i * 1.1) * 0.03 * (1 + audio.energy)) * burstScale;
@@ -710,35 +713,37 @@ export const lotusPattern: Pattern = {
 
     c.globalCompositeOperation = prevCompInner;
 
-    // 6. Center (pulsing, with strong parallax + burst bloom)
+    // 6. Center (pulsing, with strong parallax + hover drift)
     const centerSize = sprites.center.width;
     const centerPulse = (1 + audio.totalEnergy * 0.12 + Math.sin(time * 2) * 0.03) * burstScale;
     const centerParX = parallaxInnerX * 0.7;
-    const centerParY = parallaxInnerY * 0.7;
+    const centerParY = parallaxInnerY * 0.7 + burstDriftY;
     c.save();
     c.translate(cx + centerParX, cy + centerParY);
+    c.rotate(burstSpin * 0.5);
     c.scale(centerPulse, centerPulse);
     c.globalAlpha = Math.min(MB, 0.85 + burstAlphaBoost);
     c.drawImage(sprites.center, -centerSize / 2, -centerSize / 2);
     c.restore();
 
-    // 7. Pollen particles (golden dust) — extra spawn on burst
+    // 7. Pollen particles (golden dust) — extra spawn on hover
     updateAndDrawParticles(c, cx + centerParX, cy + centerParY, time,
-      audio.highEnergy + burst * 0.5, audio.energy + burst * 0.3);
+      audio.highEnergy + hoverEased * 0.25, audio.energy + hoverEased * 0.15);
 
-    // 7b. Burst bloom flash — radial light burst from center
-    if (burst > 0.01) {
+    // 7b. Soft warm glow on hover — gentle radial warmth from center
+    if (hoverEased > 0.01) {
       c.save();
       c.globalCompositeOperation = 'screen';
-      const bloomR = Math.min(width, height) * 0.35 * (0.5 + burst * 0.5);
-      const bloomGrad = c.createRadialGradient(cx, cy, 0, cx, cy, bloomR);
-      bloomGrad.addColorStop(0, rgba(C.petalTip, burst * 0.2));
-      bloomGrad.addColorStop(0.3, rgba(C.petalLight, burst * 0.12));
-      bloomGrad.addColorStop(0.6, rgba(C.centerWarm, burst * 0.06));
-      bloomGrad.addColorStop(1, 'rgba(245,215,100,0)');
+      const glowCy = cy + burstDriftY;
+      const glowR = Math.min(width, height) * 0.3;
+      const glowGrad = c.createRadialGradient(cx, glowCy, 0, cx, glowCy, glowR);
+      glowGrad.addColorStop(0, rgba(C.petalTip, hoverEased * 0.08));
+      glowGrad.addColorStop(0.4, rgba(C.petalLight, hoverEased * 0.04));
+      glowGrad.addColorStop(0.7, rgba(C.centerWarm, hoverEased * 0.02));
+      glowGrad.addColorStop(1, 'rgba(245,215,100,0)');
       c.globalAlpha = 1;
-      c.fillStyle = bloomGrad;
-      c.fillRect(cx - bloomR, cy - bloomR, bloomR * 2, bloomR * 2);
+      c.fillStyle = glowGrad;
+      c.fillRect(cx - glowR, glowCy - glowR, glowR * 2, glowR * 2);
       c.globalCompositeOperation = 'source-over';
       c.restore();
     }

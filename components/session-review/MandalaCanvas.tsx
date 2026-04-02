@@ -17,7 +17,7 @@ import { SILENT_BANDS, type AudioBands, type Pattern, type RenderContext } from 
 import type { AudioEngineHandle } from './AudioEngine';
 
 export interface MandalaCanvasHandle {
-  triggerBurst: () => void;
+  setFlowerHover: (active: boolean) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -69,14 +69,13 @@ const MandalaCanvas = forwardRef<MandalaCanvasHandle, MandalaCanvasProps>(functi
   const degradationLevel = useRef(0); // 0=full, 1=reduced layers, 2=no glow
   const analysisState = useRef<CanvasAnalysisState>('analysis-unavailable');
   const lastFrameRef = useRef<ImageData | null>(null);
-  const interactionBurstRef = useRef(0);       // 0-1 decaying burst from flower click
-  const interactionBurstTimeRef = useRef(0);   // timestamp of last burst
+  const hoverTargetRef = useRef(0);    // 0 = not hovering flower, 1 = hovering
+  const hoverCurrentRef = useRef(0);   // smoothly interpolated toward target
 
-  // Expose triggerBurst so parent can call it (e.g. from click on flower area)
+  // Expose setFlowerHover so parent can drive hover from pointer position
   useImperativeHandle(ref, () => ({
-    triggerBurst: () => {
-      interactionBurstRef.current = 1;
-      interactionBurstTimeRef.current = performance.now();
+    setFlowerHover: (active: boolean) => {
+      hoverTargetRef.current = active ? 1 : 0;
     },
   }), []);
 
@@ -228,13 +227,16 @@ const MandalaCanvas = forwardRef<MandalaCanvasHandle, MandalaCanvasProps>(functi
       const time = (timestamp - startTimeRef.current) / 1000;
       const audioTime = engineHandle?.getSnapshot().currentTime ?? 0;
 
-      // Compute interaction burst (decays over ~0.8s with ease-out)
-      let interactionBurst = 0;
-      if (interactionBurstRef.current > 0) {
-        const elapsed = (timestamp - interactionBurstTimeRef.current) / 800;
-        interactionBurst = Math.max(0, 1 - elapsed * elapsed); // quadratic ease-out
-        if (interactionBurst <= 0) interactionBurstRef.current = 0;
+      // Smooth hover interpolation (~2s ease in/out)
+      const lerpSpeed = frameDelta / 2000; // ~2 seconds to fully transition
+      const target = hoverTargetRef.current;
+      const cur = hoverCurrentRef.current;
+      if (cur < target) {
+        hoverCurrentRef.current = Math.min(target, cur + lerpSpeed);
+      } else if (cur > target) {
+        hoverCurrentRef.current = Math.max(target, cur - lerpSpeed);
       }
+      const interactionBurst = hoverCurrentRef.current;
 
       ctx.save();
       ctx.scale(dpr, dpr);

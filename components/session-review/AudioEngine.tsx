@@ -42,11 +42,15 @@ export interface AudioEngineHandle {
   seek(time: number): void;
   setVolume(v: number): void;
   setMuted(m: boolean): void;
+  setPlaybackRate(rate: number): void;
   getSnapshot(): AudioSnapshot;
   getAnalyser(): AnalyserNode | null;
   readonly canSetVolume: boolean;
   subscribeToTime(cb: (t: number) => void): () => void;
   subscribeToDuration(cb: (d: number | null) => void): () => void;
+  /** Request fullscreen on the player container */
+  requestFullscreen(): void;
+  exitFullscreen(): void;
 }
 
 interface AudioEngineProps {
@@ -54,6 +58,8 @@ interface AudioEngineProps {
   idFieldName: 'recordingId' | 'sessionId';
   tokenEndpoint: string;
   onStateChange: (state: PlayerState) => void;
+  /** Container element for fullscreen API */
+  containerEl?: HTMLElement | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -80,7 +86,7 @@ function normalizeDuration(d: number): number | null {
 // ---------------------------------------------------------------------------
 
 export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
-  function AudioEngine({ playbackId, idFieldName, tokenEndpoint, onStateChange }, ref) {
+  function AudioEngine({ playbackId, idFieldName, tokenEndpoint, onStateChange, containerEl }, ref) {
     const audioRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const graphRef = useRef<PlaybackAudioGraph | null>(null);
@@ -92,6 +98,9 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     const playEventIdRef = useRef<string | null>(null);
     const playStartRef = useRef(0);
     const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const resumePositionRef = useRef<number | null>(null);
+    const resumeFetchedRef = useRef(false);
+    const containerRef = useRef<HTMLElement | null>(null);
 
     // Subscription sets
     const timeListeners = useRef(new Set<(t: number) => void>());
@@ -110,6 +119,11 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     const errorHandlerRef = useRef<(() => void) | null>(null);
     const retryCountRef = useRef(0);
     const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Sync container ref from prop
+    useEffect(() => {
+      containerRef.current = containerEl ?? null;
+    }, [containerEl]);
 
     const emitState = useCallback((state: PlayerState) => {
       stateRef.current = state;
@@ -269,6 +283,25 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         }, 15000);
       }
 
+      // Fetch resume position (only on first load, not refresh/retry)
+      if (!isRefresh && !isRetry && !resumeFetchedRef.current) {
+        resumeFetchedRef.current = true;
+        try {
+          const resumeRes = await fetch(
+            `/api/video/play-position?${idFieldName}=${encodeURIComponent(playbackId)}`,
+            { signal: abortRef.current.signal },
+          );
+          if (!isStale()) {
+            const resumeData = await resumeRes.json().catch(() => ({ position: 0 }));
+            if (resumeData.position > 0) {
+              resumePositionRef.current = resumeData.position;
+            }
+          }
+        } catch {
+          // Non-blocking — resume is best-effort
+        }
+      }
+
       try {
         const res = await fetch(tokenEndpoint, {
           method: 'POST',
@@ -348,6 +381,11 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
               });
               return;
             }
+          } else if (resumePositionRef.current && resumePositionRef.current > 0) {
+            // Resume from last saved position (first load only)
+            audio.currentTime = resumePositionRef.current;
+            emitTime(resumePositionRef.current);
+            resumePositionRef.current = null; // Only apply once
           }
           emitState({ status: 'paused' });
         };
@@ -584,6 +622,19 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
       },
       setMuted(m: boolean) {
         if (audioRef.current) audioRef.current.muted = m;
+      },
+      setPlaybackRate(rate: number) {
+        if (audioRef.current) audioRef.current.playbackRate = rate;
+      },
+      requestFullscreen() {
+        const el = containerRef.current;
+        if (!el) return;
+        if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+        else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+      },
+      exitFullscreen() {
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
       },
       getSnapshot(): AudioSnapshot {
         const audio = audioRef.current;

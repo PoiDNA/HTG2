@@ -4,11 +4,12 @@
 // SessionReviewPlayer — audio-first player for booking recordings
 //
 // Orchestrator: holds playerState + motionMode + stable refs.
-// Does NOT read time/duration. analysisState is local in MandalaCanvas.
+// Features: fullscreen, minimize (mini-player bar), resume from last position,
+// always-on animation (ambient before/after play, reactive during).
 // ---------------------------------------------------------------------------
 
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Loader2, AlertCircle, ShieldAlert } from 'lucide-react';
+import { Loader2, AlertCircle, ShieldAlert, Play, Pause, X } from 'lucide-react';
 import { AudioEngine, type AudioEngineHandle, type PlayerState } from './AudioEngine';
 import MandalaCanvas from './MandalaCanvas';
 import PlayerControls from './PlayerControls';
@@ -37,8 +38,12 @@ export default function SessionReviewPlayer({
   tokenEndpoint = '/api/video/booking-recording-token',
 }: SessionReviewPlayerProps) {
   const engineRef = useRef<AudioEngineHandle>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [playerState, setPlayerState] = useState<PlayerState>({ status: 'loading' });
   const [motionMode, setMotionMode] = useState<'full' | 'reduced'>('full');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [resumePosition, setResumePosition] = useState(0);
 
   // Detect prefers-reduced-motion
   useEffect(() => {
@@ -47,6 +52,27 @@ export default function SessionReviewPlayer({
     const onChange = (e: MediaQueryListEvent) => setMotionMode(e.matches ? 'reduced' : 'full');
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // Fetch resume position for indicator
+  useEffect(() => {
+    fetch(`/api/video/play-position?${idFieldName}=${encodeURIComponent(playbackId)}`)
+      .then(r => r.json())
+      .then(d => { if (d.position > 0) setResumePosition(d.position); })
+      .catch(() => {});
+  }, [playbackId, idFieldName]);
+
+  // Track fullscreen state changes
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('webkitfullscreenchange', onFsChange);
+    };
   }, []);
 
   const handleStateChange = useCallback((state: PlayerState) => {
@@ -58,14 +84,109 @@ export default function SessionReviewPlayer({
     e.preventDefault();
   }, []);
 
+  const handleToggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+    } else {
+      const el = containerRef.current;
+      if (!el) return;
+      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+      else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+    }
+  }, [isFullscreen]);
+
+  const handleMinimize = useCallback(() => {
+    setIsMinimized(true);
+  }, []);
+
+  const handleRestore = useCallback(() => {
+    setIsMinimized(false);
+  }, []);
+
+  const handleMiniPlayPause = useCallback(() => {
+    if (!engineRef.current) return;
+    const snap = engineRef.current.getSnapshot();
+    if (snap.paused) {
+      engineRef.current.play();
+    } else {
+      engineRef.current.pause();
+    }
+  }, []);
+
   const status = playerState.status;
   const isPlaying = status === 'playing';
   const showCanvas = status !== 'loading' && status !== 'blocked' && status !== 'error' && status !== 'unsupported';
   const showControls = showCanvas;
+  // Animation is always active when canvas is shown (ambient before play, reactive during)
+  const isCanvasActive = showCanvas;
 
+  // -------------------------------------------------------------------------
+  // Mini-player bar (fixed at bottom of viewport)
+  // -------------------------------------------------------------------------
+  if (isMinimized) {
+    return (
+      <>
+        {/* Hidden main player (keeps audio + engine alive) */}
+        <div className="sr-only" aria-hidden="true">
+          <AudioEngine
+            ref={engineRef}
+            playbackId={playbackId}
+            idFieldName={idFieldName}
+            tokenEndpoint={tokenEndpoint}
+            onStateChange={handleStateChange}
+            containerEl={containerRef.current}
+          />
+        </div>
+
+        {/* Floating mini-player bar */}
+        <div className="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto
+                        bg-[#0D1A12]/95 backdrop-blur-md rounded-xl border border-white/10
+                        shadow-2xl px-4 py-3 flex items-center gap-3">
+          {/* Mini play/pause */}
+          <button
+            onClick={handleMiniPlayPause}
+            className="w-10 h-10 flex items-center justify-center rounded-full
+                       bg-white/10 hover:bg-white/20 text-white transition-colors shrink-0"
+            aria-label={isPlaying ? 'Pauza' : 'Odtwórz'}
+          >
+            {isPlaying ? (
+              <Pause className="w-5 h-5" />
+            ) : (
+              <Play className="w-5 h-5 ml-0.5" />
+            )}
+          </button>
+
+          {/* Mini info */}
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-white/70 truncate">
+              {isPlaying ? 'Odtwarzanie nagrania...' : 'Pauza'}
+            </div>
+            <MiniSeekbar engineHandle={engineRef.current} />
+          </div>
+
+          {/* Restore button */}
+          <button
+            onClick={handleRestore}
+            className="w-8 h-8 flex items-center justify-center rounded-full
+                       text-white/50 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+            aria-label="Przywróć odtwarzacz"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Full player
+  // -------------------------------------------------------------------------
   return (
     <div
-      className="relative w-full aspect-video bg-[#0D1A12] rounded-xl overflow-hidden select-none"
+      ref={containerRef}
+      className={`relative w-full bg-[#0D1A12] rounded-xl overflow-hidden select-none
+        ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'aspect-video'}`}
       onContextMenu={handleContextMenu}
     >
       {/* Audio engine (hidden) */}
@@ -75,15 +196,17 @@ export default function SessionReviewPlayer({
         idFieldName={idFieldName}
         tokenEndpoint={tokenEndpoint}
         onStateChange={handleStateChange}
+        containerEl={containerRef.current}
       />
 
-      {/* Animated canvas */}
+      {/* Animated canvas — always active (ambient before play, reactive during) */}
       {showCanvas && (
         <MandalaCanvas
           engineHandle={engineRef.current}
           userEmail={userEmail}
           userId={userId}
           isPlaying={isPlaying || status === 'refreshing'}
+          isActive={isCanvasActive}
           motionMode={motionMode}
         />
       )}
@@ -93,6 +216,11 @@ export default function SessionReviewPlayer({
         <PlayerControls
           engineHandle={engineRef.current}
           playerState={playerState}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={handleToggleFullscreen}
+          onMinimize={handleMinimize}
+          isMinimized={false}
+          resumePosition={resumePosition}
         />
       )}
 
@@ -138,6 +266,33 @@ export default function SessionReviewPlayer({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MiniSeekbar — tiny progress bar for the mini-player
+// ---------------------------------------------------------------------------
+
+function MiniSeekbar({ engineHandle }: { engineHandle: AudioEngineHandle | null }) {
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!engineHandle) return;
+    const unsubTime = engineHandle.subscribeToTime(setCurrentTime);
+    const unsubDur = engineHandle.subscribeToDuration(setDuration);
+    return () => { unsubTime(); unsubDur(); };
+  }, [engineHandle]);
+
+  const progress = duration ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
+      <div
+        className="h-full bg-htg-sage/70 transition-[width] duration-300"
+        style={{ width: `${progress}%` }}
+      />
     </div>
   );
 }

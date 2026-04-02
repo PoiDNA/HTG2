@@ -402,7 +402,72 @@
     "success_confirmed": "Sesja potwierdzona!",
     "success_cancelled": "Sesja anulowana.",
     "success_transferred": "Sesja przeniesiona na nowy termin.",
-    "nav_label": "Sesje indywidualne"
+    "nav_label": "Sesje indywidualne",
+    "countdown": {
+      "8plus": {
+        "0": "Przed Tobą dłuższa droga — i to jest piękne. Każdy dzień przybliża Cię do sesji.",
+        "1": "Czas jest Twoim sprzymierzeńcem. Pozwól mu pracować na Twoją korzyść.",
+        "2": "Wielkie rzeczy potrzebują czasu, żeby dojrzeć. Twoja sesja nie jest wyjątkiem.",
+        "3": "Zasiane ziarno kiełkuje w ciszy. Ty też się przygotowujesz, nawet jeśli tego nie widzisz.",
+        "4": "To długi marsz, ale każdy krok ma znaczenie. Sesja czeka na Ciebie na końcu tej drogi."
+      },
+      "7": {
+        "0": "Siedem miesięcy to dużo czasu — i jednocześnie mniej, niż myślisz.",
+        "1": "Między dniem dzisiejszym a sesją mieści się cała przestrzeń na zmiany.",
+        "2": "Pory roku zdążą się zmienić, zanim się spotkamy. I Ty też możesz się zmienić.",
+        "3": "Jeszcze daleko, ale kierunek jest jasny. Twoja sesja jest w kalendarzu.",
+        "4": "Niektóre rzeczy warto czekać. Twoja sesja jest jedną z nich."
+      },
+      "6": {
+        "0": "Pół roku dzieli Cię od sesji. To czas, który możesz dobrze wykorzystać.",
+        "1": "Sześć miesięcy — wystarczająco długo, żeby się przygotować, wystarczająco krótko, żeby czuć ekscytację.",
+        "2": "Jesteś w połowie drogi od momentu, gdy zarezerwowałeś/aś sesję. Równowaga.",
+        "3": "Sześć miesięcy mija szybciej, niż się spodziewasz. Zwłaszcza gdy wiesz, na co czekasz.",
+        "4": "Połowa roku. Wyobraź sobie, kim będziesz, gdy nadejdzie dzień sesji."
+      },
+      "5": {
+        "0": "Pięć miesięcy. Odliczanie nabiera tempa.",
+        "1": "Coraz bliżej. Pięć miesięcy to odległość, którą da się już zobaczyć na horyzoncie.",
+        "2": "Twoja sesja zbliża się krok po kroku. Pięć miesięcy to już nie abstrakcja.",
+        "3": "Za pięć miesięcy będziesz w zupełnie innym miejscu. Sesja to tylko jeden z elementów tej drogi.",
+        "4": "Pięć miesięcy — czas, w którym możesz wiele zrozumieć o sobie. I o tym, czego szukasz."
+      },
+      "4": {
+        "0": "Cztery miesiące. Sesja powoli wyłania się z mgły przyszłości.",
+        "1": "Za oknem zmieni się jeszcze jedna pora roku, zanim się spotkamy.",
+        "2": "Cztery miesiące — wystarczająco blisko, żeby zacząć myśleć o tym, co chcesz powiedzieć.",
+        "3": "Czas leci. Cztery miesiące dzielą Cię od czegoś ważnego.",
+        "4": "Sesja jest coraz bardziej realna. Cztery miesiące to już konkret."
+      },
+      "3": {
+        "0": "Trzy miesiące — wystarczająco blisko, żeby poczuć ekscytację.",
+        "1": "Jeszcze jedna chwila cierpliwości. Trzy miesiące miną szybciej, niż myślisz.",
+        "2": "Kwartał. Ostatnia prosta przed sesją zaczyna się teraz.",
+        "3": "Trzy miesiące to idealny czas, żeby zebrać myśli i przygotować się na spotkanie.",
+        "4": "Odliczanie w kwartałach — a Tobie został już tylko jeden."
+      },
+      "2": {
+        "0": "Dwa miesiące. Sesja jest już prawie na wyciągnięcie ręki.",
+        "1": "Osiem tygodni dzieli Cię od sesji. To mniej, niż myślisz.",
+        "2": "Zbliżasz się wielkimi krokami. Dwa miesiące to już finisz.",
+        "3": "Za dwa miesiące wszystko stanie się bardziej jasne. Na razie — ciesz się oczekiwaniem.",
+        "4": "Ostatnia faza odliczania. Dwa miesiące i będziesz na miejscu."
+      },
+      "1": {
+        "0": "Jeszcze tylko miesiąc. Prawie słychać, jak sesja puka do drzwi.",
+        "1": "Miesiąc. Czas na ostatnie przygotowania — albo na to, żeby po prostu być.",
+        "2": "Finisz. Za miesiąc spotkamy się na sesji.",
+        "3": "Cztery tygodnie. To tyle co mgnienie oka w porównaniu z tym, ile już czekasz.",
+        "4": "Ostatni miesiąc. Wszystko, czego potrzebujesz, jest już w Tobie."
+      },
+      "lt1": {
+        "0": "Już prawie. Ostatnie dni przed sesją.",
+        "1": "Czujesz to? Sesja jest tuż za rogiem.",
+        "2": "Odliczanie w dniach. To już naprawdę blisko.",
+        "3": "Jeszcze chwila i się spotkamy. Przygotuj się na coś wyjątkowego.",
+        "4": "Ostatnia prosta. Dni dzielą Cię od sesji — nie miesiące, nie tygodnie. Dni."
+      }
+    }
   },
   "Live": {
     "waiting_title": "Oczekiwanie na prowadzącego...",

@@ -11,6 +11,8 @@ interface BookingCardProps {
   booking: Booking;
   locale: string;
   hasEarlierSlots?: boolean;
+  countdownPhrase?: string | null;
+  countdownText?: string | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -21,7 +23,7 @@ const STATUS_STYLES: Record<string, string> = {
   transferred: 'bg-blue-50 text-blue-600',
 };
 
-export default function BookingCard({ booking, locale, hasEarlierSlots }: BookingCardProps) {
+export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownText }: BookingCardProps) {
   const t = useTranslations('Booking');
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -112,6 +114,15 @@ export default function BookingCard({ booking, locale, hasEarlierSlots }: Bookin
         <div className="text-sm text-htg-fg-muted mb-3">
           <p className="capitalize">{dateStr}</p>
           <p className="font-medium text-htg-fg">{timeStr}</p>
+        </div>
+      )}
+
+      {countdownPhrase && (
+        <div className="bg-htg-sage/5 border border-htg-sage/20 rounded-lg px-3 py-2.5 mb-3">
+          <p className="text-sm text-htg-sage italic">{countdownPhrase}</p>
+          {countdownText && (
+            <p className="text-xs text-htg-fg-muted mt-0.5">{countdownText}</p>
+          )}
         </div>
       )}
 

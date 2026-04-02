@@ -143,20 +143,31 @@ export default function SessionReviewPlayer({
     };
   }, [playerState.status]);
 
-  // Click anywhere on player: show controls + detect flower area for bloom burst
-  const handleContainerPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  // Track hover over flower area for gentle bloom animation
+  const flowerHoverRef = useRef(false);
+
+  const handleContainerPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     handleInteraction();
-    // Check if click is in flower area (normalized coords)
+    // Check if pointer is over flower area (normalized coords)
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    // Flower is roughly centered (0.2-0.8 x, 0.1-0.8 y)
-    if (x > 0.2 && x < 0.8 && y > 0.1 && y < 0.8) {
-      mandalaRef.current?.triggerBurst();
+    // Flower is roughly centered
+    const overFlower = x > 0.25 && x < 0.75 && y > 0.1 && y < 0.7;
+    if (overFlower !== flowerHoverRef.current) {
+      flowerHoverRef.current = overFlower;
+      mandalaRef.current?.setFlowerHover(overFlower);
     }
   }, [handleInteraction]);
+
+  const handleContainerPointerLeave = useCallback(() => {
+    if (flowerHoverRef.current) {
+      flowerHoverRef.current = false;
+      mandalaRef.current?.setFlowerHover(false);
+    }
+  }, []);
 
   const handleToggleFullscreen = useCallback(() => {
     if (isFullscreen) {
@@ -262,8 +273,8 @@ export default function SessionReviewPlayer({
       className={`relative w-full bg-[#0D1A12] rounded-xl overflow-hidden select-none cursor-pointer
         ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'aspect-video'}`}
       onContextMenu={handleContextMenu}
-      onPointerDown={handleContainerPointerDown}
-      onPointerMove={handleInteraction}
+      onPointerMove={handleContainerPointerMove}
+      onPointerLeave={handleContainerPointerLeave}
     >
       {/* Audio engine (hidden) */}
       <AudioEngine

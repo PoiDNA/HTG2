@@ -422,7 +422,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         if (err?.name === 'AbortError' || isStale()) return;
         triggerRetry('Nie udało się załadować nagrania.');
       }
-    }, [playbackId, idFieldName, tokenEndpoint, emitState, emitTime, emitDuration, tryCreateGraph, clearLoadingGuard, enterTerminalError]);
+    }, [playbackId, idFieldName, tokenEndpoint, emitState, emitTime, emitDuration, clearLoadingGuard, enterTerminalError]);
 
     // -----------------------------------------------------------------------
     // Audio event handlers

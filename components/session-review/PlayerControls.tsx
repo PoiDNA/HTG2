@@ -456,19 +456,9 @@ export default function PlayerControls({
                 />
               </div>
 
-              {/* Secondary controls row */}
+              {/* Secondary controls row — functions LEFT, time RIGHT */}
               <div className="flex items-center gap-2">
-                {/* Refreshing indicator */}
-                {status === 'refreshing' && (
-                  <div className="text-xs text-htg-warm animate-pulse">
-                    Buforowanie...
-                  </div>
-                )}
-
-                {/* Spacer */}
-                <div className="flex-1" />
-
-                {/* Playback speed */}
+                {/* Playback speed — LEFT */}
                 <div className="relative" ref={speedMenuRef}>
                   <button
                     onClick={() => { setShowSpeedMenu(!showSpeedMenu); handleInteraction(); }}
@@ -482,7 +472,7 @@ export default function PlayerControls({
                   </button>
 
                   {showSpeedMenu && (
-                    <div className="absolute bottom-full right-0 mb-2 bg-black/90 backdrop-blur-sm
+                    <div className="absolute bottom-full left-0 mb-2 bg-black/90 backdrop-blur-sm
                                     rounded-lg border border-white/10 py-1 min-w-[80px] z-30">
                       {PLAYBACK_RATES.map(rate => (
                         <button
@@ -501,7 +491,7 @@ export default function PlayerControls({
                   )}
                 </div>
 
-                {/* Volume / Mute */}
+                {/* Volume / Mute — LEFT */}
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={handleMuteToggle}
@@ -531,44 +521,76 @@ export default function PlayerControls({
                   )}
                 </div>
 
-                {/* Minimize */}
-                {!isMinimized && (
-                  <button
-                    onClick={onMinimize}
-                    aria-label="Minimalizuj odtwarzacz"
-                    className="w-8 h-8 flex items-center justify-center rounded-full
-                               text-white/60 hover:text-white transition-colors
-                               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
-                  >
-                    <Minimize className="w-3.5 h-3.5" />
-                  </button>
+                {/* Refreshing indicator */}
+                {status === 'refreshing' && (
+                  <div className="text-xs text-htg-warm animate-pulse">
+                    Buforowanie...
+                  </div>
                 )}
 
-                {/* Fullscreen */}
-                <button
-                  onClick={onToggleFullscreen}
-                  aria-label={isFullscreen ? 'Zamknij pełny ekran' : 'Pełny ekran'}
-                  className="w-8 h-8 flex items-center justify-center rounded-full
-                             text-white/60 hover:text-white transition-colors
-                             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
-                >
-                  {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-                </button>
-
-                {/* Time display — right side */}
-                <div className="text-xs text-white/60 font-mono tabular-nums ml-1">
+                {/* Time display — LEFT (after volume) */}
+                <div className="text-xs text-white/60 font-mono tabular-nums">
                   {formatTime(displayTime)} / {formatTime(duration)}
                 </div>
+
+                {/* Spacer */}
+                <div className="flex-1" />
               </div>
             </m.div>
           )}
         </AnimatePresence>
 
         {/* =============================================================== */}
+        {/* TOP-RIGHT — Minimize + Fullscreen (4x larger, glow on interact)*/}
+        {/* =============================================================== */}
+        <div
+          className={`absolute top-3 right-3 z-20 flex items-center gap-2
+                      transition-opacity duration-500
+                      ${controlsVisible ? 'opacity-100' : 'opacity-30 hover:opacity-100'}`}
+        >
+          {/* Minimize */}
+          {!isMinimized && (
+            <button
+              onClick={onMinimize}
+              aria-label="Minimalizuj odtwarzacz"
+              className={`w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl
+                         backdrop-blur-sm transition-all duration-300
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage
+                         ${controlsVisible
+                           ? 'bg-white/15 text-white/90 shadow-lg shadow-black/20'
+                           : 'bg-black/20 text-white/40'
+                         }
+                         hover:bg-white/25 hover:text-white hover:scale-105`}
+            >
+              <Minimize className="w-6 h-6 sm:w-7 sm:h-7" />
+            </button>
+          )}
+
+          {/* Fullscreen */}
+          <button
+            onClick={onToggleFullscreen}
+            aria-label={isFullscreen ? 'Zamknij pełny ekran' : 'Pełny ekran'}
+            className={`w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl
+                       backdrop-blur-sm transition-all duration-300
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage
+                       ${controlsVisible
+                         ? 'bg-white/15 text-white/90 shadow-lg shadow-black/20'
+                         : 'bg-black/20 text-white/40'
+                       }
+                       hover:bg-white/25 hover:text-white hover:scale-105`}
+          >
+            {isFullscreen
+              ? <Minimize className="w-6 h-6 sm:w-7 sm:h-7" />
+              : <Maximize className="w-6 h-6 sm:w-7 sm:h-7" />
+            }
+          </button>
+        </div>
+
+        {/* =============================================================== */}
         {/* TIME ALWAYS VISIBLE (bottom-right) even when controls hidden    */}
         {/* =============================================================== */}
         {!controlsVisible && (
-          <div className="absolute bottom-3 right-4 text-xs text-white/40 font-mono tabular-nums">
+          <div className="absolute bottom-3 left-4 text-xs text-white/40 font-mono tabular-nums">
             {formatTime(displayTime)} / {formatTime(duration)}
           </div>
         )}

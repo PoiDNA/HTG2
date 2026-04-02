@@ -13,10 +13,10 @@ interface BookingCardProps {
   locale: string;
   hasEarlierSlots?: boolean;
   countdownPhrase?: string | null;
-  /** Countdown months line, e.g. "1 miesiąc" */
-  countdownMonths?: string | null;
-  /** Countdown days line, e.g. "17 dni" */
-  countdownDays?: string | null;
+  /** Countdown months, e.g. { number: "1", label: "miesiąc" } */
+  countdownMonths?: { number: string; label: string } | null;
+  /** Countdown days, e.g. { number: "17", label: "dni" } */
+  countdownDays?: { number: string; label: string } | null;
   /** Countdown suffix, e.g. "do sesji" */
   countdownSuffix?: string | null;
   isPast?: boolean;
@@ -123,12 +123,18 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
         {(countdownMonths || countdownDays) && (
           <div className="text-right shrink-0" style={{ fontFamily: 'Nunito, sans-serif' }}>
             {countdownMonths && (
-              <p className="text-5xl font-bold text-htg-sage leading-none">{countdownMonths}</p>
+              <p className="flex items-start justify-end gap-1.5 leading-none">
+                <span className="text-5xl font-bold text-htg-sage">{countdownMonths.number}</span>
+                <span className="text-2xl font-bold text-htg-sage/70 pt-1">{countdownMonths.label}</span>
+              </p>
             )}
             {countdownDays && (
-              <p className="text-5xl font-bold text-htg-sage leading-none mt-1">{countdownDays}</p>
+              <p className="flex items-start justify-end gap-1.5 leading-none mt-1">
+                <span className="text-5xl font-bold text-htg-sage">{countdownDays.number}</span>
+                <span className="text-2xl font-bold text-htg-sage/70 pt-1">{countdownDays.label}</span>
+              </p>
             )}
-            <p className="text-sm text-htg-sage mt-1">{countdownSuffix}</p>
+            <p className="text-sm text-htg-sage/60 mt-1">{countdownSuffix}</p>
           </div>
         )}
       </div>

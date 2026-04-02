@@ -65,7 +65,7 @@ export default function SessionReviewPlayer({
 
   return (
     <div
-      className="relative w-full aspect-video bg-black rounded-xl overflow-hidden select-none"
+      className="relative w-full aspect-video bg-[#0D1A12] rounded-xl overflow-hidden select-none"
       onContextMenu={handleContextMenu}
     >
       {/* Audio engine (hidden) */}

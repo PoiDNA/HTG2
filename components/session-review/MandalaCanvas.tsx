@@ -41,6 +41,7 @@ interface MandalaCanvasProps {
   userEmail: string;
   userId: string;
   isPlaying: boolean;
+  isActive: boolean;        // true whenever canvas is visible (always animate)
   motionMode: 'full' | 'reduced';
 }
 
@@ -53,6 +54,7 @@ export default function MandalaCanvas({
   userEmail,
   userId,
   isPlaying,
+  isActive,
   motionMode,
 }: MandalaCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -130,8 +132,13 @@ export default function MandalaCanvas({
   // -------------------------------------------------------------------------
   // Animation loop
   // -------------------------------------------------------------------------
+  // Track isPlaying in a ref so the rAF loop can read the latest value
+  // without restarting the entire animation loop on play/pause transitions.
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+
   useEffect(() => {
-    if (!isPlaying || motionMode === 'reduced') {
+    if (!isActive || motionMode === 'reduced') {
       // Draw one static frame and stop
       drawStaticFrame();
       return;
@@ -143,15 +150,6 @@ export default function MandalaCanvas({
     if (!ctx) return;
 
     startTimeRef.current = performance.now();
-
-    // Try to create sampler if analyser available
-    const analyser = engineHandle?.getAnalyser();
-    if (analyser && !samplerRef.current) {
-      samplerRef.current = new AudioSampler(analyser);
-      analysisState.current = 'reactive';
-    } else if (!analyser) {
-      analysisState.current = 'analysis-unavailable';
-    }
 
     let lastTimestamp = performance.now();
 
@@ -180,17 +178,28 @@ export default function MandalaCanvas({
       const width = canvas.width / dpr;
       const height = canvas.height / dpr;
 
-      // Sample audio (if available)
+      // Sample audio only when playing
       let audio: AudioBands = SILENT_BANDS;
-      if (samplerRef.current) {
-        audio = samplerRef.current.sample();
-        if (samplerRef.current.state === 'ambient-fallback') {
-          analysisState.current = 'ambient-fallback';
+      const currentlyPlaying = isPlayingRef.current;
+
+      if (currentlyPlaying) {
+        // Try to create sampler if analyser available (only while playing)
+        const analyser = engineHandle?.getAnalyser();
+        if (analyser && !samplerRef.current) {
+          samplerRef.current = new AudioSampler(analyser);
+          analysisState.current = 'reactive';
+        }
+
+        if (samplerRef.current) {
+          audio = samplerRef.current.sample();
+          if (samplerRef.current.state === 'ambient-fallback') {
+            analysisState.current = 'ambient-fallback';
+          }
         }
       }
 
-      // Ambient time-based fallback if no reactive data
-      if (analysisState.current !== 'reactive') {
+      // Ambient time-based fallback: before play, after ended, or no reactive data
+      if (!currentlyPlaying || analysisState.current !== 'reactive') {
         const t = (timestamp - startTimeRef.current) / 1000;
         audio = {
           energy: 0.15 + 0.1 * Math.sin(t * 0.3),
@@ -229,7 +238,7 @@ export default function MandalaCanvas({
         ctx.fillRect(0, 0, width, height);
       }
 
-      // 4. Watermark (always, with drift)
+      // 4. Watermark
       drawWatermark(ctx, width, height, watermarkText);
 
       ctx.restore();
@@ -242,7 +251,7 @@ export default function MandalaCanvas({
     return () => {
       cancelAnimationFrame(rafRef.current);
     };
-  }, [isPlaying, motionMode, engineHandle, sizeCanvas, pattern, watermarkText, drawStaticFrame]);
+  }, [isActive, motionMode, engineHandle, sizeCanvas, pattern, watermarkText, drawStaticFrame]);
 
   // -------------------------------------------------------------------------
   // Visibility change — stop rAF when tab is hidden
@@ -262,12 +271,12 @@ export default function MandalaCanvas({
   // Resize on pause — single redraw
   // -------------------------------------------------------------------------
   useEffect(() => {
-    if (isPlaying) return; // rAF handles resize when playing
+    if (isActive && motionMode !== 'reduced') return; // rAF handles resize when active
 
     const onResize = () => drawStaticFrame();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [isPlaying, drawStaticFrame]);
+  }, [isActive, motionMode, drawStaticFrame]);
 
   return (
     <canvas

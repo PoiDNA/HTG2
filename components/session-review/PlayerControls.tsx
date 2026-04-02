@@ -6,12 +6,23 @@
 // Updates via subscribeToTime (immediate + post-action), NOT rAF.
 // Drag: pointer state + commit on release, no rAF in controls.
 // Volume: capability-driven (canSetVolume), not platform guess.
+// Features: play/pause, seek, skip ±15s, speed, volume, fullscreen, minimize
 // ---------------------------------------------------------------------------
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
-import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import {
+  Play, Pause, RotateCcw, Volume2, VolumeX,
+  Maximize, Minimize, SkipBack, SkipForward, Gauge,
+} from 'lucide-react';
 import type { AudioEngineHandle, PlayerState } from './AudioEngine';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+const SKIP_SECONDS = 15;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -31,26 +42,51 @@ function formatTime(seconds: number | null): string {
 interface PlayerControlsProps {
   engineHandle: AudioEngineHandle | null;
   playerState: PlayerState;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
+  onMinimize: () => void;
+  isMinimized: boolean;
+  resumePosition?: number; // Show resume indicator
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function PlayerControls({ engineHandle, playerState }: PlayerControlsProps) {
+export default function PlayerControls({
+  engineHandle,
+  playerState,
+  isFullscreen,
+  onToggleFullscreen,
+  onMinimize,
+  isMinimized,
+  resumePosition,
+}: PlayerControlsProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showResumeHint, setShowResumeHint] = useState(!!resumePosition && resumePosition > 0);
 
   const seekbarRef = useRef<HTMLInputElement>(null);
+  const speedMenuRef = useRef<HTMLDivElement>(null);
 
   const status = playerState.status;
   const isPlaying = status === 'playing';
   const isEnded = status === 'ended';
   const canInteract = isPlaying || status === 'paused' || isEnded || status === 'refreshing';
+
+  // Hide resume hint after first play
+  useEffect(() => {
+    if (isPlaying && showResumeHint) {
+      const timer = setTimeout(() => setShowResumeHint(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isPlaying, showResumeHint]);
 
   // -------------------------------------------------------------------------
   // Subscriptions (immediate emit)
@@ -63,6 +99,18 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
     const unsubDur = engineHandle.subscribeToDuration(setDuration);
     return () => { unsubTime(); unsubDur(); };
   }, [engineHandle, isDragging]);
+
+  // Close speed menu on click outside
+  useEffect(() => {
+    if (!showSpeedMenu) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (speedMenuRef.current && !speedMenuRef.current.contains(e.target as Node)) {
+        setShowSpeedMenu(false);
+      }
+    };
+    document.addEventListener('pointerdown', onClickOutside);
+    return () => document.removeEventListener('pointerdown', onClickOutside);
+  }, [showSpeedMenu]);
 
   // -------------------------------------------------------------------------
   // Play / Pause / Replay
@@ -78,6 +126,19 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
       engineHandle.play();
     }
   }, [engineHandle, isPlaying, isEnded]);
+
+  // -------------------------------------------------------------------------
+  // Skip ±15s
+  // -------------------------------------------------------------------------
+  const handleSkipBack = useCallback(() => {
+    if (!engineHandle) return;
+    engineHandle.seek(Math.max(0, currentTime - SKIP_SECONDS));
+  }, [engineHandle, currentTime]);
+
+  const handleSkipForward = useCallback(() => {
+    if (!engineHandle) return;
+    engineHandle.seek(Math.min(duration ?? Infinity, currentTime + SKIP_SECONDS));
+  }, [engineHandle, currentTime, duration]);
 
   // -------------------------------------------------------------------------
   // Seek (drag UX: previewTime on thumb, commit on release)
@@ -121,7 +182,17 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
   }, [engineHandle, isMuted]);
 
   // -------------------------------------------------------------------------
-  // Keyboard shortcuts (only with focus inside player)
+  // Playback speed
+  // -------------------------------------------------------------------------
+  const handleSpeedChange = useCallback((rate: number) => {
+    if (!engineHandle) return;
+    setPlaybackRate(rate);
+    engineHandle.setPlaybackRate(rate);
+    setShowSpeedMenu(false);
+  }, [engineHandle]);
+
+  // -------------------------------------------------------------------------
+  // Keyboard shortcuts
   // -------------------------------------------------------------------------
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (!engineHandle || !canInteract) return;
@@ -133,11 +204,11 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
         break;
       case 'ArrowLeft':
         e.preventDefault();
-        engineHandle.seek(Math.max(0, currentTime - 5));
+        handleSkipBack();
         break;
       case 'ArrowRight':
         e.preventDefault();
-        engineHandle.seek(Math.min(duration ?? Infinity, currentTime + 5));
+        handleSkipForward();
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -160,8 +231,13 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
         e.preventDefault();
         handleMuteToggle();
         break;
+      case 'f':
+      case 'F':
+        e.preventDefault();
+        onToggleFullscreen();
+        break;
     }
-  }, [engineHandle, canInteract, handlePlayPause, currentTime, duration, volume, handleMuteToggle]);
+  }, [engineHandle, canInteract, handlePlayPause, handleSkipBack, handleSkipForward, volume, handleMuteToggle, onToggleFullscreen]);
 
   // -------------------------------------------------------------------------
   // Render
@@ -178,6 +254,14 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
         className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 pb-4 pt-8"
         onKeyDown={handleKeyDown}
       >
+        {/* Resume position indicator */}
+        {showResumeHint && resumePosition && resumePosition > 0 && duration && (
+          <div className="mb-2 text-xs text-htg-sage/80 flex items-center gap-1.5">
+            <RotateCcw className="w-3 h-3" />
+            Wznowiono od {formatTime(resumePosition)}
+          </div>
+        )}
+
         {/* Seekbar */}
         <div className="mb-3">
           <input
@@ -210,7 +294,21 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
         </div>
 
         {/* Controls row */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Skip back 15s */}
+          <m.button
+            onClick={handleSkipBack}
+            disabled={!canInteract}
+            aria-label="Cofnij 15 sekund"
+            className="w-9 h-9 flex items-center justify-center rounded-full
+                       text-white/70 hover:text-white hover:bg-white/10 transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage
+                       disabled:opacity-40"
+            whileTap={{ scale: 0.9 }}
+          >
+            <SkipBack className="w-4 h-4" />
+          </m.button>
+
           {/* Play / Pause / Replay */}
           <m.button
             onClick={handlePlayPause}
@@ -231,8 +329,22 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
             )}
           </m.button>
 
+          {/* Skip forward 15s */}
+          <m.button
+            onClick={handleSkipForward}
+            disabled={!canInteract}
+            aria-label="Przewiń 15 sekund"
+            className="w-9 h-9 flex items-center justify-center rounded-full
+                       text-white/70 hover:text-white hover:bg-white/10 transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage
+                       disabled:opacity-40"
+            whileTap={{ scale: 0.9 }}
+          >
+            <SkipForward className="w-4 h-4" />
+          </m.button>
+
           {/* Time display */}
-          <div className="text-xs text-white/70 font-mono tabular-nums min-w-[80px]">
+          <div className="text-xs text-white/70 font-mono tabular-nums min-w-[80px] ml-1">
             {formatTime(displayTime)} / {formatTime(duration)}
           </div>
 
@@ -245,6 +357,39 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {/* Playback speed */}
+          <div className="relative" ref={speedMenuRef}>
+            <button
+              onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+              aria-label={`Prędkość odtwarzania: ${playbackRate}x`}
+              className="h-8 px-2 flex items-center gap-1 rounded-md
+                         text-xs text-white/70 hover:text-white hover:bg-white/10 transition-colors
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+            >
+              <Gauge className="w-3.5 h-3.5" />
+              <span className="font-mono tabular-nums">{playbackRate}x</span>
+            </button>
+
+            {showSpeedMenu && (
+              <div className="absolute bottom-full right-0 mb-2 bg-black/90 backdrop-blur-sm
+                              rounded-lg border border-white/10 py-1 min-w-[80px] z-30">
+                {PLAYBACK_RATES.map(rate => (
+                  <button
+                    key={rate}
+                    onClick={() => handleSpeedChange(rate)}
+                    className={`w-full px-3 py-1.5 text-xs text-left transition-colors
+                      ${rate === playbackRate
+                        ? 'text-htg-sage bg-white/10'
+                        : 'text-white/70 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    {rate}x
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Volume / Mute */}
           <div className="flex items-center gap-2">
@@ -279,6 +424,34 @@ export default function PlayerControls({ engineHandle, playerState }: PlayerCont
               />
             )}
           </div>
+
+          {/* Minimize */}
+          {!isMinimized && (
+            <button
+              onClick={onMinimize}
+              aria-label="Minimalizuj odtwarzacz"
+              className="w-9 h-9 flex items-center justify-center rounded-full
+                         text-white/70 hover:text-white transition-colors
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+            >
+              <Minimize className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Fullscreen */}
+          <button
+            onClick={onToggleFullscreen}
+            aria-label={isFullscreen ? 'Zamknij pełny ekran' : 'Pełny ekran'}
+            className="w-9 h-9 flex items-center justify-center rounded-full
+                       text-white/70 hover:text-white transition-colors
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+          >
+            {isFullscreen ? (
+              <Minimize className="w-4 h-4" />
+            ) : (
+              <Maximize className="w-4 h-4" />
+            )}
+          </button>
         </div>
 
         {/* Screen reader announcements */}

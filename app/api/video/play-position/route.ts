@@ -3,6 +3,48 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 /**
+ * GET /api/video/play-position?sessionId=xxx
+ * Returns the last saved playback position for a session.
+ * Used to resume playback from where the user left off.
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const sessionClient = await createSupabaseServer();
+    const { data: { user } } = await sessionClient.auth.getUser();
+    if (!user) return NextResponse.json({ position: 0 });
+
+    const sessionId = request.nextUrl.searchParams.get('sessionId')
+      ?? request.nextUrl.searchParams.get('recordingId');
+    if (!sessionId) return NextResponse.json({ position: 0 });
+
+    const db = createSupabaseServiceRole();
+    const { data } = await db
+      .from('playback_positions')
+      .select('position_seconds, total_duration_seconds')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!data) return NextResponse.json({ position: 0 });
+
+    // Don't resume if within last 5 seconds of total duration (treat as completed)
+    if (data.total_duration_seconds && data.position_seconds >= data.total_duration_seconds - 5) {
+      return NextResponse.json({ position: 0 });
+    }
+
+    // Don't resume if less than 10 seconds in (not worth it)
+    if (data.position_seconds < 10) {
+      return NextResponse.json({ position: 0 });
+    }
+
+    return NextResponse.json({ position: data.position_seconds });
+  } catch {
+    return NextResponse.json({ position: 0 });
+  }
+}
+
+/**
  * POST /api/video/play-position
  * Called every 30s by VideoPlayer to record current playback position.
  * Powers the retention/engagement graph in admin analytics.

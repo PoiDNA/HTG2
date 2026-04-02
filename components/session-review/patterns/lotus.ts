@@ -607,17 +607,18 @@ export const lotusPattern: Pattern = {
   maxBrightness: 0.6,
 
   render(ctx: RenderContext): void {
-    const { ctx: c, width, height, time, audio } = ctx;
+    const { ctx: c, width, height, time, audio, interactionBurst } = ctx;
     const sprites = getSprites(width, height);
     const cx = width / 2;
     const cy = height * 0.45;
     const MB = lotusPattern.maxBrightness;
+    const burst = interactionBurst ?? 0;
 
     // 1. Background (breathing gradient)
     drawBackground(c, width, height, time, audio.totalEnergy);
 
-    // 2. Water (live, bottom area)
-    drawWater(c, width, height, time, audio.energy, audio.totalEnergy);
+    // 2. Water (live, bottom area — ripple boost on burst)
+    drawWater(c, width, height, time, audio.energy + burst * 0.4, audio.totalEnergy + burst * 0.2);
 
     // Parallax offsets per layer — creates 3D depth illusion
     // Leaves: subtle (1x), Outer petals: medium (3x), Inner/Center: strong (5x)
@@ -666,36 +667,42 @@ export const lotusPattern: Pattern = {
     // Shadow offset based on wind
     const shadowOff = 2 + audio.midEnergy * 3;
 
-    // 4. Outer petals (phase-shifted wind + contact shadows + parallax)
+    // Interaction burst: flower blooms outward, petals spread + rotate
+    const burstScale = 1 + burst * 0.12;         // 12% scale-up on click
+    const burstRotation = burst * 0.08;           // slight rotation spread
+    const burstAlphaBoost = burst * 0.15;         // brighter on click
+
+    // 4. Outer petals (phase-shifted wind + contact shadows + parallax + burst)
     const outerRadius = Math.min(width, height) * 0.14;
     const outerCx = cx + parallaxOuterX;
     const outerCy = cy + parallaxOuterY;
 
     for (let i = 0; i < OUTER_PETALS; i++) {
       const baseAngle = (i / OUTER_PETALS) * Math.PI * 2 - Math.PI / 2;
-      const windPhase = Math.sin(time * 2.0 + i * 0.7) * 0.06 * (1 + audio.midEnergy * 3);
-      const breathScale = 1 + Math.sin(time * 1.5 + i * 0.9) * 0.04 * (1 + audio.energy * 2);
-      const alpha = Math.min(MB, 0.75 + audio.totalEnergy * 0.2);
+      // Burst fans petals outward (each petal rotates away from center)
+      const burstFan = (baseAngle > 0 ? 1 : -1) * burstRotation;
+      const windPhase = Math.sin(time * 2.0 + i * 0.7) * 0.06 * (1 + audio.midEnergy * 3) + burstFan;
+      const breathScale = (1 + Math.sin(time * 1.5 + i * 0.9) * 0.04 * (1 + audio.energy * 2)) * burstScale;
+      const alpha = Math.min(MB, 0.75 + audio.totalEnergy * 0.2 + burstAlphaBoost);
 
       drawPetalWithShadow(c, sprites.outerPetal, outerCx, outerCy,
         baseAngle, windPhase, breathScale, outerRadius, alpha, shadowOff);
     }
 
-    // 5. Inner petals (translucent overlaps via 'screen' + parallax + shadows)
+    // 5. Inner petals (translucent overlaps via 'screen' + parallax + burst)
     const innerRadius = Math.min(width, height) * 0.06;
     const innerCx = cx + parallaxInnerX;
     const innerCy = cy + parallaxInnerY;
 
-    // Draw inner petals with 'screen' blend for natural translucency
-    // where petals overlap they brighten, simulating light through tissue
     const prevCompInner = c.globalCompositeOperation;
     c.globalCompositeOperation = 'screen';
 
     for (let i = 0; i < INNER_PETALS; i++) {
       const baseAngle = (i / INNER_PETALS) * Math.PI * 2 - Math.PI / 2 + 0.2;
-      const windPhase = Math.sin(time * 1.6 + i * 0.8 + 2) * 0.04 * (1 + audio.midEnergy * 2);
-      const breathScale = 1 + Math.sin(time * 1.2 + i * 1.1) * 0.03 * (1 + audio.energy);
-      const alpha = Math.min(MB, 0.65 + audio.totalEnergy * 0.15);
+      const burstFan = (baseAngle > 0 ? 1 : -1) * burstRotation * 0.6;
+      const windPhase = Math.sin(time * 1.6 + i * 0.8 + 2) * 0.04 * (1 + audio.midEnergy * 2) + burstFan;
+      const breathScale = (1 + Math.sin(time * 1.2 + i * 1.1) * 0.03 * (1 + audio.energy)) * burstScale;
+      const alpha = Math.min(MB, 0.65 + audio.totalEnergy * 0.15 + burstAlphaBoost);
 
       drawPetalWithShadow(c, sprites.innerPetal, innerCx, innerCy,
         baseAngle, windPhase, breathScale, innerRadius, alpha, shadowOff * 0.6);
@@ -703,20 +710,38 @@ export const lotusPattern: Pattern = {
 
     c.globalCompositeOperation = prevCompInner;
 
-    // 6. Center (pulsing, with strong parallax)
+    // 6. Center (pulsing, with strong parallax + burst bloom)
     const centerSize = sprites.center.width;
-    const centerPulse = 1 + audio.totalEnergy * 0.12 + Math.sin(time * 2) * 0.03;
+    const centerPulse = (1 + audio.totalEnergy * 0.12 + Math.sin(time * 2) * 0.03) * burstScale;
     const centerParX = parallaxInnerX * 0.7;
     const centerParY = parallaxInnerY * 0.7;
     c.save();
     c.translate(cx + centerParX, cy + centerParY);
     c.scale(centerPulse, centerPulse);
-    c.globalAlpha = Math.min(MB, 0.85);
+    c.globalAlpha = Math.min(MB, 0.85 + burstAlphaBoost);
     c.drawImage(sprites.center, -centerSize / 2, -centerSize / 2);
     c.restore();
 
-    // 7. Pollen particles (golden dust)
-    updateAndDrawParticles(c, cx + centerParX, cy + centerParY, time, audio.highEnergy, audio.energy);
+    // 7. Pollen particles (golden dust) — extra spawn on burst
+    updateAndDrawParticles(c, cx + centerParX, cy + centerParY, time,
+      audio.highEnergy + burst * 0.5, audio.energy + burst * 0.3);
+
+    // 7b. Burst bloom flash — radial light burst from center
+    if (burst > 0.01) {
+      c.save();
+      c.globalCompositeOperation = 'screen';
+      const bloomR = Math.min(width, height) * 0.35 * (0.5 + burst * 0.5);
+      const bloomGrad = c.createRadialGradient(cx, cy, 0, cx, cy, bloomR);
+      bloomGrad.addColorStop(0, rgba(C.petalTip, burst * 0.2));
+      bloomGrad.addColorStop(0.3, rgba(C.petalLight, burst * 0.12));
+      bloomGrad.addColorStop(0.6, rgba(C.centerWarm, burst * 0.06));
+      bloomGrad.addColorStop(1, 'rgba(245,215,100,0)');
+      c.globalAlpha = 1;
+      c.fillStyle = bloomGrad;
+      c.fillRect(cx - bloomR, cy - bloomR, bloomR * 2, bloomR * 2);
+      c.globalCompositeOperation = 'source-over';
+      c.restore();
+    }
 
     // 8. Pulsating vein highlights — energy pumps through the flower
     // Radial streaks from center that brighten with audio.energy

@@ -384,6 +384,7 @@ export default function PlayerControls({
                          bg-black/30 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/15
                          transition-colors disabled:opacity-30
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+              whileHover={{ scale: 1.2 }}
               whileTap={{ scale: 0.9 }}
             >
               <SkipBack className="w-5 h-5" />
@@ -398,6 +399,7 @@ export default function PlayerControls({
                          bg-black/30 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/15
                          transition-colors disabled:opacity-30
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
+              whileHover={{ scale: 1.2 }}
               whileTap={{ scale: 0.9 }}
             >
               <SkipForward className="w-5 h-5" />

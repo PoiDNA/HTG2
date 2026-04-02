@@ -65,6 +65,8 @@ export default function MandalaCanvas({
   const degradationLevel = useRef(0); // 0=full, 1=reduced layers, 2=no glow
   const analysisState = useRef<CanvasAnalysisState>('analysis-unavailable');
   const lastFrameRef = useRef<ImageData | null>(null);
+  const interactionBurstRef = useRef(0);       // 0-1 decaying burst from flower click
+  const interactionBurstTimeRef = useRef(0);   // timestamp of last burst
 
   // Select active pattern
   const pattern: Pattern = DEV_BENCHMARK ? concentricCirclesPattern : lotusPattern;
@@ -120,6 +122,7 @@ export default function MandalaCanvas({
       audioTime: engineHandle?.getSnapshot().currentTime ?? 0,
       audio: SILENT_BANDS,
       dpr,
+      interactionBurst: 0,
     };
     pattern.render(renderCtx);
 
@@ -213,6 +216,14 @@ export default function MandalaCanvas({
       const time = (timestamp - startTimeRef.current) / 1000;
       const audioTime = engineHandle?.getSnapshot().currentTime ?? 0;
 
+      // Compute interaction burst (decays over ~0.8s with ease-out)
+      let interactionBurst = 0;
+      if (interactionBurstRef.current > 0) {
+        const elapsed = (timestamp - interactionBurstTimeRef.current) / 800;
+        interactionBurst = Math.max(0, 1 - elapsed * elapsed); // quadratic ease-out
+        if (interactionBurst <= 0) interactionBurstRef.current = 0;
+      }
+
       ctx.save();
       ctx.scale(dpr, dpr);
 
@@ -222,7 +233,7 @@ export default function MandalaCanvas({
 
       // 2. Pattern
       const renderCtx: RenderContext = {
-        ctx, width, height, time, audioTime, audio, dpr,
+        ctx, width, height, time, audioTime, audio, dpr, interactionBurst,
       };
       pattern.render(renderCtx);
 
@@ -278,11 +289,26 @@ export default function MandalaCanvas({
     return () => window.removeEventListener('resize', onResize);
   }, [isActive, motionMode, drawStaticFrame]);
 
+  // Click on flower area triggers interaction burst
+  const handleCanvasClick = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    // Flower is roughly centered (0.25-0.75 x, 0.15-0.75 y)
+    if (x > 0.2 && x < 0.8 && y > 0.1 && y < 0.8) {
+      interactionBurstRef.current = 1;
+      interactionBurstTimeRef.current = performance.now();
+    }
+  }, []);
+
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 w-full h-full"
+      className="absolute inset-0 w-full h-full cursor-pointer"
       aria-hidden="true"
+      onPointerDown={handleCanvasClick}
     />
   );
 }

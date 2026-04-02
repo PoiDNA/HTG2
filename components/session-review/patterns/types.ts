@@ -45,6 +45,8 @@ export interface RenderContext {
   audio: AudioBands;
   /** Effective device pixel ratio (after clamping) */
   dpr: number;
+  /** Interaction burst intensity (0-1), triggered by click on flower area. Decays over ~1s. */
+  interactionBurst: number;
 }
 
 /**

@@ -11,8 +11,10 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Loader2, AlertCircle, ShieldAlert, Play, Pause, X } from 'lucide-react';
 import { AudioEngine, type AudioEngineHandle, type PlayerState } from './AudioEngine';
-import MandalaCanvas from './MandalaCanvas';
+import MandalaCanvas, { type MandalaCanvasHandle } from './MandalaCanvas';
 import PlayerControls from './PlayerControls';
+
+const CONTROLS_HIDE_DELAY = 4000; // ms after last interaction
 
 // ---------------------------------------------------------------------------
 // Props
@@ -39,13 +41,16 @@ export default function SessionReviewPlayer({
 }: SessionReviewPlayerProps) {
   const engineRef = useRef<AudioEngineHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const mandalaRef = useRef<MandalaCanvasHandle>(null);
   const [playerState, setPlayerState] = useState<PlayerState>({ status: 'loading' });
   const [motionMode, setMotionMode] = useState<'full' | 'reduced'>('full');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [resumePosition, setResumePosition] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
   const autoplayAttemptedRef = useRef(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Detect prefers-reduced-motion
   useEffect(() => {
@@ -107,6 +112,51 @@ export default function SessionReviewPlayer({
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
+
+  // Controls visibility management (lifted from PlayerControls)
+  const isPlayingRef = useRef(false);
+  isPlayingRef.current = playerState.status === 'playing';
+
+  const handleInteraction = useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (isPlayingRef.current) {
+      hideTimerRef.current = setTimeout(() => {
+        setControlsVisible(false);
+      }, CONTROLS_HIDE_DELAY);
+    }
+  }, []);
+
+  // Auto-hide when playing, always show when paused/ended
+  useEffect(() => {
+    const playing = playerState.status === 'playing';
+    if (!playing) {
+      setControlsVisible(true);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      return;
+    }
+    hideTimerRef.current = setTimeout(() => {
+      setControlsVisible(false);
+    }, CONTROLS_HIDE_DELAY);
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [playerState.status]);
+
+  // Click anywhere on player: show controls + detect flower area for bloom burst
+  const handleContainerPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    handleInteraction();
+    // Check if click is in flower area (normalized coords)
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    // Flower is roughly centered (0.2-0.8 x, 0.1-0.8 y)
+    if (x > 0.2 && x < 0.8 && y > 0.1 && y < 0.8) {
+      mandalaRef.current?.triggerBurst();
+    }
+  }, [handleInteraction]);
 
   const handleToggleFullscreen = useCallback(() => {
     if (isFullscreen) {
@@ -209,9 +259,11 @@ export default function SessionReviewPlayer({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full bg-[#0D1A12] rounded-xl overflow-hidden select-none
+      className={`relative w-full bg-[#0D1A12] rounded-xl overflow-hidden select-none cursor-pointer
         ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'aspect-video'}`}
       onContextMenu={handleContextMenu}
+      onPointerDown={handleContainerPointerDown}
+      onPointerMove={handleInteraction}
     >
       {/* Audio engine (hidden) */}
       <AudioEngine
@@ -230,6 +282,7 @@ export default function SessionReviewPlayer({
           style={{ opacity: isRevealed ? 1 : 0 }}
         >
           <MandalaCanvas
+            ref={mandalaRef}
             engineHandle={engineRef.current}
             userEmail={userEmail}
             userId={userId}
@@ -254,6 +307,8 @@ export default function SessionReviewPlayer({
           onMinimize={handleMinimize}
           isMinimized={false}
           resumePosition={resumePosition}
+          controlsVisible={controlsVisible}
+          onInteraction={handleInteraction}
         />
         </div>
       )}

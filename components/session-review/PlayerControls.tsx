@@ -24,7 +24,6 @@ import type { AudioEngineHandle, PlayerState } from './AudioEngine';
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 const SKIP_SECONDS = 15;
-const CONTROLS_HIDE_DELAY = 4000; // ms after last interaction
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,6 +48,8 @@ interface PlayerControlsProps {
   onMinimize: () => void;
   isMinimized: boolean;
   resumePosition?: number;
+  controlsVisible: boolean;
+  onInteraction: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,8 @@ export default function PlayerControls({
   onMinimize,
   isMinimized,
   resumePosition,
+  controlsVisible,
+  onInteraction,
 }: PlayerControlsProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState<number | null>(null);
@@ -73,54 +76,17 @@ export default function PlayerControls({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showResumeHint, setShowResumeHint] = useState(!!resumePosition && resumePosition > 0);
-  const [controlsVisible, setControlsVisible] = useState(true);
 
   const seekbarRef = useRef<HTMLInputElement>(null);
   const speedMenuRef = useRef<HTMLDivElement>(null);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const status = playerState.status;
   const isPlaying = status === 'playing';
   const isEnded = status === 'ended';
   const canInteract = isPlaying || status === 'paused' || isEnded || status === 'refreshing';
 
-  // -------------------------------------------------------------------------
-  // Auto-hide seekbar/secondary controls during playback
-  // -------------------------------------------------------------------------
-  const showControls = useCallback(() => {
-    setControlsVisible(true);
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => {
-      // Only hide when playing (keep visible on pause/ended)
-      setControlsVisible(prev => prev); // force re-eval in effect below
-    }, CONTROLS_HIDE_DELAY);
-  }, []);
-
-  // Auto-hide when playing, always show when paused/ended
-  useEffect(() => {
-    if (!isPlaying) {
-      setControlsVisible(true);
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-      return;
-    }
-    // Start hide timer when playback begins
-    hideTimerRef.current = setTimeout(() => {
-      setControlsVisible(false);
-    }, CONTROLS_HIDE_DELAY);
-    return () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    };
-  }, [isPlaying]);
-
-  const handleInteraction = useCallback(() => {
-    setControlsVisible(true);
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    if (isPlaying) {
-      hideTimerRef.current = setTimeout(() => {
-        setControlsVisible(false);
-      }, CONTROLS_HIDE_DELAY);
-    }
-  }, [isPlaying]);
+  // handleInteraction delegates to parent (which manages controlsVisible + hide timer)
+  const handleInteraction = onInteraction;
 
   // Hide resume hint after first play
   useEffect(() => {
@@ -299,15 +265,13 @@ export default function PlayerControls({
       <div
         role="group"
         aria-label="Odtwarzacz nagrania"
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         onKeyDown={handleKeyDown}
-        onClick={handleInteraction}
-        onPointerMove={handleInteraction}
       >
         {/* =============================================================== */}
         {/* CENTRAL PLAY/PAUSE — "green stone" button, always visible       */}
         {/* =============================================================== */}
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10">
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
           <m.button
             onClick={handlePlayPause}
             disabled={!canInteract}
@@ -384,8 +348,8 @@ export default function PlayerControls({
                          bg-black/30 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/15
                          transition-colors disabled:opacity-30
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.25 }}
+              whileTap={{ scale: 1.15 }}
             >
               <SkipBack className="w-5 h-5" />
             </m.button>
@@ -399,8 +363,8 @@ export default function PlayerControls({
                          bg-black/30 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/15
                          transition-colors disabled:opacity-30
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
-              whileHover={{ scale: 1.2 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.25 }}
+              whileTap={{ scale: 1.15 }}
             >
               <SkipForward className="w-5 h-5" />
             </m.button>
@@ -413,7 +377,7 @@ export default function PlayerControls({
         <AnimatePresence>
           {controlsVisible && (
             <m.div
-              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-3 pt-10"
+              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-3 pt-10 pointer-events-auto"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
@@ -546,7 +510,7 @@ export default function PlayerControls({
         {/* TOP-RIGHT — Minimize + Fullscreen (4x larger, glow on interact)*/}
         {/* =============================================================== */}
         <div
-          className={`absolute top-3 right-3 z-20 flex items-center gap-2
+          className={`absolute top-3 right-3 z-20 flex items-center gap-2 pointer-events-auto
                       transition-opacity duration-500
                       ${controlsVisible ? 'opacity-100' : 'opacity-30 hover:opacity-100'}`}
         >
@@ -592,7 +556,7 @@ export default function PlayerControls({
         {/* TIME ALWAYS VISIBLE (bottom-right) even when controls hidden    */}
         {/* =============================================================== */}
         {!controlsVisible && (
-          <div className="absolute bottom-3 left-4 text-xs text-white/40 font-mono tabular-nums">
+          <div className="absolute bottom-3 left-4 text-xs text-white/40 font-mono tabular-nums pointer-events-auto">
             {formatTime(displayTime)} / {formatTime(duration)}
           </div>
         )}

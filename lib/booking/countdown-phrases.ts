@@ -126,10 +126,15 @@ export function formatCountdown(
   const fmtDays = locale === 'pl' ? plDays : enDays;
   const conjunction = locale === 'pl' ? ' i ' : ' and ';
 
+  const suffix = locale === 'pl' ? ' do sesji' : ' until session';
+
+  let result = '';
   if (months > 0 && days > 0) {
-    return fmtMonths(months) + conjunction + fmtDays(days);
+    result = fmtMonths(months) + conjunction + fmtDays(days);
+  } else if (months > 0) {
+    result = fmtMonths(months);
+  } else if (days > 0) {
+    result = fmtDays(days);
   }
-  if (months > 0) return fmtMonths(months);
-  if (days > 0) return fmtDays(days);
-  return '';
+  return result ? result + suffix : '';
 }

@@ -271,7 +271,11 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
 
         const onSourceReady = () => {
           clearLoadingGuard();
-          tryCreateGraph();
+          // NOTE: Do NOT call tryCreateGraph() here.
+          // createMediaElementSource() hijacks audio output from the element,
+          // routing it exclusively through the AudioContext graph.
+          // If AudioContext is suspended (no user gesture yet), audio is silenced.
+          // Graph creation is deferred to play() which runs inside a user gesture.
           emitDuration();
           if (snapshot) {
             audio.currentTime = snapshot.currentTime;
@@ -472,9 +476,20 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
       play() {
         const audio = audioRef.current;
         if (!audio) return;
-        tryCreateGraph(); // Ensure graph is created on user gesture
-        if (graphRef.current?.audioContext?.state === 'suspended') {
-          graphRef.current.audioContext.resume().catch(() => {});
+        // Create audio graph on user gesture — this is the only safe moment
+        // because createMediaElementSource() hijacks audio output and
+        // AudioContext.resume() requires a user gesture to succeed.
+        tryCreateGraph();
+        const ctx = graphRef.current?.audioContext;
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().catch(() => {
+            // Resume failed — graph hijacked audio but can't output.
+            // Destroy graph so audio routes directly to speakers.
+            if (graphRef.current) {
+              graphRef.current.cleanup();
+              graphRef.current = null;
+            }
+          });
         }
         audio.play().catch(() => {});
       },

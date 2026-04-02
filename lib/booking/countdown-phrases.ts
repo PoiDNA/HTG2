@@ -124,22 +124,39 @@ export function formatCountdown(
 ): string {
   const parts = formatCountdownParts(months, days, locale);
   if (!parts) return '';
-  const lines = [parts.monthsLine, parts.daysLine].filter(Boolean).join(' ');
+  const lines = [parts.monthsLine, parts.daysLine]
+    .filter(Boolean)
+    .map(l => l!.number + ' ' + l!.label)
+    .join(' ');
   return lines + ' ' + parts.suffix;
 }
 
-/** Returns countdown split into separate lines for display */
+interface CountdownLine {
+  number: string;
+  label: string;
+}
+
+/** Returns countdown split into number/label pairs for flexible rendering */
 export function formatCountdownParts(
   months: number,
   days: number,
   locale: 'pl' | 'en',
-): { monthsLine: string | null; daysLine: string | null; suffix: string } | null {
-  const fmtMonths = locale === 'pl' ? plMonths : enMonths;
-  const fmtDays = locale === 'pl' ? plDays : enDays;
+): { monthsLine: CountdownLine | null; daysLine: CountdownLine | null; suffix: string } | null {
   const suffix = locale === 'pl' ? 'do sesji' : 'until session';
 
-  const monthsLine = months > 0 ? fmtMonths(months) : null;
-  const daysLine = days > 0 ? fmtDays(days) : null;
+  function splitNumberLabel(formatted: string): CountdownLine {
+    const spaceIdx = formatted.indexOf(' ');
+    return {
+      number: formatted.slice(0, spaceIdx),
+      label: formatted.slice(spaceIdx + 1),
+    };
+  }
+
+  const fmtMonths = locale === 'pl' ? plMonths : enMonths;
+  const fmtDays = locale === 'pl' ? plDays : enDays;
+
+  const monthsLine = months > 0 ? splitNumberLabel(fmtMonths(months)) : null;
+  const daysLine = days > 0 ? splitNumberLabel(fmtDays(days)) : null;
 
   if (!monthsLine && !daysLine) return null;
   return { monthsLine, daysLine, suffix };

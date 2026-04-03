@@ -271,7 +271,7 @@ export default function PlayerControls({
         {/* =============================================================== */}
         {/* CENTRAL PLAY/PAUSE — "green stone" button, always visible       */}
         {/* =============================================================== */}
-        <div className="absolute inset-0 flex items-center justify-center md:items-end md:pb-20 z-10 pointer-events-auto">
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
           <div className="relative flex items-center gap-6 md:gap-0">
             {/* Skip back — visible on mobile beside play, absolute on desktop */}
             <m.button
@@ -282,12 +282,12 @@ export default function PlayerControls({
                          text-white/30 md:text-white/70 hover:text-white
                          md:bg-black/30 md:backdrop-blur-sm md:hover:bg-white/15
                          transition-colors disabled:opacity-30
-                         md:absolute md:top-1/2 md:-translate-y-1/2 md:-left-14 lg:-left-16
+                         md:absolute md:top-1/2 md:-translate-y-1/2 md:-left-20
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
               whileHover={{ scale: 1.25 }}
               whileTap={{ scale: 1.15 }}
             >
-              <SkipBack className="w-6 h-6 md:w-5 md:h-5" />
+              <SkipBack className="w-6 h-6 md:w-6 md:h-6" />
             </m.button>
 
             {/* Play/Pause button */}
@@ -295,7 +295,7 @@ export default function PlayerControls({
               onClick={handlePlayPause}
               disabled={!canInteract}
               aria-label={isEnded ? 'Odtwórz ponownie' : isPlaying ? 'Pauza' : 'Odtwórz'}
-              className="relative w-24 h-24 md:w-20 md:h-20 sm:w-22 sm:h-22 flex items-center justify-center rounded-full
+              className="relative w-24 h-24 md:w-36 md:h-36 flex items-center justify-center rounded-full
                          disabled:opacity-40 cursor-pointer
                          focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-htg-sage/60"
               whileTap={{ scale: 0.92 }}
@@ -348,11 +348,11 @@ export default function PlayerControls({
               {/* Icon */}
               <div className="relative z-10 text-white drop-shadow-lg">
                 {isEnded ? (
-                  <RotateCcw className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
+                  <RotateCcw className="w-10 h-10 md:w-14 md:h-14" strokeWidth={2} />
                 ) : isPlaying ? (
-                  <Pause className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
+                  <Pause className="w-10 h-10 md:w-14 md:h-14" strokeWidth={2} />
                 ) : (
-                  <Play className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9 ml-1" strokeWidth={2.2} />
+                  <Play className="w-10 h-10 md:w-14 md:h-14 ml-1" strokeWidth={2} />
                 )}
               </div>
             </m.button>
@@ -366,12 +366,12 @@ export default function PlayerControls({
                          text-white/30 md:text-white/70 hover:text-white
                          md:bg-black/30 md:backdrop-blur-sm md:hover:bg-white/15
                          transition-colors disabled:opacity-30
-                         md:absolute md:top-1/2 md:-translate-y-1/2 md:-right-14 lg:-right-16
+                         md:absolute md:top-1/2 md:-translate-y-1/2 md:-right-20
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
               whileHover={{ scale: 1.25 }}
               whileTap={{ scale: 1.15 }}
             >
-              <SkipForward className="w-6 h-6 md:w-5 md:h-5" />
+              <SkipForward className="w-6 h-6 md:w-6 md:h-6" />
             </m.button>
           </div>
         </div>

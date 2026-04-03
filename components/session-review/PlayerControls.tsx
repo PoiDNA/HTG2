@@ -271,12 +271,12 @@ export default function PlayerControls({
         {/* =============================================================== */}
         {/* CENTRAL PLAY/PAUSE — "green stone" button, always visible       */}
         {/* =============================================================== */}
-        <div className="absolute bottom-1/3 md:bottom-20 left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
+        <div className="absolute inset-0 flex items-center justify-center md:items-end md:pb-20 z-10 pointer-events-auto">
           <m.button
             onClick={handlePlayPause}
             disabled={!canInteract}
             aria-label={isEnded ? 'Odtwórz ponownie' : isPlaying ? 'Pauza' : 'Odtwórz'}
-            className="relative w-20 h-20 sm:w-22 sm:h-22 flex items-center justify-center rounded-full
+            className="relative w-24 h-24 md:w-20 md:h-20 sm:w-22 sm:h-22 flex items-center justify-center rounded-full
                        disabled:opacity-40 cursor-pointer
                        focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-htg-sage/60"
             whileTap={{ scale: 0.92 }}
@@ -329,11 +329,11 @@ export default function PlayerControls({
             {/* Icon */}
             <div className="relative z-10 text-white drop-shadow-lg">
               {isEnded ? (
-                <RotateCcw className="w-8 h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
+                <RotateCcw className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
               ) : isPlaying ? (
-                <Pause className="w-8 h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
+                <Pause className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
               ) : (
-                <Play className="w-8 h-8 sm:w-9 sm:h-9 ml-1" strokeWidth={2.2} />
+                <Play className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9 ml-1" strokeWidth={2.2} />
               )}
             </div>
           </m.button>

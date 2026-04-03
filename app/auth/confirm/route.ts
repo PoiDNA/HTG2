@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 import { getRoleForEmail } from '@/lib/roles';
+import { isNagraniaPortal, NAGRANIA_HOME } from '@/lib/portal';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -10,11 +11,14 @@ export async function GET(request: NextRequest) {
   const consentFromUrl = searchParams.get('consent') === '1';
 
   // Detect locale from 'next' param or default to 'pl'
-  const next = searchParams.get('next') ?? '/pl/konto';
+  const isNagrania = isNagraniaPortal(request.headers.get('host'));
+  const defaultNext = isNagrania ? `/pl${NAGRANIA_HOME}` : '/pl/konto';
+  const next = searchParams.get('next') ?? defaultNext;
   const localeMatch = next.match(/^\/([a-z]{2})(?:\/|$)/);
   const locale = localeMatch ? localeMatch[1] : 'pl';
 
-  const successRedirect = new URL(`/${locale}/konto`, origin);
+  const defaultHome = isNagrania ? NAGRANIA_HOME : '/konto';
+  const successRedirect = new URL(`/${locale}${defaultHome}`, origin);
   const failRedirect = new URL(`/${locale}/login?error=auth_failed`, origin);
 
   if (!code && !tokenHash) {

@@ -3,9 +3,11 @@ import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
+import { isNagraniaPortal } from '@/lib/portal';
+import NagraniaHeader from '@/components/portal/NagraniaHeader';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
@@ -28,6 +30,21 @@ export default async function AccountLayout({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  // ─── Nagrania portal: minimal layout without sidebar ─────────
+  const headersList = await headers();
+  const host = headersList.get('host');
+  if (isNagraniaPortal(host)) {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-8">
+        <NagraniaHeader userEmail={user?.email ?? ''} locale={locale} />
+        {children}
+      </div>
+    );
+  }
+
   const t = await getTranslations({ locale, namespace: 'Account' });
   const tPanel = await getTranslations({ locale, namespace: 'PanelNav' });
 

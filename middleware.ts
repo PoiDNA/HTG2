@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { routing, locales } from './i18n-config';
+import { isNagraniaPortal, NAGRANIA_HOME } from './lib/portal';
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -23,8 +24,18 @@ function getLocaleFromPath(pathname: string): string {
   return match ? match[1] : routing.defaultLocale;
 }
 
+// Paths allowed on the nagrania.htg.cyou portal (without locale prefix)
+const NAGRANIA_ALLOWED = ['/login', '/auth', '/konto/nagrania-sesji', '/konto/zgody'];
+
+function isNagraniaAllowed(pathname: string): boolean {
+  const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
+  return NAGRANIA_ALLOWED.some(p => withoutLocale === p || withoutLocale.startsWith(`${p}/`));
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+  const host = request.headers.get('host');
+  const isNagrania = isNagraniaPortal(host);
 
   // Skip static assets
   if (pathname.includes('/_next/') || pathname.includes('/favicon.ico') || pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)) {
@@ -43,7 +54,7 @@ export async function middleware(request: NextRequest) {
     const nextParam = searchParams.get('next');
     const locale = nextParam?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || getLocaleFromPath(pathname);
     const url = request.nextUrl.clone();
-    url.pathname = nextParam || `/${locale}/konto`;
+    url.pathname = nextParam || `/${locale}${isNagrania ? NAGRANIA_HOME : '/konto'}`;
     url.searchParams.delete('code');
     url.searchParams.delete('next');
     url.searchParams.delete('consent');
@@ -77,6 +88,14 @@ export async function middleware(request: NextRequest) {
     }
 
     return response;
+  }
+
+  // ─── Portal Route Restriction ─────────────────────────────────
+  if (isNagrania && !isNagraniaAllowed(pathname)) {
+    const locale = getLocaleFromPath(pathname);
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}${NAGRANIA_HOME}`;
+    return NextResponse.redirect(url);
   }
 
   // ─── i18n Middleware ──────────────────────────────────────────

@@ -67,8 +67,9 @@ export default function ConsentGatePage() {
         return;
       }
 
-      // Redirect to account panel
-      router.push('/konto');
+      // Redirect to account panel (or recordings on nagrania portal)
+      const isNagrania = window.location.hostname === 'nagrania.htg.cyou' || window.location.hostname === 'nagrania.localhost';
+      router.push(isNagrania ? '/konto/nagrania-sesji' : '/konto');
       router.refresh();
     } catch {
       setError('Wystąpił błąd. Spróbuj ponownie.');

@@ -272,101 +272,106 @@ export default function PlayerControls({
         {/* CENTRAL PLAY/PAUSE — "green stone" button, always visible       */}
         {/* =============================================================== */}
         <div className="absolute inset-0 flex items-center justify-center md:items-end md:pb-20 z-10 pointer-events-auto">
-          <m.button
-            onClick={handlePlayPause}
-            disabled={!canInteract}
-            aria-label={isEnded ? 'Odtwórz ponownie' : isPlaying ? 'Pauza' : 'Odtwórz'}
-            className="relative w-24 h-24 md:w-20 md:h-20 sm:w-22 sm:h-22 flex items-center justify-center rounded-full
-                       disabled:opacity-40 cursor-pointer
-                       focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-htg-sage/60"
-            whileTap={{ scale: 0.92 }}
-            whileHover={{ scale: 1.06 }}
-            style={{ WebkitTapHighlightColor: 'transparent' }}
-          >
-            {/* Outer glow — pulsing ring */}
-            <m.div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: 'radial-gradient(circle at 40% 35%, rgba(110,190,85,0.25), rgba(90,138,78,0.12) 50%, rgba(45,107,45,0.06) 80%, transparent)',
-                boxShadow: '0 0 30px rgba(90,138,78,0.3), 0 0 60px rgba(90,138,78,0.12)',
-              }}
-              animate={{
-                scale: isPlaying ? [1, 1.08, 1] : [1, 1.04, 1],
-                opacity: isPlaying ? [0.7, 1, 0.7] : [0.5, 0.7, 0.5],
-              }}
-              transition={{
-                duration: isPlaying ? 2 : 3,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-            />
-
-            {/* Stone body — layered radial gradients for depth */}
-            <div
-              className="absolute inset-1 rounded-full"
-              style={{
-                background: `
-                  radial-gradient(ellipse 60% 50% at 38% 32%, rgba(150,210,130,0.45), transparent 60%),
-                  radial-gradient(ellipse 80% 80% at 50% 50%, rgba(90,138,78,0.95), rgba(61,107,50,0.9) 60%, rgba(45,85,35,0.85) 100%)
-                `,
-                boxShadow: `
-                  inset 0 2px 8px rgba(150,210,130,0.3),
-                  inset 0 -3px 6px rgba(30,60,25,0.4),
-                  0 4px 16px rgba(0,0,0,0.4),
-                  0 2px 6px rgba(0,0,0,0.3)
-                `,
-              }}
-            />
-
-            {/* Subtle inner highlight arc (top specular) */}
-            <div
-              className="absolute top-2 left-3 right-3 h-6 rounded-full opacity-20"
-              style={{
-                background: 'linear-gradient(to bottom, rgba(200,255,180,0.6), transparent)',
-              }}
-            />
-
-            {/* Icon */}
-            <div className="relative z-10 text-white drop-shadow-lg">
-              {isEnded ? (
-                <RotateCcw className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
-              ) : isPlaying ? (
-                <Pause className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
-              ) : (
-                <Play className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9 ml-1" strokeWidth={2.2} />
-              )}
-            </div>
-          </m.button>
-
-          {/* Skip buttons flanking the play button */}
-          <div className="absolute top-1/2 -translate-y-1/2 -left-14 sm:-left-16">
+          <div className="relative flex items-center gap-6 md:gap-0">
+            {/* Skip back — visible on mobile beside play, absolute on desktop */}
             <m.button
               onClick={handleSkipBack}
               disabled={!canInteract}
               aria-label="Cofnij 15 sekund"
-              className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full
-                         bg-black/30 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/15
+              className="w-11 h-11 md:w-10 md:h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full
+                         text-white/30 md:text-white/70 hover:text-white
+                         md:bg-black/30 md:backdrop-blur-sm md:hover:bg-white/15
                          transition-colors disabled:opacity-30
+                         md:absolute md:top-1/2 md:-translate-y-1/2 md:-left-14 lg:-left-16
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
               whileHover={{ scale: 1.25 }}
               whileTap={{ scale: 1.15 }}
             >
-              <SkipBack className="w-5 h-5" />
+              <SkipBack className="w-6 h-6 md:w-5 md:h-5" />
             </m.button>
-          </div>
-          <div className="absolute top-1/2 -translate-y-1/2 -right-14 sm:-right-16">
+
+            {/* Play/Pause button */}
+            <m.button
+              onClick={handlePlayPause}
+              disabled={!canInteract}
+              aria-label={isEnded ? 'Odtwórz ponownie' : isPlaying ? 'Pauza' : 'Odtwórz'}
+              className="relative w-24 h-24 md:w-20 md:h-20 sm:w-22 sm:h-22 flex items-center justify-center rounded-full
+                         disabled:opacity-40 cursor-pointer
+                         focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-htg-sage/60"
+              whileTap={{ scale: 0.92 }}
+              whileHover={{ scale: 1.06 }}
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              {/* Outer glow — pulsing ring */}
+              <m.div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle at 40% 35%, rgba(110,190,85,0.25), rgba(90,138,78,0.12) 50%, rgba(45,107,45,0.06) 80%, transparent)',
+                  boxShadow: '0 0 30px rgba(90,138,78,0.3), 0 0 60px rgba(90,138,78,0.12)',
+                }}
+                animate={{
+                  scale: isPlaying ? [1, 1.08, 1] : [1, 1.04, 1],
+                  opacity: isPlaying ? [0.7, 1, 0.7] : [0.5, 0.7, 0.5],
+                }}
+                transition={{
+                  duration: isPlaying ? 2 : 3,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+
+              {/* Stone body — layered radial gradients for depth */}
+              <div
+                className="absolute inset-1 rounded-full"
+                style={{
+                  background: `
+                    radial-gradient(ellipse 60% 50% at 38% 32%, rgba(150,210,130,0.45), transparent 60%),
+                    radial-gradient(ellipse 80% 80% at 50% 50%, rgba(90,138,78,0.95), rgba(61,107,50,0.9) 60%, rgba(45,85,35,0.85) 100%)
+                  `,
+                  boxShadow: `
+                    inset 0 2px 8px rgba(150,210,130,0.3),
+                    inset 0 -3px 6px rgba(30,60,25,0.4),
+                    0 4px 16px rgba(0,0,0,0.4),
+                    0 2px 6px rgba(0,0,0,0.3)
+                  `,
+                }}
+              />
+
+              {/* Subtle inner highlight arc (top specular) */}
+              <div
+                className="absolute top-2 left-3 right-3 h-6 rounded-full opacity-20"
+                style={{
+                  background: 'linear-gradient(to bottom, rgba(200,255,180,0.6), transparent)',
+                }}
+              />
+
+              {/* Icon */}
+              <div className="relative z-10 text-white drop-shadow-lg">
+                {isEnded ? (
+                  <RotateCcw className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
+                ) : isPlaying ? (
+                  <Pause className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9" strokeWidth={2.2} />
+                ) : (
+                  <Play className="w-10 h-10 md:w-8 md:h-8 sm:w-9 sm:h-9 ml-1" strokeWidth={2.2} />
+                )}
+              </div>
+            </m.button>
+
+            {/* Skip forward — visible on mobile beside play, absolute on desktop */}
             <m.button
               onClick={handleSkipForward}
               disabled={!canInteract}
               aria-label="Przewiń 15 sekund"
-              className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full
-                         bg-black/30 backdrop-blur-sm text-white/70 hover:text-white hover:bg-white/15
+              className="w-11 h-11 md:w-10 md:h-10 sm:w-11 sm:h-11 flex items-center justify-center rounded-full
+                         text-white/30 md:text-white/70 hover:text-white
+                         md:bg-black/30 md:backdrop-blur-sm md:hover:bg-white/15
                          transition-colors disabled:opacity-30
+                         md:absolute md:top-1/2 md:-translate-y-1/2 md:-right-14 lg:-right-16
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage"
               whileHover={{ scale: 1.25 }}
               whileTap={{ scale: 1.15 }}
             >
-              <SkipForward className="w-5 h-5" />
+              <SkipForward className="w-6 h-6 md:w-5 md:h-5" />
             </m.button>
           </div>
         </div>
@@ -532,11 +537,11 @@ export default function PlayerControls({
             </button>
           )}
 
-          {/* Fullscreen */}
+          {/* Fullscreen — hidden on mobile */}
           <button
             onClick={onToggleFullscreen}
             aria-label={isFullscreen ? 'Zamknij pełny ekran' : 'Pełny ekran'}
-            className={`w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-xl
+            className={`hidden md:flex w-12 h-12 sm:w-14 sm:h-14 items-center justify-center rounded-xl
                        backdrop-blur-sm transition-all duration-300
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-htg-sage
                        ${controlsVisible

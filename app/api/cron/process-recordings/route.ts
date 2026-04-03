@@ -186,16 +186,17 @@ async function section2StatusPolling(db: DB, stats: Record<string, number>) {
     if (!rec.bunny_video_id || !rec.bunny_library_id) continue;
 
     try {
-      const { status: bunnyStatus } = await getVideoStatus(rec.bunny_library_id, rec.bunny_video_id);
+      const { status: bunnyStatus, length: bunnyLength } = await getVideoStatus(rec.bunny_library_id, rec.bunny_video_id);
 
       if (bunnyStatus === 4) {
-        // Finished
+        // Finished — save duration_seconds from Bunny (used for playback token TTL)
         await db.from('booking_recordings').update({
           status: 'ready',
+          ...(bunnyLength > 0 ? { duration_seconds: bunnyLength } : {}),
           last_checked_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq('id', rec.id);
-        await audit(db, rec.id, 'bunny_ready', {});
+        await audit(db, rec.id, 'bunny_ready', { duration_seconds: bunnyLength || null });
       } else if (bunnyStatus === 3 || bunnyStatus === 2 || bunnyStatus === 1) {
         // Still processing
         await db.from('booking_recordings').update({

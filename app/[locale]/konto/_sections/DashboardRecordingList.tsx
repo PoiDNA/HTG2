@@ -37,7 +37,7 @@ export default function DashboardRecordingList({ items, userEmail, userId }: Pro
         
         return (
           <div key={item.id} className="bg-htg-card border border-htg-card-border rounded-xl p-4">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-x-4 gap-y-3 items-start">
+            <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-3 items-start">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`inline-block px-2 py-0.5 rounded-full text-xs text-white ${item.configColor}`}>
@@ -52,9 +52,6 @@ export default function DashboardRecordingList({ items, userEmail, userId }: Pro
                 </h3>
                 <div className="flex items-center gap-3 mt-0.5 text-xs text-htg-fg-muted flex-wrap">
                   {item.dateLabel && <span>{item.dateLabel}</span>}
-                  {item.recordingEmail && (
-                    <span className="text-htg-fg-muted/70">{item.recordingEmail}</span>
-                  )}
                   {item.durationLabel && (
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -62,6 +59,9 @@ export default function DashboardRecordingList({ items, userEmail, userId }: Pro
                     </span>
                   )}
                 </div>
+                {item.recordingEmail && (
+                  <div className="text-xs text-htg-fg-muted/70 mt-0.5">{item.recordingEmail}</div>
+                )}
               </div>
 
               {item.isReady ? (

@@ -39,20 +39,20 @@ export default function InlineRecordingPlayer({
         <button
           onClick={onToggle}
           className={`
-            flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
-            ${isExpanded 
-              ? 'bg-htg-surface-hover text-htg-fg-muted hover:text-htg-fg' 
+            flex items-center gap-2 px-4 py-2.5 md:px-3 md:py-1.5 rounded-lg text-sm md:text-xs font-medium transition-colors
+            ${isExpanded
+              ? 'bg-htg-surface-hover text-htg-fg-muted hover:text-htg-fg'
               : 'bg-htg-sage text-white hover:bg-htg-sage/90'}
           `}
         >
           {isExpanded ? (
             <>
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4 md:w-3.5 md:h-3.5" />
               {t('close')}
             </>
           ) : (
             <>
-              <Play className="w-3.5 h-3.5" />
+              <Play className="w-4 h-4 md:w-3.5 md:h-3.5" />
               {t('listen')}
             </>
           )}

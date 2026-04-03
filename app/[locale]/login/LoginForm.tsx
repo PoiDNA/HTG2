@@ -444,11 +444,13 @@ export default function LoginForm() {
             </span>
           </label>
 
-          {/* Help text for new/elderly users */}
-          <div className="bg-htg-surface rounded-lg px-4 py-3 flex gap-3 items-start">
-            <Mail className="w-5 h-5 text-htg-sage shrink-0 mt-0.5" />
-            <p className="text-base text-htg-fg leading-snug">{t('login_help')}</p>
-          </div>
+          {/* Help text for new/elderly users — nagrania portal only */}
+          {isNagrania && (
+            <div className="bg-htg-surface rounded-lg px-4 py-3 flex gap-3 items-start">
+              <Mail className="w-5 h-5 text-htg-sage shrink-0 mt-0.5" />
+              <p className="text-base text-htg-fg leading-snug">{t('login_help')}</p>
+            </div>
+          )}
 
           {/* Email form */}
           <form onSubmit={handleSendOtp} className="flex flex-col gap-4">

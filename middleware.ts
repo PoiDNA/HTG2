@@ -42,6 +42,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ─── Nagrania portal domain correction ───────────────────────
+  // If auth callback landed on wrong domain but is destined for nagrania,
+  // redirect to nagrania.htg.cyou BEFORE consuming any auth tokens
+  if (pathname.startsWith('/auth/') && !isNagrania && !host?.includes('localhost')) {
+    const nextVal = searchParams.get('next') ?? '';
+    if (nextVal.includes(NAGRANIA_HOME)) {
+      const correctUrl = new URL(request.url);
+      correctUrl.host = 'nagrania.htg.cyou';
+      correctUrl.protocol = 'https:';
+      return NextResponse.redirect(correctUrl.toString());
+    }
+  }
+
   // Skip auth callback from i18n — BUT let PKCE code exchange through
   if (pathname.startsWith('/auth/') && !searchParams.get('code')) {
     return NextResponse.next();
@@ -51,10 +64,12 @@ export async function middleware(request: NextRequest) {
   // If ?code= is present (on any path including /auth/confirm), exchange it
   const authCode = searchParams.get('code');
   if (authCode && authCode.length > 20) {
-    const nextParam = searchParams.get('next');
-    const locale = nextParam?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || getLocaleFromPath(pathname);
+    const rawNext = searchParams.get('next');
+    // Validate next param — only allow relative paths, prevent open redirect
+    const safeNext = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : null;
+    const locale = safeNext?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || getLocaleFromPath(pathname);
     const url = request.nextUrl.clone();
-    url.pathname = nextParam || `/${locale}${isNagrania ? NAGRANIA_HOME : '/konto'}`;
+    url.pathname = safeNext || `/${locale}${isNagrania ? NAGRANIA_HOME : '/konto'}`;
     url.searchParams.delete('code');
     url.searchParams.delete('next');
     url.searchParams.delete('consent');

@@ -11,14 +11,25 @@ export async function GET(request: NextRequest) {
   const isLoginFlow = (['email', 'signup', 'magiclink', 'invite'] as string[]).includes(type);
 
   // Detect locale from 'next' param or default to 'pl'
-  const isNagrania = isNagraniaPortal(request.headers.get('host'));
+  const host = request.headers.get('host');
+  const isNagrania = isNagraniaPortal(host);
   const defaultNext = isNagrania ? `/pl${NAGRANIA_HOME}` : '/pl/konto';
-  const next = searchParams.get('next') ?? defaultNext;
+  const rawNext = searchParams.get('next');
+  // Validate next param — only allow relative paths
+  const next = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : defaultNext;
   const localeMatch = next.match(/^\/([a-z]{2})(?:\/|$)/);
   const locale = localeMatch ? localeMatch[1] : 'pl';
 
-  const defaultHome = isNagrania ? NAGRANIA_HOME : '/konto';
-  const successRedirect = new URL(`/${locale}${defaultHome}`, origin);
+  // Domain correction: if landed on wrong domain for nagrania portal,
+  // redirect to nagrania.htg.cyou BEFORE consuming any auth tokens
+  if (!isNagrania && next.includes(NAGRANIA_HOME) && host && !host.includes('localhost')) {
+    const correctUrl = new URL(request.url);
+    correctUrl.host = 'nagrania.htg.cyou';
+    correctUrl.protocol = 'https:';
+    return NextResponse.redirect(correctUrl.toString());
+  }
+
+  const successRedirect = new URL(next, origin);
   const failRedirect = new URL(`/${locale}/login?error=auth_failed`, origin);
 
   if (!code && !tokenHash) {

@@ -59,7 +59,8 @@ export default function AuthCallbackPage() {
           } catch {}
 
           const locale = window.location.pathname.split('/')[1] || 'pl';
-          window.location.href = `/${locale}/konto`;
+          const isNagrania = window.location.hostname === 'nagrania.htg.cyou' || window.location.hostname === 'nagrania.localhost';
+          window.location.href = `/${locale}${isNagrania ? '/konto/nagrania-sesji' : '/konto'}`;
           return;
         }
       }
@@ -68,7 +69,8 @@ export default function AuthCallbackPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const locale = window.location.pathname.split('/')[1] || 'pl';
-        window.location.href = `/${locale}/konto`;
+        const isNagraniaFallback = window.location.hostname === 'nagrania.htg.cyou' || window.location.hostname === 'nagrania.localhost';
+        window.location.href = `/${locale}${isNagraniaFallback ? '/konto/nagrania-sesji' : '/konto'}`;
         return;
       }
 

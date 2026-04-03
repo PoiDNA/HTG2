@@ -1,5 +1,3 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
@@ -9,7 +7,6 @@ import crypto from 'crypto';
 
 const BUNNY_API_KEY = process.env.BUNNY_API_KEY!;
 const BUNNY_LIBRARY_ID = process.env.BUNNY_LIBRARY_ID!;
-const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 
 /**
  * POST /api/admin/import-recording
@@ -90,6 +87,7 @@ export async function POST(request: NextRequest) {
         status: 'uploading',
         import_filename: fileName || null,
         import_confidence: 'admin_assigned',
+        expires_at: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
         metadata: {
           imported_by: user.email,
           imported_at: new Date().toISOString(),

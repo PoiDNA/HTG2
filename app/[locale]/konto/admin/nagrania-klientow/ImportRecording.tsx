@@ -102,8 +102,10 @@ export default function ImportRecording({ onDone }: { onDone?: () => void }) {
       createXhr.open('POST', config.tusEndpoint, true);
       createXhr.setRequestHeader('Tus-Resumable', '1.0.0');
       createXhr.setRequestHeader('Upload-Length', file.size.toString());
+      const safeType = btoa(file.type || 'application/octet-stream');
+      const safeTitle = btoa(unescape(encodeURIComponent(file.name)));
       createXhr.setRequestHeader('Upload-Metadata',
-        `filetype ${btoa(file.type)},title ${btoa(file.name)}`);
+        `filetype ${safeType},title ${safeTitle}`);
       createXhr.setRequestHeader('AuthorizationSignature', config.authSignature);
       createXhr.setRequestHeader('AuthorizationExpire', config.authExpire.toString());
       createXhr.setRequestHeader('VideoId', config.videoId);

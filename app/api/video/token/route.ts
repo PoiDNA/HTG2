@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { signBunnyUrl, signPrivateCdnUrl } from '@/lib/bunny';
+import { isAdminEmail } from '@/lib/roles';
+import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +20,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'sessionId and deviceId required' }, { status: 400 });
     }
 
-    // Check if user account is blocked
     const db = createSupabaseServiceRole();
+
+    // Admin impersonation: use impersonated user's ID for access checks
+    const impersonateId = request.cookies.get(IMPERSONATE_USER_COOKIE)?.value;
+    const isAdmin = isAdminEmail(user.email ?? '');
+    const isImpersonating = !!(impersonateId && isAdmin);
+    const effectiveUserId = isImpersonating ? impersonateId : user.id;
+
+    // Check if user account is blocked
     const { data: profile } = await db
       .from('profiles')
       .select('is_blocked, blocked_reason')
-      .eq('id', user.id)
+      .eq('id', effectiveUserId)
       .single();
 
     if (profile?.is_blocked) {
@@ -34,48 +43,52 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check entitlement
-    const now = new Date().toISOString();
-    
-    // 1. Direct session entitlement (bez zmian)
-    const { data: entitlement } = await db
-      .from('entitlements').select('id')
-      .eq('user_id', user.id).eq('session_id', sessionId)
-      .eq('is_active', true).gt('valid_until', now)
-      .limit(1).maybeSingle();
-
-    let hasAccess = !!entitlement;
+    // Check entitlement — admin bypasses entitlement check entirely
+    let hasAccess = isAdmin;
 
     if (!hasAccess) {
-      // 2. Znajdź zestawy tej sesji
-      const { data: sessionSets } = await db
-        .from('set_sessions')
-        .select('set_id, monthly_set:monthly_sets(month_label)')
-        .eq('session_id', sessionId);
-      const setIds = (sessionSets || []).map(ss => ss.set_id);
+      const now = new Date().toISOString();
 
-      if (setIds.length > 0) {
-        // 3. Entitlement z monthly_set_id
-        const { data: setEnt } = await db
-          .from('entitlements').select('id')
-          .eq('user_id', user.id).in('type', ['yearly', 'monthly'])
-          .in('monthly_set_id', setIds)
-          .eq('is_active', true).gt('valid_until', now)
-          .limit(1).maybeSingle();
-        hasAccess = !!setEnt;
+      // 1. Direct session entitlement
+      const { data: entitlement } = await db
+        .from('entitlements').select('id')
+        .eq('user_id', effectiveUserId).eq('session_id', sessionId)
+        .eq('is_active', true).gt('valid_until', now)
+        .limit(1).maybeSingle();
 
-        // 4. Fallback legacy (monthly_set_id IS NULL + scope_month)
-        if (!hasAccess) {
-          const setMonths = (sessionSets || [])
-            .map(ss => (ss as any).monthly_set?.month_label).filter(Boolean);
-          if (setMonths.length > 0) {
-            const { data: legacyEnt } = await db
-              .from('entitlements').select('id')
-              .eq('user_id', user.id).in('type', ['yearly', 'monthly'])
-              .is('monthly_set_id', null).in('scope_month', setMonths)
-              .eq('is_active', true).gt('valid_until', now)
-              .limit(1).maybeSingle();
-            hasAccess = !!legacyEnt;
+      hasAccess = !!entitlement;
+
+      if (!hasAccess) {
+        // 2. Znajdź zestawy tej sesji
+        const { data: sessionSets } = await db
+          .from('set_sessions')
+          .select('set_id, monthly_set:monthly_sets(month_label)')
+          .eq('session_id', sessionId);
+        const setIds = (sessionSets || []).map(ss => ss.set_id);
+
+        if (setIds.length > 0) {
+          // 3. Entitlement z monthly_set_id
+          const { data: setEnt } = await db
+            .from('entitlements').select('id')
+            .eq('user_id', effectiveUserId).in('type', ['yearly', 'monthly'])
+            .in('monthly_set_id', setIds)
+            .eq('is_active', true).gt('valid_until', now)
+            .limit(1).maybeSingle();
+          hasAccess = !!setEnt;
+
+          // 4. Fallback legacy (monthly_set_id IS NULL + scope_month)
+          if (!hasAccess) {
+            const setMonths = (sessionSets || [])
+              .map(ss => (ss as any).monthly_set?.month_label).filter(Boolean);
+            if (setMonths.length > 0) {
+              const { data: legacyEnt } = await db
+                .from('entitlements').select('id')
+                .eq('user_id', effectiveUserId).in('type', ['yearly', 'monthly'])
+                .is('monthly_set_id', null).in('scope_month', setMonths)
+                .eq('is_active', true).gt('valid_until', now)
+                .limit(1).maybeSingle();
+              hasAccess = !!legacyEnt;
+            }
           }
         }
       }
@@ -89,36 +102,38 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check concurrent streams — only 1 device at a time
-    const cutoff = new Date(Date.now() - 60 * 1000).toISOString(); // 60s stale threshold
-    const { data: activeStreams } = await supabase
-      .from('active_streams')
-      .select('device_id')
-      .eq('user_id', user.id)
-      .gt('last_heartbeat', cutoff);
+    // Concurrent streams — skip for admin (preview mode)
+    if (!isAdmin) {
+      const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
+      const { data: activeStreams } = await supabase
+        .from('active_streams')
+        .select('device_id')
+        .eq('user_id', effectiveUserId)
+        .gt('last_heartbeat', cutoff);
 
-    const otherDeviceActive = activeStreams?.some(s => s.device_id !== deviceId);
+      const otherDeviceActive = activeStreams?.some(s => s.device_id !== deviceId);
 
-    if (otherDeviceActive) {
-      return NextResponse.json({
-        allowed: false,
-        title: 'Odtwarzanie na innym urządzeniu',
-        message: 'Odtwarzasz już nagranie na innym urządzeniu. Zatrzymaj odtwarzanie tam, aby rozpocząć tutaj.',
-      });
+      if (otherDeviceActive) {
+        return NextResponse.json({
+          allowed: false,
+          title: 'Odtwarzanie na innym urządzeniu',
+          message: 'Odtwarzasz już nagranie na innym urządzeniu. Zatrzymaj odtwarzanie tam, aby rozpocząć tutaj.',
+        });
+      }
+
+      // Register this stream
+      await supabase
+        .from('active_streams')
+        .upsert({
+          user_id: effectiveUserId,
+          device_id: deviceId,
+          session_id: sessionId,
+          last_heartbeat: new Date().toISOString(),
+        }, { onConflict: 'user_id,device_id' });
     }
 
-    // Register this stream
-    await supabase
-      .from('active_streams')
-      .upsert({
-        user_id: user.id,
-        device_id: deviceId,
-        session_id: sessionId,
-        last_heartbeat: new Date().toISOString(),
-      }, { onConflict: 'user_id,device_id' });
-
     // Get video details
-    const { data: session } = await supabase
+    const { data: session } = await db
       .from('session_templates')
       .select('bunny_video_id, bunny_library_id')
       .eq('id', sessionId)

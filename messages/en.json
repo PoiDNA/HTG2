@@ -122,7 +122,7 @@
   "PrivateRecordings": {
     "listen": "Listen",
     "close": "Close",
-    "sharing_prohibited": "Sharing this recording with third parties is prohibited.",
+    "sharing_prohibited": "Out of respect for privacy and the comfort of the session, this recording is not intended for further sharing.",
     "processing": "Processing..."
   },
   "Recordings": {

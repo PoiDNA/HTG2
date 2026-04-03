@@ -122,7 +122,7 @@
   "PrivateRecordings": {
     "listen": "Odsłuchaj",
     "close": "Zamknij",
-    "sharing_prohibited": "Udostępnianie nagrania osobom trzecim jest zabronione.",
+    "sharing_prohibited": "W trosce o poufność i komfort sesji, nagranie nie jest przeznaczone do dalszego udostępniania.",
     "processing": "Przetwarzane..."
   },
   "Recordings": {

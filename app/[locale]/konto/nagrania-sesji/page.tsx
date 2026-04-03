@@ -6,6 +6,8 @@ import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 import { Headphones, Info } from 'lucide-react';
 import FullRecordingList, { RecordingGroup } from './FullRecordingList';
+import { headers } from 'next/headers';
+import { isNagraniaPortal } from '@/lib/portal';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -17,6 +19,8 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
 
   const { userId } = await getEffectiveUser();
   const db = createSupabaseServiceRole();
+  const headersList = await headers();
+  const isPortal = isNagraniaPortal(headersList.get('host'));
 
   // Fetch user email for watermark
   const [{ data: authUser }, { data: recordings }] = await Promise.all([
@@ -100,7 +104,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       isLegalHold,
       dateLabel: main.session_date ? format.dateTime(new Date(main.session_date as string), { dateStyle: 'medium' }) : '',
       durationLabel: main.duration_seconds ? `${Math.floor((main.duration_seconds as number) / 60)} min` : null,
-      expiresLabel: expiresAt && isReady && !isLegalHold ? `Dostępne do ${format.dateTime(new Date(expiresAt), { dateStyle: 'medium' })}` : null,
+      expiresLabel: expiresAt && isReady && !isLegalHold && !isPortal ? `Dostępne do ${format.dateTime(new Date(expiresAt), { dateStyle: 'medium' })}` : null,
       recordingStartedLabel,
       legalHoldMessage,
       recordingEmail,
@@ -108,7 +112,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
         id: r.id as string,
         durationLabel: r.duration_seconds ? `${Math.floor((r.duration_seconds as number) / 60)} min` : null,
         isReady: r.status === 'ready',
-        showRevoke: r.status === 'ready' && !isLegalHold,
+        showRevoke: r.status === 'ready' && !isLegalHold && !isPortal,
         isPara: isPara,
       })),
     };
@@ -121,16 +125,18 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
         <h1 className="text-2xl font-serif font-bold text-htg-fg">Nagrania z sesji</h1>
       </div>
 
-      {/* Privacy banner */}
-      <div className="bg-htg-surface rounded-xl p-4 mb-6 flex items-start gap-3 border border-htg-card-border">
-        <Info className="w-5 h-5 text-htg-fg-muted shrink-0 mt-0.5" />
-        <p className="text-sm text-htg-fg-muted">
-          Nagrania z Twoich sesji są dostępne przez okres do 12 miesięcy od daty sesji.
-          Ze względów bezpieczeństwa zastrzegamy sobie prawo do skrócenia tego czasu.
-          Jeśli chcesz usunąć nagranie lub zgłosić problem, napisz do nas na{' '}
-          <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
-        </p>
-      </div>
+      {/* Privacy banner — hidden on nagrania portal */}
+      {!isPortal && (
+        <div className="bg-htg-surface rounded-xl p-4 mb-6 flex items-start gap-3 border border-htg-card-border">
+          <Info className="w-5 h-5 text-htg-fg-muted shrink-0 mt-0.5" />
+          <p className="text-sm text-htg-fg-muted">
+            Nagrania z Twoich sesji są dostępne przez okres do 12 miesięcy od daty sesji.
+            Ze względów bezpieczeństwa zastrzegamy sobie prawo do skrócenia tego czasu.
+            Jeśli chcesz usunąć nagranie lub zgłosić problem, napisz do nas na{' '}
+            <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
+          </p>
+        </div>
+      )}
 
       {formattedGroups.length === 0 ? (
         <div className="text-center py-16">

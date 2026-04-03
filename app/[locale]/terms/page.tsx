@@ -364,8 +364,10 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Nasza odpowiedzialność za poufność</h3>
           <P>
             Zespół HTG traktuje treść każdej sesji jako poufną. Informacje, które nam powierzasz,
-            nie będą udostępniane osobom trzecim — z wyjątkiem sytuacji wynikających z prawa
-            lub publikacji sesji na warunkach opisanych w pkt&nbsp;8.
+            nie będą udostępniane osobom trzecim — z&nbsp;wyjątkiem sytuacji wynikających z&nbsp;prawa
+            lub publikacji sesji na warunkach opisanych w&nbsp;pkt&nbsp;8. Zespół HTG może
+            informować na stronie htgcyou.com o&nbsp;aktualnie prowadzonych sesjach, wykorzystując
+            wyłącznie imię Uczestnika (bez nazwiska), np.&nbsp;„sesja dla Anny".
           </P>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Wskazanie fragmentów do usunięcia</h3>

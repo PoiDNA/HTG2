@@ -16,6 +16,13 @@ import PlayerControls from './PlayerControls';
 const CONTROLS_HIDE_DELAY = 4000; // ms after last interaction
 const VIDEO_BG_URL = 'https://htg2-cdn.b-cdn.net/HTG%20CYOU%20-%20Loop%20Canvas%200-3M.mp4';
 
+/** Detect iOS (iPhone/iPad) for fullscreen CSS fallback */
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -39,6 +46,7 @@ export default function SessionReviewPlayer({
 }: SessionReviewPlayerProps) {
   const engineRef = useRef<AudioEngineHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [playerState, setPlayerState] = useState<PlayerState>({ status: 'loading' });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -86,6 +94,13 @@ export default function SessionReviewPlayer({
     }
   }, [playerState.status]);
 
+  // Kick video playback when it becomes visible (iOS needs programmatic .play())
+  const showVideo = playerState.status !== 'loading' && playerState.status !== 'blocked' && playerState.status !== 'error' && playerState.status !== 'unsupported';
+  useEffect(() => {
+    if (!showVideo || !videoRef.current) return;
+    videoRef.current.play().catch(() => {});
+  }, [showVideo]);
+
   // Fade-in reveal: trigger after canvas becomes visible
   useEffect(() => {
     if (playerState.status !== 'loading' && !isRevealed) {
@@ -98,6 +113,16 @@ export default function SessionReviewPlayer({
   // Block context menu on the player
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+  }, []);
+
+  // Fallback: on first user interaction, retry video.play() if it's paused (iOS autoplay policy)
+  const videoStartedRef = useRef(false);
+  const handleContainerPointerDown = useCallback(() => {
+    if (videoStartedRef.current || !videoRef.current) return;
+    if (videoRef.current.paused) {
+      videoRef.current.play().catch(() => {});
+    }
+    videoStartedRef.current = true;
   }, []);
 
   // Controls visibility management (lifted from PlayerControls)
@@ -135,6 +160,11 @@ export default function SessionReviewPlayer({
   }, [handleInteraction]);
 
   const handleToggleFullscreen = useCallback(() => {
+    // iOS doesn't support Fullscreen API on div elements — use CSS fallback
+    if (isIOS()) {
+      setIsFullscreen(prev => !prev);
+      return;
+    }
     if (isFullscreen) {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
@@ -166,7 +196,6 @@ export default function SessionReviewPlayer({
 
   const status = playerState.status;
   const isPlaying = status === 'playing';
-  const showVideo = status !== 'loading' && status !== 'blocked' && status !== 'error' && status !== 'unsupported';
   const showControls = showVideo;
 
   // -------------------------------------------------------------------------
@@ -237,6 +266,7 @@ export default function SessionReviewPlayer({
         ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'aspect-[9/14] md:aspect-video'}`}
       onContextMenu={handleContextMenu}
       onPointerMove={handleContainerPointerMove}
+      onPointerDown={handleContainerPointerDown}
     >
       {/* Audio engine (hidden) */}
       <AudioEngine
@@ -255,6 +285,7 @@ export default function SessionReviewPlayer({
           style={{ opacity: isRevealed ? 1 : 0 }}
         >
           <video
+            ref={videoRef}
             src={VIDEO_BG_URL}
             autoPlay
             loop

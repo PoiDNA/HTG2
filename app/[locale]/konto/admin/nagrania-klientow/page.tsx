@@ -9,6 +9,7 @@ import type { SessionType } from '@/lib/booking/types';
 import { Headphones, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import AuditPageView from './AuditPageView';
 import RecordingActions from './RecordingActions';
+import ImportRecording from './ImportRecording';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -125,11 +126,16 @@ export default async function AdminRecordingsPage({
     <div>
       <AuditPageView page="nagrania-klientow" />
 
-      <div className="flex items-center gap-3 mb-6">
-        <Headphones className="w-6 h-6 text-htg-sage" />
-        <h1 className="text-xl font-serif font-bold text-htg-fg">Nagrania klientów</h1>
-        <span className="text-sm text-htg-fg-muted">({totalCount ?? 0})</span>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Headphones className="w-6 h-6 text-htg-sage" />
+          <h1 className="text-xl font-serif font-bold text-htg-fg">Nagrania klientów</h1>
+          <span className="text-sm text-htg-fg-muted">({totalCount ?? 0})</span>
+        </div>
       </div>
+
+      {/* Import section */}
+      <ImportRecording />
 
       {/* Filters */}
       <form className="flex flex-wrap items-center gap-3 mb-6">

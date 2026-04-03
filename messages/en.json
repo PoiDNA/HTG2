@@ -83,7 +83,8 @@
     "error_sso": "Login failed. Please try again.",
     "error_passkey": "Biometric login failed. Try another method.",
     "consent_label": "I consent to the processing of my data regarding beliefs and health status for the purpose of providing spiritual development sessions (GDPR Art. 9).",
-    "consent_required": "Consent is required to continue."
+    "consent_required": "Consent is required to continue.",
+    "login_help": "To listen to recordings: enter your email address, click \"Send link\", then open your inbox and click the link in the email."
   },
   "Sessions": {
     "title": "Group sessions",

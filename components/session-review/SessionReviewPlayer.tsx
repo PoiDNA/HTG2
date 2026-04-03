@@ -3,18 +3,18 @@
 // ---------------------------------------------------------------------------
 // SessionReviewPlayer — audio-first player for booking recordings
 //
-// Orchestrator: holds playerState + motionMode + stable refs.
+// Orchestrator: holds playerState + stable refs.
 // Features: fullscreen, minimize (mini-player bar), resume from last position,
-// always-on animation (ambient before/after play, reactive during).
+// looping video background, fade-in reveal.
 // ---------------------------------------------------------------------------
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Loader2, AlertCircle, ShieldAlert, Play, Pause, X } from 'lucide-react';
 import { AudioEngine, type AudioEngineHandle, type PlayerState } from './AudioEngine';
-import MandalaCanvas, { type MandalaCanvasHandle } from './MandalaCanvas';
 import PlayerControls from './PlayerControls';
 
 const CONTROLS_HIDE_DELAY = 4000; // ms after last interaction
+const VIDEO_BG_URL = 'https://htg2-cdn.b-cdn.net/HTG%20CYOU%20-%20Loop%20Canvas%200-3M.mp4';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -35,15 +35,11 @@ interface SessionReviewPlayerProps {
 export default function SessionReviewPlayer({
   playbackId,
   idFieldName,
-  userEmail,
-  userId,
   tokenEndpoint = '/api/video/booking-recording-token',
 }: SessionReviewPlayerProps) {
   const engineRef = useRef<AudioEngineHandle>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const mandalaRef = useRef<MandalaCanvasHandle>(null);
   const [playerState, setPlayerState] = useState<PlayerState>({ status: 'loading' });
-  const [motionMode, setMotionMode] = useState<'full' | 'reduced'>('full');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [resumePosition, setResumePosition] = useState(0);
@@ -51,15 +47,6 @@ export default function SessionReviewPlayer({
   const [controlsVisible, setControlsVisible] = useState(true);
   const autoplayAttemptedRef = useRef(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Detect prefers-reduced-motion
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setMotionMode(mq.matches ? 'reduced' : 'full');
-    const onChange = (e: MediaQueryListEvent) => setMotionMode(e.matches ? 'reduced' : 'full');
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
 
   // Fetch resume position for indicator
   useEffect(() => {
@@ -143,31 +130,9 @@ export default function SessionReviewPlayer({
     };
   }, [playerState.status]);
 
-  // Track hover over flower area for gentle bloom animation
-  const flowerHoverRef = useRef(false);
-
-  const handleContainerPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  const handleContainerPointerMove = useCallback(() => {
     handleInteraction();
-    // Check if pointer is over flower area (normalized coords)
-    const el = containerRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    // Flower is roughly centered
-    const overFlower = x > 0.25 && x < 0.75 && y > 0.1 && y < 0.7;
-    if (overFlower !== flowerHoverRef.current) {
-      flowerHoverRef.current = overFlower;
-      mandalaRef.current?.setFlowerHover(overFlower);
-    }
   }, [handleInteraction]);
-
-  const handleContainerPointerLeave = useCallback(() => {
-    if (flowerHoverRef.current) {
-      flowerHoverRef.current = false;
-      mandalaRef.current?.setFlowerHover(false);
-    }
-  }, []);
 
   const handleToggleFullscreen = useCallback(() => {
     if (isFullscreen) {
@@ -201,10 +166,8 @@ export default function SessionReviewPlayer({
 
   const status = playerState.status;
   const isPlaying = status === 'playing';
-  const showCanvas = status !== 'loading' && status !== 'blocked' && status !== 'error' && status !== 'unsupported';
-  const showControls = showCanvas;
-  // Animation is always active when canvas is shown (ambient before play, reactive during)
-  const isCanvasActive = showCanvas;
+  const showVideo = status !== 'loading' && status !== 'blocked' && status !== 'error' && status !== 'unsupported';
+  const showControls = showVideo;
 
   // -------------------------------------------------------------------------
   // Mini-player bar (fixed at bottom of viewport)
@@ -274,7 +237,6 @@ export default function SessionReviewPlayer({
         ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'aspect-video'}`}
       onContextMenu={handleContextMenu}
       onPointerMove={handleContainerPointerMove}
-      onPointerLeave={handleContainerPointerLeave}
     >
       {/* Audio engine (hidden) */}
       <AudioEngine
@@ -286,20 +248,21 @@ export default function SessionReviewPlayer({
         containerEl={containerRef.current}
       />
 
-      {/* Animated canvas — fade-in reveal from black */}
-      {showCanvas && (
+      {/* Video background — looping ambient video, fade-in reveal */}
+      {showVideo && (
         <div
           className="absolute inset-0 transition-opacity duration-[1500ms] ease-out"
           style={{ opacity: isRevealed ? 1 : 0 }}
         >
-          <MandalaCanvas
-            ref={mandalaRef}
-            engineHandle={engineRef.current}
-            userEmail={userEmail}
-            userId={userId}
-            isPlaying={isPlaying || status === 'refreshing'}
-            isActive={isCanvasActive}
-            motionMode={motionMode}
+          <video
+            src={VIDEO_BG_URL}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="absolute inset-0 w-full h-full object-cover"
+            aria-hidden="true"
           />
         </div>
       )}

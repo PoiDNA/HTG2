@@ -83,7 +83,8 @@
     "error_sso": "Nie udało się zalogować. Spróbuj ponownie.",
     "error_passkey": "Logowanie biometryczne nie powiodło się. Spróbuj innej metody.",
     "consent_label": "Wyrażam zgodę na przetwarzanie moich danych dotyczących przekonań i stanu zdrowia w celu świadczenia usługi sesji rozwoju duchowego (RODO art. 9).",
-    "consent_required": "Zgoda jest wymagana, aby kontynuować."
+    "consent_required": "Zgoda jest wymagana, aby kontynuować.",
+    "login_help": "Aby odsłuchać nagrania: wpisz adres e-mail, kliknij przycisk Wyślij link, a następnie otwórz skrzynkę e-mail i kliknij link w wiadomości."
   },
   "Sessions": {
     "title": "Biblioteka Sesji",

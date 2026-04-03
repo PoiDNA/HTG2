@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const tokenHash = searchParams.get('token_hash');
   const type = (searchParams.get('type') ?? 'email') as 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email';
-  const consentFromUrl = searchParams.get('consent') === '1';
+  const isLoginFlow = (['email', 'signup', 'magiclink', 'invite'] as string[]).includes(type);
 
   // Detect locale from 'next' param or default to 'pl'
   const isNagrania = isNagraniaPortal(request.headers.get('host'));
@@ -69,8 +69,9 @@ export async function GET(request: NextRequest) {
     }
   } catch { /* Non-blocking */ }
 
-  // Record GDPR consent if passed via URL (magic link / SSO flow)
-  if (consentFromUrl) {
+  // Record GDPR consent for login flows (magic link / SSO / signup)
+  // Not recorded for recovery or email_change — those are not new consent acts
+  if (isLoginFlow) {
     try {
       await supabase.from('consent_records').insert({
         consent_type: 'sensitive_data',
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
         'Cookie': cookieHeader,
       },
-      body: JSON.stringify({ consent: consentFromUrl }),
+      body: JSON.stringify({ consent: true }),
     }).catch(() => {}); // Fire and forget
   } catch { /* Non-blocking */ }
 

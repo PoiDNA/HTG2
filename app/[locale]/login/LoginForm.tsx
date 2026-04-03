@@ -68,7 +68,7 @@ export default function LoginForm() {
       email,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/${locale}${portalHome}&consent=1`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/${locale}${portalHome}`,
       },
     });
 
@@ -152,7 +152,7 @@ export default function LoginForm() {
     const { error: ssoError } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/confirm?next=/${locale}${portalHome}&consent=1`,
+        redirectTo: `${window.location.origin}/auth/confirm?next=/${locale}${portalHome}`,
       },
     });
 

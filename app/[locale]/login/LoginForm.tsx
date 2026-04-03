@@ -30,6 +30,10 @@ export default function LoginForm() {
 
   const supabase = createSupabaseBrowser();
 
+  const isNagrania = typeof window !== 'undefined' &&
+    (window.location.hostname === 'nagrania.htg.cyou' || window.location.hostname === 'nagrania.localhost');
+  const portalHome = isNagrania ? '/konto/nagrania-sesji' : '/konto';
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setReturnTo(params.get('returnTo') || '');
@@ -64,7 +68,7 @@ export default function LoginForm() {
       email,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/${locale}/konto&consent=1`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/${locale}${portalHome}&consent=1`,
       },
     });
 
@@ -148,7 +152,7 @@ export default function LoginForm() {
     const { error: ssoError } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/confirm?next=/${locale}/konto&consent=1`,
+        redirectTo: `${window.location.origin}/auth/confirm?next=/${locale}${portalHome}&consent=1`,
       },
     });
 
@@ -221,7 +225,7 @@ export default function LoginForm() {
 
   async function finishLogin(name?: string) {
     const locale = getLocale();
-    if (!returnTo) {
+    if (!returnTo && !isNagrania) {
       try {
         const { data: { user: u } } = await supabase.auth.getUser();
         if (u) {
@@ -233,7 +237,7 @@ export default function LoginForm() {
         }
       } catch { /* fallback below */ }
     }
-    window.location.href = returnTo || `/${locale}/konto`;
+    window.location.href = returnTo || `/${locale}${portalHome}`;
   }
 
   async function handleSaveName(e: React.FormEvent) {
@@ -278,10 +282,10 @@ export default function LoginForm() {
         </div>
         <div className="flex flex-col gap-3">
           <Link
-            href="/konto"
+            href={portalHome}
             className="bg-htg-sage text-white py-3 px-6 rounded-lg font-medium text-base hover:bg-htg-sage-dark transition-colors text-center"
           >
-            Przejdź do konta
+            {isNagrania ? 'Przejdź do nagrań' : 'Przejdź do konta'}
           </Link>
           <button
             onClick={handleLogoutFromLogin}
@@ -306,7 +310,7 @@ export default function LoginForm() {
            step === 'code' ? t('code_subtitle', { email }) :
            t('login_title')}
         </h1>
-        {step === 'email' && (
+        {step === 'email' && !isNagrania && (
           <button
             type="button"
             onClick={handlePasskeyLogin}
@@ -482,42 +486,45 @@ export default function LoginForm() {
             </div>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-htg-card-border" />
-            <span className="text-xs text-htg-fg-muted uppercase tracking-wider">lub</span>
-            <div className="flex-1 h-px bg-htg-card-border" />
-          </div>
+          {/* Divider + SSO — hidden on nagrania portal */}
+          {!isNagrania && (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-htg-card-border" />
+                <span className="text-xs text-htg-fg-muted uppercase tracking-wider">lub</span>
+                <div className="flex-1 h-px bg-htg-card-border" />
+              </div>
 
-          {/* SSO Buttons */}
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={() => handleSSO('google')}
-              disabled={allDisabled}
-              className="py-2.5 px-2 rounded-lg font-medium text-xs bg-white dark:bg-htg-surface border border-htg-card-border dark:border-htg-fg-muted/20 text-htg-fg hover:bg-gray-50 dark:hover:bg-htg-card transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              Google
-            </button>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSSO('google')}
+                  disabled={allDisabled}
+                  className="py-2.5 px-2 rounded-lg font-medium text-xs bg-white dark:bg-htg-surface border border-htg-card-border dark:border-htg-fg-muted/20 text-htg-fg hover:bg-gray-50 dark:hover:bg-htg-card transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  Google
+                </button>
 
-            <button
-              type="button"
-              onClick={() => handleSSO('apple')}
-              disabled={allDisabled}
-              className="py-2.5 px-2 rounded-lg font-medium text-xs bg-black text-white border border-htg-card-border hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              Apple
-            </button>
+                <button
+                  type="button"
+                  onClick={() => handleSSO('apple')}
+                  disabled={allDisabled}
+                  className="py-2.5 px-2 rounded-lg font-medium text-xs bg-black text-white border border-htg-card-border hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  Apple
+                </button>
 
-            <button
-              type="button"
-              onClick={() => handleSSO('facebook')}
-              disabled={allDisabled}
-              className="py-2.5 px-2 rounded-lg font-medium text-xs bg-[#1877F2] text-white border border-transparent hover:bg-[#166FE5] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              Facebook
-            </button>
-          </div>
+                <button
+                  type="button"
+                  onClick={() => handleSSO('facebook')}
+                  disabled={allDisabled}
+                  className="py-2.5 px-2 rounded-lg font-medium text-xs bg-[#1877F2] text-white border border-transparent hover:bg-[#166FE5] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  Facebook
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

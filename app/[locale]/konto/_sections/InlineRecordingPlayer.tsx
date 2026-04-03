@@ -61,7 +61,7 @@ export default function InlineRecordingPlayer({
       </div>
 
       {isExpanded && (
-        <div className="col-span-1 md:col-span-2 w-full mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="col-span-2 w-[calc(100%+2rem)] -mx-4 md:w-full md:mx-0 mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
           <SessionReviewPlayer
             playbackId={recordingId}
             idFieldName="recordingId"

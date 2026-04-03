@@ -271,7 +271,7 @@ export default function PlayerControls({
         {/* =============================================================== */}
         {/* CENTRAL PLAY/PAUSE — "green stone" button, always visible       */}
         {/* =============================================================== */}
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
+        <div className="absolute bottom-1/3 md:bottom-20 left-1/2 -translate-x-1/2 z-10 pointer-events-auto">
           <m.button
             onClick={handlePlayPause}
             disabled={!canInteract}

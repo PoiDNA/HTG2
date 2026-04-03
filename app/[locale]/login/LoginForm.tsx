@@ -428,21 +428,23 @@ export default function LoginForm() {
       ) : (
         <div className="flex flex-col gap-5">
 
-          {/* Consent */}
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => { setConsent(e.target.checked); setError(''); }}
-              className="mt-1 w-4 h-4 rounded border-htg-card-border text-htg-sage focus:ring-htg-sage shrink-0 accent-htg-sage"
-            />
-            <span className="text-sm text-htg-fg-muted leading-relaxed">
-              Akceptuję{' '}
-              <a href="/privacy" className="text-htg-indigo hover:underline" target="_blank" rel="noopener">politykę prywatności</a>
-              {' '}i{' '}
-              <a href="/terms" className="text-htg-indigo hover:underline" target="_blank" rel="noopener">regulamin</a>
-            </span>
-          </label>
+          {/* Consent — hidden on nagrania portal */}
+          {!isNagrania && (
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => { setConsent(e.target.checked); setError(''); }}
+                className="mt-1 w-4 h-4 rounded border-htg-card-border text-htg-sage focus:ring-htg-sage shrink-0 accent-htg-sage"
+              />
+              <span className="text-sm text-htg-fg-muted leading-relaxed">
+                Akceptuję{' '}
+                <a href="/privacy" className="text-htg-indigo hover:underline" target="_blank" rel="noopener">politykę prywatności</a>
+                {' '}i{' '}
+                <a href="/terms" className="text-htg-indigo hover:underline" target="_blank" rel="noopener">regulamin</a>
+              </span>
+            </label>
+          )}
 
           {/* Help text for new/elderly users — nagrania portal only */}
           {isNagrania && (

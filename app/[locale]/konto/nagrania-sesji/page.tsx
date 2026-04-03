@@ -6,6 +6,7 @@ import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 import { Headphones, Info } from 'lucide-react';
 import FullRecordingList, { RecordingGroup } from './FullRecordingList';
+import DashboardRecordingList, { DashboardRecordingItem } from '../_sections/DashboardRecordingList';
 import { headers } from 'next/headers';
 import { isNagraniaPortal } from '@/lib/portal';
 
@@ -47,6 +48,61 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
     .filter(Boolean)
     .filter((r) => ['queued', 'preparing', 'uploading', 'processing', 'ready'].includes(r.status as string));
 
+  const format = await getFormatter({ locale });
+
+  // ── PORTAL: flat DashboardRecordingList (same style as /konto dashboard) ──
+  if (isPortal) {
+    const portalItems: DashboardRecordingItem[] = items.map((item) => {
+      const sessionType = item.session_type as SessionType;
+      const config = SESSION_CONFIG[sessionType];
+      const isPara = sessionType === 'natalia_para';
+      const isReady = item.status === 'ready';
+      const isLegalHold = item.legal_hold === true;
+
+      const rawTitle = item.title as string | null;
+      const displayTitle = config?.label
+        ?? (rawTitle && !rawTitle.startsWith('Import') ? rawTitle : null)
+        ?? 'Sesja indywidualna';
+
+      const emailMatch = rawTitle?.match(/[\w.+-]+@[\w.-]+\.\w+/);
+      const recordingEmail = emailMatch?.[0] ?? null;
+
+      return {
+        id: item.id as string,
+        title: displayTitle,
+        configColor: config?.color ?? 'bg-gray-500',
+        configLabel: config?.labelShort ?? 'Sesja',
+        isPara,
+        isReady,
+        isLegalHold,
+        dateLabel: item.session_date ? format.dateTime(new Date(item.session_date as string), { dateStyle: 'medium' }) : '',
+        durationLabel: item.duration_seconds ? `${Math.floor((item.duration_seconds as number) / 60)} min` : null,
+        showRevoke: false,
+        recordingEmail,
+      };
+    });
+
+    return (
+      <div className="max-w-3xl mx-auto py-8 px-4">
+        <div className="flex items-center gap-3 mb-6">
+          <Headphones className="w-6 h-6 text-htg-sage" />
+          <h1 className="text-2xl font-serif font-bold text-htg-fg">Nagrania z sesji</h1>
+        </div>
+
+        {portalItems.length === 0 ? (
+          <div className="text-center py-16">
+            <Headphones className="w-12 h-12 text-htg-fg-muted/30 mx-auto mb-4" />
+            <p className="text-htg-fg-muted">Nie masz jeszcze żadnych nagrań z sesji.</p>
+          </div>
+        ) : (
+          <DashboardRecordingList items={portalItems} userEmail={userEmail} userId={userId} />
+        )}
+      </div>
+    );
+  }
+
+  // ── MAIN SITE: grouped FullRecordingList ──
+
   // Group by booking_id
   const grouped = new Map<string, Record<string, any>[]>();
   for (const item of items) {
@@ -61,8 +117,6 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
     const dateB = b[1][0]?.session_date as string ?? '';
     return dateB.localeCompare(dateA);
   });
-
-  const format = await getFormatter({ locale });
 
   const formattedGroups: RecordingGroup[] = sortedGroups.map(([bookingId, recs]) => {
     const main = recs.reduce((longest, r) =>
@@ -89,7 +143,6 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       ?? (rawTitle && !rawTitle.startsWith('Import') ? rawTitle : null)
       ?? 'Sesja indywidualna';
 
-    // Extract email from raw title
     const emailMatch = rawTitle?.match(/[\w.+-]+@[\w.-]+\.\w+/);
     const recordingEmail = emailMatch?.[0] ?? null;
 
@@ -104,7 +157,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       isLegalHold,
       dateLabel: main.session_date ? format.dateTime(new Date(main.session_date as string), { dateStyle: 'medium' }) : '',
       durationLabel: main.duration_seconds ? `${Math.floor((main.duration_seconds as number) / 60)} min` : null,
-      expiresLabel: expiresAt && isReady && !isLegalHold && !isPortal ? `Dostępne do ${format.dateTime(new Date(expiresAt), { dateStyle: 'medium' })}` : null,
+      expiresLabel: expiresAt && isReady && !isLegalHold ? `Dostępne do ${format.dateTime(new Date(expiresAt), { dateStyle: 'medium' })}` : null,
       recordingStartedLabel,
       legalHoldMessage,
       recordingEmail,
@@ -112,7 +165,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
         id: r.id as string,
         durationLabel: r.duration_seconds ? `${Math.floor((r.duration_seconds as number) / 60)} min` : null,
         isReady: r.status === 'ready',
-        showRevoke: r.status === 'ready' && !isLegalHold && !isPortal,
+        showRevoke: r.status === 'ready' && !isLegalHold,
         isPara: isPara,
       })),
     };
@@ -125,18 +178,16 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
         <h1 className="text-2xl font-serif font-bold text-htg-fg">Nagrania z sesji</h1>
       </div>
 
-      {/* Privacy banner — hidden on nagrania portal */}
-      {!isPortal && (
-        <div className="bg-htg-surface rounded-xl p-4 mb-6 flex items-start gap-3 border border-htg-card-border">
-          <Info className="w-5 h-5 text-htg-fg-muted shrink-0 mt-0.5" />
-          <p className="text-sm text-htg-fg-muted">
-            Nagrania z Twoich sesji są dostępne przez okres do 12 miesięcy od daty sesji.
-            Ze względów bezpieczeństwa zastrzegamy sobie prawo do skrócenia tego czasu.
-            Jeśli chcesz usunąć nagranie lub zgłosić problem, napisz do nas na{' '}
-            <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
-          </p>
-        </div>
-      )}
+      {/* Privacy banner */}
+      <div className="bg-htg-surface rounded-xl p-4 mb-6 flex items-start gap-3 border border-htg-card-border">
+        <Info className="w-5 h-5 text-htg-fg-muted shrink-0 mt-0.5" />
+        <p className="text-sm text-htg-fg-muted">
+          Nagrania z Twoich sesji są dostępne przez okres do 12 miesięcy od daty sesji.
+          Ze względów bezpieczeństwa zastrzegamy sobie prawo do skrócenia tego czasu.
+          Jeśli chcesz usunąć nagranie lub zgłosić problem, napisz do nas na{' '}
+          <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
+        </p>
+      </div>
 
       {formattedGroups.length === 0 ? (
         <div className="text-center py-16">

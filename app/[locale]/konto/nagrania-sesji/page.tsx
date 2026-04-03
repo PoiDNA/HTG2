@@ -99,9 +99,17 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
           <DashboardRecordingList items={portalItems} userEmail={userEmail} userId={userId} />
         )}
 
-        {/* Centrum Kontaktu */}
+        {/* Centrum Kontaktu HTG */}
         <div className="mt-12">
-          <h2 className="font-serif text-xl font-bold text-htg-fg mb-6">Centrum Kontaktu</h2>
+          <h2 className="font-serif text-xl font-bold text-htg-fg mb-2">Centrum Kontaktu HTG</h2>
+          <p className="text-sm text-htg-fg-muted mb-6 leading-relaxed">
+            Jak coś nie działa albo potrzebujesz dostępu do innych nagrań — napisz przez Centrum Kontaktu HTG.<br />
+            Po prostu daj znać 🙂
+          </p>
+          <p className="text-sm text-htg-fg-muted mb-6 leading-relaxed">
+            Po zalogowaniu zawsze możesz wrócić do rozmów i sprawdzić, co było ustalone.<br />
+            Odpowiemy jak najszybciej się da.
+          </p>
           <PortalMessages />
         </div>
       </div>

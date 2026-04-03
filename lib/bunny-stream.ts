@@ -78,11 +78,11 @@ export async function fetchVideoFromUrl(
 export async function getVideoStatus(
   libraryId: string,
   videoId: string
-): Promise<{ status: number; encodeProgress: number }> {
+): Promise<{ status: number; encodeProgress: number; length: number }> {
   const data = await bunnyFetch<BunnyVideo>(
     `/library/${libraryId}/videos/${videoId}`
   );
-  return { status: data.status, encodeProgress: data.encodeProgress };
+  return { status: data.status, encodeProgress: data.encodeProgress, length: data.length };
 }
 
 /**

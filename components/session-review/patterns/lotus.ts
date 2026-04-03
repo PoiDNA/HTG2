@@ -669,11 +669,11 @@ export const lotusPattern: Pattern = {
 
     // Hover interaction: gentle bloom — soft scale, upward drift, subtle rotation
     const hoverEased = burst * burst * (3 - 2 * burst); // smoothstep for extra softness
-    const burstScale = 1 + hoverEased * 0.05;           // 5% gentle scale-up
-    const burstRotation = hoverEased * 0.025;            // very subtle fan-out
-    const burstAlphaBoost = hoverEased * 0.08;           // slight brightening
-    const burstDriftY = -hoverEased * Math.min(height, width) * 0.02;  // gentle upward float
-    const burstSpin = hoverEased * 0.04;                 // gentle whole-flower rotation
+    const burstScale = 1 + hoverEased * 0.35;           // 35% scale-up (slow, smooth)
+    const burstRotation = hoverEased * 0.06;             // noticeable petal fan-out
+    const burstAlphaBoost = hoverEased * 0.12;           // brightening
+    const burstDriftY = -hoverEased * Math.min(height, width) * 0.07;  // strong upward float
+    const burstSpin = hoverEased * 0.15;                 // clear whole-flower rotation
 
     // 4. Outer petals (phase-shifted wind + contact shadows + parallax + hover drift)
     const outerRadius = Math.min(width, height) * 0.14;

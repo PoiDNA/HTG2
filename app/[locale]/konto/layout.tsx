@@ -8,6 +8,7 @@ import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import { isNagraniaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
+import ActiveSessionIndicator from '@/components/home/ActiveSessionIndicator';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
@@ -246,6 +247,9 @@ export default async function AccountLayout({
               </>
             )}
 
+          </div>
+          <div className="hidden md:block mt-4">
+            <ActiveSessionIndicator showClientName />
           </div>
         </nav>
 

@@ -30,6 +30,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import type { Metadata } from 'next';
 import { ExternalLink } from 'lucide-react';
+import ActiveSessionIndicator from '@/components/home/ActiveSessionIndicator';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -66,6 +67,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <div className="inline-flex items-center gap-2 bg-htg-sage/10 text-htg-sage px-4 py-2 rounded-full text-sm font-medium mb-10">
           <span className="w-2 h-2 bg-htg-sage rounded-full animate-pulse" />
           {t('status')}
+        </div>
+
+        {/* Active session indicator */}
+        <div className="mb-6">
+          <ActiveSessionIndicator />
         </div>
 
         {/* Single CTA */}

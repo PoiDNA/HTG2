@@ -13,6 +13,8 @@ import { getMessages } from "next-intl/server";
 import { locales, routing } from "@/i18n-config";
 import { Link } from "@/i18n-config";
 import { Toaster } from "sonner";
+import { headers } from "next/headers";
+import { isNagraniaPortal } from "@/lib/portal";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -76,6 +78,9 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
 
+  const headersList = await headers();
+  const isNagrania = isNagraniaPortal(headersList.get('host'));
+
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
@@ -109,23 +114,25 @@ export default async function LocaleLayout({
         </a>
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
-            <header className="bg-htg-card border-b border-htg-card-border sticky top-0 z-50 transition-colors duration-300">
-              <div className="mx-auto max-w-6xl px-6 py-4 grid grid-cols-[auto_1fr_auto] items-center gap-4 relative">
-                <Link href="/" className="flex items-center">
-                  <span className="text-2xl font-serif font-bold text-htg-indigo">HTG</span>
-                </Link>
-                <NavLinks />
-                <div className="col-start-3 flex justify-end">
-                  <SiteNav />
+            {!isNagrania && (
+              <header className="bg-htg-card border-b border-htg-card-border sticky top-0 z-50 transition-colors duration-300">
+                <div className="mx-auto max-w-6xl px-6 py-4 grid grid-cols-[auto_1fr_auto] items-center gap-4 relative">
+                  <Link href="/" className="flex items-center">
+                    <span className="text-2xl font-serif font-bold text-htg-indigo">HTG</span>
+                  </Link>
+                  <NavLinks />
+                  <div className="col-start-3 flex justify-end">
+                    <SiteNav />
+                  </div>
                 </div>
-              </div>
-            </header>
+              </header>
+            )}
 
             <main id="main-content" className="flex-grow w-full">
               {children}
             </main>
 
-            <Footer />
+            {!isNagrania && <Footer />}
             <Toaster richColors position="bottom-right" />
           </ThemeProvider>
         </NextIntlClientProvider>

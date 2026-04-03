@@ -84,12 +84,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
     });
 
     return (
-      <div className="max-w-3xl mx-auto py-8 px-4">
-        <div className="flex items-center gap-3 mb-6">
-          <Headphones className="w-6 h-6 text-htg-sage" />
-          <h1 className="text-2xl font-serif font-bold text-htg-fg">Nagrania z sesji</h1>
-        </div>
-
+      <div>
         {portalItems.length === 0 ? (
           <div className="text-center py-16">
             <Headphones className="w-12 h-12 text-htg-fg-muted/30 mx-auto mb-4" />

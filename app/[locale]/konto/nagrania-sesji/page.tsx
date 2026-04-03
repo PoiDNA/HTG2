@@ -7,6 +7,7 @@ import type { SessionType } from '@/lib/booking/types';
 import { Headphones, Info } from 'lucide-react';
 import FullRecordingList, { RecordingGroup } from './FullRecordingList';
 import DashboardRecordingList, { DashboardRecordingItem } from '../_sections/DashboardRecordingList';
+import PortalMessages from '@/components/account/PortalMessages';
 import { headers } from 'next/headers';
 import { isNagraniaPortal } from '@/lib/portal';
 
@@ -97,6 +98,12 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
         ) : (
           <DashboardRecordingList items={portalItems} userEmail={userEmail} userId={userId} />
         )}
+
+        {/* Centrum Kontaktu */}
+        <div className="mt-12">
+          <h2 className="font-serif text-xl font-bold text-htg-fg mb-6">Centrum Kontaktu</h2>
+          <PortalMessages />
+        </div>
       </div>
     );
   }

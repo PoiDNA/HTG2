@@ -160,19 +160,24 @@ export default function SessionReviewPlayer({
   }, [handleInteraction]);
 
   const handleToggleFullscreen = useCallback(() => {
-    // iOS doesn't support Fullscreen API on div elements — use CSS fallback
-    if (isIOS()) {
-      setIsFullscreen(prev => !prev);
-      return;
-    }
     if (isFullscreen) {
-      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-      else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+      // Exit: try native API first, then CSS fallback
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else {
+        setIsFullscreen(false);
+      }
     } else {
       const el = containerRef.current;
       if (!el) return;
-      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-      else if ((el as any).webkitRequestFullscreen) (el as any).webkitRequestFullscreen();
+      // Try native Fullscreen API, fall back to CSS fullscreen on failure
+      const tryNative = el.requestFullscreen?.bind(el)
+        ?? (el as any).webkitRequestFullscreen?.bind(el);
+      if (tryNative) {
+        tryNative().catch(() => setIsFullscreen(true));
+      } else {
+        setIsFullscreen(true);
+      }
     }
   }, [isFullscreen]);
 

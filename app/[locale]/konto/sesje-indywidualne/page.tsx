@@ -12,6 +12,8 @@ import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import CompanionInvite from '@/components/booking/CompanionInvite';
 import PastBookingAccordion from '@/components/booking/PastBookingAccordion';
 import { getSessionCountdown, formatCountdownParts } from '@/lib/booking/countdown-phrases';
+import { Suspense } from 'react';
+import LibrarySuggestSection from '../_sections/LibrarySuggestSection';
 
 // Session type → assistant slug mapping
 const SESSION_TYPE_TO_SLUG: Record<string, string> = {
@@ -356,6 +358,11 @@ export default async function IndividualSessionsPage({
           <p className="text-htg-fg-muted">{t('no_bookings')}</p>
         </div>
       )}
+
+      {/* Library suggestions — packages user doesn't own yet */}
+      <Suspense fallback={null}>
+        <LibrarySuggestSection userId={userId} locale={locale} />
+      </Suspense>
     </div>
   );
 }

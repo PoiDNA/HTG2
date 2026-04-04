@@ -10,6 +10,7 @@ import { isNagraniaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
 import CollapsibleSidebar from './CollapsibleSidebar';
 import SidebarLink from './SidebarLink';
+import SpiritIcon from './SpiritIcon';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
@@ -159,16 +160,16 @@ export default async function AccountLayout({
     { href: '/publikacja/dodaj', label: tPanel('pub_add'), icon: PlusCircle },
   ] as const;
 
-  // USER section (regular clients only)
+  // USER section (regular clients only) — ethereal metaphor icons
   const userItems = [
-    { href: '/konto', label: 'Biblioteka sesji', icon: Film },
-    { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', icon: CalendarDays },
-    { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
-    { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', icon: Mail },
-    { href: '/konto/subskrypcje', label: 'Twoje Aktywacje', icon: CreditCard },
-    { href: '/konto/polubieni', label: 'Twoi Znajomi', icon: Users },
-    { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', icon: Gift },
-    { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw },
+    { href: '/konto', label: 'Biblioteka sesji', spiritIcon: 'portal' as const },
+    { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', spiritIcon: 'eye' as const },
+    { href: '/spolecznosc', label: 'Społeczność', spiritIcon: 'vesica' as const },
+    { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', spiritIcon: 'feather' as const },
+    { href: '/konto/subskrypcje', label: 'Twoje Aktywacje', spiritIcon: 'crystal' as const },
+    { href: '/konto/polubieni', label: 'Twoi Znajomi', spiritIcon: 'bond' as const },
+    { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', spiritIcon: 'offering' as const },
+    { href: '/konto/aktualizacja', label: 'Aktualizacja', spiritIcon: 'spiral' as const },
   ] as const;
 
   // Aktualizacja item (replaces standalone Profil)
@@ -215,7 +216,13 @@ export default async function AccountLayout({
             )}
             {isAdmin && viewAsUserEmail && (
               <>
-                {renderSection('Moje konto', userItems)}
+                <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">Moje konto</p>
+                {userItems.map(({ href, label, spiritIcon }) => (
+                  <SidebarLink key={href} href={href} label={label} locale={locale}>
+                    <SpiritIcon type={spiritIcon} />
+                  </SidebarLink>
+                ))}
+                <div className="hidden md:block border-t border-htg-card-border my-2" />
               </>
             )}
 
@@ -238,7 +245,13 @@ export default async function AccountLayout({
             {/* USER role (no special role): full MOJE KONTO */}
             {!isAdmin && !isStaff && !isPublikacja && (
               <>
-                {renderSection(t('title'), userItems)}
+                <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{t('title')}</p>
+                {userItems.map(({ href, label, spiritIcon }) => (
+                  <SidebarLink key={href} href={href} label={label} locale={locale}>
+                    <SpiritIcon type={spiritIcon} />
+                  </SidebarLink>
+                ))}
+                <div className="hidden md:block border-t border-htg-card-border my-2" />
               </>
             )}
           </>

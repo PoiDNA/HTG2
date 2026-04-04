@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, ChevronDown, Clock, CheckCircle2 } from 'lucide-react';
+import { Play, ChevronDown, Clock, CheckCircle2, Bookmark } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
 
@@ -12,9 +12,10 @@ type Props = {
   userId: string;
   userEmail: string;
   listenedSessionIds: string[];
+  bookmarkedSessionIds: string[];
 };
 
-export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail, listenedSessionIds }: Props) {
+export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail, listenedSessionIds, bookmarkedSessionIds }: Props) {
   const [expandedKey, setExpandedKey] = useState<string | null>(() => {
     const firstNonEmptySection = sections.find(s => s.sessions.length > 0);
     return firstNonEmptySection ? firstNonEmptySection.monthLabel : (singleSessions.length > 0 ? 'singles' : null);
@@ -22,6 +23,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
 
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
   const [listened, setListened] = useState<Set<string>>(() => new Set(listenedSessionIds));
+  const [bookmarked, setBookmarked] = useState<Set<string>>(() => new Set(bookmarkedSessionIds));
 
   const toggleSection = (key: string) => {
     setExpandedKey(prev => {
@@ -61,6 +63,28 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
     }
   }, [listened]);
 
+  const toggleBookmark = useCallback(async (sessionId: string) => {
+    const next = !bookmarked.has(sessionId);
+    setBookmarked(prev => {
+      const s = new Set(prev);
+      if (next) s.add(sessionId); else s.delete(sessionId);
+      return s;
+    });
+    try {
+      await fetch('/api/video/session-bookmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, bookmarked: next }),
+      });
+    } catch {
+      setBookmarked(prev => {
+        const s = new Set(prev);
+        if (next) s.delete(sessionId); else s.add(sessionId);
+        return s;
+      });
+    }
+  }, [bookmarked]);
+
   return (
     <div className="space-y-4">
       {sections.map((section) => (
@@ -86,6 +110,8 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                   onTogglePlay={() => togglePlay(session.id)}
                   isListened={listened.has(session.id)}
                   onToggleListened={() => toggleListened(session.id)}
+                  isBookmarked={bookmarked.has(session.id)}
+                  onToggleBookmark={() => toggleBookmark(session.id)}
                   userId={userId}
                   userEmail={userEmail}
                 />
@@ -112,6 +138,8 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                 onTogglePlay={() => togglePlay(session.id)}
                 isListened={listened.has(session.id)}
                 onToggleListened={() => toggleListened(session.id)}
+                isBookmarked={bookmarked.has(session.id)}
+                onToggleBookmark={() => toggleBookmark(session.id)}
                 userId={userId}
                 userEmail={userEmail}
               />
@@ -189,6 +217,8 @@ function SessionCard({
   onTogglePlay,
   isListened,
   onToggleListened,
+  isBookmarked,
+  onToggleBookmark,
   userId,
   userEmail
 }: {
@@ -197,6 +227,8 @@ function SessionCard({
   onTogglePlay: () => void;
   isListened: boolean;
   onToggleListened: () => void;
+  isBookmarked: boolean;
+  onToggleBookmark: () => void;
   userId: string;
   userEmail: string;
 }) {
@@ -233,6 +265,18 @@ function SessionCard({
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={onToggleBookmark}
+                title={isBookmarked ? 'Usuń zakładkę' : 'Wróć do tej sesji'}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isBookmarked
+                    ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                    : 'bg-htg-surface text-htg-fg-muted hover:text-amber-400 hover:bg-amber-500/10'
+                }`}
+              >
+                <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+                {isBookmarked ? 'Wróć' : 'Wróć'}
+              </button>
               <button
                 onClick={onToggleListened}
                 title={isListened ? 'Oznacz jako nieodsłuchaną' : 'Oznacz jako odsłuchaną'}

@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Mail, KeyRound, ArrowLeft, Loader2, User, Fingerprint, LogOut } from 'lucide-react';
-import { Link } from '@/i18n-config';
+import { Mail, KeyRound, ArrowLeft, Loader2, User, Fingerprint } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { getRoleForEmail } from '@/lib/roles';
 import type { Provider } from '@supabase/supabase-js';
@@ -253,21 +252,14 @@ export default function LoginForm() {
     await finishLogin(displayName.trim());
   }
 
-  async function handleLogoutFromLogin() {
-    setLoading(true);
-    await supabase.auth.signOut();
-    setLoggedInUser(null);
-    setLoading(false);
-  }
-
   const allDisabled = loading || !consent;
 
-  // Auto-redirect logged-in users on nagrania portal
+  // Auto-redirect logged-in users to their portal
   useEffect(() => {
-    if (loggedInUser && isNagrania) {
+    if (loggedInUser) {
       router.push(portalHome);
     }
-  }, [loggedInUser, isNagrania, router, portalHome]);
+  }, [loggedInUser, router, portalHome]);
 
   // Show logged-in state
   if (checkingSession) {
@@ -279,38 +271,10 @@ export default function LoginForm() {
   }
 
   if (loggedInUser) {
-    // On nagrania portal, show loading while redirecting
-    if (isNagrania) {
-      return (
-        <div className="p-8 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-htg-sage animate-spin" />
-        </div>
-      );
-    }
+    // Show loading spinner while redirecting to portal
     return (
-      <div className="p-4 md:bg-htg-card md:border md:border-htg-card-border md:rounded-2xl md:p-8 md:shadow-sm">
-        <h1 className="text-2xl font-serif font-bold text-htg-fg mb-6">{t('login_title')}</h1>
-        <div className="bg-htg-surface rounded-lg p-6 text-center mb-6">
-          <User className="w-10 h-10 text-htg-sage mx-auto mb-3" />
-          <p className="text-sm text-htg-fg-muted mb-1">Zalogowano jako</p>
-          <p className="text-base font-medium text-htg-fg">{loggedInUser.user_metadata?.full_name || loggedInUser.email}</p>
-        </div>
-        <div className="flex flex-col gap-3">
-          <Link
-            href={portalHome}
-            className="bg-htg-sage text-white py-3 px-6 rounded-lg font-medium text-base hover:bg-htg-sage-dark transition-colors text-center"
-          >
-            {isNagrania ? 'Przejdź do nagrań' : 'Przejdź do konta'}
-          </Link>
-          <button
-            onClick={handleLogoutFromLogin}
-            disabled={loading}
-            className="py-3 px-6 rounded-lg font-medium text-base text-red-600 dark:text-red-400 border border-htg-card-border hover:bg-htg-surface transition-colors flex items-center justify-center gap-2"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
-            Wyloguj
-          </button>
-        </div>
+      <div className="p-8 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-htg-sage animate-spin" />
       </div>
     );
   }
@@ -459,14 +423,6 @@ export default function LoginForm() {
                 <a href="/terms" className="text-htg-indigo hover:underline" target="_blank" rel="noopener">regulamin</a>
               </span>
             </label>
-          )}
-
-          {/* Help text for new/elderly users — nagrania portal only */}
-          {isNagrania && (
-            <div className="bg-htg-surface rounded-lg px-4 py-3 flex gap-3 items-start">
-              <Mail className="w-5 h-5 text-htg-sage shrink-0 mt-0.5" />
-              <p className="text-base text-htg-fg leading-snug">{t('login_help')}</p>
-            </div>
           )}
 
           {/* Help text for new/elderly users — nagrania portal only */}

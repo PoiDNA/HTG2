@@ -64,7 +64,10 @@ export default async function AdminRecordingsPage({
     query = query.eq('status', statusFilter);
   }
 
-  const { data: allData, count: totalCount } = await query.range(offset, offset + PAGE_SIZE - 1);
+  // When searching: fetch all records and filter in memory (no cross-page pagination issue)
+  const { data: allData, count: totalCount } = searchQuery
+    ? await query
+    : await query.range(offset, offset + PAGE_SIZE - 1);
 
   // Fetch profiles for all user_ids
   const allUserIds = new Set<string>();
@@ -120,7 +123,10 @@ export default async function AdminRecordingsPage({
       )
     : rows;
 
-  const totalPages = Math.ceil((totalCount ?? 0) / PAGE_SIZE);
+  // When searching: no pagination (all results shown). Otherwise paginate.
+  const displayedRows = searchQuery ? filteredRows : filteredRows;
+  const totalPages = searchQuery ? 0 : Math.ceil((totalCount ?? 0) / PAGE_SIZE);
+  const displayCount = searchQuery ? filteredRows.length : (totalCount ?? 0);
 
   return (
     <div>
@@ -130,7 +136,7 @@ export default async function AdminRecordingsPage({
         <div className="flex items-center gap-3">
           <Headphones className="w-6 h-6 text-htg-sage" />
           <h1 className="text-xl font-serif font-bold text-htg-fg">Nagrania klientów</h1>
-          <span className="text-sm text-htg-fg-muted">({totalCount ?? 0})</span>
+          <span className="text-sm text-htg-fg-muted">({displayCount})</span>
         </div>
       </div>
 
@@ -178,7 +184,7 @@ export default async function AdminRecordingsPage({
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map((rec) => {
+            {displayedRows.map((rec) => {
               const sessionType = rec.session_type as SessionType | null;
               const config = sessionType ? SESSION_CONFIG[sessionType] : null;
 

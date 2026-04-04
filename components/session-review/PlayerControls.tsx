@@ -271,8 +271,8 @@ export default function PlayerControls({
         {/* =============================================================== */}
         {/* CENTRAL PLAY/PAUSE — "green stone" button, always visible       */}
         {/* =============================================================== */}
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-auto">
-          <div className="relative flex items-center gap-6 md:gap-0">
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="relative flex items-center gap-6 md:gap-0 pointer-events-auto">
             {/* Skip back — visible on mobile beside play, absolute on desktop */}
             <m.button
               onClick={handleSkipBack}
@@ -382,7 +382,7 @@ export default function PlayerControls({
         <AnimatePresence>
           {controlsVisible && (
             <m.div
-              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-3 pt-10 pointer-events-auto"
+              className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pb-3 pt-10 pointer-events-auto"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}

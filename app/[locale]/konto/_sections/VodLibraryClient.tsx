@@ -390,7 +390,20 @@ function SessionCard({
               onMouseLeave={() => setPaused(false)}
             >
               {expandedDesc ? (
-                <p>{session.description}</p>
+                <div className="space-y-0">
+                  {sentences.map((sentence, i) => (
+                    <span key={i}>
+                      {sentence}{' '}
+                      {i < sentences.length - 1 && (i + 1) % 5 === 0 && (
+                        <span className="flex items-center justify-center gap-2 my-3 text-htg-sage/40" aria-hidden="true">
+                          <span className="h-px flex-1 bg-htg-sage/20" />
+                          <span className="text-xs">✦</span>
+                          <span className="h-px flex-1 bg-htg-sage/20" />
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </div>
               ) : (
                 <p
                   key={sentenceIndex}

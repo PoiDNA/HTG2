@@ -24,6 +24,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
   const [listened, setListened] = useState<Set<string>>(() => new Set(listenedSessionIds));
   const [bookmarked, setBookmarked] = useState<Set<string>>(() => new Set(bookmarkedSessionIds));
+  const [filter, setFilter] = useState<'all' | 'unlistened' | 'bookmarked'>('all');
 
   const toggleSection = (key: string) => {
     setExpandedKey(prev => {
@@ -85,52 +86,97 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
     }
   }, [bookmarked]);
 
+  const filterSessions = (sessions: VodSession[]) => {
+    if (filter === 'unlistened') return sessions.filter(s => !listened.has(s.id));
+    if (filter === 'bookmarked') return sessions.filter(s => bookmarked.has(s.id));
+    return sessions;
+  };
+
+  const pills: { key: typeof filter; label: string; icon: React.ReactNode }[] = [
+    { key: 'unlistened', label: 'Nieodsłuchane', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+    { key: 'bookmarked', label: 'Wracam',         icon: <Bookmark className="w-3.5 h-3.5" /> },
+  ];
+
   return (
     <div className="space-y-4">
-      {sections.map((section) => (
-        <AccordionMonth
-          key={section.monthLabel}
-          title={section.title}
-          sessionsCount={section.sessions.length}
-          listenedCount={section.sessions.filter(s => listened.has(s.id)).length}
-          isExpanded={expandedKey === section.monthLabel}
-          onToggle={() => toggleSection(section.monthLabel)}
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-htg-fg-muted">Pokaż:</span>
+        <button
+          onClick={() => setFilter('all')}
+          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+            filter === 'all'
+              ? 'bg-htg-sage text-white border-htg-sage'
+              : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
+          }`}
         >
-          {section.sessions.length === 0 ? (
-            <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center text-htg-fg-muted">
-              Sesje w przygotowaniu
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {section.sessions.map(session => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  isPlaying={playingSessionId === session.id}
-                  onTogglePlay={() => togglePlay(session.id)}
-                  isListened={listened.has(session.id)}
-                  onToggleListened={() => toggleListened(session.id)}
-                  isBookmarked={bookmarked.has(session.id)}
-                  onToggleBookmark={() => toggleBookmark(session.id)}
-                  userId={userId}
-                  userEmail={userEmail}
-                />
-              ))}
-            </div>
-          )}
-        </AccordionMonth>
-      ))}
+          Wszystkie
+        </button>
+        {pills.map(p => (
+          <button
+            key={p.key}
+            onClick={() => setFilter(prev => prev === p.key ? 'all' : p.key)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              filter === p.key
+                ? 'bg-htg-sage text-white border-htg-sage'
+                : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
+            }`}
+          >
+            {p.icon}{p.label}
+          </button>
+        ))}
+      </div>
 
-      {singleSessions.length > 0 && (
+      {sections.map((section) => {
+        const visible = filterSessions(section.sessions);
+        if (filter !== 'all' && visible.length === 0 && section.sessions.length > 0) return null;
+        return (
+          <AccordionMonth
+            key={section.monthLabel}
+            title={section.title}
+            sessionsCount={section.sessions.length}
+            listenedCount={section.sessions.filter(s => listened.has(s.id)).length}
+            bookmarkedCount={section.sessions.filter(s => bookmarked.has(s.id)).length}
+            isExpanded={expandedKey === section.monthLabel}
+            onToggle={() => toggleSection(section.monthLabel)}
+          >
+            {section.sessions.length === 0 ? (
+              <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center text-htg-fg-muted">
+                Sesje w przygotowaniu
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {visible.map(session => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    isPlaying={playingSessionId === session.id}
+                    onTogglePlay={() => togglePlay(session.id)}
+                    isListened={listened.has(session.id)}
+                    onToggleListened={() => toggleListened(session.id)}
+                    isBookmarked={bookmarked.has(session.id)}
+                    onToggleBookmark={() => toggleBookmark(session.id)}
+                    userId={userId}
+                    userEmail={userEmail}
+                  />
+                ))}
+              </div>
+            )}
+          </AccordionMonth>
+        );
+      })}
+
+      {singleSessions.length > 0 && (filter === 'all' || filterSessions(singleSessions).length > 0) && (
         <AccordionMonth
           title="Sesje pojedyncze"
           sessionsCount={singleSessions.length}
           listenedCount={singleSessions.filter(s => listened.has(s.id)).length}
+          bookmarkedCount={singleSessions.filter(s => bookmarked.has(s.id)).length}
           isExpanded={expandedKey === 'singles'}
           onToggle={() => toggleSection('singles')}
         >
           <div className="space-y-4">
-            {singleSessions.map(session => (
+            {filterSessions(singleSessions).map(session => (
               <SessionCard
                 key={session.id}
                 session={session}
@@ -161,6 +207,7 @@ function AccordionMonth({
   title,
   sessionsCount,
   listenedCount,
+  bookmarkedCount,
   isExpanded,
   onToggle,
   children
@@ -168,6 +215,7 @@ function AccordionMonth({
   title: string;
   sessionsCount: number;
   listenedCount: number;
+  bookmarkedCount: number;
   isExpanded: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -187,6 +235,12 @@ function AccordionMonth({
             <span className="text-xs text-htg-sage font-normal flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               {listenedCount}/{sessionsCount}
+            </span>
+          )}
+          {bookmarkedCount > 0 && (
+            <span className="text-xs text-amber-400 font-normal flex items-center gap-1">
+              <Bookmark className="w-3.5 h-3.5 fill-current" />
+              {bookmarkedCount}
             </span>
           )}
         </div>

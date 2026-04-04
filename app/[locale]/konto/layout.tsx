@@ -8,6 +8,7 @@ import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import { isNagraniaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
+import CollapsibleSidebar from './CollapsibleSidebar';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
@@ -203,11 +204,9 @@ export default async function AccountLayout({
           </form>
         </div>
       )}
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Sidebar nav */}
-        <nav className="md:w-56 shrink-0">
-          <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-
+      <CollapsibleSidebar
+        sidebar={
+          <>
             {/* ADMIN role: ADMIN + PUBLIKACJA + Profil (but show user nav when impersonating) */}
             {isAdmin && !viewAsUserEmail && (
               <>
@@ -245,15 +244,11 @@ export default async function AccountLayout({
                 {renderSection(t('title'), userItems)}
               </>
             )}
-
-          </div>
-        </nav>
-
-        {/* Content */}
-        <div className="flex-grow min-w-0">
-          {children}
-        </div>
-      </div>
+          </>
+        }
+      >
+        {children}
+      </CollapsibleSidebar>
     </div>
   );
 }

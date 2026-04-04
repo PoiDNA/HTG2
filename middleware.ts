@@ -101,6 +101,36 @@ export async function middleware(request: NextRequest) {
   // ─── i18n Middleware ──────────────────────────────────────────
   const response = intlMiddleware(request);
 
+  // ─── Nagrania portal: redirect logged-in users from /login to recordings ──
+  if (isNagrania && isPublicPath(pathname)) {
+    const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
+    if (withoutLocale === '/login') {
+      const supabaseCheck = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() { return request.cookies.getAll(); },
+            setAll(cookiesToSet) {
+              cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+              cookiesToSet.forEach(({ name, value, options }) =>
+                response.cookies.set(name, value, options)
+              );
+            },
+          },
+        }
+      );
+      const { data: { user } } = await supabaseCheck.auth.getUser();
+      if (user) {
+        const locale = getLocaleFromPath(pathname);
+        const url = request.nextUrl.clone();
+        url.pathname = `/${locale}${NAGRANIA_HOME}`;
+        return NextResponse.redirect(url);
+      }
+    }
+    return response;
+  }
+
   // For public paths, no auth check needed
   if (isPublicPath(pathname)) {
     return response;

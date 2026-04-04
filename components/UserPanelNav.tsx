@@ -87,6 +87,8 @@ export default function UserPanelNav() {
               <DropdownLink href="/konto/admin/subskrypcje" icon={CreditCard} label={t('admin_subscriptions')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/nagrania-klientow" icon={Headphones} label="Nagrania klientów" onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/aktualizacja" icon={UserCircle} label="Aktualizacja" onClick={() => setOpen(false)} />
+              <div className="border-t border-htg-card-border my-1" />
+              <DropdownLink href="/prowadzacy/spotkania-htg" icon={Presentation} label="Spotkania" onClick={() => setOpen(false)} />
             </div>
           ) : (
             <>

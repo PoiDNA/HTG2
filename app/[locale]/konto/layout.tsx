@@ -128,6 +128,7 @@ export default async function AccountLayout({
 
   // PIASKOWNICA section (admin only — narzędzia i testy)
   const piaskownicaItems = [
+    { href: '/prowadzacy/spotkania-htg', label: 'Spotkania', icon: Presentation },
     { href: '/konto/admin/zestawy', label: tPanel('admin_sets'), icon: Package },
     { href: '/konto/admin/zgloszenia', label: `Aktualizacje klientów${pendingUpdates > 0 ? ` — ${pendingUpdates}` : ''}`, icon: ClipboardCheck },
     { href: '/prowadzacy/spotkania-htg/profile-uczestnikow', label: 'Profile uczestników', icon: BarChart2 },

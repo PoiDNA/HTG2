@@ -136,6 +136,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
             title={section.title}
             sessionsCount={section.sessions.length}
             listenedCount={section.sessions.filter(s => listened.has(s.id)).length}
+            bookmarkedCount={section.sessions.filter(s => bookmarked.has(s.id)).length}
             isExpanded={expandedKey === section.monthLabel}
             onToggle={() => toggleSection(section.monthLabel)}
           >
@@ -170,6 +171,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
           title="Sesje pojedyncze"
           sessionsCount={singleSessions.length}
           listenedCount={singleSessions.filter(s => listened.has(s.id)).length}
+          bookmarkedCount={singleSessions.filter(s => bookmarked.has(s.id)).length}
           isExpanded={expandedKey === 'singles'}
           onToggle={() => toggleSection('singles')}
         >
@@ -205,6 +207,7 @@ function AccordionMonth({
   title,
   sessionsCount,
   listenedCount,
+  bookmarkedCount,
   isExpanded,
   onToggle,
   children
@@ -212,6 +215,7 @@ function AccordionMonth({
   title: string;
   sessionsCount: number;
   listenedCount: number;
+  bookmarkedCount: number;
   isExpanded: boolean;
   onToggle: () => void;
   children: React.ReactNode;
@@ -231,6 +235,12 @@ function AccordionMonth({
             <span className="text-xs text-htg-sage font-normal flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               {listenedCount}/{sessionsCount}
+            </span>
+          )}
+          {bookmarkedCount > 0 && (
+            <span className="text-xs text-amber-400 font-normal flex items-center gap-1">
+              <Bookmark className="w-3.5 h-3.5 fill-current" />
+              {bookmarkedCount}
             </span>
           )}
         </div>

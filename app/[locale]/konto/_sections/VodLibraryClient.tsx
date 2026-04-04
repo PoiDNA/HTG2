@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Play, ChevronDown, Clock, CheckCircle2, Bookmark } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
@@ -211,6 +211,15 @@ function AccordionMonth({
   );
 }
 
+function splitSentences(text: string): string[] {
+  if (typeof Intl.Segmenter === 'undefined') {
+    return [text];
+  }
+  const segmenter = new Intl.Segmenter('pl', { granularity: 'sentence' });
+  const segments = [...segmenter.segment(text)].map(s => s.segment.trim()).filter(Boolean);
+  return segments.length > 0 ? segments : [text];
+}
+
 function SessionCard({
   session,
   isPlaying,
@@ -233,7 +242,20 @@ function SessionCard({
   userEmail: string;
 }) {
   const [expandedDesc, setExpandedDesc] = useState(false);
+  const [sentenceIndex, setSentenceIndex] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const playerRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useRef(false);
+
+  const sentences = useMemo(
+    () => (session.description ? splitSentences(session.description) : []),
+    [session.description],
+  );
+
+  useEffect(() => {
+    prefersReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
 
   useEffect(() => {
     if (isPlaying && playerRef.current) {
@@ -242,6 +264,31 @@ function SessionCard({
       }, 100);
     }
   }, [isPlaying]);
+
+  const startRotation = useCallback(() => {
+    if (prefersReducedMotion.current || sentences.length < 2 || expandedDesc) return;
+    setIsHovering(true);
+    intervalRef.current = setInterval(() => {
+      setSentenceIndex(prev => (prev + 1) % sentences.length);
+    }, 3500);
+  }, [sentences.length, expandedDesc]);
+
+  const stopRotation = useCallback(() => {
+    setIsHovering(false);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setSentenceIndex(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const canExpand = sentences.length > 1 && (session.description?.length ?? 0) > 100;
 
   return (
     <div className={`border rounded-lg overflow-hidden transition-colors ${
@@ -301,13 +348,28 @@ function SessionCard({
           </div>
 
           {session.description && (
-            <div className="mt-2 text-sm text-htg-fg-muted">
-              <p className={expandedDesc ? '' : 'line-clamp-2'}>
-                {session.description}
-              </p>
-              {session.description.length > 100 && (
+            <div
+              className="mt-2 text-sm text-htg-fg-muted"
+              onMouseEnter={startRotation}
+              onMouseLeave={stopRotation}
+            >
+              {expandedDesc ? (
+                <p>{session.description}</p>
+              ) : (
+                <p
+                  key={sentenceIndex}
+                  className={`line-clamp-2 ${isHovering && sentences.length > 1 ? 'animate-[fadeIn_500ms_ease-in-out]' : ''}`}
+                >
+                  {sentences[sentenceIndex]}
+                </p>
+              )}
+              {canExpand && (
                 <button
-                  onClick={() => setExpandedDesc(!expandedDesc)}
+                  onClick={() => {
+                    const next = !expandedDesc;
+                    setExpandedDesc(next);
+                    if (next) stopRotation();
+                  }}
                   className="text-htg-sage hover:underline mt-1 font-medium"
                 >
                   {expandedDesc ? 'Zwiń' : 'Rozwiń'}

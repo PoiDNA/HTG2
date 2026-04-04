@@ -262,6 +262,13 @@ export default function LoginForm() {
 
   const allDisabled = loading || !consent;
 
+  // Auto-redirect logged-in users on nagrania portal
+  useEffect(() => {
+    if (loggedInUser && isNagrania) {
+      router.push(portalHome);
+    }
+  }, [loggedInUser, isNagrania, router, portalHome]);
+
   // Show logged-in state
   if (checkingSession) {
     return (
@@ -270,13 +277,6 @@ export default function LoginForm() {
       </div>
     );
   }
-
-  // Auto-redirect logged-in users on nagrania portal
-  useEffect(() => {
-    if (loggedInUser && isNagrania) {
-      router.push(portalHome);
-    }
-  }, [loggedInUser, isNagrania, router, portalHome]);
 
   if (loggedInUser) {
     // On nagrania portal, show loading while redirecting

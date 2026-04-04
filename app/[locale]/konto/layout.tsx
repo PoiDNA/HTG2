@@ -9,6 +9,7 @@ import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import { isNagraniaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
 import CollapsibleSidebar from './CollapsibleSidebar';
+import SidebarLink from './SidebarLink';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
@@ -177,15 +178,8 @@ export default async function AccountLayout({
   const renderSection = (title: string, items: ReadonlyArray<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>) => (
     <>
       <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
-      {items.map(({ href, label, icon: Icon }) => (
-        <Link
-          key={href}
-          href={href}
-          className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors whitespace-nowrap"
-        >
-          <Icon className="w-5 h-5 shrink-0" />
-          {label}
-        </Link>
+      {items.map(({ href, label, icon }) => (
+        <SidebarLink key={href} href={href} label={label} icon={icon} locale={locale} />
       ))}
       <div className="hidden md:block border-t border-htg-card-border my-2" />
     </>

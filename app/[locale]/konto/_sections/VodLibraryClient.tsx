@@ -99,16 +99,27 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
 
   return (
     <div className="space-y-4">
-      {/* Filter pills */}
-      <div className="flex justify-end gap-2">
+      {/* Filter bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-htg-fg-muted">Pokaż:</span>
+        <button
+          onClick={() => setFilter('all')}
+          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+            filter === 'all'
+              ? 'bg-htg-sage text-white border-htg-sage'
+              : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
+          }`}
+        >
+          Wszystkie
+        </button>
         {pills.map(p => (
           <button
             key={p.key}
             onClick={() => setFilter(prev => prev === p.key ? 'all' : p.key)}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
               filter === p.key
-                ? 'bg-htg-sage/15 border-htg-sage/40 text-htg-sage'
-                : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/30 hover:text-htg-fg'
+                ? 'bg-htg-sage text-white border-htg-sage'
+                : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
             }`}
           >
             {p.icon}{p.label}

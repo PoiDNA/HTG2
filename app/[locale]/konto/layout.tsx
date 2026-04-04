@@ -8,6 +8,7 @@ import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import { isNagraniaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
+import CollapsibleSidebar from '@/components/CollapsibleSidebar';
 import {
   Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
@@ -175,18 +176,66 @@ export default async function AccountLayout({
   // Helper to render a nav section
   const renderSection = (title: string, items: ReadonlyArray<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>) => (
     <>
-      <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
+      <p className="sidebar-label hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
       {items.map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
           href={href}
-          className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors whitespace-nowrap"
+          title={label}
+          className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors whitespace-nowrap overflow-hidden"
         >
           <Icon className="w-5 h-5 shrink-0" />
-          {label}
+          <span className="sidebar-label transition-[opacity,max-width] duration-300 ease-in-out max-w-[12rem] opacity-100">{label}</span>
         </Link>
       ))}
-      <div className="hidden md:block border-t border-htg-card-border my-2" />
+      <div className="sidebar-label hidden md:block border-t border-htg-card-border my-2" />
+    </>
+  );
+
+  // Read sidebar collapsed state from cookie (avoids FOUC)
+  const sidebarCookieStore = await cookies();
+  const sidebarCollapsed = sidebarCookieStore.get('htg-sidebar-collapsed')?.value === '1';
+
+  // Build sidebar content (shared between desktop collapsible and mobile scroll)
+  const sidebarContent = (
+    <>
+      {/* ADMIN role: ADMIN + PUBLIKACJA + Profil (but show user nav when impersonating) */}
+      {isAdmin && !viewAsUserEmail && (
+        <>
+          {renderSection('Admin', adminItems)}
+          {showPublikacja && renderSection('Publikacja', publikacjaItems)}
+          {renderSection('Piaskownica', piaskownicaItems)}
+          {renderSection('Profil', [profileItem])}
+        </>
+      )}
+      {isAdmin && viewAsUserEmail && (
+        <>
+          {renderSection('Moje konto', userItems)}
+        </>
+      )}
+
+      {/* MODERATOR role (staff, not admin): PANEL PROWADZACEGO + Profil */}
+      {isStaff && !isAdmin && (
+        <>
+          {renderSection('Panel prowadzącego', staffItems)}
+          {renderSection('Profil', [profileItem])}
+        </>
+      )}
+
+      {/* PUBLIKACJA role (not admin, not staff): PUBLIKACJA + Profil */}
+      {isPublikacja && !isAdmin && !isStaff && (
+        <>
+          {renderSection('Publikacja', publikacjaItems)}
+          {renderSection('Profil', [profileItem])}
+        </>
+      )}
+
+      {/* USER role (no special role): full MOJE KONTO */}
+      {!isAdmin && !isStaff && !isPublikacja && (
+        <>
+          {renderSection(t('title'), userItems)}
+        </>
+      )}
     </>
   );
 
@@ -205,50 +254,17 @@ export default async function AccountLayout({
         </div>
       )}
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Sidebar nav */}
-        <nav className="md:w-56 shrink-0">
-          <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-
-            {/* ADMIN role: ADMIN + PUBLIKACJA + Profil (but show user nav when impersonating) */}
-            {isAdmin && !viewAsUserEmail && (
-              <>
-                {renderSection('Admin', adminItems)}
-                {showPublikacja && renderSection('Publikacja', publikacjaItems)}
-                {renderSection('Piaskownica', piaskownicaItems)}
-                {renderSection('Profil', [profileItem])}
-              </>
-            )}
-            {isAdmin && viewAsUserEmail && (
-              <>
-                {renderSection('Moje konto', userItems)}
-              </>
-            )}
-
-            {/* MODERATOR role (staff, not admin): PANEL PROWADZACEGO + Profil */}
-            {isStaff && !isAdmin && (
-              <>
-                {renderSection('Panel prowadzącego', staffItems)}
-                {renderSection('Profil', [profileItem])}
-              </>
-            )}
-
-            {/* PUBLIKACJA role (not admin, not staff): PUBLIKACJA + Profil */}
-            {isPublikacja && !isAdmin && !isStaff && (
-              <>
-                {renderSection('Publikacja', publikacjaItems)}
-                {renderSection('Profil', [profileItem])}
-              </>
-            )}
-
-            {/* USER role (no special role): full MOJE KONTO */}
-            {!isAdmin && !isStaff && !isPublikacja && (
-              <>
-                {renderSection(t('title'), userItems)}
-              </>
-            )}
-
+        {/* Mobile nav — horizontal scroll, always expanded */}
+        <nav className="md:hidden shrink-0">
+          <div className="flex gap-1 overflow-x-auto pb-2">
+            {sidebarContent}
           </div>
         </nav>
+
+        {/* Desktop/tablet nav — collapsible */}
+        <CollapsibleSidebar defaultCollapsed={sidebarCollapsed}>
+          {sidebarContent}
+        </CollapsibleSidebar>
 
         {/* Content */}
         <div className="flex-grow min-w-0">

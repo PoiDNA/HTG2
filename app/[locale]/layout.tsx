@@ -15,6 +15,7 @@ import { Link } from "@/i18n-config";
 import { Toaster } from "sonner";
 import { headers } from "next/headers";
 import { isNagraniaPortal } from "@/lib/portal";
+import HeaderLogo from "@/components/HeaderLogo";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -120,8 +121,8 @@ export default async function LocaleLayout({
             {!isNagrania && (
               <header className="bg-htg-card border-b border-htg-card-border sticky top-0 z-50 transition-colors duration-300">
                 <div className="mx-auto max-w-6xl px-6 py-4 grid grid-cols-[auto_1fr_auto] items-center gap-4 relative">
-                  <Link href="/" className="flex items-center">
-                    <span className="text-2xl font-serif font-bold text-htg-indigo">HTG</span>
+                  <Link href="/" className="flex items-center" aria-label="Strona główna HTG">
+                    <HeaderLogo />
                   </Link>
                   <NavLinks />
                   <div className="col-start-3 flex justify-end">

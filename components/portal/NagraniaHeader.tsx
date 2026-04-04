@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
+import Image from 'next/image';
 import { LogOut } from 'lucide-react';
 
 interface NagraniaHeaderProps {
@@ -20,8 +21,8 @@ export default function NagraniaHeader({ userEmail, locale }: NagraniaHeaderProp
 
   return (
     <header className="flex items-center justify-between mb-8 pb-4 border-b border-htg-card-border">
-      <a href={`/${locale}/konto/nagrania-sesji`} className="flex items-center gap-3 text-htg-fg hover:text-htg-sage transition-colors">
-        <span className="text-2xl font-serif font-bold text-htg-indigo">HTG</span>
+      <a href={`/${locale}/konto/nagrania-sesji`} className="flex items-center gap-3 text-htg-fg hover:text-htg-sage transition-colors" aria-label="Nagrania z Twoich sesji">
+        <Image src="/icon.png" alt="HTG" width={32} height={32} sizes="32px" className="rounded-full" />
         <span className="text-lg font-serif font-bold">Nagrania z Twoich sesji</span>
       </a>
       <div className="flex items-center gap-4">

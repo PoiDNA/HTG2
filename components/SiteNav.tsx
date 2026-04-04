@@ -75,6 +75,7 @@ export default function SiteNav() {
 
                 <div className="border-t border-htg-card-border my-2" />
                 <MobileLink href="/konto/aktualizacja" label="Aktualizacja" pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/prowadzacy/spotkania-htg" label="Spotkania" pathname={pathname} onClick={() => setOpen(false)} />
               </>
             )}
 

@@ -92,9 +92,9 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
     return sessions;
   };
 
-  const pills: { key: typeof filter; label: string; icon: React.ReactNode }[] = [
-    { key: 'unlistened', label: 'Nieodsłuchane', icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-    { key: 'bookmarked', label: 'Wracam',         icon: <Bookmark className="w-3.5 h-3.5" /> },
+  const pills: { key: typeof filter; label: string; icon: React.ReactNode; activeClass: string }[] = [
+    { key: 'unlistened', label: 'Nieodsłuchane', icon: <CheckCircle2 className="w-3.5 h-3.5" />, activeClass: 'bg-htg-sage text-white border-htg-sage' },
+    { key: 'bookmarked', label: 'Wracam',         icon: <Bookmark className="w-3.5 h-3.5 fill-current" />, activeClass: 'bg-amber-500 text-white border-amber-500' },
   ];
 
   return (
@@ -123,7 +123,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
               onClick={() => setFilter(prev => prev === p.key ? 'all' : p.key)}
               className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 filter === p.key
-                  ? 'bg-htg-sage text-white border-htg-sage'
+                  ? p.activeClass
                   : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
               }`}
             >

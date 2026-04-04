@@ -14,23 +14,26 @@ export default function Footer() {
           <span className="text-sm text-white/60"> — {t('tagline')}</span>
         </div>
 
-        {/* Links + Contact in two columns */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
-          <div className="flex flex-col gap-1.5">
-            <Link href="/privacy" className="text-sm hover:text-white transition-colors">
-              {t('privacy')}
-            </Link>
-            <Link href="/terms" className="text-sm hover:text-white transition-colors">
-              {t('terms')}
-            </Link>
-          </div>
+        {/* Links */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <Link href="/privacy" className="whitespace-nowrap hover:text-white transition-colors">
+            {t('privacy')}
+          </Link>
+          <span className="text-white/30" aria-hidden="true">·</span>
+          <Link href="/terms" className="whitespace-nowrap hover:text-white transition-colors">
+            {t('terms')}
+          </Link>
+          <span className="text-white/30" aria-hidden="true">·</span>
+          <Link href="/konto/wiadomosci" className="whitespace-nowrap hover:text-white transition-colors">
+            {t('contact_center')}
+          </Link>
+        </div>
 
-          <div className="flex flex-col gap-1.5">
-            <p className="text-sm font-semibold text-white">{t('contact')}</p>
-            <a href="mailto:sesje@htg.cyou" className="text-sm hover:text-white transition-colors">
-              {t('email')}
-            </a>
-          </div>
+        {/* Email fallback */}
+        <div className="mt-2">
+          <a href="mailto:sesje@htg.cyou" className="text-xs text-white/50 hover:text-white transition-colors">
+            {t('email')}
+          </a>
         </div>
 
         <div className="border-t border-white/10 mt-3 pt-3 md:mt-8 md:pt-6 text-center text-xs text-white/40">

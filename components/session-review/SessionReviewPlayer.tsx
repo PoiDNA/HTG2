@@ -267,7 +267,7 @@ export default function SessionReviewPlayer({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full bg-[#0D1A12] rounded-b-xl md:rounded-xl overflow-hidden select-none cursor-pointer
+      className={`relative w-full bg-[#0D1A12] rounded-xl overflow-hidden select-none cursor-pointer
         ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'aspect-square md:aspect-video'}`}
       onContextMenu={handleContextMenu}
       onPointerMove={handleContainerPointerMove}

@@ -52,10 +52,6 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
 
   return (
     <section>
-      <div className="flex items-center gap-2 mb-4">
-        <Film className="w-5 h-5 text-htg-sage" />
-        <h2 className="text-lg font-serif font-semibold text-htg-fg">Twoja Biblioteka</h2>
-      </div>
       <VodLibraryClient
         sections={library.sections}
         singleSessions={library.singleSessions}

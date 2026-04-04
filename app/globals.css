@@ -77,3 +77,8 @@ body.hide-footer footer {
   33% { transform: translate(1px, 3px) scale(1.003); }
   66% { transform: translate(-2px, -1px) scale(0.998); }
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

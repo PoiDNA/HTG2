@@ -6,11 +6,11 @@ import { Link } from '@/i18n-config';
 interface SidebarLinkProps {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
   locale: string;
+  children: React.ReactNode; // icon rendered server-side (SVG) — not a component ref
 }
 
-export default function SidebarLink({ href, label, icon: Icon, locale }: SidebarLinkProps) {
+export default function SidebarLink({ href, label, locale, children }: SidebarLinkProps) {
   const pathname = usePathname();
   const fullHref = `/${locale}${href}`;
 
@@ -32,7 +32,7 @@ export default function SidebarLink({ href, label, icon: Icon, locale }: Sidebar
       <span className={`shrink-0 transition-all duration-200 origin-center group-hover:scale-110 group-hover:text-htg-indigo ${
         isActive ? 'text-htg-indigo' : ''
       }`}>
-        <Icon className="w-5 h-5" />
+        {children}
       </span>
       {label}
     </Link>

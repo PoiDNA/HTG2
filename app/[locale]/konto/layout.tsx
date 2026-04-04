@@ -178,8 +178,10 @@ export default async function AccountLayout({
   const renderSection = (title: string, items: ReadonlyArray<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>) => (
     <>
       <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
-      {items.map(({ href, label, icon }) => (
-        <SidebarLink key={href} href={href} label={label} icon={icon} locale={locale} />
+      {items.map(({ href, label, icon: Icon }) => (
+        <SidebarLink key={href} href={href} label={label} locale={locale}>
+          <Icon className="w-5 h-5" />
+        </SidebarLink>
       ))}
       <div className="hidden md:block border-t border-htg-card-border my-2" />
     </>

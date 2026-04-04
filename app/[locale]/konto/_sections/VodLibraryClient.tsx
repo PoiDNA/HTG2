@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Play, ChevronDown, Clock, CheckCircle2, Bookmark } from 'lucide-react';
+import { Play, ChevronDown, Clock, CheckCircle2, Bookmark, Film } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
 
@@ -99,32 +99,38 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
 
   return (
     <div className="space-y-4">
-      {/* Filter bar */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-htg-fg-muted">Pokaż:</span>
-        <button
-          onClick={() => setFilter('all')}
-          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-            filter === 'all'
-              ? 'bg-htg-sage text-white border-htg-sage'
-              : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
-          }`}
-        >
-          Wszystkie
-        </button>
-        {pills.map(p => (
+      {/* Header row: title left, filter pills right */}
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+        <div className="flex items-center gap-2">
+          <Film className="w-5 h-5 text-htg-sage" />
+          <h2 className="text-lg font-serif font-semibold text-htg-fg">Twoja Biblioteka</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-htg-fg-muted">Pokaż:</span>
           <button
-            key={p.key}
-            onClick={() => setFilter(prev => prev === p.key ? 'all' : p.key)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              filter === p.key
+            onClick={() => setFilter('all')}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              filter === 'all'
                 ? 'bg-htg-sage text-white border-htg-sage'
                 : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
             }`}
           >
-            {p.icon}{p.label}
+            Wszystkie
           </button>
-        ))}
+          {pills.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setFilter(prev => prev === p.key ? 'all' : p.key)}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                filter === p.key
+                  ? 'bg-htg-sage text-white border-htg-sage'
+                  : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
+              }`}
+            >
+              {p.icon}{p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {sections.map((section) => {

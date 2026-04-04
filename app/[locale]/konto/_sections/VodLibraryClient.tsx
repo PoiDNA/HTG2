@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Play, ChevronDown, Clock } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Play, ChevronDown, Clock, CheckCircle2 } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
 
@@ -11,15 +11,17 @@ type Props = {
   futureMonthsCount: number;
   userId: string;
   userEmail: string;
+  listenedSessionIds: string[];
 };
 
-export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail }: Props) {
+export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail, listenedSessionIds }: Props) {
   const [expandedKey, setExpandedKey] = useState<string | null>(() => {
     const firstNonEmptySection = sections.find(s => s.sessions.length > 0);
     return firstNonEmptySection ? firstNonEmptySection.monthLabel : (singleSessions.length > 0 ? 'singles' : null);
   });
-  
+
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
+  const [listened, setListened] = useState<Set<string>>(() => new Set(listenedSessionIds));
 
   const toggleSection = (key: string) => {
     setExpandedKey(prev => {
@@ -36,6 +38,29 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
     setPlayingSessionId(prev => prev === sessionId ? null : sessionId);
   };
 
+  const toggleListened = useCallback(async (sessionId: string) => {
+    const next = !listened.has(sessionId);
+    setListened(prev => {
+      const s = new Set(prev);
+      if (next) s.add(sessionId); else s.delete(sessionId);
+      return s;
+    });
+    try {
+      await fetch('/api/video/session-listened', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, listened: next }),
+      });
+    } catch {
+      // revert on error
+      setListened(prev => {
+        const s = new Set(prev);
+        if (next) s.delete(sessionId); else s.add(sessionId);
+        return s;
+      });
+    }
+  }, [listened]);
+
   return (
     <div className="space-y-4">
       {sections.map((section) => (
@@ -43,6 +68,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
           key={section.monthLabel}
           title={section.title}
           sessionsCount={section.sessions.length}
+          listenedCount={section.sessions.filter(s => listened.has(s.id)).length}
           isExpanded={expandedKey === section.monthLabel}
           onToggle={() => toggleSection(section.monthLabel)}
         >
@@ -58,6 +84,8 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                   session={session}
                   isPlaying={playingSessionId === session.id}
                   onTogglePlay={() => togglePlay(session.id)}
+                  isListened={listened.has(session.id)}
+                  onToggleListened={() => toggleListened(session.id)}
                   userId={userId}
                   userEmail={userEmail}
                 />
@@ -71,6 +99,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
         <AccordionMonth
           title="Sesje pojedyncze"
           sessionsCount={singleSessions.length}
+          listenedCount={singleSessions.filter(s => listened.has(s.id)).length}
           isExpanded={expandedKey === 'singles'}
           onToggle={() => toggleSection('singles')}
         >
@@ -81,6 +110,8 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                 session={session}
                 isPlaying={playingSessionId === session.id}
                 onTogglePlay={() => togglePlay(session.id)}
+                isListened={listened.has(session.id)}
+                onToggleListened={() => toggleListened(session.id)}
                 userId={userId}
                 userEmail={userEmail}
               />
@@ -98,17 +129,19 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
   );
 }
 
-function AccordionMonth({ 
-  title, 
-  sessionsCount, 
-  isExpanded, 
-  onToggle, 
-  children 
-}: { 
-  title: string; 
-  sessionsCount: number; 
-  isExpanded: boolean; 
-  onToggle: () => void; 
+function AccordionMonth({
+  title,
+  sessionsCount,
+  listenedCount,
+  isExpanded,
+  onToggle,
+  children
+}: {
+  title: string;
+  sessionsCount: number;
+  listenedCount: number;
+  isExpanded: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -122,6 +155,12 @@ function AccordionMonth({
           <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface px-2 py-0.5 rounded-full">
             {sessionsCount}
           </span>
+          {listenedCount > 0 && (
+            <span className="text-xs text-htg-sage font-normal flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              {listenedCount}/{sessionsCount}
+            </span>
+          )}
         </div>
         <ChevronDown
           className={`w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
@@ -144,17 +183,21 @@ function AccordionMonth({
   );
 }
 
-function SessionCard({ 
-  session, 
-  isPlaying, 
-  onTogglePlay, 
-  userId, 
-  userEmail 
-}: { 
-  session: VodSession; 
-  isPlaying: boolean; 
-  onTogglePlay: () => void; 
-  userId: string; 
+function SessionCard({
+  session,
+  isPlaying,
+  onTogglePlay,
+  isListened,
+  onToggleListened,
+  userId,
+  userEmail
+}: {
+  session: VodSession;
+  isPlaying: boolean;
+  onTogglePlay: () => void;
+  isListened: boolean;
+  onToggleListened: () => void;
+  userId: string;
   userEmail: string;
 }) {
   const [expandedDesc, setExpandedDesc] = useState(false);
@@ -169,7 +212,11 @@ function SessionCard({
   }, [isPlaying]);
 
   return (
-    <div className="border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30">
+    <div className={`border rounded-lg overflow-hidden transition-colors ${
+      isListened
+        ? 'border-htg-sage/30 bg-htg-sage/5'
+        : 'border-htg-card-border bg-htg-surface/30'
+    }`}>
       <div className="p-4 flex flex-col md:flex-row md:items-start gap-4">
         <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center shrink-0">
           <Play className="w-5 h-5 text-htg-sage" />
@@ -185,23 +232,37 @@ function SessionCard({
                 </div>
               )}
             </div>
-            {session.isPlayable && (
+            <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={onTogglePlay}
-                className="shrink-0 flex items-center gap-2 bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                onClick={onToggleListened}
+                title={isListened ? 'Oznacz jako nieodsłuchaną' : 'Oznacz jako odsłuchaną'}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isListened
+                    ? 'bg-htg-sage/15 text-htg-sage hover:bg-htg-sage/25'
+                    : 'bg-htg-surface text-htg-fg-muted hover:text-htg-sage hover:bg-htg-sage/10'
+                }`}
               >
-                {isPlaying ? 'Zamknij' : 'Odsłuchaj'}
+                <CheckCircle2 className="w-4 h-4" />
+                {isListened ? 'Odsłuchana' : 'Odsłuchana?'}
               </button>
-            )}
+              {session.isPlayable && (
+                <button
+                  onClick={onTogglePlay}
+                  className="flex items-center gap-2 bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  {isPlaying ? 'Zamknij' : 'Odsłuchaj'}
+                </button>
+              )}
+            </div>
           </div>
-          
+
           {session.description && (
             <div className="mt-2 text-sm text-htg-fg-muted">
               <p className={expandedDesc ? '' : 'line-clamp-2'}>
                 {session.description}
               </p>
               {session.description.length > 100 && (
-                <button 
+                <button
                   onClick={() => setExpandedDesc(!expandedDesc)}
                   className="text-htg-sage hover:underline mt-1 font-medium"
                 >
@@ -212,7 +273,7 @@ function SessionCard({
           )}
         </div>
       </div>
-      
+
       {isPlaying && (
         <div ref={playerRef} className="border-t border-htg-card-border bg-black">
           <SessionReviewPlayer

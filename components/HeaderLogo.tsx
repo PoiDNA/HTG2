@@ -1,37 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 
-const TAGLINE = 'HTG — Hacking The Game';
-const STAGGER_DELAY = 0.025; // seconds between each letter
-
-// Per-letter animation variants (GPU-friendly: opacity + transform only)
-const letterVariants = {
-  hidden: { opacity: 0, y: 4 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * STAGGER_DELAY,
-      duration: 0.3,
-      ease: [0.25, 0.46, 0.45, 0.94],
-    },
-  }),
-  exit: (i: number) => ({
-    opacity: 0,
-    transition: {
-      delay: i * 0.01,
-      duration: 0.2,
-      ease: 'easeIn',
-    },
-  }),
-};
+const HOVER_LINGER_MS = 3000; // stay visible after mouse leaves
 
 export default function HeaderLogo() {
   const [showTagline, setShowTagline] = useState(false);
   const [autoPlayed, setAutoPlayed] = useState(false);
+  const lingerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-play on first visit — no delay
   useEffect(() => {
@@ -55,14 +33,29 @@ export default function HeaderLogo() {
 
   const handleMouseEnter = useCallback(() => {
     if (autoPlayed) return;
+    // Cancel any pending hide
+    if (lingerRef.current) {
+      clearTimeout(lingerRef.current);
+      lingerRef.current = null;
+    }
     setShowTagline(true);
   }, [autoPlayed]);
 
   const handleMouseLeave = useCallback(() => {
-    if (!autoPlayed) {
+    if (autoPlayed) return;
+    // Keep visible for a few seconds after leaving
+    lingerRef.current = setTimeout(() => {
       setShowTagline(false);
-    }
+      lingerRef.current = null;
+    }, HOVER_LINGER_MS);
   }, [autoPlayed]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (lingerRef.current) clearTimeout(lingerRef.current);
+    };
+  }, []);
 
   return (
     <div
@@ -84,22 +77,23 @@ export default function HeaderLogo() {
           {showTagline && (
             <m.span
               key="tagline"
-              className="absolute left-12 whitespace-nowrap text-xs font-bold font-serif tracking-wide text-htg-fg-muted pointer-events-none flex"
-              initial="hidden"
-              animate="visible"
-              exit="exit"
+              className="absolute left-12 whitespace-nowrap pointer-events-none flex items-baseline gap-[0.35em]"
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -4 }}
+              transition={{
+                duration: 0.5,
+                ease: [0.25, 0.46, 0.45, 0.94],
+                exit: { duration: 0.4, ease: 'easeIn' },
+              }}
+              style={{ willChange: 'opacity, transform' }}
             >
-              {TAGLINE.split('').map((char, i) => (
-                <m.span
-                  key={`${i}-${char}`}
-                  custom={i}
-                  variants={letterVariants}
-                  className={char === ' ' ? 'w-[0.25em]' : undefined}
-                  style={{ display: 'inline-block', willChange: 'opacity, transform' }}
-                >
-                  {char === ' ' ? '\u00A0' : char}
-                </m.span>
-              ))}
+              <span className="text-sm font-serif font-bold tracking-wide text-htg-fg-muted">
+                HTG
+              </span>
+              <span className="text-xs font-sans font-normal tracking-wide text-htg-fg-muted/70">
+                — Hacking The Game
+              </span>
             </m.span>
           )}
         </AnimatePresence>

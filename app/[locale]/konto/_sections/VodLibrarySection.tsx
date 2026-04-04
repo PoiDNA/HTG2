@@ -18,12 +18,14 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
 
   // Pobrać userEmail do watermarku + listened session IDs
   const db = createSupabaseServiceRole();
-  const [{ data: authUser }, { data: listensRows }] = await Promise.all([
+  const [{ data: authUser }, { data: listensRows }, { data: bookmarkRows }] = await Promise.all([
     db.auth.admin.getUserById(userId),
     db.from('session_listens').select('session_id').eq('user_id', userId),
+    db.from('session_bookmarks').select('session_id').eq('user_id', userId),
   ]);
   const userEmail = authUser?.user?.email ?? '';
   const listenedSessionIds = new Set((listensRows ?? []).map(r => r.session_id));
+  const bookmarkedSessionIds = new Set((bookmarkRows ?? []).map(r => r.session_id));
 
   if (library.sections.length === 0 && library.singleSessions.length === 0 && library.futureMonthsCount === 0) {
     return (
@@ -61,6 +63,7 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
         userId={userId}
         userEmail={userEmail}
         listenedSessionIds={[...listenedSessionIds]}
+        bookmarkedSessionIds={[...bookmarkedSessionIds]}
       />
     </section>
   );

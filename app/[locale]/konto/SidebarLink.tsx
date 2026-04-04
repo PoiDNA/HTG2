@@ -23,7 +23,7 @@ export default function SidebarLink({ href, label, locale, children }: SidebarLi
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+      className={`group flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
         isActive
           ? 'text-htg-fg bg-htg-surface'
           : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'

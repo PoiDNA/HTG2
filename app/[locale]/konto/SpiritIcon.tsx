@@ -26,7 +26,7 @@ interface SpiritIconProps {
 export default function SpiritIcon({ type }: SpiritIconProps) {
   return (
     <span
-      className={`inline-block w-1.5 h-1.5 rounded-full transition-transform duration-200 group-hover:scale-[1.8] ${dotColor[type]}`}
+      className={`inline-block align-middle w-1.5 h-1.5 rounded-full saturate-[0.55] brightness-90 transition-transform duration-[800ms] group-hover:scale-[1.8] ${dotColor[type]}`}
     />
   );
 }

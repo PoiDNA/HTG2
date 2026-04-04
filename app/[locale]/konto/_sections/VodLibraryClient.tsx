@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Play, ChevronDown, Clock, CheckCircle2, Bookmark } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
@@ -297,19 +297,13 @@ function SessionCard({
 }) {
   const [expandedDesc, setExpandedDesc] = useState(false);
   const [sentenceIndex, setSentenceIndex] = useState(0);
-  const [isHovering, setIsHovering] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [paused, setPaused] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
-  const prefersReducedMotion = useRef(false);
 
   const sentences = useMemo(
     () => (session.description ? splitSentences(session.description) : []),
     [session.description],
   );
-
-  useEffect(() => {
-    prefersReducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
 
   useEffect(() => {
     if (isPlaying && playerRef.current) {
@@ -319,28 +313,16 @@ function SessionCard({
     }
   }, [isPlaying]);
 
-  const startRotation = useCallback(() => {
-    if (prefersReducedMotion.current || sentences.length < 2 || expandedDesc) return;
-    setIsHovering(true);
-    intervalRef.current = setInterval(() => {
+  // Auto-rotate sentences; pause on hover or when expanded
+  useEffect(() => {
+    if (sentences.length < 2 || expandedDesc || paused) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) return;
+    const id = setInterval(() => {
       setSentenceIndex(prev => (prev + 1) % sentences.length);
     }, 3500);
-  }, [sentences.length, expandedDesc]);
-
-  const stopRotation = useCallback(() => {
-    setIsHovering(false);
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setSentenceIndex(0);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
+    return () => clearInterval(id);
+  }, [sentences.length, expandedDesc, paused]);
 
   const canExpand = sentences.length > 1 && (session.description?.length ?? 0) > 100;
 
@@ -404,26 +386,22 @@ function SessionCard({
           {session.description && (
             <div
               className="mt-2 text-sm text-htg-fg-muted"
-              onMouseEnter={startRotation}
-              onMouseLeave={stopRotation}
+              onMouseEnter={() => setPaused(true)}
+              onMouseLeave={() => setPaused(false)}
             >
               {expandedDesc ? (
                 <p>{session.description}</p>
               ) : (
                 <p
                   key={sentenceIndex}
-                  className={`line-clamp-2 ${isHovering && sentences.length > 1 ? 'animate-[fadeIn_500ms_ease-in-out]' : ''}`}
+                  className={`line-clamp-2 ${sentences.length > 1 ? 'animate-[fadeIn_500ms_ease-in-out]' : ''}`}
                 >
                   {sentences[sentenceIndex]}
                 </p>
               )}
               {canExpand && (
                 <button
-                  onClick={() => {
-                    const next = !expandedDesc;
-                    setExpandedDesc(next);
-                    if (next) stopRotation();
-                  }}
+                  onClick={() => setExpandedDesc(!expandedDesc)}
                   className="text-htg-sage hover:underline mt-1 font-medium"
                 >
                   {expandedDesc ? 'Zwiń' : 'Rozwiń'}

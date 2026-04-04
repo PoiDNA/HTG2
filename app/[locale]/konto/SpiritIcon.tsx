@@ -17,6 +17,8 @@ export type SpiritIconType =
   | 'spiral';     // Aktualizacja — spirala
 
 const base = {
+  width: '20',
+  height: '20',
   viewBox: '0 0 20 20',
   fill: 'none',
   stroke: 'currentColor',

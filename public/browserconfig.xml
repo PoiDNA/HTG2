@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+  <msapplication>
+    <tile>
+      <square150x150logo src="https://htg2-cdn.b-cdn.net/images/mstile-150x150.png"/>
+      <TileColor>#9B4A5C</TileColor>
+    </tile>
+  </msapplication>
+</browserconfig>

@@ -86,6 +86,9 @@ export default async function LocaleLayout({
       <head>
         {/* Block Dark Reader from mutating hero section */}
         <meta name="darkreader-lock" />
+        <meta name="theme-color" content="#9B4A5C" />
+        <meta name="msapplication-TileColor" content="#9B4A5C" />
+        <meta name="msapplication-TileImage" content="https://htg2-cdn.b-cdn.net/images/mstile-150x150.png" />
         {/* Preload hero glow asset */}
         <link rel="preload" href="/hero/glow.avif" as="image" type="image/avif" fetchPriority="high" />
         {/* Anti-flash: apply dark class + override Tailwind CSS vars before paint */}

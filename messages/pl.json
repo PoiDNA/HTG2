@@ -83,6 +83,7 @@
     "error_code": "Nieprawidłowy kod. Spróbuj ponownie.",
     "error_sso": "Nie udało się zalogować. Spróbuj ponownie.",
     "error_passkey": "Logowanie biometryczne nie powiodło się. Spróbuj innej metody.",
+    "error_not_registered": "Ten adres e-mail nie jest zarejestrowany. Skontaktuj się z terapeutą, aby uzyskać dostęp.",
     "consent_label": "Wyrażam zgodę na przetwarzanie moich danych dotyczących przekonań i stanu zdrowia w celu świadczenia usługi sesji rozwoju duchowego (RODO art. 9).",
     "consent_required": "Zgoda jest wymagana, aby kontynuować.",
     "login_help": "Aby odsłuchać nagrania: wpisz adres e-mail, którym logujesz się do HTG, kliknij przycisk Wyślij link, a następnie otwórz skrzynkę e-mail i kliknij link w wiadomości."

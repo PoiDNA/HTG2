@@ -82,9 +82,17 @@ export async function middleware(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(authCode);
     if (error) {
       console.error('Code exchange failed:', error.message);
-      // Redirect to login on failure
+      const errCode = (error as any).code ?? '';
+      const errMsg = error.message?.toLowerCase() ?? '';
+      const errorType = (
+        errCode === 'otp_disabled' || errCode === 'user_not_found' ||
+        errMsg.includes('signups not allowed') || errMsg.includes('user not found')
+      ) ? 'not_registered' : 'auth_failed';
       url.pathname = `/${locale}/login`;
-      return NextResponse.redirect(url);
+      url.searchParams.set('error', errorType);
+      const errorResponse = NextResponse.redirect(url);
+      errorResponse.headers.set('Cache-Control', 'no-store');
+      return errorResponse;
     }
 
     return response;

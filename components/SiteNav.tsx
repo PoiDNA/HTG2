@@ -41,6 +41,13 @@ export default function SiteNav() {
       <div className="hidden md:flex items-center gap-2">
         <FontSizeToggle />
         <ThemeToggle />
+        {!loading && isLoggedIn && (
+          <>
+            <GhostNavLink href="/nagrania" label="Na początek" pathname={pathname} />
+            <GhostNavLink href="/sesje-indywidualne" label="Umów sesję" pathname={pathname} />
+            <GhostNavLink href="/konto" label="Biblioteka" pathname={pathname} />
+          </>
+        )}
         {!loading && isLoggedIn && user && <NotificationBell userId={user.id} alwaysShow={isCommunityActive} />}
         {!loading && isLoggedIn ? <UserPanelNav /> : <HeaderAuthButton />}
       </div>
@@ -147,6 +154,22 @@ export default function SiteNav() {
         </div>
       )}
     </nav>
+  );
+}
+
+function GhostNavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+  const isActive = pathname === href || pathname.startsWith(href + '/');
+  return (
+    <Link
+      href={href}
+      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+        isActive
+          ? 'text-htg-fg opacity-100'
+          : 'text-htg-fg opacity-25 hover:opacity-100'
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
 

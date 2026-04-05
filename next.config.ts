@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
         destination: '/:locale/konto',
         permanent: true,
       },
+      {
+        source: '/:locale/konto/profil',
+        destination: '/:locale/konto/aktualizacja',
+        permanent: false,
+      },
     ];
   },
 

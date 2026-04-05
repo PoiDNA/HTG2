@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Mail, KeyRound, ArrowLeft, Loader2, User, Fingerprint } from 'lucide-react';
+import { Mail, KeyRound, ArrowLeft, Loader2, User } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { getRoleForEmail } from '@/lib/roles';
 import type { Provider } from '@supabase/supabase-js';
@@ -49,11 +49,9 @@ export default function LoginForm() {
       setCheckingSession(false);
     });
 
-    // Check if browser supports WebAuthn
-    if (typeof window !== 'undefined' && window.PublicKeyCredential) {
-      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.()
-        .then(available => setSupportsPasskey(available))
-        .catch(() => {});
+    // Check if browser supports WebAuthn (platform + cross-device + synced passkeys)
+    if (typeof window !== 'undefined' && window.PublicKeyCredential && window.isSecureContext) {
+      setSupportsPasskey(true);
     }
   }, []);
 
@@ -243,7 +241,14 @@ export default function LoginForm() {
 
       // Get auth options from server
       const optionsRes = await fetch('/api/auth/passkey/auth-options', { method: 'POST' });
-      if (!optionsRes.ok) throw new Error('Failed to get auth options');
+      if (!optionsRes.ok) {
+        if (optionsRes.status === 501) {
+          // Passkey not configured on this environment
+          setLoading(false);
+          return;
+        }
+        throw new Error('Failed to get auth options');
+      }
       const options = await optionsRes.json();
 
       // Trigger browser biometric prompt
@@ -370,15 +375,16 @@ export default function LoginForm() {
            step === 'register' ? t('register_title') :
            t('login_title')}
         </h1>
-        {step === 'email' && !isNagrania && (
+        {step === 'email' && !isNagrania && supportsPasskey && (
           <button
             type="button"
             onClick={handlePasskeyLogin}
             disabled={loading}
-            title="Zaloguj się biometrycznie"
+            title="Zaloguj się kluczem dostępu"
+            aria-label="Zaloguj się kluczem dostępu"
             className="p-2 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors disabled:opacity-40"
           >
-            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Fingerprint className="w-6 h-6" />}
+            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <KeyRound className="w-6 h-6" />}
           </button>
         )}
       </div>

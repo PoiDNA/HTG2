@@ -10,14 +10,8 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-3 md:py-4">
         {/* Top row: brand left, links right */}
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-          {/* Brand + email */}
-          <div className="flex items-center gap-3">
-            <span className="text-base font-serif font-bold text-white">HTG</span>
-            <span className="text-xs text-white/50">·</span>
-            <a href="mailto:sesje@htg.cyou" className="text-xs text-white/50 hover:text-white transition-colors">
-              {t('email')}
-            </a>
-          </div>
+          {/* Brand */}
+          <span className="text-base font-serif font-bold text-white">HTG</span>
 
           {/* Links — inline */}
           <div className="flex items-center gap-3 text-sm">
@@ -36,6 +30,10 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 mt-2 pt-2 text-center text-xs text-white/40">
+          <a href="mailto:sesje@htg.cyou" className="hover:text-white transition-colors">
+            {t('email')}
+          </a>
+          <span className="mx-2">·</span>
           {t('copyright', { year: String(year) })}
         </div>
       </div>

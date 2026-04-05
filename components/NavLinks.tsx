@@ -19,13 +19,15 @@ export default function NavLinks() {
   if (loading || isLoggedIn) return <div />;
 
   return (
-    <div className="hidden md:flex items-center justify-center gap-5">
+    <div className="hidden md:flex items-center justify-center gap-1">
       {navLinks.map(({ href, key }) => (
         <Link
           key={href}
           href={href}
-          className={`text-sm font-medium transition-colors hover:text-htg-indigo ${
-            pathname.startsWith(href) ? 'text-htg-indigo' : 'text-htg-fg-muted'
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+            pathname.startsWith(href)
+              ? 'text-htg-fg opacity-100'
+              : 'text-htg-fg opacity-25 hover:opacity-100'
           }`}
         >
           {t(key)}

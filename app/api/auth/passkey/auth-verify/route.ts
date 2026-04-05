@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unknown credential' }, { status: 400 });
   }
 
-  // Decode stored public key from base64
+  // Decode stored public key from base64 (stored as TEXT column)
   const publicKey = new Uint8Array(Buffer.from(credential.public_key, 'base64'));
 
   let verification;

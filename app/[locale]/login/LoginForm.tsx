@@ -9,7 +9,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { getRoleForEmail } from '@/lib/roles';
 import type { Provider } from '@supabase/supabase-js';
 
-type Step = 'email' | 'code' | 'link-sent' | 'name';
+type Step = 'email' | 'code' | 'link-sent' | 'name' | 'register';
 
 export default function LoginForm() {
   const t = useTranslations('Auth');
@@ -26,6 +26,7 @@ export default function LoginForm() {
   const [supportsPasskey, setSupportsPasskey] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState<SupabaseUser | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [notRegistered, setNotRegistered] = useState(false);
 
   const supabase = createSupabaseBrowser();
 
@@ -39,7 +40,7 @@ export default function LoginForm() {
 
     // Handle auth error redirects
     const errorParam = params.get('error');
-    if (errorParam === 'not_registered') setError(t('error_not_registered'));
+    if (errorParam === 'not_registered') setNotRegistered(true);
     else if (errorParam === 'auth_failed') setError(t('error_email'));
 
     // Check if user is already logged in
@@ -81,7 +82,7 @@ export default function LoginForm() {
 
     if (!await checkEmailExists(email)) {
       setLoading(false);
-      setError(t('error_not_registered'));
+      setNotRegistered(true);
       return;
     }
 
@@ -104,7 +105,7 @@ export default function LoginForm() {
         code === 'otp_disabled' || code === 'user_not_found' ||
         msg.includes('signups not allowed') || msg.includes('user not found')
       ) {
-        setError(t('error_not_registered'));
+        setNotRegistered(true);
       } else {
         setError(t('error_email'));
       }
@@ -122,7 +123,7 @@ export default function LoginForm() {
 
     if (!await checkEmailExists(email)) {
       setLoading(false);
-      setError(t('error_not_registered'));
+      setNotRegistered(true);
       return;
     }
 
@@ -141,7 +142,33 @@ export default function LoginForm() {
         code === 'otp_disabled' || code === 'user_not_found' ||
         msg.includes('signups not allowed') || msg.includes('user not found')
       ) {
-        setError(t('error_not_registered'));
+        setNotRegistered(true);
+      } else {
+        setError(t('error_email'));
+      }
+    } else {
+      setStep('code');
+    }
+  }
+
+  // ─── Register (new user — intentional signup) ───────────────
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+    if (!consent) { setError(t('consent_required')); return; }
+    if (!displayName.trim()) { setError(t('register_name_required')); return; }
+    setError('');
+    setLoading(true);
+
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
+
+    setLoading(false);
+    if (otpError) {
+      const msg = otpError.message?.toLowerCase() ?? '';
+      if (msg.includes('rate limit')) {
+        setError(t('error_rate_limit'));
       } else {
         setError(t('error_email'));
       }
@@ -255,10 +282,20 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (data.isNew) {
-        setIsNewUser(true);
-        setStep('name');
-        setLoading(false);
-        return;
+        // If name was already provided during registration, save it and skip name step
+        if (displayName.trim()) {
+          try {
+            const { data: { user: u } } = await supabase.auth.getUser();
+            if (u) {
+              await supabase.from('profiles').update({ display_name: displayName.trim() }).eq('id', u.id);
+            }
+          } catch { /* Non-blocking */ }
+        } else {
+          setIsNewUser(true);
+          setStep('name');
+          setLoading(false);
+          return;
+        }
       }
     } catch { /* Non-blocking */ }
 
@@ -330,6 +367,7 @@ export default function LoginForm() {
           {step === 'name' ? t('name_subtitle') :
            step === 'link-sent' ? t('link_sent_subtitle') :
            step === 'code' ? t('code_subtitle', { email }) :
+           step === 'register' ? t('register_title') :
            t('login_title')}
         </h1>
         {step === 'email' && !isNagrania && (
@@ -446,6 +484,83 @@ export default function LoginForm() {
           </button>
         </form>
 
+      /* ─── Register step ─── */
+      ) : step === 'register' ? (
+        <form onSubmit={handleRegister} className="flex flex-col gap-4">
+          <p className="text-sm text-htg-fg-muted">{t('register_subtitle')}</p>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-htg-fg">{t('email_label')}</span>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-htg-fg-muted" />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t('email_placeholder')}
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg placeholder:text-htg-fg-muted focus:ring-2 focus:ring-htg-sage focus:border-transparent text-base"
+              />
+            </div>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-htg-fg">{t('name_label')}</span>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-htg-fg-muted" />
+              <input
+                type="text"
+                required
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder={t('name_placeholder')}
+                className="w-full pl-11 pr-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg placeholder:text-htg-fg-muted focus:ring-2 focus:ring-htg-sage focus:border-transparent text-base"
+                autoFocus
+              />
+            </div>
+          </label>
+
+          {/* Consent */}
+          {!isNagrania && (
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => { setConsent(e.target.checked); setError(''); }}
+                className="mt-1 w-4 h-4 rounded border-htg-card-border text-htg-sage focus:ring-htg-sage shrink-0 accent-htg-sage"
+              />
+              <span className="text-sm text-htg-fg-muted leading-relaxed">
+                Akceptuję{' '}
+                <a href="/privacy" className="text-htg-indigo hover:underline" target="_blank" rel="noopener">politykę prywatności</a>
+                {' '}i{' '}
+                <a href="/terms" className="text-htg-indigo hover:underline" target="_blank" rel="noopener">regulamin</a>
+              </span>
+            </label>
+          )}
+
+          {error && (
+            <p className="text-red-600 text-sm bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-lg">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={allDisabled || !email || !displayName.trim()}
+            className="bg-htg-sage text-white py-3 px-6 rounded-lg font-medium text-base hover:bg-htg-sage-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+            {t('register_submit')}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setStep('email'); setError(''); setDisplayName(''); }}
+            className="text-htg-fg-muted text-sm hover:text-htg-fg transition-colors flex items-center justify-center gap-1"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t('register_back_to_login')}
+          </button>
+        </form>
+
       /* ─── Main login screen (email step) ─── */
       ) : (
         <div className="flex flex-col gap-5">
@@ -486,14 +601,27 @@ export default function LoginForm() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setNotRegistered(false); }}
                   placeholder={t('email_placeholder')}
                   className="w-full pl-11 pr-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg placeholder:text-htg-fg-muted focus:ring-2 focus:ring-htg-sage focus:border-transparent text-base"
                 />
               </div>
             </label>
 
-            {error && (
+            {notRegistered && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 rounded-lg">
+                <p className="text-amber-800 dark:text-amber-200 text-sm mb-2">{t('error_not_registered')}</p>
+                <button
+                  type="button"
+                  onClick={() => { setNotRegistered(false); setError(''); setStep('register'); }}
+                  className="text-sm font-medium text-htg-sage hover:text-htg-sage-dark underline underline-offset-2"
+                >
+                  {t('register_cta')}
+                </button>
+              </div>
+            )}
+
+            {error && !notRegistered && (
               <p className="text-red-600 text-sm bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-lg">{error}</p>
             )}
 

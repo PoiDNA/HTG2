@@ -37,6 +37,11 @@ export default function LoginForm() {
     const params = new URLSearchParams(window.location.search);
     setReturnTo(params.get('returnTo') || '');
 
+    // Handle auth error redirects
+    const errorParam = params.get('error');
+    if (errorParam === 'not_registered') setError(t('error_not_registered'));
+    else if (errorParam === 'auth_failed') setError(t('error_email'));
+
     // Check if user is already logged in
     supabase.auth.getUser().then(({ data: { user } }) => {
       setLoggedInUser(user);
@@ -55,6 +60,18 @@ export default function LoginForm() {
     return window.location.pathname.split('/')[1] || 'pl';
   }
 
+  /** UX precheck — gives immediate feedback when email is not registered. */
+  async function checkEmailExists(emailToCheck: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(emailToCheck)}`);
+      const data = await res.json();
+      return data.exists === true;
+    } catch {
+      // If precheck fails, let the OTP flow handle it
+      return true;
+    }
+  }
+
   // ─── Magic Link ─────────────────────────────────────────────
   async function handleSendMagicLink(e: React.FormEvent) {
     e.preventDefault();
@@ -62,19 +79,32 @@ export default function LoginForm() {
     setError('');
     setLoading(true);
 
+    if (!await checkEmailExists(email)) {
+      setLoading(false);
+      setError(t('error_not_registered'));
+      return;
+    }
+
     const locale = getLocale();
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        shouldCreateUser: true,
+        shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}/auth/confirm?next=/${locale}${portalHome}`,
       },
     });
 
     setLoading(false);
     if (otpError) {
-      if (otpError.message?.includes('rate limit')) {
+      const code = (otpError as any).code ?? '';
+      const msg = otpError.message?.toLowerCase() ?? '';
+      if (msg.includes('rate limit')) {
         setError(t('error_rate_limit'));
+      } else if (
+        code === 'otp_disabled' || code === 'user_not_found' ||
+        msg.includes('signups not allowed') || msg.includes('user not found')
+      ) {
+        setError(t('error_not_registered'));
       } else {
         setError(t('error_email'));
       }
@@ -90,15 +120,28 @@ export default function LoginForm() {
     setError('');
     setLoading(true);
 
+    if (!await checkEmailExists(email)) {
+      setLoading(false);
+      setError(t('error_not_registered'));
+      return;
+    }
+
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true },
+      options: { shouldCreateUser: false },
     });
 
     setLoading(false);
     if (otpError) {
-      if (otpError.message?.includes('rate limit')) {
+      const code = (otpError as any).code ?? '';
+      const msg = otpError.message?.toLowerCase() ?? '';
+      if (msg.includes('rate limit')) {
         setError(t('error_rate_limit'));
+      } else if (
+        code === 'otp_disabled' || code === 'user_not_found' ||
+        msg.includes('signups not allowed') || msg.includes('user not found')
+      ) {
+        setError(t('error_not_registered'));
       } else {
         setError(t('error_email'));
       }

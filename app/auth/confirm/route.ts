@@ -22,6 +22,15 @@ export async function GET(request: NextRequest) {
   const failRedirect = new URL(`/${locale}/login?error=auth_failed`, origin);
 
   if (!code && !tokenHash) {
+    // OAuth may return error params when signup is blocked
+    const oauthError = searchParams.get('error');
+    const oauthErrorDesc = searchParams.get('error_description');
+    if (oauthError || oauthErrorDesc) {
+      const desc = oauthErrorDesc?.toLowerCase() ?? '';
+      const errorType = (desc.includes('signups not allowed') || oauthError === 'access_denied')
+        ? 'not_registered' : 'auth_failed';
+      return NextResponse.redirect(new URL(`/${locale}/login?error=${errorType}`, origin));
+    }
     return NextResponse.redirect(failRedirect);
   }
 
@@ -55,7 +64,13 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error('Auth confirm error:', error.message);
-    return NextResponse.redirect(failRedirect);
+    const errCode = (error as any).code ?? '';
+    const errMsg = error.message?.toLowerCase() ?? '';
+    const errorType = (
+      errCode === 'otp_disabled' || errCode === 'user_not_found' ||
+      errMsg.includes('signups not allowed') || errMsg.includes('user not found')
+    ) ? 'not_registered' : 'auth_failed';
+    return NextResponse.redirect(new URL(`/${locale}/login?error=${errorType}`, origin));
   }
 
   // Auto-set role based on email

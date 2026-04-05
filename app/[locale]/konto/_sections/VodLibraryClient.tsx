@@ -16,10 +16,7 @@ type Props = {
 };
 
 export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail, listenedSessionIds, bookmarkedSessionIds }: Props) {
-  const [expandedKey, setExpandedKey] = useState<string | null>(() => {
-    const firstNonEmptySection = sections.find(s => s.sessions.length > 0);
-    return firstNonEmptySection ? firstNonEmptySection.monthLabel : (singleSessions.length > 0 ? 'singles' : null);
-  });
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
   const [listened, setListened] = useState<Set<string>>(() => new Set(listenedSessionIds));

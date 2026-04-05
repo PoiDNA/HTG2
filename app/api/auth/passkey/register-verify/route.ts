@@ -60,10 +60,7 @@ export async function POST(req: NextRequest) {
 
   if (dbError) {
     console.error('Passkey store error:', dbError.message, dbError.code, dbError.details);
-    return NextResponse.json({
-      error: 'Failed to store credential',
-      debug: { message: dbError.message, code: dbError.code, hint: dbError.hint },
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to store credential' }, { status: 500 });
   }
 
   const res = NextResponse.json({ verified: true });

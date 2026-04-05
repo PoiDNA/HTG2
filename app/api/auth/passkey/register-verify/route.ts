@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { rpID, origin } from '@/lib/webauthn/config';
+import { getRpID, getOrigin } from '@/lib/webauthn/config';
 import { verifyChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
 
 /**
@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
     verification = await verifyRegistrationResponse({
       response: attResponse,
       expectedChallenge,
-      expectedOrigin: origin,
-      expectedRPID: rpID,
+      expectedOrigin: getOrigin(),
+      expectedRPID: getRpID(),
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { rpName, rpID } from '@/lib/webauthn/config';
+import { rpName, getRpID } from '@/lib/webauthn/config';
 import { signChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
 
 /**
@@ -18,6 +18,16 @@ export async function GET() {
     .from('passkey_credentials')
     .select('credential_id, transports')
     .eq('user_id', user.id);
+
+  let rpID: string;
+  try {
+    rpID = getRpID();
+  } catch (err: any) {
+    if (err.message?.includes('Missing required env var')) {
+      return NextResponse.json({ error: 'Passkeys not configured' }, { status: 501 });
+    }
+    throw err;
+  }
 
   const options = await generateRegistrationOptions({
     rpName,

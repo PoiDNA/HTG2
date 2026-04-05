@@ -1,6 +1,15 @@
 import { createHmac } from 'crypto';
 
-const SECRET = process.env.WEBAUTHN_CHALLENGE_SECRET || 'dev-secret-change-in-production';
+let _secret: string | undefined;
+function getSecret(): string {
+  if (!_secret) {
+    const v = process.env.WEBAUTHN_CHALLENGE_SECRET;
+    if (!v) throw new Error('Missing required env var: WEBAUTHN_CHALLENGE_SECRET');
+    _secret = v;
+  }
+  return _secret;
+}
+
 const MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
 
 interface ChallengePayload {
@@ -17,7 +26,7 @@ export function signChallenge(challenge: string): string {
     expiresAt: Date.now() + MAX_AGE_MS,
   };
   const json = JSON.stringify(payload);
-  const signature = createHmac('sha256', SECRET).update(json).digest('hex');
+  const signature = createHmac('sha256', getSecret()).update(json).digest('hex');
   return `${Buffer.from(json).toString('base64')}.${signature}`;
 }
 
@@ -30,7 +39,7 @@ export function verifyChallenge(cookieValue: string): string | null {
     if (!b64 || !signature) return null;
 
     const json = Buffer.from(b64, 'base64').toString('utf-8');
-    const expected = createHmac('sha256', SECRET).update(json).digest('hex');
+    const expected = createHmac('sha256', getSecret()).update(json).digest('hex');
 
     if (signature !== expected) return null;
 

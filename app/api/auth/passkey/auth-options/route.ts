@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
-import { rpID } from '@/lib/webauthn/config';
+import { getRpID } from '@/lib/webauthn/config';
 import { signChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
 
 /**
@@ -9,20 +9,27 @@ import { signChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
  * Uses discoverable credentials (passkeys stored on device).
  */
 export async function POST() {
-  const options = await generateAuthenticationOptions({
-    rpID,
-    userVerification: 'preferred',
-    // Empty allowCredentials = discoverable credentials (resident keys)
-  });
+  try {
+    const options = await generateAuthenticationOptions({
+      rpID: getRpID(),
+      userVerification: 'preferred',
+      // Empty allowCredentials = discoverable credentials (resident keys)
+    });
 
-  const response = NextResponse.json(options);
-  response.cookies.set(CHALLENGE_COOKIE_NAME, signChallenge(options.challenge), {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    maxAge: 300,
-    path: '/',
-  });
+    const response = NextResponse.json(options);
+    response.cookies.set(CHALLENGE_COOKIE_NAME, signChallenge(options.challenge), {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 300,
+      path: '/',
+    });
 
-  return response;
+    return response;
+  } catch (err: any) {
+    if (err.message?.includes('Missing required env var')) {
+      return NextResponse.json({ error: 'Passkeys not configured' }, { status: 501 });
+    }
+    throw err;
+  }
 }

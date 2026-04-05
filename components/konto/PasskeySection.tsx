@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Fingerprint, Plus, Trash2, Loader2, Smartphone } from 'lucide-react';
+import { KeyRound, Plus, Trash2, Loader2, Smartphone } from 'lucide-react';
 
 interface PasskeyCredential {
   id: string;
@@ -51,13 +51,9 @@ export function PasskeySection({ labels }: PasskeySectionProps) {
   }, [supabase]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.PublicKeyCredential) {
-      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable?.()
-        .then(available => {
-          setSupported(available);
-          if (available) loadPasskeys();
-        })
-        .catch(() => {});
+    if (typeof window !== 'undefined' && window.PublicKeyCredential && window.isSecureContext) {
+      setSupported(true);
+      loadPasskeys();
     }
   }, [loadPasskeys]);
 
@@ -135,7 +131,7 @@ export function PasskeySection({ labels }: PasskeySectionProps) {
   return (
     <div className="border-t border-htg-card-border pt-6">
       <h3 className="text-lg font-semibold text-htg-fg mb-4 flex items-center gap-2">
-        <Fingerprint className="w-5 h-5" />
+        <KeyRound className="w-5 h-5" />
         {labels.title}
       </h3>
 
@@ -197,7 +193,7 @@ export function PasskeySection({ labels }: PasskeySectionProps) {
             disabled={loading}
             className="bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50 flex items-center gap-2"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Fingerprint className="w-4 h-4" />}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
             {labels.add}
           </button>
         </div>

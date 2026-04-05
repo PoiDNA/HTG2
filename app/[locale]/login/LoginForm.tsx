@@ -99,20 +99,16 @@ export default function LoginForm() {
         useBrowserAutofill: true,
       });
 
-      // User selected a passkey from autofill — verify it
-      setLoading(true);
+      // User selected a passkey from autofill — verify it (fully silent, no UI state changes)
       const verifyRes = await fetch('/api/auth/passkey/auth-verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ response: authResponse }),
       });
 
-      if (!verifyRes.ok) {
-        setLoading(false);
-        setError(t('error_passkey'));
-        return;
-      }
+      if (!verifyRes.ok) return; // Silent fail — user can still use email/OTP
 
+      // Success — redirect to account
       await handlePostLogin();
     } catch {
       // Silent — user didn't select passkey, cancelled, or no credential available

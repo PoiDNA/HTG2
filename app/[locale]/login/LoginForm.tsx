@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
@@ -23,10 +23,10 @@ export default function LoginForm() {
   const [displayName, setDisplayName] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
   const [returnTo, setReturnTo] = useState('');
-  const [supportsPasskey, setSupportsPasskey] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState<SupabaseUser | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [notRegistered, setNotRegistered] = useState(false);
+  const passkeyAbortRef = useRef<AbortController | null>(null);
 
   const supabase = createSupabaseBrowser();
 
@@ -49,10 +49,15 @@ export default function LoginForm() {
       setCheckingSession(false);
     });
 
-    // Check if browser supports WebAuthn (platform + cross-device + synced passkeys)
+    // Start Conditional UI — passkey appears in email input autofill dropdown
     if (typeof window !== 'undefined' && window.PublicKeyCredential && window.isSecureContext) {
-      setSupportsPasskey(true);
+      startConditionalPasskey();
     }
+
+    return () => {
+      // Abort conditional mediation on unmount
+      passkeyAbortRef.current?.abort();
+    };
   }, []);
 
   function getLocale() {
@@ -68,6 +73,49 @@ export default function LoginForm() {
     } catch {
       // If precheck fails, let the OTP flow handle it
       return true;
+    }
+  }
+
+  // ─── Passkey Conditional UI ──────────────────────────────────
+  async function startConditionalPasskey() {
+    try {
+      const available = await PublicKeyCredential.isConditionalMediationAvailable?.();
+      if (!available) return;
+
+      const { startAuthentication } = await import('@simplewebauthn/browser');
+
+      const optionsRes = await fetch('/api/auth/passkey/auth-options', { method: 'POST' });
+      if (!optionsRes.ok) return; // Passkey not configured — silently skip
+
+      const options = await optionsRes.json();
+
+      // Create abort controller for cleanup
+      const abort = new AbortController();
+      passkeyAbortRef.current = abort;
+
+      // Start conditional mediation — passkey appears in email autofill dropdown
+      const authResponse = await startAuthentication({
+        optionsJSON: options,
+        useBrowserAutofill: true,
+      });
+
+      // User selected a passkey from autofill — verify it
+      setLoading(true);
+      const verifyRes = await fetch('/api/auth/passkey/auth-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response: authResponse }),
+      });
+
+      if (!verifyRes.ok) {
+        setLoading(false);
+        setError(t('error_passkey'));
+        return;
+      }
+
+      await handlePostLogin();
+    } catch {
+      // Silent — user didn't select passkey, cancelled, or no credential available
     }
   }
 
@@ -230,52 +278,6 @@ export default function LoginForm() {
     // On success, browser redirects to OAuth provider
   }
 
-  // ─── Passkey ────────────────────────────────────────────────
-  async function handlePasskeyLogin() {
-    if (!consent) { setError(t('consent_required')); return; }
-    setError('');
-    setLoading(true);
-
-    try {
-      const { startAuthentication } = await import('@simplewebauthn/browser');
-
-      // Get auth options from server
-      const optionsRes = await fetch('/api/auth/passkey/auth-options', { method: 'POST' });
-      if (!optionsRes.ok) {
-        if (optionsRes.status === 501) {
-          // Passkey not configured on this environment
-          setLoading(false);
-          return;
-        }
-        throw new Error('Failed to get auth options');
-      }
-      const options = await optionsRes.json();
-
-      // Trigger browser biometric prompt
-      const authResponse = await startAuthentication({ optionsJSON: options });
-
-      // Verify with server
-      const verifyRes = await fetch('/api/auth/passkey/auth-verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ response: authResponse }),
-      });
-
-      if (!verifyRes.ok) {
-        const err = await verifyRes.json();
-        throw new Error(err.error || 'Verification failed');
-      }
-
-      // Session cookies are set by the server, call post-login then redirect
-      await handlePostLogin();
-    } catch (err: any) {
-      setLoading(false);
-      // NotAllowedError = user cancelled — silent fallback
-      if (err.name === 'NotAllowedError') return;
-      setError(t('error_passkey'));
-    }
-  }
-
   // ─── Centralized Post-Login ─────────────────────────────────
   async function handlePostLogin() {
     try {
@@ -375,18 +377,7 @@ export default function LoginForm() {
            step === 'register' ? t('register_title') :
            t('login_title')}
         </h1>
-        {step === 'email' && !isNagrania && supportsPasskey && (
-          <button
-            type="button"
-            onClick={handlePasskeyLogin}
-            disabled={loading}
-            title="Zaloguj się kluczem dostępu"
-            aria-label="Zaloguj się kluczem dostępu"
-            className="p-2 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors disabled:opacity-40"
-          >
-            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <KeyRound className="w-6 h-6" />}
-          </button>
-        )}
+        {/* Passkey login is handled via Conditional UI (autofill on email input) */}
       </div>
 
       {/* ─── Name step (new users) ─── */}
@@ -609,6 +600,7 @@ export default function LoginForm() {
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setNotRegistered(false); }}
                   placeholder={t('email_placeholder')}
+                  autoComplete="username webauthn"
                   className="w-full pl-11 pr-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg placeholder:text-htg-fg-muted focus:ring-2 focus:ring-htg-sage focus:border-transparent text-base"
                 />
               </div>

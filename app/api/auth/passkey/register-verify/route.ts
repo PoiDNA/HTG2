@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { getRpID, getOrigin } from '@/lib/webauthn/config';
 import { verifyChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
 
@@ -44,8 +45,9 @@ export async function POST(req: NextRequest) {
 
   const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
 
-  // Store credential in DB
-  const { error: dbError } = await supabase.from('passkey_credentials').insert({
+  // Store credential in DB (service role bypasses RLS)
+  const db = createSupabaseServiceRole();
+  const { error: dbError } = await db.from('passkey_credentials').insert({
     user_id: user.id,
     credential_id: credential.id,
     public_key: Buffer.from(credential.publicKey).toString('base64'),
@@ -57,6 +59,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (dbError) {
+    console.error('Passkey store error:', dbError.message, dbError.code, dbError.details);
     return NextResponse.json({ error: 'Failed to store credential' }, { status: 500 });
   }
 

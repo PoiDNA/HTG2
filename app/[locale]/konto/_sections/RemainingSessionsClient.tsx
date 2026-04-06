@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, Plus, Check, ChevronDown, Clock, X, ShoppingCart, Loader2, Play } from 'lucide-react';
+import { ShoppingBag, Check, ChevronDown, Clock, X, ShoppingCart, Loader2, Play } from 'lucide-react';
 import FontSizeToggle from '@/components/FontSizeToggle';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -42,7 +42,6 @@ function splitSentences(text: string): string[] {
 export default function RemainingSessionsClient({ months, prices }: Props) {
   const router = useRouter();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const [selectedSessions, setSelectedSessions] = useState<Record<string, boolean>>({});
   const [selectedMonths, setSelectedMonths] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
 
@@ -52,16 +51,6 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
 
   // ── Cart helpers ──────────────────────────────────────────────
 
-  const toggleSession = (sessionId: string, monthId: string) => {
-    if (selectedMonths[monthId]) return;
-    setSelectedSessions(prev => {
-      const next = { ...prev };
-      if (next[sessionId]) delete next[sessionId];
-      else next[sessionId] = true;
-      return next;
-    });
-  };
-
   const toggleMonth = (month: MonthInfo) => {
     setSelectedMonths(prev => {
       const next = { ...prev };
@@ -69,54 +58,39 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
         delete next[month.monthLabel];
       } else {
         next[month.monthLabel] = true;
-        const sessionIdsInMonth = new Set(month.sessions.map(s => s.id));
-        setSelectedSessions(prevS => {
-          const nextS = { ...prevS };
-          for (const id of Object.keys(nextS)) {
-            if (sessionIdsInMonth.has(id)) delete nextS[id];
-          }
-          return nextS;
-        });
       }
       return next;
     });
   };
 
   const clearCart = () => {
-    setSelectedSessions({});
     setSelectedMonths({});
   };
 
   // ── Cart calculations ──────────────────────────────────────────
 
-  const sessionCount = Object.keys(selectedSessions).length;
   const monthCount = Object.keys(selectedMonths).length;
-  const totalItems = sessionCount + monthCount;
-  const totalPrice = (sessionCount * prices.sessionAmount + monthCount * prices.monthlyAmount) / 100;
+  const totalItems = monthCount;
+  const totalPrice = (monthCount * prices.monthlyAmount) / 100;
 
-  const cartLabel = [
-    sessionCount > 0 ? `${sessionCount} ${sessionCount === 1 ? 'sesja' : sessionCount < 5 ? 'sesje' : 'sesji'}` : null,
-    monthCount > 0 ? `${monthCount} ${monthCount === 1 ? 'pakiet' : monthCount < 5 ? 'pakiety' : 'pakietów'}` : null,
-  ].filter(Boolean).join(', ');
+  const cartLabel = monthCount > 0
+    ? `${monthCount} ${monthCount === 1 ? 'pakiet' : monthCount < 5 ? 'pakiety' : 'pakietów'}`
+    : '';
 
   // ── Checkout ──────────────────────────────────────────────────
 
   async function handleCheckout() {
     setLoading(true);
     try {
-      const sessionIds = Object.keys(selectedSessions);
       const monthLabels = Object.keys(selectedMonths);
 
       const body: Record<string, any> = {
-        priceId: sessionIds.length > 0 ? prices.sessionPriceId : prices.monthlyPriceId,
+        priceId: prices.monthlyPriceId,
         mode: 'payment',
-        quantity: sessionIds.length > 0 ? sessionIds.length : monthLabels.length,
+        quantity: monthLabels.length,
         metadata: {
-          type: sessionIds.length > 0 && monthLabels.length > 0
-            ? 'sessions'
-            : sessionIds.length > 0 ? 'sessions' : 'monthly',
-          sessionIds: sessionIds.length > 0 ? JSON.stringify(sessionIds) : '',
-          monthLabels: monthLabels.length > 0 ? JSON.stringify(monthLabels) : '',
+          type: 'monthly',
+          monthLabels: JSON.stringify(monthLabels),
           return_path: '/konto',
         },
       };
@@ -208,10 +182,6 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                       <ShopSessionCard
                         key={session.id}
                         session={session}
-                        inCart={!!selectedSessions[session.id] || isMonthInCart}
-                        monthInCart={isMonthInCart}
-                        priceLabel={`${prices.sessionAmount / 100} PLN`}
-                        onToggle={() => toggleSession(session.id, month.id)}
                       />
                     ))}
                   </div>
@@ -255,16 +225,8 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
 
 function ShopSessionCard({
   session,
-  inCart,
-  monthInCart,
-  priceLabel,
-  onToggle,
 }: {
   session: SessionInfo;
-  inCart: boolean;
-  monthInCart: boolean;
-  priceLabel: string;
-  onToggle: () => void;
 }) {
   const [expandedDesc, setExpandedDesc] = useState(false);
   const [sentenceIndex, setSentenceIndex] = useState(0);
@@ -291,30 +253,13 @@ function ShopSessionCard({
   return (
     <div className="border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30">
       <div className="p-4 space-y-3">
-        {/* Top row: Play icon + toggles left, add-to-cart button right */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center">
-              <Play className="w-5 h-5 text-htg-sage" />
-            </div>
-            <FontSizeToggle />
-            <ThemeToggle />
+        {/* Top row: Play icon + toggles */}
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center">
+            <Play className="w-5 h-5 text-htg-sage" />
           </div>
-          <button
-            onClick={onToggle}
-            disabled={monthInCart}
-            className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              inCart
-                ? 'bg-htg-sage text-white'
-                : 'bg-htg-surface border border-htg-card-border text-htg-fg hover:border-htg-sage/40'
-            } disabled:opacity-60`}
-          >
-            {inCart ? (
-              <><Check className="w-4 h-4" /> Dodano</>
-            ) : (
-              <><Plus className="w-4 h-4" /> Dodaj · {priceLabel}</>
-            )}
-          </button>
+          <FontSizeToggle />
+          <ThemeToggle />
         </div>
         {/* Title + description below */}
         <div className="space-y-2">

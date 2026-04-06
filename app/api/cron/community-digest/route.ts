@@ -39,10 +39,10 @@ export async function GET() {
 
   const prefsMap = new Map((prefs ?? []).map(p => [p.user_id, p.email_digest]));
 
-  // Filter users who want weekly digest (or have no preference = default weekly)
+  // Filter users who explicitly opted in to weekly digest
   const digestUserIds = uniqueUserIds.filter(uid => {
     const pref = prefsMap.get(uid);
-    return !pref || pref === 'weekly';
+    return pref === 'weekly' || pref === 'daily';
   });
 
   if (digestUserIds.length === 0) {

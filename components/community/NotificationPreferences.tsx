@@ -92,7 +92,7 @@ export function NotificationPreferences() {
         </label>
         <div className="space-y-2">
           <Toggle
-            label="Włączone"
+            label={prefs.push_enabled ? 'Włączone' : 'Wyłączone'}
             checked={prefs.push_enabled}
             onChange={(v) => updatePref('push_enabled', v)}
           />

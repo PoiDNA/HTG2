@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { getRoleForEmail } from '@/lib/roles';
-import { sendWelcomeEmail } from '@/lib/email/resend';
+import { sendWelcomeEmail, sendInvitationAccepted } from '@/lib/email/resend';
 
 /**
  * POST /api/auth/post-login
@@ -91,6 +91,62 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* Non-blocking */ }
   }
+
+  // 6. Convert external invitations for this email (idempotent — runs every login)
+  try {
+    const userEmail = user.email?.toLowerCase();
+    if (userEmail) {
+      const db = createSupabaseServiceRole();
+
+      // Lazy-expire old invitations
+      await db
+        .from('external_invitations')
+        .update({ status: 'expired' })
+        .eq('email', userEmail)
+        .eq('status', 'sent')
+        .lt('expires_at', new Date().toISOString());
+
+      // Convert active invitations
+      const { data: pending } = await db
+        .from('external_invitations')
+        .select('id, inviter_id')
+        .eq('email', userEmail)
+        .eq('status', 'sent')
+        .gt('expires_at', new Date().toISOString());
+
+      if (pending?.length) {
+        await db
+          .from('external_invitations')
+          .update({
+            status: 'registered',
+            registered_user_id: user.id,
+            registered_at: new Date().toISOString(),
+          })
+          .in('id', pending.map(i => i.id));
+
+        // Notify each inviter (fire-and-forget)
+        const newUserName = user.user_metadata?.display_name
+          || user.user_metadata?.full_name
+          || userEmail.split('@')[0];
+
+        for (const inv of pending) {
+          const { data: inviterProfile } = await db
+            .from('profiles')
+            .select('email, display_name')
+            .eq('id', inv.inviter_id)
+            .single();
+
+          if (inviterProfile?.email) {
+            void sendInvitationAccepted(inviterProfile.email, {
+              inviterName: inviterProfile.display_name || inviterProfile.email.split('@')[0],
+              newUserName,
+              newUserEmail: userEmail,
+            }).catch(() => {});
+          }
+        }
+      }
+    }
+  } catch { /* Non-blocking */ }
 
   return NextResponse.json({ isNew, role });
 }

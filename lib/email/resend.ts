@@ -9,6 +9,10 @@ function getResend() {
 const FROM_EMAIL = 'HTG <sesje@htgcyou.com>';
 const REPLY_TO = 'htg@htg.cyou';
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 export async function sendOrderConfirmation(to: string, data: {
   name: string;
   productName: string;
@@ -241,6 +245,74 @@ export async function sendPaymentFailedNotification(to: string, data: {
         </div>
         <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
           <p>XX Operator PSA | htg@htg.cyou</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
+export async function sendInvitationEmail(to: string, data: {
+  inviterName: string;
+  personalMessage?: string;
+  registerUrl: string;
+}) {
+  const name = escapeHtml(data.inviterName);
+  const messageBlock = data.personalMessage
+    ? `<div style="background: white; border-left: 4px solid #CC9544; padding: 16px 20px; margin: 20px 0; border-radius: 4px;"><p style="margin: 0; font-style: italic; color: #444;">&bdquo;${escapeHtml(data.personalMessage)}&rdquo;</p></div>`
+    : '';
+
+  return getResend().emails.send({
+    from: FROM_EMAIL,
+    to,
+    replyTo: REPLY_TO,
+    subject: `${data.inviterName} zaprasza Cię do HTG`,
+    html: `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; color: #1a1a2e;">
+        <div style="background: #1a1a2e; padding: 32px; text-align: center;">
+          <h1 style="color: #c9b97a; margin: 0; font-size: 28px;">HTG</h1>
+          <p style="color: #a0a0b0; margin: 8px 0 0;">Hacking The Game</p>
+        </div>
+        <div style="padding: 32px; background: #f8f6f0;">
+          <h2 style="color: #1a1a2e; margin-top: 0;">Zaproszenie do HTG</h2>
+          <p><strong>${name}</strong> zaprasza Cię do społeczności HTG — Hacking The Game.</p>
+          <p>HTG to przestrzeń rozwoju osobistego i duchowego, prowadzona przez Natalię. Dołącz, aby uzyskać dostęp do sesji grupowych, nagrań i społeczności.</p>
+          ${messageBlock}
+          <a href="${escapeHtml(data.registerUrl)}" style="display: inline-block; background: #8B9E7C; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Dołącz do HTG →</a>
+          <p style="margin-top: 20px; color: #666; font-size: 13px;">Kliknij powyżej, aby utworzyć konto. Rejestracja jest bezpłatna.</p>
+        </div>
+        <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
+          <p>HTG Operator PSA | htg@htg.cyou</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
+export async function sendInvitationAccepted(to: string, data: {
+  inviterName: string;
+  newUserName: string;
+  newUserEmail: string;
+}) {
+  return getResend().emails.send({
+    from: FROM_EMAIL,
+    to,
+    replyTo: REPLY_TO,
+    subject: 'Twoje zaproszenie zadziałało!',
+    html: `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; color: #1a1a2e;">
+        <div style="background: #1a1a2e; padding: 32px; text-align: center;">
+          <h1 style="color: #c9b97a; margin: 0; font-size: 28px;">HTG</h1>
+          <p style="color: #a0a0b0; margin: 8px 0 0;">Hacking The Game</p>
+        </div>
+        <div style="padding: 32px; background: #f8f6f0;">
+          <h2 style="color: #1a1a2e; margin-top: 0;">Ktoś dołączył z Twojego zaproszenia!</h2>
+          <p>Cześć ${escapeHtml(data.inviterName)},</p>
+          <p><strong>${escapeHtml(data.newUserName)}</strong> (${escapeHtml(data.newUserEmail)}) właśnie dołączył/a do HTG z Twojego zaproszenia.</p>
+          <p>Możesz dodać tę osobę do swoich znajomych:</p>
+          <a href="https://htgcyou.com/pl/konto/polubieni" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Zobacz znajomych →</a>
+        </div>
+        <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
+          <p>HTG Operator PSA | htg@htg.cyou</p>
         </div>
       </div>
     `,

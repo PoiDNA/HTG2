@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Plus, Check, ChevronDown, Clock, X, ShoppingCart, Loader2, Play } from 'lucide-react';
+import FontSizeToggle from '@/components/FontSizeToggle';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface SessionInfo {
   id: string;
@@ -289,8 +291,12 @@ function ShopSessionCard({
   return (
     <div className="border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30">
       <div className="p-4 flex flex-col md:flex-row md:items-start gap-4">
-        <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center shrink-0">
-          <Play className="w-5 h-5 text-htg-sage" />
+        <div className="flex flex-col items-center gap-2 shrink-0">
+          <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center">
+            <Play className="w-5 h-5 text-htg-sage" />
+          </div>
+          <FontSizeToggle />
+          <ThemeToggle />
         </div>
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">

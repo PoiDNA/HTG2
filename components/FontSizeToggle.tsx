@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AArrowUp } from 'lucide-react';
 
 const LEVELS = [100, 120, 140, 160]; // % of base font size
 const LABELS = ['A', 'A+', 'A++', 'A+++'];
+const FONT_CHANGE_EVENT = 'htg-font-change';
 
 export default function FontSizeToggle() {
   const [level, setLevel] = useState(1); // default A+
@@ -21,6 +21,19 @@ export default function FontSizeToggle() {
     }
   }, []);
 
+  // Sync multiple instances via CustomEvent (storage event doesn't fire in same tab)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const idx = (e as CustomEvent<number>).detail;
+      if (idx >= 0 && idx < LEVELS.length) {
+        setLevel(idx);
+        applyFontSize(idx);
+      }
+    };
+    window.addEventListener(FONT_CHANGE_EVENT, handler);
+    return () => window.removeEventListener(FONT_CHANGE_EVENT, handler);
+  }, []);
+
   function applyFontSize(idx: number) {
     document.documentElement.style.fontSize = `${LEVELS[idx]}%`;
   }
@@ -30,6 +43,7 @@ export default function FontSizeToggle() {
     setLevel(next);
     applyFontSize(next);
     localStorage.setItem('htg-font-level', String(next));
+    window.dispatchEvent(new CustomEvent(FONT_CHANGE_EVENT, { detail: next }));
   }
 
   return (

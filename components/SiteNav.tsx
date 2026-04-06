@@ -162,10 +162,10 @@ function GhostNavLink({ href, label, pathname }: { href: string; label: string; 
   return (
     <Link
       href={href}
-      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+      className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-300 border ${
         isActive
-          ? 'text-htg-fg opacity-100'
-          : 'text-htg-fg opacity-25 hover:opacity-100'
+          ? 'bg-htg-fg/10 text-htg-fg border-htg-fg/20'
+          : 'text-htg-fg/30 border-transparent hover:text-htg-fg/80 hover:bg-htg-fg/5 hover:border-htg-fg/10'
       }`}
     >
       {label}

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, Plus, Check, ChevronDown, Clock, X, ShoppingCart, Loader2 } from 'lucide-react';
+import { ShoppingBag, Plus, Check, ChevronDown, Clock, X, ShoppingCart, Loader2, Play } from 'lucide-react';
 
 interface SessionInfo {
   id: string;
@@ -31,6 +31,12 @@ interface Props {
   prices: Prices;
 }
 
+function splitSentences(text: string): string[] {
+  // Split on ? ! . followed by space or end, keeping punctuation
+  const parts = text.split(/(?<=[.?!])\s+/).map(s => s.trim()).filter(Boolean);
+  return parts.length > 0 ? parts : [text];
+}
+
 export default function RemainingSessionsClient({ months, prices }: Props) {
   const router = useRouter();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -45,7 +51,6 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
   // ── Cart helpers ──────────────────────────────────────────────
 
   const toggleSession = (sessionId: string, monthId: string) => {
-    // If whole month is in cart, don't allow individual session toggling
     if (selectedMonths[monthId]) return;
     setSelectedSessions(prev => {
       const next = { ...prev };
@@ -62,7 +67,6 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
         delete next[month.monthLabel];
       } else {
         next[month.monthLabel] = true;
-        // Remove individual sessions from this month (package replaces them)
         const sessionIdsInMonth = new Set(month.sessions.map(s => s.id));
         setSelectedSessions(prevS => {
           const nextS = { ...prevS };
@@ -107,7 +111,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
         quantity: sessionIds.length > 0 ? sessionIds.length : monthLabels.length,
         metadata: {
           type: sessionIds.length > 0 && monthLabels.length > 0
-            ? 'sessions' // mixed: send sessions, months handled by checkout route
+            ? 'sessions'
             : sessionIds.length > 0 ? 'sessions' : 'monthly',
           sessionIds: sessionIds.length > 0 ? JSON.stringify(sessionIds) : '',
           monthLabels: monthLabels.length > 0 ? JSON.stringify(monthLabels) : '',
@@ -124,7 +128,6 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
       const data = await res.json();
       if (res.status === 401) { router.push('/login'); return; }
       if (res.status === 400) {
-        // Already owned or empty cart after filtering
         clearCart();
         router.refresh();
         return;
@@ -171,7 +174,6 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                   }`} />
                 </button>
 
-                {/* Add month button */}
                 {monthCheaper ? (
                   <button
                     onClick={() => toggleMonth(month)}
@@ -199,46 +201,17 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                 expandedKey === month.monthLabel ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
               }`}>
                 <div className="overflow-hidden">
-                  <div className="p-4 pt-0 border-t border-htg-card-border space-y-3">
-                    {month.sessions.map(session => {
-                      const inCart = !!selectedSessions[session.id] || isMonthInCart;
-
-                      return (
-                        <div
-                          key={session.id}
-                          className="border border-htg-card-border rounded-lg bg-htg-surface/30 p-4 flex flex-col sm:flex-row sm:items-start gap-3"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-htg-fg text-sm">{session.title}</h4>
-                            {session.durationMinutes && (
-                              <div className="flex items-center gap-1.5 text-xs text-htg-fg-muted mt-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>{session.durationMinutes} min</span>
-                              </div>
-                            )}
-                            {session.description && (
-                              <p className="text-xs text-htg-fg-muted mt-1.5 line-clamp-2">{session.description}</p>
-                            )}
-                          </div>
-
-                          <button
-                            onClick={() => toggleSession(session.id, month.id)}
-                            disabled={isMonthInCart}
-                            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                              inCart
-                                ? 'bg-htg-sage text-white'
-                                : 'bg-htg-surface border border-htg-card-border text-htg-fg hover:border-htg-sage/40'
-                            } disabled:opacity-60`}
-                          >
-                            {inCart ? (
-                              <><Check className="w-3.5 h-3.5" /> Dodano</>
-                            ) : (
-                              <><Plus className="w-3.5 h-3.5" /> Dodaj · {prices.sessionAmount / 100} PLN</>
-                            )}
-                          </button>
-                        </div>
-                      );
-                    })}
+                  <div className="p-4 pt-0 border-t border-htg-card-border space-y-4">
+                    {month.sessions.map(session => (
+                      <ShopSessionCard
+                        key={session.id}
+                        session={session}
+                        inCart={!!selectedSessions[session.id] || isMonthInCart}
+                        monthInCart={isMonthInCart}
+                        priceLabel={`${prices.sessionAmount / 100} PLN`}
+                        onToggle={() => toggleSession(session.id, month.id)}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -273,5 +246,121 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
         </div>
       )}
     </section>
+  );
+}
+
+// ── Session card (matching VodLibrary design) ───────────────────
+
+function ShopSessionCard({
+  session,
+  inCart,
+  monthInCart,
+  priceLabel,
+  onToggle,
+}: {
+  session: SessionInfo;
+  inCart: boolean;
+  monthInCart: boolean;
+  priceLabel: string;
+  onToggle: () => void;
+}) {
+  const [expandedDesc, setExpandedDesc] = useState(false);
+  const [sentenceIndex, setSentenceIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  const sentences = useMemo(
+    () => (session.description ? splitSentences(session.description) : []),
+    [session.description],
+  );
+
+  // Auto-rotate sentences (fade effect) — pause on hover or when expanded
+  useEffect(() => {
+    if (sentences.length < 2 || expandedDesc || paused) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) return;
+    const id = setInterval(() => {
+      setSentenceIndex(prev => (prev + 1) % sentences.length);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [sentences.length, expandedDesc, paused]);
+
+  const canExpand = sentences.length > 1 && (session.description?.length ?? 0) > 100;
+
+  return (
+    <div className="border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30">
+      <div className="p-4 flex flex-col md:flex-row md:items-start gap-4">
+        <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center shrink-0">
+          <Play className="w-5 h-5 text-htg-sage" />
+        </div>
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div>
+              <h4 className="font-semibold text-htg-fg">{session.title}</h4>
+              {session.durationMinutes && (
+                <div className="flex items-center gap-1.5 text-sm text-htg-fg-muted mt-1">
+                  <Clock className="w-4 h-4" />
+                  <span>{session.durationMinutes} min</span>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={onToggle}
+              disabled={monthInCart}
+              className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                inCart
+                  ? 'bg-htg-sage text-white'
+                  : 'bg-htg-surface border border-htg-card-border text-htg-fg hover:border-htg-sage/40'
+              } disabled:opacity-60`}
+            >
+              {inCart ? (
+                <><Check className="w-4 h-4" /> Dodano</>
+              ) : (
+                <><Plus className="w-4 h-4" /> Dodaj · {priceLabel}</>
+              )}
+            </button>
+          </div>
+
+          {session.description && (
+            <div
+              className="mt-2 text-sm text-htg-fg-muted"
+              onMouseEnter={() => setPaused(true)}
+              onMouseLeave={() => setPaused(false)}
+            >
+              {expandedDesc ? (
+                <div className="space-y-0">
+                  {sentences.map((sentence, i) => (
+                    <span key={i}>
+                      {sentence}{' '}
+                      {i < sentences.length - 1 && (i + 1) % 5 === 0 && (
+                        <span className="flex items-center justify-center gap-2 my-3 text-htg-sage/40" aria-hidden="true">
+                          <span className="h-px flex-1 bg-htg-sage/20" />
+                          <span className="text-xs">✦</span>
+                          <span className="h-px flex-1 bg-htg-sage/20" />
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p
+                  key={sentenceIndex}
+                  className={`line-clamp-2 ${sentences.length > 1 ? 'animate-[fadeIn_500ms_ease-in-out]' : ''}`}
+                >
+                  {sentences[sentenceIndex]}
+                </p>
+              )}
+              {canExpand && (
+                <button
+                  onClick={() => setExpandedDesc(!expandedDesc)}
+                  className="text-htg-sage hover:underline mt-1 font-medium"
+                >
+                  {expandedDesc ? 'Zwiń' : 'Rozwiń'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

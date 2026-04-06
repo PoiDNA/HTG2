@@ -407,6 +407,7 @@ export default async function IndividualSessionsPage({
 
           <SessionPicker
             sessions={sessionOptions}
+            userEmail={userEmail}
             labels={{
               choose: tInd('choose_session'),
               date_label: tInd('date_label'),

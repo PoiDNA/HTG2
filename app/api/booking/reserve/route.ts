@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { sendBookingConfirmation } from '@/lib/email/resend';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
@@ -13,10 +14,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { slotId, topics } = await request.json();
+    const { slotId, topics, paymentMethod, proofPath, proofFilename } = await request.json();
 
     if (!slotId) {
       return NextResponse.json({ error: 'slotId required' }, { status: 400 });
+    }
+
+    // Validate bank transfer params
+    if (paymentMethod === 'transfer') {
+      if (!proofPath || !proofFilename) {
+        return NextResponse.json({ error: 'proofPath and proofFilename required for bank transfer' }, { status: 400 });
+      }
+      // Anti-IDOR: proof path must start with user's own folder
+      const expectedPrefix = `${user.id}/`;
+      if (!proofPath.startsWith(expectedPrefix) || !(/^[a-f0-9-]+\/\d+\.\w+$/.test(proofPath))) {
+        return NextResponse.json({ error: 'Invalid proof path' }, { status: 400 });
+      }
     }
 
     const { data, error } = await supabase.rpc('reserve_slot', {
@@ -29,7 +42,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // Send booking confirmation email (non-blocking)
+    // For bank transfer: update booking with proof and extend expiry via service role
+    if (paymentMethod === 'transfer') {
+      const db = createSupabaseServiceRole();
+      const sevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      await db.from('bookings')
+        .update({
+          payment_status: 'pending_verification',
+          transfer_proof_url: proofPath,
+          transfer_proof_filename: proofFilename,
+          expires_at: sevenDays,
+        })
+        .eq('id', data);
+
+      await db.from('booking_slots')
+        .update({ held_until: sevenDays })
+        .eq('id', slotId);
+
+      // TODO: notify admin via email when sendAdminNotification is available
+      console.log(`[TRANSFER] New bank transfer booking ${data} — pending verification`);
+
+      return NextResponse.json({ success: true, booking_id: data, paymentMethod: 'transfer' });
+    }
+
+    // Send booking confirmation email (non-blocking) — Stripe flow
     try {
       const { data: slot } = await supabase
         .from('booking_slots')

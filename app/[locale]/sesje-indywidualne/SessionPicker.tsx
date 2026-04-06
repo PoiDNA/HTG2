@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from '@/i18n-config';
 import { PRODUCT_SLUGS, SESSION_CONFIG } from '@/lib/booking/constants';
-import { User, Users, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap, Heart, Gift } from 'lucide-react';
+import { User, Users, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap, Heart, Gift, Upload, X, Banknote } from 'lucide-react';
+import BankTransferCard from '@/components/booking/BankTransferCard';
 
 interface SessionOption {
   slug: string;
@@ -26,6 +27,7 @@ interface SlotInfo {
 
 interface SessionPickerProps {
   sessions: SessionOption[];
+  userEmail?: string;
   labels: {
     choose: string;
     date_label: string;
@@ -41,7 +43,7 @@ interface SessionPickerProps {
 const DAYS_PL = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 const MONTHS_PL = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
 
-export function SessionPicker({ sessions, labels }: SessionPickerProps) {
+export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProps) {
   // 'solo' | 'asysta' | 'para' | null
   const [selectedGroup, setSelectedGroup] = useState<'solo' | 'asysta' | 'para' | null>(null);
   // slug of chosen assistant session (sesja-natalia-agata or sesja-natalia-justyna)
@@ -58,6 +60,9 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
   const [loading, setLoading] = useState(false);
   const [wantAcceleration, setWantAcceleration] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'full' | 'installments'>('full');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'transfer'>('stripe');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [isGift, setIsGift] = useState(false);
   const [giftEmail, setGiftEmail] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
@@ -177,8 +182,69 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
 
   async function handleCheckout() {
     if (!selectedSession || payAmount <= 0) return;
-    if (!selectedSession.priceId) return;
     if (!recordingConsent) return;
+
+    // Bank transfer flow
+    if (paymentMethod === 'transfer' && paymentMode === 'full') {
+      if (!proofFile) return;
+      if (!selectedSlotId) return;
+      setLoading(true);
+      try {
+        const { createSupabaseBrowser } = await import('@/lib/supabase/client');
+        const supabase = createSupabaseBrowser();
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!currentUser) { router.push('/login' as any); return; }
+
+        // Record consent
+        try {
+          await supabase.from('consent_records').insert({
+            user_id: currentUser.id,
+            consent_type: 'recording_publication',
+            granted: true,
+            consent_text: 'Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu. Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.',
+          });
+        } catch { /* Non-blocking */ }
+
+        // Upload proof to Supabase Storage
+        const ext = proofFile.name.split('.').pop() || 'bin';
+        const proofPath = `${currentUser.id}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('transfer-proofs')
+          .upload(proofPath, proofFile);
+        if (uploadError) throw uploadError;
+
+        // Reserve slot with transfer proof
+        const res = await fetch('/api/booking/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slotId: selectedSlotId,
+            sessionType: selectedSession.sessionType,
+            paymentMethod: 'transfer',
+            proofPath,
+            proofFilename: proofFile.name,
+            ...(isGift && giftEmail && { giftEmail: giftEmail.trim().toLowerCase() }),
+            ...(isGift && giftMessage.trim() && { giftMessage: giftMessage.trim() }),
+          }),
+        });
+        const data = await res.json();
+        if (res.status === 401) { router.push('/login' as any); return; }
+        if (data.success) {
+          router.push('/konto/sesje-indywidualne?transfer=success' as any);
+        } else {
+          alert(data.error || 'Błąd rezerwacji');
+        }
+      } catch (err) {
+        console.error('Bank transfer booking error:', err);
+        alert('Wystąpił błąd. Spróbuj ponownie.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Stripe flow (existing)
+    if (!selectedSession.priceId) return;
     setLoading(true);
     try {
       // Record recording/publication consent
@@ -234,6 +300,8 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
     setCalendarOpen(false);
     setWantAcceleration(false);
     setPaymentMode('full');
+    setPaymentMethod('stripe');
+    setProofFile(null);
   }
 
   function selectAssistant(slug: string) {
@@ -556,7 +624,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
                 <p className="text-htg-fg-muted text-xs">jednorazowo</p>
               </button>
               <button
-                onClick={() => setPaymentMode('installments')}
+                onClick={() => { setPaymentMode('installments'); setPaymentMethod('stripe'); setProofFile(null); }}
                 className={`p-4 rounded-xl border-2 text-left transition-all ${
                   paymentMode === 'installments'
                     ? 'border-htg-sage bg-htg-sage/5'
@@ -584,6 +652,89 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
               </div>
             )}
           </div>
+
+          {/* Payment method — only for full payment, logged-in users */}
+          {paymentMode === 'full' && userEmail && (
+            <div className="space-y-3">
+              <span className="text-sm font-medium text-htg-fg block">Metoda płatności</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  onClick={() => { setPaymentMethod('stripe'); setProofFile(null); }}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${
+                    paymentMethod === 'stripe'
+                      ? 'border-htg-sage bg-htg-sage/5'
+                      : 'border-htg-card-border hover:border-htg-sage/40'
+                  }`}
+                >
+                  <p className="font-medium text-htg-fg text-sm">Karta / Blik</p>
+                  <p className="text-htg-fg-muted text-xs mt-1">Szybka płatność online</p>
+                </button>
+                <button
+                  onClick={() => setPaymentMethod('transfer')}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${
+                    paymentMethod === 'transfer'
+                      ? 'border-htg-sage bg-htg-sage/5'
+                      : 'border-htg-card-border hover:border-htg-sage/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Banknote className="w-4 h-4 text-htg-fg-muted" />
+                    <p className="font-medium text-htg-fg text-sm">Przelew bankowy</p>
+                  </div>
+                  <p className="text-htg-fg-muted text-xs mt-1">Tradycyjny przelew</p>
+                </button>
+              </div>
+
+              {paymentMethod === 'transfer' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <BankTransferCard
+                    email={userEmail}
+                    labels={{
+                      title: 'Dane do przelewu',
+                      recipient: 'Odbiorca',
+                      account: 'Numer konta',
+                      reference: 'Tytuł przelewu',
+                      download: 'Pobierz PDF',
+                      print: 'Drukuj',
+                    }}
+                  />
+
+                  <div className="bg-htg-surface border border-htg-card-border rounded-xl p-4">
+                    <p className="text-sm font-medium text-htg-fg mb-3">Załącz potwierdzenie przelewu</p>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={e => setProofFile(e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                    {!proofFile ? (
+                      <button
+                        onClick={() => fileRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-3 bg-htg-card border border-dashed border-htg-card-border rounded-lg text-sm text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg transition-colors w-full justify-center"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Wybierz plik (zdjęcie lub PDF, max 5MB)
+                      </button>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-htg-sage/5 border border-htg-sage/20 rounded-lg">
+                        <span className="text-sm text-htg-fg truncate">{proofFile.name}</span>
+                        <button
+                          onClick={() => { setProofFile(null); if (fileRef.current) fileRef.current.value = ''; }}
+                          className="shrink-0 p-1 rounded hover:bg-htg-surface"
+                        >
+                          <X className="w-4 h-4 text-htg-fg-muted" />
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-xs text-htg-fg-muted mt-2">
+                      Po załączeniu potwierdzenia termin zostanie zarezerwowany. Weryfikacja płatności do 3 dni roboczych.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Gift toggle */}
           <div>
@@ -656,7 +807,7 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration) || !selectedSession?.priceId || (isGift && !giftEmail.trim()) || !recordingConsent}
+              disabled={loading || (!selectedSlotId && !wantAcceleration) || (paymentMethod === 'stripe' && !selectedSession?.priceId) || (paymentMethod === 'transfer' && (!proofFile || !selectedSlotId)) || (isGift && !giftEmail.trim()) || !recordingConsent}
               className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -669,8 +820,9 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
                 </span>
               ) : (
                 <>
-                  {paymentMode === 'full' && `${labels.buy} — ${totalAmount} PLN`}
-                  {paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount} PLN`}
+                  {paymentMethod === 'transfer' && `Zarezerwuj sesję — ${totalAmount} PLN`}
+                  {paymentMethod === 'stripe' && paymentMode === 'full' && `${labels.buy} — ${totalAmount} PLN`}
+                  {paymentMethod === 'stripe' && paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount} PLN`}
                 </>
               )}
             </button>
@@ -686,7 +838,10 @@ export function SessionPicker({ sessions, labels }: SessionPickerProps) {
                 Płatność online dla sesji par wkrótce. Skontaktuj się z nami bezpośrednio.
               </p>
             )}
-            {!recordingConsent && selectedSession?.priceId && (
+            {paymentMethod === 'transfer' && !proofFile && (
+              <p className="text-xs text-htg-warm text-center mt-2">Załącz potwierdzenie przelewu</p>
+            )}
+            {!recordingConsent && (selectedSession?.priceId || paymentMethod === 'transfer') && (
               <p className="text-xs text-htg-warm text-center mt-2">Potwierdź zgodę na nagrywanie i publikację sesji</p>
             )}
             <p className="text-xs text-htg-fg-muted text-center mt-3">{labels.cancel_policy}</p>

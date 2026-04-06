@@ -370,7 +370,7 @@
     "logout": "Wyloguj"
   },
   "Booking": {
-    "title": "Sesje indywidualne",
+    "title": "Umów sesję",
     "subtitle": "Twoje zarezerwowane sesje i kalendarz dostępnych terminów.",
     "calendar_title": "Wybierz termin",
     "no_bookings": "Nie masz jeszcze żadnych rezerwacji.",

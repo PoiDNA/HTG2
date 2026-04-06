@@ -2,7 +2,9 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { createSupabaseServer } from '@/lib/supabase/server';
 import type { Booking, AccelerationEntry } from '@/lib/booking/types';
+import { PRODUCT_SLUGS } from '@/lib/booking/constants';
 import BookingCard from '@/components/booking/BookingCard';
 import ActiveBookingsSection from '@/components/booking/ActiveBookingsSection';
 import AccelerationRequest from '@/components/booking/AccelerationRequest';
@@ -15,6 +17,7 @@ import PrivateRecordingsSection from '../_sections/PrivateRecordingsSection';
 import { getSessionCountdown, formatCountdownParts } from '@/lib/booking/countdown-phrases';
 import { Suspense } from 'react';
 import LibrarySuggestSection from '../_sections/LibrarySuggestSection';
+import { SessionPicker } from '@/app/[locale]/sesje-indywidualne/SessionPicker';
 
 // Session type → assistant slug mapping
 const SESSION_TYPE_TO_SLUG: Record<string, string> = {
@@ -201,6 +204,36 @@ export default async function IndividualSessionsPage({
     return (dt.getTime() - Date.now()) / (1000 * 60 * 60);
   }
 
+  // Fetch individual session products for booking section
+  const tInd = await getTranslations({ locale, namespace: 'Individual' });
+  const pubSupa = await createSupabaseServer();
+  const { data: products } = await pubSupa
+    .from('products')
+    .select(`
+      id, name, slug, description, metadata,
+      prices ( id, stripe_price_id, amount, currency )
+    `)
+    .in('slug', [
+      PRODUCT_SLUGS.SESSION_1ON1,
+      PRODUCT_SLUGS.SESSION_AGATA,
+      PRODUCT_SLUGS.SESSION_JUSTYNA,
+      PRODUCT_SLUGS.SESSION_PARA,
+    ])
+    .eq('is_active', true);
+
+  const sessionOptions = (products || []).map((s: any) => {
+    const price = s.prices?.[0];
+    return {
+      slug: s.slug,
+      name: s.name,
+      description: s.description,
+      amount: price?.amount || 0,
+      currency: price?.currency || 'pln',
+      priceId: price?.stripe_price_id || '',
+      sessionType: s.metadata?.session_type || '',
+    };
+  });
+
   return (
     <div className="space-y-8">
       <div>
@@ -369,6 +402,42 @@ export default async function IndividualSessionsPage({
       <Suspense fallback={null}>
         <LibrarySuggestSection userId={userId} locale={locale} />
       </Suspense>
+
+      {/* Book a new session */}
+      {sessionOptions.length > 0 && (
+        <div className="border-t border-htg-card-border pt-8">
+          <h2 className="text-xl font-serif font-semibold text-htg-fg mb-2">{tInd('choose_session')}</h2>
+          <p className="text-sm text-htg-fg-muted mb-6">{tInd('subtitle')}</p>
+
+          <div className="bg-htg-surface rounded-xl p-5 mb-6">
+            <h3 className="font-serif font-semibold text-sm text-htg-fg mb-3">{tInd('how_title')}</h3>
+            <ol className="space-y-2">
+              {['step_1', 'step_2', 'step_3', 'step_4'].map((key, i) => (
+                <li key={key} className="flex items-start gap-2.5 text-xs text-htg-fg">
+                  <span className="shrink-0 w-5 h-5 bg-htg-sage text-white rounded-full flex items-center justify-center text-[10px] font-bold">
+                    {i + 1}
+                  </span>
+                  <span className="pt-0.5">{tInd(key)}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <SessionPicker
+            sessions={sessionOptions}
+            labels={{
+              choose: tInd('choose_session'),
+              date_label: tInd('date_label'),
+              date_hint: tInd('date_hint'),
+              topics_label: tInd('topics_label'),
+              topics_placeholder: tInd('topics_placeholder'),
+              buy: tInd('buy'),
+              cancel_policy: tInd('cancel_policy'),
+              per_session: tInd('per_session'),
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

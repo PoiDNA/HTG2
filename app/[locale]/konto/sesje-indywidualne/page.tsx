@@ -12,7 +12,7 @@ import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
 import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import CompanionInvite from '@/components/booking/CompanionInvite';
-import PastBookingAccordion from '@/components/booking/PastBookingAccordion';
+import BankTransferCard from '@/components/booking/BankTransferCard';
 import PrivateRecordingsSection from '../_sections/PrivateRecordingsSection';
 import { getSessionCountdown, formatCountdownParts } from '@/lib/booking/countdown-phrases';
 import { Suspense } from 'react';
@@ -39,6 +39,14 @@ export default async function IndividualSessionsPage({
   const t = await getTranslations({ locale, namespace: 'Booking' });
 
   const { userId, supabase } = await getEffectiveUser();
+
+  // Fetch user email for bank transfer card
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', userId)
+    .single();
+  const userEmail = profile?.email || '';
 
   // Fetch user's bookings with slot details
   const { data } = await supabase
@@ -136,29 +144,13 @@ export default async function IndividualSessionsPage({
 
   const accelerationEntries: AccelerationEntry[] = (accelData ?? []) as AccelerationEntry[];
 
-  // Split bookings: future-active (shown as full cards) vs past (accordion)
-  // A booking is "past" if its slot date+time is in the past, regardless of status
-  const futureBookings: Booking[] = [];
-  const pastAllBookings: Booking[] = [];
-
-  for (const b of bookings) {
+  // Filter to future-active bookings only
+  const activeBookings = bookings.filter(b => {
     const isActiveStatus = b.status === 'pending_confirmation' || b.status === 'confirmed';
-    const isCompleted = b.status === 'completed';
     const slot = b.slot;
     const slotInFuture = slot ? (slot.slot_date + 'T' + slot.start_time) >= nowIso.slice(0, 16) : true;
-
-    if (isActiveStatus && slotInFuture) {
-      futureBookings.push(b);
-    } else if (isCompleted || (isActiveStatus && !slotInFuture)) {
-      // Skip pre_session bookings from past — they are not standalone sessions
-      if (b.session_type !== 'pre_session') {
-        pastAllBookings.push(b);
-      }
-    }
-  }
-
-  // Keep legacy names for downstream usage
-  const activeBookings = futureBookings;
+    return isActiveStatus && slotInFuture;
+  });
 
   // Fetch companions for natalia_para bookings
   const paraBookingIds = activeBookings
@@ -381,18 +373,8 @@ export default async function IndividualSessionsPage({
         <PrivateRecordingsSection locale={locale} />
       </Suspense>
 
-      {/* Past bookings — accordion */}
-      {pastAllBookings.length > 0 && (
-        <div>
-          <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4 text-htg-fg-muted">
-            {t('past_sessions_title')}
-          </h3>
-          <PastBookingAccordion bookings={pastAllBookings} locale={locale} />
-        </div>
-      )}
-
       {/* Empty state */}
-      {bookings.length === 0 && unbookedCount === 0 && (
+      {activeBookings.length === 0 && unbookedCount === 0 && partnerBookings.length === 0 && accelerationEntries.length === 0 && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-8 text-center">
           <p className="text-htg-fg-muted">{t('no_bookings')}</p>
         </div>
@@ -434,6 +416,18 @@ export default async function IndividualSessionsPage({
               buy: tInd('buy'),
               cancel_policy: tInd('cancel_policy'),
               per_session: tInd('per_session'),
+            }}
+          />
+
+          <BankTransferCard
+            email={userEmail}
+            labels={{
+              title: tInd('transfer_title'),
+              recipient: tInd('transfer_recipient'),
+              account: tInd('transfer_account'),
+              reference: tInd('transfer_reference'),
+              download: tInd('transfer_download'),
+              print: tInd('transfer_print'),
             }}
           />
         </div>

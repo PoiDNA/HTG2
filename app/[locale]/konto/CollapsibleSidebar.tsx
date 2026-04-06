@@ -18,6 +18,7 @@ export default function CollapsibleSidebar({
 
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -49,14 +50,19 @@ export default function CollapsibleSidebar({
         const delta = scrollY - lastScrollY.current;
 
         if (delta > 10) {
-          // Scrolling DOWN
+          // Scrolling DOWN — auto-hide
           setAutoHidden(prev => {
             if (!prev) setManualOverride(false);
             return true;
           });
         } else if (delta < -10) {
-          // Scrolling UP
-          setAutoHidden(false);
+          // Scrolling UP — show sidebar only when back near the top (nav level)
+          const navBottom = navRef.current
+            ? navRef.current.getBoundingClientRect().height + navRef.current.offsetTop
+            : 200;
+          if (scrollY <= navBottom) {
+            setAutoHidden(false);
+          }
         }
 
         lastScrollY.current = scrollY;
@@ -95,8 +101,9 @@ export default function CollapsibleSidebar({
     <div className="flex flex-col md:flex-row gap-8">
       {/* Sidebar */}
       <nav
+        ref={navRef}
         inert={isDesktop && isHidden ? true : undefined}
-        className={`shrink-0 transition-all duration-200 ${
+        className={`shrink-0 transition-all duration-500 ease-in-out ${
           isHidden ? 'md:w-0 md:opacity-0 md:overflow-hidden md:pointer-events-none' : 'md:w-56'
         }`}
       >

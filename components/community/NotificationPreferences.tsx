@@ -13,10 +13,10 @@ interface Preferences {
 }
 
 const defaults: Preferences = {
-  email_digest: 'weekly',
-  push_enabled: true,
-  push_comments: true,
-  push_mentions: true,
+  email_digest: 'off',
+  push_enabled: false,
+  push_comments: false,
+  push_mentions: false,
   push_reactions: false,
 };
 

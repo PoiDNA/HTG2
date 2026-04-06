@@ -7,7 +7,6 @@ import RemainingSessionsClient from './RemainingSessionsClient';
 /**
  * Server component: fetches unpurchased months/sessions and renders the shop section.
  * Returns null if user has full catalog access or owns everything.
- * Wrapped in try/catch to never crash inside Suspense.
  */
 export default async function RemainingSessionsSection({ locale }: { locale: string }) {
   try {
@@ -23,29 +22,14 @@ export default async function RemainingSessionsSection({ locale }: { locale: str
 
     const ownedSessionSet = new Set(purchased.ownedSessionIds);
     const ownedMonthSet = new Set(purchased.ownedMonthSetIds);
-
-    // Also check scope_month ownership (legacy entitlements without monthly_set_id)
-    const ownedScopeMonths = new Set<string>();
-    // getUserPurchased doesn't return scope_months yet, so we fetch them directly
-    const { data: scopeEnts } = await supabase
-      .from('entitlements')
-      .select('scope_month')
-      .eq('user_id', userId)
-      .in('type', ['monthly', 'yearly'])
-      .eq('is_active', true)
-      .gt('valid_until', new Date().toISOString())
-      .not('scope_month', 'is', null);
-    for (const e of scopeEnts || []) {
-      if (e.scope_month) ownedScopeMonths.add(e.scope_month);
-    }
+    const ownedScopeSet = new Set(purchased.ownedScopeMonths);
 
     // Filter to months/sessions user doesn't own
     const remainingMonths = allSets
       .filter(set => {
         if (!set.month_label) return false;
-        // Owned by monthly_set_id OR by scope_month (legacy)
         if (ownedMonthSet.has(set.id)) return false;
-        if (ownedScopeMonths.has(set.month_label)) return false;
+        if (ownedScopeSet.has(set.month_label)) return false;
         return true;
       })
       .map(set => {

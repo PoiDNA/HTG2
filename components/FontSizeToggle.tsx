@@ -49,11 +49,7 @@ export default function FontSizeToggle() {
   return (
     <button
       onClick={toggle}
-      className={`relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors ${
-        level > 0
-          ? 'bg-htg-sage/20 text-htg-sage hover:bg-htg-sage/30'
-          : 'text-htg-fg-muted hover:bg-htg-surface'
-      }`}
+      className="relative flex items-center justify-center w-9 h-9 rounded-lg text-htg-fg-muted/30 hover:text-htg-sage hover:bg-htg-sage/15 active:text-htg-sage active:bg-htg-sage/20 transition-colors duration-300"
       title={`Rozmiar tekstu: ${LEVELS[level]}%`}
       aria-label={`Zmień rozmiar tekstu (obecnie ${LEVELS[level]}%)`}
     >

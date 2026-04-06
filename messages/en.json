@@ -194,20 +194,26 @@
   },
   "Individual": {
     "title": "Individual Sessions",
-    "subtitle": "Private live session with Natalia HTG. Choose a session type, preferred date and pay online.",
+    "subtitle": "Choose a session type, preferred date and pay online or by bank transfer.",
     "how_title": "How it works",
     "step_1": "Choose session type — solo with Natalia or with an assistant (Agata / Justyna).",
     "step_2": "Select your preferred date — we'll contact you to confirm the exact time.",
     "step_3": "Pay online — you'll receive an invoice and confirmation via email.",
     "step_4": "On the session day, you'll receive a room link — join at the scheduled time.",
-    "choose_session": "Choose session type",
+    "choose_session": "Book a session",
     "date_label": "Preferred date",
     "date_hint": "We'll contact you to confirm the exact date and time.",
     "topics_label": "Topics for the session (optional)",
     "topics_placeholder": "Describe what you'd like to work on during the session...",
     "buy": "Pay for session",
     "cancel_policy": "Guaranteed rescheduling is available up to 48 hours before the session. Rescheduling less than 48h before the session depends on another person taking the slot. Session cancellation: within 14 days of purchase.",
-    "per_session": "per session"
+    "per_session": "per session",
+    "transfer_title": "Bank transfer payment",
+    "transfer_recipient": "Recipient",
+    "transfer_account": "Account number",
+    "transfer_reference": "Transfer reference",
+    "transfer_download": "Download PDF",
+    "transfer_print": "Print"
   },
   "Legal": {
     "privacy_title": "Privacy Policy",
@@ -370,7 +376,7 @@
     "logout": "Log out"
   },
   "Booking": {
-    "title": "Book a session",
+    "title": "Private sessions",
     "subtitle": "Your booked sessions and available time slots.",
     "calendar_title": "Choose a time slot",
     "no_bookings": "You don't have any bookings yet.",

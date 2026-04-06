@@ -1,6 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { Youtube, Play } from 'lucide-react';
+import { Youtube, Users } from 'lucide-react';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import VideoThumbnail from '@/components/VideoThumbnail';
 
@@ -67,6 +67,34 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
           <p className="text-htg-fg-muted">Pracujemy nad udostępnieniem materiałów publicznych.</p>
         </div>
       )}
+
+      {/* Facebook group section */}
+      <div className="mt-16 border-t border-htg-card-border pt-12">
+        <a
+          href="https://www.facebook.com/groups/700310275054653"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group flex flex-col sm:flex-row items-center gap-6 bg-htg-card border border-htg-card-border rounded-2xl p-8 hover:border-[#1877F2]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#1877F2]/5"
+        >
+          <div className="flex-shrink-0 w-14 h-14 rounded-full bg-[#1877F2]/10 flex items-center justify-center group-hover:bg-[#1877F2]/20 transition-colors duration-300">
+            <Users className="w-7 h-7 text-[#1877F2]" />
+          </div>
+          <div className="text-center sm:text-left">
+            <p className="text-xs font-medium text-[#1877F2] uppercase tracking-widest mb-1">Grupa na Facebooku</p>
+            <h3 className="text-lg font-serif font-semibold text-htg-fg mb-1">
+              Zapraszamy do aktywności w naszej grupie
+            </h3>
+            <p className="text-htg-fg-muted text-sm">
+              Tylko dla osób po sesji — dołącz i bądź częścią społeczności.
+            </p>
+          </div>
+          <div className="sm:ml-auto flex-shrink-0">
+            <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#1877F2]/10 text-[#1877F2] text-sm font-medium group-hover:bg-[#1877F2] group-hover:text-white transition-all duration-300">
+              Dołącz do grupy
+            </span>
+          </div>
+        </a>
+      </div>
     </div>
   );
 }

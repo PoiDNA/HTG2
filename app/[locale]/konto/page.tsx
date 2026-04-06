@@ -7,7 +7,6 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
-import PrivateRecordingsSection from './_sections/PrivateRecordingsSection';
 import VodLibrarySection from './_sections/VodLibrarySection';
 
 export function generateStaticParams() {
@@ -53,10 +52,6 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
   return (
     <div>
       <ActiveCallsWidget locale={locale} />
-
-      <Suspense fallback={<SectionSkeleton title="Nagrania z Twoich sesji" />}>
-        <PrivateRecordingsSection locale={locale} />
-      </Suspense>
 
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />

@@ -72,7 +72,7 @@ export default function HoneycombNav({ locale }: { locale: string }) {
 
   return (
     <div
-      className={`sticky top-[64px] z-30 bg-htg-bg/80 backdrop-blur-md border-b border-htg-card-border transition-all duration-300 md:hidden ${
+      className={`sticky top-[64px] z-30 bg-htg-bg/80 backdrop-blur-md border-b border-htg-card-border transition-all duration-300 ${
         visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}
     >

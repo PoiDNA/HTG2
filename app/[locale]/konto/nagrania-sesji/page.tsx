@@ -18,13 +18,13 @@ function FacebookGroupCard() {
         href="https://www.facebook.com/groups/700310275054653"
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex flex-col sm:flex-row items-center gap-5 bg-htg-card border border-htg-card-border rounded-2xl p-6 hover:border-[#1877F2]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#1877F2]/5"
+        className="group flex flex-col sm:flex-row items-center gap-5 bg-htg-card border border-htg-card-border rounded-2xl p-6 hover:border-htg-sage/40 transition-all duration-300 hover:shadow-lg hover:shadow-htg-sage/5"
       >
-        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1877F2]/10 flex items-center justify-center group-hover:bg-[#1877F2]/20 transition-colors duration-300">
-          <Users className="w-6 h-6 text-[#1877F2]" />
+        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-htg-sage/10 flex items-center justify-center group-hover:bg-htg-sage/20 transition-colors duration-300">
+          <Users className="w-6 h-6 text-htg-sage" />
         </div>
         <div className="text-center sm:text-left">
-          <p className="text-xs font-medium text-[#1877F2] uppercase tracking-widest mb-0.5">Grupa na Facebooku</p>
+          <p className="text-xs font-medium text-htg-sage uppercase tracking-widest mb-0.5">Grupa na Facebooku</p>
           <h3 className="text-base font-serif font-semibold text-htg-fg mb-0.5">
             Zapraszamy do aktywności w naszej grupie
           </h3>
@@ -33,7 +33,7 @@ function FacebookGroupCard() {
           </p>
         </div>
         <div className="sm:ml-auto flex-shrink-0">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1877F2]/10 text-[#1877F2] text-sm font-medium group-hover:bg-[#1877F2] group-hover:text-white transition-all duration-300">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-htg-sage/10 text-htg-sage text-sm font-medium group-hover:bg-htg-sage group-hover:text-white transition-all duration-300">
             Dołącz do grupy
           </span>
         </div>

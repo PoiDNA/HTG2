@@ -77,13 +77,13 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
           href="https://www.facebook.com/groups/700310275054653"
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex flex-col sm:flex-row items-center gap-6 bg-htg-card border border-htg-card-border rounded-2xl p-8 hover:border-[#1877F2]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#1877F2]/5"
+          className="group flex flex-col sm:flex-row items-center gap-6 bg-htg-card border border-htg-card-border rounded-2xl p-8 hover:border-htg-sage/40 transition-all duration-300 hover:shadow-lg hover:shadow-htg-sage/5"
         >
-          <div className="flex-shrink-0 w-14 h-14 rounded-full bg-[#1877F2]/10 flex items-center justify-center group-hover:bg-[#1877F2]/20 transition-colors duration-300">
-            <Users className="w-7 h-7 text-[#1877F2]" />
+          <div className="flex-shrink-0 w-14 h-14 rounded-full bg-htg-sage/10 flex items-center justify-center group-hover:bg-htg-sage/20 transition-colors duration-300">
+            <Users className="w-7 h-7 text-htg-sage" />
           </div>
           <div className="text-center sm:text-left">
-            <p className="text-xs font-medium text-[#1877F2] uppercase tracking-widest mb-1">Grupa na Facebooku</p>
+            <p className="text-xs font-medium text-htg-sage uppercase tracking-widest mb-1">Grupa na Facebooku</p>
             <h3 className="text-lg font-serif font-semibold text-htg-fg mb-1">
               Zapraszamy do aktywności w naszej grupie
             </h3>
@@ -92,7 +92,7 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
             </p>
           </div>
           <div className="sm:ml-auto flex-shrink-0">
-            <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#1877F2]/10 text-[#1877F2] text-sm font-medium group-hover:bg-[#1877F2] group-hover:text-white transition-all duration-300">
+            <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-htg-sage/10 text-htg-sage text-sm font-medium group-hover:bg-htg-sage group-hover:text-white transition-all duration-300">
               Dołącz do grupy
             </span>
           </div>

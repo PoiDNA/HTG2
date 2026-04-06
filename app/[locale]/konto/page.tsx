@@ -8,6 +8,7 @@ import { isAdminEmail } from '@/lib/roles';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import VodLibrarySection from './_sections/VodLibrarySection';
+import RemainingSessionsSection from './_sections/RemainingSessionsSection';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -55,6 +56,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
 
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />
+      </Suspense>
+
+      <Suspense fallback={<SectionSkeleton title="Pozostałe Sesje" />}>
+        <RemainingSessionsSection locale={locale} />
       </Suspense>
     </div>
   );

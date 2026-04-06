@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Play, ChevronDown, Clock, CheckCircle2, Bookmark, Film, Headphones, X } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
+import FontSizeToggle from '@/components/FontSizeToggle';
+import ThemeToggle from '@/components/ThemeToggle';
 
 type Props = {
   sections: MonthSection[];
@@ -336,8 +338,16 @@ function SessionCard({
         : 'border-htg-card-border bg-htg-surface/30'
     }`}>
       <div className="p-4 flex flex-col md:flex-row md:items-start gap-4">
-        <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center shrink-0">
-          <Play className="w-5 h-5 text-htg-sage" />
+        <div className="flex flex-col items-center gap-2 shrink-0">
+          <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center">
+            <Play className="w-5 h-5 text-htg-sage" />
+          </div>
+          {isPlaying && (
+            <>
+              <FontSizeToggle />
+              <ThemeToggle />
+            </>
+          )}
         </div>
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex flex-col md:flex-row md:items-start md:flex-wrap justify-between gap-3">

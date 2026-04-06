@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 export default function CollapsibleSidebar({
@@ -11,7 +11,13 @@ export default function CollapsibleSidebar({
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [autoHidden, setAutoHidden] = useState(false);
+  const [manualOverride, setManualOverride] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -19,19 +25,79 @@ export default function CollapsibleSidebar({
     if (stored === 'true') setCollapsed(true);
   }, []);
 
+  // Desktop media query listener
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => {
+      setIsDesktop(e.matches);
+      if (!e.matches) {
+        setAutoHidden(false);
+        setManualOverride(false);
+      }
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // Scroll listener (desktop only)
+  const handleScroll = useCallback(() => {
+    if (!ticking.current) {
+      ticking.current = true;
+      requestAnimationFrame(() => {
+        const scrollY = window.scrollY;
+        const delta = scrollY - lastScrollY.current;
+
+        if (delta > 10) {
+          // Scrolling DOWN
+          setAutoHidden(prev => {
+            if (!prev) setManualOverride(false);
+            return true;
+          });
+        } else if (delta < -10) {
+          // Scrolling UP
+          setAutoHidden(false);
+        }
+
+        lastScrollY.current = scrollY;
+        ticking.current = false;
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktop) return;
+    lastScrollY.current = window.scrollY;
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isDesktop, handleScroll]);
+
+  const isHidden = mounted && (collapsed || (autoHidden && !manualOverride));
+
   const toggle = () => {
-    setCollapsed((v) => {
-      localStorage.setItem('konto-sidebar-collapsed', String(!v));
-      return !v;
-    });
+    if (collapsed) {
+      setCollapsed(false);
+      setAutoHidden(false);
+      setManualOverride(true);
+      localStorage.setItem('konto-sidebar-collapsed', 'false');
+      return;
+    }
+    if (autoHidden && !manualOverride) {
+      setManualOverride(true);
+      return;
+    }
+    setCollapsed(true);
+    setManualOverride(false);
+    localStorage.setItem('konto-sidebar-collapsed', 'true');
   };
 
   return (
     <div className="flex flex-col md:flex-row gap-8">
       {/* Sidebar */}
       <nav
+        inert={isDesktop && isHidden ? true : undefined}
         className={`shrink-0 transition-all duration-200 ${
-          mounted && collapsed ? 'md:w-0 md:opacity-0 md:overflow-hidden md:pointer-events-none' : 'md:w-56'
+          isHidden ? 'md:w-0 md:opacity-0 md:overflow-hidden md:pointer-events-none' : 'md:w-56'
         }`}
       >
         <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
@@ -44,14 +110,14 @@ export default function CollapsibleSidebar({
         <button
           onClick={toggle}
           className="hidden md:flex items-center gap-1.5 mb-4 text-xs text-htg-fg-muted hover:text-htg-fg transition-colors"
-          aria-label={collapsed ? 'Pokaż menu' : 'Ukryj menu'}
+          aria-label={isHidden ? 'Pokaż menu' : 'Ukryj menu'}
         >
-          {collapsed ? (
+          {isHidden ? (
             <PanelLeftOpen className="w-4 h-4" />
           ) : (
             <PanelLeftClose className="w-4 h-4" />
           )}
-          <span>{collapsed ? 'Pokaż menu' : 'Ukryj menu'}</span>
+          <span>{isHidden ? 'Pokaż menu' : 'Ukryj menu'}</span>
         </button>
         {children}
       </div>

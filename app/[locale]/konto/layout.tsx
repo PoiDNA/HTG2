@@ -9,6 +9,7 @@ import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import { isNagraniaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
 import CollapsibleSidebar from './CollapsibleSidebar';
+import HoneycombNav from '@/components/konto/HoneycombNav';
 import SidebarLink from './SidebarLink';
 import SpiritIcon from './SpiritIcon';
 import {
@@ -166,7 +167,6 @@ export default async function AccountLayout({
     { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', spiritIcon: 'eye' as const },
     { href: '/spolecznosc', label: 'Społeczność', spiritIcon: 'vesica' as const },
     { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', spiritIcon: 'feather' as const },
-    { href: '/konto/subskrypcje', label: 'Twoje Aktywacje', spiritIcon: 'crystal' as const },
     { href: '/konto/polubieni', label: 'Twoi Znajomi', spiritIcon: 'bond' as const },
     { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', spiritIcon: 'offering' as const },
     { href: '/konto/aktualizacja', label: 'Aktualizacja', spiritIcon: 'spiral' as const },
@@ -189,6 +189,11 @@ export default async function AccountLayout({
   );
 
   return (
+    <>
+    {/* Honeycomb nav for regular users on mobile */}
+    {!isAdmin && !isStaff && !isPublikacja && (
+      <HoneycombNav locale={locale} />
+    )}
     <div className="mx-auto max-w-6xl px-6 py-8">
       {viewAsUserEmail && (
         <div className="flex items-center gap-3 px-4 py-3 mb-6 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm text-amber-600 dark:text-amber-400">
@@ -260,5 +265,6 @@ export default async function AccountLayout({
         {children}
       </CollapsibleSidebar>
     </div>
+    </>
   );
 }

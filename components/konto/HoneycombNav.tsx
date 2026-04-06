@@ -1,0 +1,100 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+
+const ITEMS = [
+  { href: '/konto', label: 'Biblioteka sesji', color: 'rgb(244, 63, 94)' },
+  { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', color: 'rgb(139, 92, 246)' },
+  { href: '/spolecznosc', label: 'Społeczność', color: 'rgb(20, 184, 166)' },
+  { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', color: 'rgb(16, 185, 129)' },
+  { href: '/konto/polubieni', label: 'Twoi Znajomi', color: 'rgb(251, 146, 60)' },
+  { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', color: 'rgb(244, 114, 182)' },
+  { href: '/konto/aktualizacja', label: 'Aktualizacja', color: 'rgb(14, 165, 233)' },
+];
+
+function HexCell({ href, label, color, isActive, locale }: {
+  href: string; label: string; color: string; isActive: boolean; locale: string;
+}) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <Link
+      href={`/${locale}${href}`}
+      className="relative"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div
+        className="relative w-12 h-14 flex items-center justify-center transition-all duration-200"
+        style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}
+      >
+        <div
+          className="absolute inset-0 transition-opacity duration-200"
+          style={{
+            backgroundColor: color,
+            opacity: hovered ? 0.35 : isActive ? 0.25 : 0.08,
+          }}
+        />
+        <div
+          className="relative w-2 h-2 rounded-full z-10 transition-transform duration-200"
+          style={{
+            backgroundColor: color,
+            transform: hovered ? 'scale(1.5)' : 'scale(1)',
+          }}
+        />
+      </div>
+
+      {hovered && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-htg-fg text-htg-bg text-[10px] font-medium rounded whitespace-nowrap pointer-events-none z-50">
+          {label}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+export default function HoneycombNav({ locale }: { locale: string }) {
+  const pathname = usePathname();
+  const [visible, setVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      setVisible(y < lastScrollY.current || y < 80);
+      lastScrollY.current = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  return (
+    <div
+      className={`sticky top-[64px] z-30 bg-htg-bg/80 backdrop-blur-md border-b border-htg-card-border transition-all duration-300 md:hidden ${
+        visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+      }`}
+    >
+      <div className="mx-auto max-w-6xl px-3 py-2">
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {ITEMS.map((item) => {
+            const fullHref = `/${locale}${item.href}`;
+            const isActive = pathname === fullHref || (item.href !== '/konto' && pathname.startsWith(fullHref));
+
+            return (
+              <HexCell
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                color={item.color}
+                isActive={isActive}
+                locale={locale}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -14,10 +14,12 @@ const ITEMS = [
   { href: '/konto/aktualizacja', label: 'Aktualizacja', color: 'rgb(14, 165, 233)' },
 ];
 
-function HexCell({ href, label, color, isActive, locale }: {
-  href: string; label: string; color: string; isActive: boolean; locale: string;
+function HexCell({ href, label, color, isActive, locale, highlighted }: {
+  href: string; label: string; color: string; isActive: boolean; locale: string; highlighted: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
+  const showLabel = hovered || highlighted;
+  const emphasis = hovered || highlighted;
 
   return (
     <Link
@@ -27,30 +29,34 @@ function HexCell({ href, label, color, isActive, locale }: {
       onMouseLeave={() => setHovered(false)}
     >
       <div
-        className="relative w-12 h-14 flex items-center justify-center transition-all duration-200"
-        style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}
+        className="relative w-12 h-14 md:w-15 md:h-[70px] flex items-center justify-center transition-all duration-300"
+        style={{
+          clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+          transform: emphasis ? 'scale(1.12)' : 'scale(1)',
+        }}
       >
         <div
-          className="absolute inset-0 transition-opacity duration-200"
+          className="absolute inset-0 transition-opacity duration-300"
           style={{
             backgroundColor: color,
-            opacity: hovered ? 0.35 : isActive ? 0.25 : 0.08,
+            opacity: emphasis ? 0.4 : isActive ? 0.25 : 0.08,
           }}
         />
         <div
-          className="relative w-2 h-2 rounded-full z-10 transition-transform duration-200"
+          className="relative w-2 h-2 rounded-full z-10 transition-transform duration-300"
           style={{
             backgroundColor: color,
-            transform: hovered ? 'scale(1.5)' : 'scale(1)',
+            transform: emphasis ? 'scale(1.6)' : 'scale(1)',
           }}
         />
       </div>
 
-      {hovered && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-htg-fg text-htg-bg text-[10px] font-medium rounded whitespace-nowrap pointer-events-none z-50">
-          {label}
-        </div>
-      )}
+      <div
+        className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-htg-fg text-htg-bg text-[10px] font-medium rounded whitespace-nowrap pointer-events-none z-50 transition-opacity duration-300"
+        style={{ opacity: showLabel ? 1 : 0 }}
+      >
+        {label}
+      </div>
     </Link>
   );
 }
@@ -59,6 +65,8 @@ export default function HoneycombNav({ locale }: { locale: string }) {
   const pathname = usePathname();
   const [visible, setVisible] = useState(true);
   const lastScrollY = useRef(0);
+  const [introIndex, setIntroIndex] = useState(-1);
+  const introRan = useRef(false);
 
   useEffect(() => {
     const onScroll = () => {
@@ -70,15 +78,35 @@ export default function HoneycombNav({ locale }: { locale: string }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Intro animation: highlight each item left-to-right, once per page load
+  useEffect(() => {
+    if (introRan.current) return;
+    introRan.current = true;
+
+    let i = 0;
+    const run = () => {
+      setIntroIndex(i);
+      i++;
+      if (i < ITEMS.length) {
+        setTimeout(run, 1500);
+      } else {
+        // Clear last highlight after 1.5s
+        setTimeout(() => setIntroIndex(-1), 1500);
+      }
+    };
+    // Start after a short delay
+    setTimeout(run, 500);
+  }, []);
+
   return (
     <div
       className={`sticky top-[64px] z-30 bg-htg-bg/80 backdrop-blur-md border-b border-htg-card-border transition-all duration-300 ${
         visible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}
     >
-      <div className="mx-auto max-w-6xl px-3 py-2">
-        <div className="flex flex-wrap justify-center gap-1.5">
-          {ITEMS.map((item) => {
+      <div className="mx-auto max-w-6xl px-3 py-2 md:py-3">
+        <div className="flex flex-wrap justify-center gap-1.5 md:gap-3">
+          {ITEMS.map((item, idx) => {
             const fullHref = `/${locale}${item.href}`;
             const isActive = pathname === fullHref || (item.href !== '/konto' && pathname.startsWith(fullHref));
 
@@ -90,6 +118,7 @@ export default function HoneycombNav({ locale }: { locale: string }) {
                 color={item.color}
                 isActive={isActive}
                 locale={locale}
+                highlighted={introIndex === idx}
               />
             );
           })}

@@ -30,6 +30,9 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
   const t = await getTranslations({ locale, namespace: 'Recordings' });
 
   const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isLoggedIn = !!user;
+
   const { data: videos } = await supabase
     .from('youtube_videos')
     .select('id, youtube_id, title, description')
@@ -68,8 +71,8 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
         </div>
       )}
 
-      {/* Facebook group section */}
-      <div className="mt-16 border-t border-htg-card-border pt-12">
+      {/* Facebook group section — only for logged-in users */}
+      {isLoggedIn && <div className="mt-16 border-t border-htg-card-border pt-12">
         <a
           href="https://www.facebook.com/groups/700310275054653"
           target="_blank"
@@ -94,7 +97,7 @@ export default async function RecordingsPage({ params }: { params: Promise<{ loc
             </span>
           </div>
         </a>
-      </div>
+      </div>}
     </div>
   );
 }

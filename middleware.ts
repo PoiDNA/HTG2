@@ -53,14 +53,27 @@ export async function middleware(request: NextRequest) {
   if (authCode && authCode.length > 20) {
     const nextParam = searchParams.get('next');
     const locale = nextParam?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || getLocaleFromPath(pathname);
-    const url = request.nextUrl.clone();
-    url.pathname = nextParam || `/${locale}${isNagrania ? NAGRANIA_HOME : '/konto'}`;
-    url.searchParams.delete('code');
-    url.searchParams.delete('next');
-    url.searchParams.delete('consent');
-    url.searchParams.delete('type');
 
-    const response = NextResponse.redirect(url);
+    // Defensive: if the code lands on nagrania.htg.cyou but `next` does NOT point to the
+    // nagrania-sesji path (or is absent), the user was logging in via htgcyou.com and
+    // Supabase fell back to Site URL (htg.cyou → nagrania.htg.cyou).
+    // Redirect them to the main site after session exchange instead of keeping them on the portal.
+    const isNagraniaNext = !!nextParam?.includes('nagrania-sesji');
+    let destUrl: URL;
+    if (isNagrania && !isNagraniaNext) {
+      const dest = nextParam ?? `/${locale}/konto`;
+      destUrl = new URL(`https://htgcyou.com${dest}`);
+    } else {
+      const url = request.nextUrl.clone();
+      url.pathname = nextParam || `/${locale}${isNagrania ? NAGRANIA_HOME : '/konto'}`;
+      url.searchParams.delete('code');
+      url.searchParams.delete('next');
+      url.searchParams.delete('consent');
+      url.searchParams.delete('type');
+      destUrl = url;
+    }
+
+    const response = NextResponse.redirect(destUrl);
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -88,9 +101,10 @@ export async function middleware(request: NextRequest) {
         errCode === 'otp_disabled' || errCode === 'user_not_found' ||
         errMsg.includes('signups not allowed') || errMsg.includes('user not found')
       ) ? 'not_registered' : 'auth_failed';
-      url.pathname = `/${locale}/login`;
-      url.searchParams.set('error', errorType);
-      const errorResponse = NextResponse.redirect(url);
+      const errUrl = request.nextUrl.clone();
+      errUrl.pathname = `/${locale}/login`;
+      errUrl.searchParams.set('error', errorType);
+      const errorResponse = NextResponse.redirect(errUrl);
       errorResponse.headers.set('Cache-Control', 'no-store');
       return errorResponse;
     }

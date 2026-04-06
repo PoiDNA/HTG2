@@ -83,6 +83,7 @@
     "error_code": "Invalid code. Please try again.",
     "error_sso": "Login failed. Please try again.",
     "error_passkey": "Passkey login failed. Try another method.",
+    "error_link_expired": "The link expired or was opened in a different browser. Enter your email to get a new one.",
     "error_not_registered": "No account found with this email address.",
     "register_cta": "Sign up",
     "register_title": "Sign up",

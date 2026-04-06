@@ -83,6 +83,7 @@
     "error_code": "Nieprawidłowy kod. Spróbuj ponownie.",
     "error_sso": "Nie udało się zalogować. Spróbuj ponownie.",
     "error_passkey": "Logowanie kluczem dostępu nie powiodło się. Spróbuj innej metody.",
+    "error_link_expired": "Link wygasł lub był otwarty w innej przeglądarce. Wpisz email i wyślij nowy link.",
     "error_not_registered": "Nie znaleziono konta z tym adresem e-mail.",
     "register_cta": "Zarejestruj się",
     "register_title": "Rejestracja",

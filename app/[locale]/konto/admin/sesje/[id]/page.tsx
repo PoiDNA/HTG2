@@ -4,7 +4,7 @@ import { isAdminEmail } from '@/lib/roles';
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { Link } from '@/i18n-config';
-import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History, ExternalLink, Banknote, Download } from 'lucide-react';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 import { PAYMENT_STATUS_LABELS, SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
@@ -43,7 +43,7 @@ export default async function AdminSessionDetailPage({
   const { data: booking } = await db
     .from('bookings')
     .select(`
-      id, session_type, status, topics, user_id, payment_status, payment_comment, created_at,
+      id, session_type, status, topics, user_id, payment_status, payment_comment, created_at, transfer_proof_url, transfer_proof_filename,
       slot:booking_slots(slot_date, start_time, end_time)
     `)
     .eq('id', id)
@@ -80,6 +80,15 @@ export default async function AdminSessionDetailPage({
     .limit(50);
 
   const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
+
+  // Generate signed URL for transfer proof (if exists)
+  let transferProofSignedUrl: string | null = null;
+  if (booking.transfer_proof_url) {
+    const { data: signedData } = await db.storage
+      .from('transfer-proofs')
+      .createSignedUrl(booking.transfer_proof_url, 3600);
+    transferProofSignedUrl = signedData?.signedUrl || null;
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -134,6 +143,27 @@ export default async function AdminSessionDetailPage({
             canEdit={true}
           />
         </div>
+
+        {/* Transfer proof */}
+        {booking.transfer_proof_url && (
+          <div className="flex items-center gap-3 pt-2 border-t border-htg-card-border">
+            <Banknote className="w-4 h-4 text-htg-fg-muted" />
+            <span className="text-sm text-htg-fg-muted">Dowód przelewu:</span>
+            {transferProofSignedUrl ? (
+              <a
+                href={transferProofSignedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-htg-indigo hover:underline"
+              >
+                <Download className="w-3.5 h-3.5" />
+                {booking.transfer_proof_filename || 'Pobierz dowód'}
+              </a>
+            ) : (
+              <span className="text-sm text-htg-fg-muted">Plik niedostępny</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Session type selector */}

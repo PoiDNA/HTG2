@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { Banknote } from 'lucide-react';
 import type { Booking } from '@/lib/booking/types';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import BookingCountdown from './BookingCountdown';
@@ -92,6 +93,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
   const isPending = booking.status === 'pending_confirmation';
   const isConfirmed = booking.status === 'confirmed';
   const isActive = isPending || isConfirmed;
+  const isPendingTransfer = booking.payment_status === 'pending_verification';
 
   // 14-day cancellation window from purchase date (created_at)
   const purchaseDate = booking.created_at ? new Date(booking.created_at) : new Date();
@@ -260,7 +262,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
       {isActive && !isPast && (
         <div className="space-y-3 pt-3 border-t border-htg-card-border">
           <div className="flex flex-wrap gap-2">
-            {isPending && (
+            {isPending && !isPendingTransfer && (
               <button
                 onClick={handleConfirm}
                 disabled={loading === 'confirm'}
@@ -268,6 +270,12 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
               >
                 {loading === 'confirm' ? t('loading') : t('confirm_btn')}
               </button>
+            )}
+            {isPendingTransfer && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 text-amber-600 rounded-lg text-xs font-medium">
+                <Banknote className="w-3.5 h-3.5" />
+                Oczekuje na weryfikację płatności
+              </span>
             )}
 
             {/* Join live session — active 30 min before session and during session */}

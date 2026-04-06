@@ -290,40 +290,42 @@ function ShopSessionCard({
 
   return (
     <div className="border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30">
-      <div className="p-4 flex flex-col md:flex-row md:items-start gap-4">
-        <div className="flex flex-col items-center gap-2 shrink-0">
-          <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center">
-            <Play className="w-5 h-5 text-htg-sage" />
-          </div>
-          <FontSizeToggle />
-          <ThemeToggle />
-        </div>
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div>
-              <h4 className="font-semibold text-htg-fg">{session.title}</h4>
-              {session.durationMinutes && (
-                <div className="flex items-center gap-1.5 text-sm text-htg-fg-muted mt-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{session.durationMinutes} min</span>
-                </div>
-              )}
+      <div className="p-4 space-y-3">
+        {/* Top row: Play icon + toggles left, add-to-cart button right */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center">
+              <Play className="w-5 h-5 text-htg-sage" />
             </div>
-            <button
-              onClick={onToggle}
-              disabled={monthInCart}
-              className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                inCart
-                  ? 'bg-htg-sage text-white'
-                  : 'bg-htg-surface border border-htg-card-border text-htg-fg hover:border-htg-sage/40'
-              } disabled:opacity-60`}
-            >
-              {inCart ? (
-                <><Check className="w-4 h-4" /> Dodano</>
-              ) : (
-                <><Plus className="w-4 h-4" /> Dodaj · {priceLabel}</>
-              )}
-            </button>
+            <FontSizeToggle />
+            <ThemeToggle />
+          </div>
+          <button
+            onClick={onToggle}
+            disabled={monthInCart}
+            className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              inCart
+                ? 'bg-htg-sage text-white'
+                : 'bg-htg-surface border border-htg-card-border text-htg-fg hover:border-htg-sage/40'
+            } disabled:opacity-60`}
+          >
+            {inCart ? (
+              <><Check className="w-4 h-4" /> Dodano</>
+            ) : (
+              <><Plus className="w-4 h-4" /> Dodaj · {priceLabel}</>
+            )}
+          </button>
+        </div>
+        {/* Title + description below */}
+        <div className="space-y-2">
+          <div>
+            <h4 className="font-semibold text-htg-fg">{session.title}</h4>
+            {session.durationMinutes && (
+              <div className="flex items-center gap-1.5 text-sm text-htg-fg-muted mt-1">
+                <Clock className="w-4 h-4" />
+                <span>{session.durationMinutes} min</span>
+              </div>
+            )}
           </div>
 
           {session.description && (

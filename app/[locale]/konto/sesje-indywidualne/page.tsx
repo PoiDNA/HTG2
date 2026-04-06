@@ -11,6 +11,7 @@ import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import CompanionInvite from '@/components/booking/CompanionInvite';
 import PastBookingAccordion from '@/components/booking/PastBookingAccordion';
+import PrivateRecordingsSection from '../_sections/PrivateRecordingsSection';
 import { getSessionCountdown, formatCountdownParts } from '@/lib/booking/countdown-phrases';
 import { Suspense } from 'react';
 import LibrarySuggestSection from '../_sections/LibrarySuggestSection';
@@ -341,6 +342,11 @@ export default async function IndividualSessionsPage({
           />
         </div>
       )}
+
+      {/* Private session recordings */}
+      <Suspense fallback={null}>
+        <PrivateRecordingsSection locale={locale} />
+      </Suspense>
 
       {/* Past bookings — accordion */}
       {pastAllBookings.length > 0 && (

@@ -370,7 +370,7 @@
     "logout": "Log out"
   },
   "Booking": {
-    "title": "Individual Sessions",
+    "title": "Book a session",
     "subtitle": "Your booked sessions and available time slots.",
     "calendar_title": "Choose a time slot",
     "no_bookings": "You don't have any bookings yet.",

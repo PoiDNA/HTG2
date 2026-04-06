@@ -140,7 +140,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
   // ── Render ────────────────────────────────────────────────────
 
   return (
-    <section className={`mb-10 ${totalItems > 0 ? 'pb-28' : ''}`}>
+    <section className={`mt-8 mb-10 ${totalItems > 0 ? 'pb-28' : ''}`}>
       <div className="flex items-center gap-2 mb-4">
         <ShoppingBag className="w-5 h-5 text-htg-sage" />
         <h2 className="text-lg font-serif font-semibold text-htg-fg">Pozostałe Sesje</h2>

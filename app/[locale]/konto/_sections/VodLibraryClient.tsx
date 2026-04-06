@@ -337,69 +337,70 @@ function SessionCard({
         ? 'border-htg-sage/30 bg-htg-sage/5'
         : 'border-htg-card-border bg-htg-surface/30'
     }`}>
-      <div className="p-4 flex flex-col md:flex-row md:items-start gap-4">
-        <div className="flex flex-col items-center gap-2 shrink-0">
-          <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center">
-            <Play className="w-5 h-5 text-htg-sage" />
+      <div className="p-4 space-y-3">
+        {/* Top row: Play icon (+ toggles) left, action buttons right */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-10 h-10 bg-htg-surface rounded-lg flex items-center justify-center">
+              <Play className="w-5 h-5 text-htg-sage" />
+            </div>
+            {isPlaying && (
+              <>
+                <FontSizeToggle />
+                <ThemeToggle />
+              </>
+            )}
           </div>
-          {isPlaying && (
-            <>
-              <FontSizeToggle />
-              <ThemeToggle />
-            </>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onToggleBookmark}
+              aria-pressed={isBookmarked}
+              aria-label="Wróć do tej sesji"
+              className={`flex items-center gap-1.5 p-2 md:px-3 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium transition-colors ${
+                isBookmarked
+                  ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                  : 'bg-htg-surface text-htg-fg-muted hover:text-amber-400 hover:bg-amber-500/10'
+              }`}
+            >
+              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+              <span className="hidden md:inline">Wróć</span>
+            </button>
+            <button
+              onClick={onToggleListened}
+              aria-pressed={isListened}
+              aria-label="Odsłuchana"
+              className={`flex items-center gap-1.5 p-2 md:px-3 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium transition-colors ${
+                isListened
+                  ? 'bg-htg-sage/15 text-htg-sage hover:bg-htg-sage/25'
+                  : 'bg-htg-surface text-htg-fg-muted hover:text-htg-sage hover:bg-htg-sage/10'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="hidden md:inline">{isListened ? 'Odsłuchana' : 'Odsłuchana?'}</span>
+            </button>
+            {session.isPlayable && (
+              <button
+                onClick={onTogglePlay}
+                aria-label={isPlaying ? 'Zamknij odtwarzacz' : 'Odsłuchaj sesję'}
+                className="flex items-center gap-2 bg-htg-sage text-white p-2 md:px-4 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                {isPlaying ? <X className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
+                <span className="hidden md:inline">{isPlaying ? 'Zamknij' : 'Odsłuchaj'}</span>
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex flex-col md:flex-row md:items-start md:flex-wrap justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h4 className="font-semibold text-htg-fg">{session.title}</h4>
-              {session.durationMinutes && (
-                <div className="flex items-center gap-1.5 text-sm text-htg-fg-muted mt-1">
-                  <Clock className="w-4 h-4" />
-                  <span>{session.durationMinutes} min</span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={onToggleBookmark}
-                aria-pressed={isBookmarked}
-                aria-label="Wróć do tej sesji"
-                className={`flex items-center gap-1.5 p-2 md:px-3 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium transition-colors ${
-                  isBookmarked
-                    ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
-                    : 'bg-htg-surface text-htg-fg-muted hover:text-amber-400 hover:bg-amber-500/10'
-                }`}
-              >
-                <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-                <span className="hidden md:inline">Wróć</span>
-              </button>
-              <button
-                onClick={onToggleListened}
-                aria-pressed={isListened}
-                aria-label="Odsłuchana"
-                className={`flex items-center gap-1.5 p-2 md:px-3 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium transition-colors ${
-                  isListened
-                    ? 'bg-htg-sage/15 text-htg-sage hover:bg-htg-sage/25'
-                    : 'bg-htg-surface text-htg-fg-muted hover:text-htg-sage hover:bg-htg-sage/10'
-                }`}
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span className="hidden md:inline">{isListened ? 'Odsłuchana' : 'Odsłuchana?'}</span>
-              </button>
-              {session.isPlayable && (
-                <button
-                  onClick={onTogglePlay}
-                  aria-label={isPlaying ? 'Zamknij odtwarzacz' : 'Odsłuchaj sesję'}
-                  className="flex items-center gap-2 bg-htg-sage text-white p-2 md:px-4 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-                >
-                  {isPlaying ? <X className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
-                  <span className="hidden md:inline">{isPlaying ? 'Zamknij' : 'Odsłuchaj'}</span>
-                </button>
-              )}
-            </div>
+        {/* Title + description below */}
+        <div className="space-y-2">
+          <div>
+            <h4 className="font-semibold text-htg-fg">{session.title}</h4>
+            {session.durationMinutes && (
+              <div className="flex items-center gap-1.5 text-sm text-htg-fg-muted mt-1">
+                <Clock className="w-4 h-4" />
+                <span>{session.durationMinutes} min</span>
+              </div>
+            )}
           </div>
-
           {session.description && (
             <div
               className="mt-2 text-sm text-htg-fg-muted"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Play, ChevronDown, Clock, CheckCircle2, Bookmark, Film } from 'lucide-react';
+import { Play, ChevronDown, Clock, CheckCircle2, Bookmark, Film, Headphones, X } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
 
@@ -340,8 +340,8 @@ function SessionCard({
           <Play className="w-5 h-5 text-htg-sage" />
         </div>
         <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div>
+          <div className="flex flex-col md:flex-row md:items-start md:flex-wrap justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <h4 className="font-semibold text-htg-fg">{session.title}</h4>
               {session.durationMinutes && (
                 <div className="flex items-center gap-1.5 text-sm text-htg-fg-muted mt-1">
@@ -353,34 +353,38 @@ function SessionCard({
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={onToggleBookmark}
-                title={isBookmarked ? 'Usuń zakładkę' : 'Wróć do tej sesji'}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                aria-pressed={isBookmarked}
+                aria-label="Wróć do tej sesji"
+                className={`flex items-center gap-1.5 p-2 md:px-3 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium transition-colors ${
                   isBookmarked
                     ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
                     : 'bg-htg-surface text-htg-fg-muted hover:text-amber-400 hover:bg-amber-500/10'
                 }`}
               >
                 <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
-                {isBookmarked ? 'Wróć' : 'Wróć'}
+                <span className="hidden md:inline">Wróć</span>
               </button>
               <button
                 onClick={onToggleListened}
-                title={isListened ? 'Oznacz jako nieodsłuchaną' : 'Oznacz jako odsłuchaną'}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                aria-pressed={isListened}
+                aria-label="Odsłuchana"
+                className={`flex items-center gap-1.5 p-2 md:px-3 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium transition-colors ${
                   isListened
                     ? 'bg-htg-sage/15 text-htg-sage hover:bg-htg-sage/25'
                     : 'bg-htg-surface text-htg-fg-muted hover:text-htg-sage hover:bg-htg-sage/10'
                 }`}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                {isListened ? 'Odsłuchana' : 'Odsłuchana?'}
+                <span className="hidden md:inline">{isListened ? 'Odsłuchana' : 'Odsłuchana?'}</span>
               </button>
               {session.isPlayable && (
                 <button
                   onClick={onTogglePlay}
-                  className="flex items-center gap-2 bg-htg-sage text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                  aria-label={isPlaying ? 'Zamknij odtwarzacz' : 'Odsłuchaj sesję'}
+                  className="flex items-center gap-2 bg-htg-sage text-white p-2 md:px-4 md:py-2 min-w-[44px] min-h-[44px] justify-center md:justify-start rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
                 >
-                  {isPlaying ? 'Zamknij' : 'Odsłuchaj'}
+                  {isPlaying ? <X className="w-4 h-4" /> : <Headphones className="w-4 h-4" />}
+                  <span className="hidden md:inline">{isPlaying ? 'Zamknij' : 'Odsłuchaj'}</span>
                 </button>
               )}
             </div>

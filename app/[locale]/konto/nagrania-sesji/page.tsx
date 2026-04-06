@@ -4,12 +4,43 @@ import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
-import { Headphones, Info } from 'lucide-react';
+import { Headphones, Info, Users } from 'lucide-react';
 import FullRecordingList, { RecordingGroup } from './FullRecordingList';
 import DashboardRecordingList, { DashboardRecordingItem } from '../_sections/DashboardRecordingList';
 import PortalMessages from '@/components/account/PortalMessages';
 import { headers } from 'next/headers';
 import { isNagraniaPortal } from '@/lib/portal';
+
+function FacebookGroupCard() {
+  return (
+    <div className="mt-10 border-t border-htg-card-border pt-8">
+      <a
+        href="https://www.facebook.com/groups/700310275054653"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex flex-col sm:flex-row items-center gap-5 bg-htg-card border border-htg-card-border rounded-2xl p-6 hover:border-[#1877F2]/40 transition-all duration-300 hover:shadow-lg hover:shadow-[#1877F2]/5"
+      >
+        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#1877F2]/10 flex items-center justify-center group-hover:bg-[#1877F2]/20 transition-colors duration-300">
+          <Users className="w-6 h-6 text-[#1877F2]" />
+        </div>
+        <div className="text-center sm:text-left">
+          <p className="text-xs font-medium text-[#1877F2] uppercase tracking-widest mb-0.5">Grupa na Facebooku</p>
+          <h3 className="text-base font-serif font-semibold text-htg-fg mb-0.5">
+            Zapraszamy do aktywności w naszej grupie
+          </h3>
+          <p className="text-htg-fg-muted text-sm">
+            Tylko dla osób po sesji — dołącz i bądź częścią społeczności.
+          </p>
+        </div>
+        <div className="sm:ml-auto flex-shrink-0">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1877F2]/10 text-[#1877F2] text-sm font-medium group-hover:bg-[#1877F2] group-hover:text-white transition-all duration-300">
+            Dołącz do grupy
+          </span>
+        </div>
+      </a>
+    </div>
+  );
+}
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -93,6 +124,9 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
         ) : (
           <DashboardRecordingList items={portalItems} userEmail={userEmail} userId={userId} />
         )}
+
+        {/* Facebook group */}
+        <FacebookGroupCard />
 
         {/* Centrum Kontaktu HTG */}
         <div className="mt-12">
@@ -207,6 +241,8 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       ) : (
         <FullRecordingList groups={formattedGroups} userEmail={userEmail} userId={userId} />
       )}
+
+      <FacebookGroupCard />
     </div>
   );
 }

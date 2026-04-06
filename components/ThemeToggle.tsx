@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from './ThemeProvider';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, SunMoon } from 'lucide-react';
 
 export default function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -15,7 +15,7 @@ export default function ThemeToggle() {
       {resolvedTheme === 'dark' ? (
         <Sun className="w-5 h-5" />
       ) : (
-        <Moon className="w-5 h-5" />
+        <SunMoon className="w-5 h-5" />
       )}
     </button>
   );

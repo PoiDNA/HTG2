@@ -18,8 +18,19 @@ export async function GET(request: NextRequest) {
   const locale = localeMatch ? localeMatch[1] : 'pl';
 
   const defaultHome = isNagrania ? NAGRANIA_HOME : '/konto';
-  const successRedirect = new URL(`/${locale}${defaultHome}`, origin);
-  const failRedirect = new URL(`/${locale}/login?error=auth_failed`, origin);
+  // Honor `next` if it's a safe same-origin path; otherwise fall back to defaultHome
+  const successPath = (next && next.startsWith('/') && !next.startsWith('//')) ? next : `/${locale}${defaultHome}`;
+  const successRedirect = new URL(successPath, origin);
+  // Build fail redirect helper — preserves next as returnTo so user lands where they intended
+  const safeReturnTo = (next && next.startsWith('/') && !next.startsWith('//') && next !== `/${locale}${defaultHome}`)
+    ? next : null;
+  function buildFailRedirect(errorType: string): URL {
+    const url = new URL(`/${locale}/login`, origin);
+    url.searchParams.set('error', errorType);
+    if (safeReturnTo) url.searchParams.set('returnTo', safeReturnTo);
+    return url;
+  }
+  const failRedirect = buildFailRedirect('auth_failed');
 
   if (!code && !tokenHash) {
     // OAuth may return error params when signup is blocked
@@ -70,7 +81,7 @@ export async function GET(request: NextRequest) {
       errCode === 'otp_disabled' || errCode === 'user_not_found' ||
       errMsg.includes('signups not allowed') || errMsg.includes('user not found')
     ) ? 'not_registered' : 'auth_failed';
-    return NextResponse.redirect(new URL(`/${locale}/login?error=${errorType}`, origin));
+    return NextResponse.redirect(buildFailRedirect(errorType));
   }
 
   // Auto-set role based on email
@@ -99,10 +110,13 @@ export async function GET(request: NextRequest) {
   // Trigger post-login actions (welcome email, gifts, community join) — non-blocking
   try {
     const postLoginUrl = new URL('/api/auth/post-login', origin);
-    // We need to forward the auth cookies to the post-login endpoint
-    const cookieHeader = request.cookies.getAll()
-      .map(c => `${c.name}=${c.value}`)
-      .join('; ');
+    // Forward auth cookies to post-login endpoint.
+    // verifyOtp sets new session cookies on `response` — merge with request cookies
+    // so that post-login receives a valid authenticated session.
+    const cookieMap = new Map<string, string>();
+    request.cookies.getAll().forEach(c => cookieMap.set(c.name, c.value));
+    response.cookies.getAll().forEach(c => cookieMap.set(c.name, c.value)); // response cookies override (newer)
+    const cookieHeader = [...cookieMap.entries()].map(([k, v]) => `${k}=${v}`).join('; ');
 
     fetch(postLoginUrl, {
       method: 'POST',

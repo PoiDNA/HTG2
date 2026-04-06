@@ -101,9 +101,13 @@ export async function middleware(request: NextRequest) {
         errCode === 'otp_disabled' || errCode === 'user_not_found' ||
         errMsg.includes('signups not allowed') || errMsg.includes('user not found')
       ) ? 'not_registered' : 'auth_failed';
-      const errUrl = request.nextUrl.clone();
-      errUrl.pathname = `/${locale}/login`;
+      // Build clean error redirect — don't clone request URL (would carry ?code=, ?next= as garbage)
+      const errUrl = new URL(`${request.nextUrl.origin}/${locale}/login`);
       errUrl.searchParams.set('error', errorType);
+      // Preserve nextParam as returnTo so user lands where intended after re-login
+      if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+        errUrl.searchParams.set('returnTo', nextParam);
+      }
       const errorResponse = NextResponse.redirect(errUrl);
       errorResponse.headers.set('Cache-Control', 'no-store');
       return errorResponse;

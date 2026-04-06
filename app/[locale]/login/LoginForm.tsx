@@ -36,12 +36,14 @@ export default function LoginForm() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setReturnTo(params.get('returnTo') || '');
+    // Only accept same-origin paths as returnTo to prevent open redirect
+    const rawReturnTo = params.get('returnTo') || '';
+    setReturnTo(rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '');
 
     // Handle auth error redirects
     const errorParam = params.get('error');
     if (errorParam === 'not_registered') setNotRegistered(true);
-    else if (errorParam === 'auth_failed') setError(t('error_email'));
+    else if (errorParam === 'auth_failed') setError(t('error_link_expired'));
 
     // Check if user is already logged in
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -133,6 +135,7 @@ export default function LoginForm() {
       email,
       options: {
         shouldCreateUser: false,
+        // NOTE: must include ?next=... (query string) — Supabase email template appends &token_hash=
         emailRedirectTo: `${window.location.origin}/auth/confirm?next=/${locale}${portalHome}`,
       },
     });
@@ -319,7 +322,9 @@ export default function LoginForm() {
         }
       } catch { /* fallback below */ }
     }
-    window.location.href = returnTo || `/${locale}${portalHome}`;
+    // Sanitize returnTo — only allow same-origin paths
+    const safeTo = (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) ? returnTo : '';
+    window.location.href = safeTo || `/${locale}${portalHome}`;
   }
 
   async function handleSaveName(e: React.FormEvent) {

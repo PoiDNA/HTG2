@@ -32,9 +32,26 @@ export default function StickyPlayer() {
     }
   }, [engineHandle]);
 
-  // Don't show if no active session or ended
+  // Don't show if no active session
   if (!activeSession) return null;
-  if (playerState.status === 'ended') return null;
+
+  // Ended state — show "Sesja zakończona" briefly
+  if (playerState.status === 'ended') {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-htg-card/95 backdrop-blur-md border-t border-htg-card-border shadow-lg">
+        <div className="h-0.5 bg-htg-warm w-full" />
+        <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-htg-fg-muted">Sesja zakończona.</p>
+          <button
+            onClick={stopPlayback}
+            className="px-4 py-2 rounded-lg text-xs font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
+          >
+            Wróć do panelu
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const isPlaying = playerState.status === 'playing';
   const progress = duration ? (currentTime / duration) * 100 : 0;

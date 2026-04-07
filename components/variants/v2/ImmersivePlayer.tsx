@@ -35,6 +35,9 @@ export default function ImmersivePlayer({
   const [isRevealed, setIsRevealed] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [resumePosition, setResumePosition] = useState(0);
+  const [showPostSession, setShowPostSession] = useState(false);
+  const [note, setNote] = useState('');
+  const [noteSaved, setNoteSaved] = useState(false);
   const autoplayAttemptedRef = useRef(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPlayingRef = useRef(false);
@@ -56,8 +59,10 @@ export default function ImmersivePlayer({
 
   const handleStateChange = useCallback((state: PlayerState) => {
     setPlayerState(state);
-    if (state.status === 'ended' && onEnd) onEnd();
-  }, [onEnd]);
+    if (state.status === 'ended') {
+      setShowPostSession(true);
+    }
+  }, []);
 
   // Autoplay
   useEffect(() => {
@@ -222,6 +227,49 @@ export default function ImmersivePlayer({
             <ShieldAlert className="w-12 h-12 text-htg-lavender mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Format nieobsługiwany</h3>
             <p className="text-white/70 text-sm">{playerState.message}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Post-session note overlay (V2 Sanctuary) */}
+      {showPostSession && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0D1A12]/95 z-30 animate-in fade-in duration-1000">
+          <div className="text-center max-w-md px-6 w-full">
+            {noteSaved ? (
+              <div className="animate-in fade-in duration-500">
+                <p className="text-white/70 text-sm mb-6">Zapisano.</p>
+                <button
+                  onClick={() => { setShowPostSession(false); onEnd?.(); }}
+                  className="px-6 py-3 bg-htg-indigo text-white rounded-xl text-sm font-medium hover:bg-htg-indigo-light transition-colors"
+                >
+                  Wróć do panelu
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-white/60 text-sm mb-4">Zostaw ślad z teraz (opcjonalnie)</p>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-white/30 resize-none min-h-[80px] mb-2"
+                  rows={3}
+                />
+                <p className="text-white/30 text-xs mb-6">To widzisz tylko Ty</p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => {
+                      // TODO: save note to backend when API exists
+                      if (note.trim()) setNoteSaved(true);
+                      else { setShowPostSession(false); onEnd?.(); }
+                    }}
+                    className="px-6 py-3 bg-htg-indigo text-white rounded-xl text-sm font-medium hover:bg-htg-indigo-light transition-colors"
+                  >
+                    {note.trim() ? 'Zapisz i zakończ' : 'Zakończ bez notatki'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

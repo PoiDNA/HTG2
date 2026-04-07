@@ -119,7 +119,7 @@ export default async function LocaleLayout({
           (function(){
             try{
               var t=localStorage.getItem('htg-theme');
-              var dark=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+              var dark=t==='dark'||(v==='v3'&&!t)||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches);
               var d=document.documentElement;
               var v=${JSON.stringify(variant)};
               var palettes={
@@ -140,6 +140,10 @@ export default async function LocaleLayout({
               d.style.setProperty('--color-htg-card',p.c);
               d.style.setProperty('--color-htg-card-border',p.cb);
               d.style.setProperty('--color-htg-surface',p.s);
+              if(v==='v3'){
+                d.style.setProperty('--color-htg-indigo','#B8860B');
+                d.style.setProperty('--color-htg-indigo-light','#D4A840');
+              }
             }catch(e){}
           })();
         `}} />

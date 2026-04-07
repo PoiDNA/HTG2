@@ -171,23 +171,12 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         <div className="relative z-30 flex-shrink-0 h-[60px] flex items-center justify-between px-4">
           <LiveControls backUrl={backUrl} standalone={false} />
 
-          {/* REC indicator removed — consent covers recording */}
-
           {/* Connection state badge */}
           {!isConnected && (
             <div className="absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full
               bg-black/40 backdrop-blur-sm text-xs text-htg-cream/70 pointer-events-none">
               {isConnecting ? 'Łączenie...' : connectionState}
             </div>
-          )}
-
-          {/* Session timer — staff only */}
-          {isStaff && (
-            <SessionTimer
-              startedAt={initialSession.started_at}
-              phaseChangedAt={phaseChangedAt}
-              phase={phase}
-            />
           )}
         </div>
       )}
@@ -309,42 +298,46 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
       {/* ── Staff fixed controls — all active phases ───────────────────── */}
       {isStaff && phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && phase !== 'przejscie_1' && phase !== 'przejscie_2' && (
         <>
-          {/* ZOOM — top-left, transparent, blue on hover */}
-          <div className="fixed top-20 left-4 z-50">
+          {/* Bottom-left: ZOOM + Private talk */}
+          <div className="fixed bottom-6 left-4 sm:left-6 z-50 flex items-center gap-2">
             <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
-          </div>
-
-          {/* Phase button — bottom-right on desktop, bottom-left on mobile (arrow only) */}
-          <div className="fixed bottom-6 right-6 z-50 hidden sm:block">
-            <PhaseControls
-              sessionId={sessionId}
-              currentPhase={phase}
-              isStaff={isStaff}
-              onPhaseChanged={handlePhaseChanged}
-            />
-          </div>
-          <div className="fixed bottom-6 left-4 z-50 sm:hidden">
-            <PhaseControls
-              sessionId={sessionId}
-              currentPhase={phase}
-              isStaff={isStaff}
-              onPhaseChanged={handlePhaseChanged}
-              compact
-            />
-          </div>
-
-          {/* Private talk — desktop only, bottom-left */}
-          {phase === 'sesja' && (
-            <div className="fixed bottom-6 left-6 z-50 hidden sm:block">
+            {phase === 'sesja' && (
               <PrivateTalkButton room={room} isStaff={isStaff} />
+            )}
+          </div>
+
+          {/* Bottom-right: timer + phase button stacked */}
+          <div className="fixed bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-2">
+            <SessionTimer
+              startedAt={initialSession.started_at}
+              phaseChangedAt={phaseChangedAt}
+              phase={phase}
+            />
+            {/* Desktop: full button, Mobile: compact arrow */}
+            <div className="hidden sm:block">
+              <PhaseControls
+                sessionId={sessionId}
+                currentPhase={phase}
+                isStaff={isStaff}
+                onPhaseChanged={handlePhaseChanged}
+              />
             </div>
-          )}
+            <div className="sm:hidden">
+              <PhaseControls
+                sessionId={sessionId}
+                currentPhase={phase}
+                isStaff={isStaff}
+                onPhaseChanged={handlePhaseChanged}
+                compact
+              />
+            </div>
+          </div>
         </>
       )}
 
-      {/* ── Client volume sliders — audio phase only ──────────────────── */}
-      {!isStaff && phase === 'sesja' && (
-        <div className="fixed bottom-6 right-6 z-50 hidden sm:flex items-center gap-2">
+      {/* ── Volume sliders — sesja phase, all participants ────────────── */}
+      {phase === 'sesja' && (
+        <div className="fixed bottom-20 right-4 sm:right-6 z-50 hidden sm:flex flex-col gap-2">
           {Array.from(room.remoteParticipants.values()).map((p) => (
             <VolumeSlider
               key={p.identity}

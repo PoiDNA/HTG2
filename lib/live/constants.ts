@@ -105,6 +105,7 @@ export const PHASE_BUTTON_LABELS: Partial<Record<Phase, string>> = {
   wstep: 'go_to_session',
   przejscie_1: 'start_session',
   sesja: 'end_session',
+  przejscie_2: 'go_to_summary',
   podsumowanie: 'leave_session',
 };
 

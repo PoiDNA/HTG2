@@ -499,6 +499,7 @@
     "go_to_session": "Go to session",
     "start_session": "Start session",
     "end_session": "End session",
+    "go_to_summary": "Go to summary",
     "leave_session": "Leave session",
     "loading": "Loading...",
     "mic_on": "Unmute microphone",

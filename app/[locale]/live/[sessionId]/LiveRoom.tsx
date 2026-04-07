@@ -260,7 +260,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         )}
 
         {phase === 'przejscie_1' && (
-          <div className="relative">
+          <>
             <PhaseTransition
               variant={1}
               musicSrc="https://htg2-cdn.b-cdn.net/music-sessions/music-1.mp3"
@@ -268,7 +268,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
               onComplete={handleTransitionComplete}
             />
             {isStaff && (
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+              <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50">
                 <PhaseControls
                   sessionId={sessionId}
                   currentPhase={phase}
@@ -277,7 +277,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
                 />
               </div>
             )}
-          </div>
+          </>
         )}
 
         {phase === 'sesja' && (
@@ -303,7 +303,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         )}
 
         {phase === 'przejscie_2' && (
-          <div className="relative">
+          <>
             <PhaseTransition
               variant={2}
               musicSrc="https://htg2-cdn.b-cdn.net/music-sessions/music-2.mp3"
@@ -311,7 +311,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
               onComplete={handleTransitionComplete}
             />
             {isStaff && (
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+              <div className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50">
                 <PhaseControls
                   sessionId={sessionId}
                   currentPhase={phase}
@@ -320,7 +320,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
                 />
               </div>
             )}
-          </div>
+          </>
         )}
 
         {phase === 'podsumowanie' && (

@@ -7,6 +7,7 @@ import StripeConnectCard from '@/components/staff/StripeConnectCard';
 import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
+import CreateRoomButton from '@/components/staff/CreateRoomButton';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -212,9 +213,7 @@ export default async function StaffDashboard({
                   )}
 
                   {!booking.live_session_id && canJoin && (
-                    <span className="text-xs text-htg-fg-muted bg-htg-surface px-3 py-2 rounded-lg shrink-0">
-                      Poczekalnia za chwilę...
-                    </span>
+                    <CreateRoomButton bookingId={booking.id} />
                   )}
 
                   {!canJoin && (

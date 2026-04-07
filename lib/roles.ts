@@ -1,5 +1,5 @@
 export const ADMIN_EMAILS = ['htg@htg.cyou'];
-export const STAFF_EMAILS = ['natalia@htg.cyou', 'agata@htg.cyou', 'justyna@htg.cyou'];
+export const STAFF_EMAILS = ['natalia@htg.cyou', 'agata@htg.cyou', 'justyna@htg.cyou', 'przemek@htg.cyou'];
 
 export type UserRole = 'user' | 'moderator' | 'admin';
 

@@ -3,8 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { isAdminEmail } from '@/lib/roles';
-import { DESIGN_VARIANT_COOKIE, type DesignVariant } from './design-variant';
+import { DESIGN_VARIANT_COOKIE, canSwitchVariant, type DesignVariant } from './design-variant';
 
 const VALID: ReadonlySet<string> = new Set<DesignVariant>(['v1', 'v2', 'v3']);
 
@@ -12,7 +11,7 @@ export async function setDesignVariant(formData: FormData) {
   // Authorize: check email-based admin (same as impersonate pattern)
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) {
+  if (!user || !canSwitchVariant(user.email ?? '')) {
     throw new Error('Brak uprawnień');
   }
 

@@ -91,17 +91,12 @@ export async function POST(req: NextRequest) {
       await getResend().emails.send({
         from: 'HTG <sesje@htgcyou.com>',
         to: toAddress,
-        subject: 'Nowa odpowiedź od zespołu HTG',
+        subject: 'Nowa wiadomość w Centrum Kontaktu HTG',
         text: [
-          userName ? `Cześć ${userName},` : 'Cześć,',
-          '',
-          'Masz nową wiadomość od zespołu HTG.',
-          '',
-          'Zaloguj się, aby przeczytać odpowiedź:',
-          `${baseUrl}/pl/konto/wiadomosci`,
+          'Masz nową wiadomość w Centrum Kontaktu HTG.',
           '',
           'Pozdrawiamy,',
-          'Zespół HTG',
+          'HTG',
         ].join('\n'),
       });
       console.info('Portal notification sent', { to: toAddress, conversationId });

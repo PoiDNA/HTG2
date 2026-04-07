@@ -67,7 +67,21 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
   const [giftEmail, setGiftEmail] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
   const [recordingConsent, setRecordingConsent] = useState(false);
+  const [clientEmail, setClientEmail] = useState('');
   const router = useRouter();
+
+  // Fetch user email client-side if not provided via prop
+  useEffect(() => {
+    if (userEmail) { setClientEmail(userEmail); return; }
+    (async () => {
+      try {
+        const { createSupabaseBrowser } = await import('@/lib/supabase/client');
+        const supabase = createSupabaseBrowser();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) setClientEmail(user.email);
+      } catch { /* not logged in */ }
+    })();
+  }, [userEmail]);
 
   // Derive sessions
   const soloSession = sessions.find(s => s.sessionType === 'natalia_solo');
@@ -654,7 +668,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
           </div>
 
           {/* Payment method — only for full payment, logged-in users */}
-          {paymentMode === 'full' && userEmail && (
+          {paymentMode === 'full' && clientEmail && (
             <div className="space-y-3">
               <span className="text-sm font-medium text-htg-fg block">Metoda płatności</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -688,7 +702,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
               {paymentMethod === 'transfer' && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
                   <BankTransferCard
-                    email={userEmail}
+                    email={clientEmail}
                     labels={{
                       title: 'Dane do przelewu',
                       recipient: 'Odbiorca',

@@ -41,12 +41,13 @@ export default async function IndividualSessionsPage({
   const { userId, supabase } = await getEffectiveUser();
 
   // Fetch user email for bank transfer card
+  const { data: { user: authUser } } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from('profiles')
     .select('email')
     .eq('id', userId)
     .single();
-  const userEmail = profile?.email || '';
+  const userEmail = profile?.email || authUser?.email || '';
 
   // Fetch user's bookings with slot details
   const { data } = await supabase

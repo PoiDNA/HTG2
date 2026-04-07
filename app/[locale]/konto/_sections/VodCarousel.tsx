@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Play, Clock, CheckCircle2, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Clock, CheckCircle2, Bookmark } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
-import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
+import ImmersivePlayer from '@/components/variants/v2/ImmersivePlayer';
 
 type FilterTag = 'all' | 'unlistened' | 'bookmarked' | 'new';
 
@@ -112,10 +112,10 @@ export default function VodCarousel({ sections, singleSessions, userId, userEmai
                 )}
               </button>
 
-              {/* Inline player */}
+              {/* Immersive player (V2) */}
               {playingSessionId === session.id && session.isPlayable && (
                 <div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <SessionReviewPlayer
+                  <ImmersivePlayer
                     playbackId={session.id}
                     idFieldName="sessionId"
                     userEmail={userEmail}

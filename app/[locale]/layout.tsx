@@ -18,6 +18,9 @@ import GlobalShellV1 from "@/components/variants/v1/GlobalShell";
 import GlobalShellV2 from "@/components/variants/v2/GlobalShell";
 import GlobalShellV3 from "@/components/variants/v3/GlobalShell";
 import DesignVariantSwitcher from "@/components/DesignVariantSwitcher";
+import { PlayerProvider } from "@/lib/player-context";
+import GlobalPlayer from "@/components/player/GlobalPlayer";
+import StickyPlayer from "@/components/variants/v3/StickyPlayer";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -148,10 +151,14 @@ export default async function LocaleLayout({
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider variant={variant}>
             <DesignVariantProvider variant={variant}>
-              <Shell isNagrania={isNagrania}>
-                {children}
-              </Shell>
-              {showSwitcher && <DesignVariantSwitcher currentVariant={variant} locale={locale} />}
+              <PlayerProvider>
+                <Shell isNagrania={isNagrania}>
+                  {children}
+                </Shell>
+                {variant === 'v3' && <GlobalPlayer />}
+                {variant === 'v3' && <StickyPlayer />}
+                {showSwitcher && <DesignVariantSwitcher currentVariant={variant} locale={locale} />}
+              </PlayerProvider>
             </DesignVariantProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

@@ -9,7 +9,6 @@ import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import { isNagraniaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
 import CollapsibleSidebar from './CollapsibleSidebar';
-import HoneycombNav from '@/components/konto/HoneycombNav';
 import SidebarLink from './SidebarLink';
 import SpiritIcon from './SpiritIcon';
 import {
@@ -189,11 +188,6 @@ export default async function AccountLayout({
   );
 
   return (
-    <>
-    {/* Honeycomb nav for regular users on mobile */}
-    {!isAdmin && !isStaff && !isPublikacja && (
-      <HoneycombNav locale={locale} />
-    )}
     <div className="mx-auto max-w-6xl px-6 py-8">
       {viewAsUserEmail && (
         <div className="flex items-center gap-3 px-4 py-3 mb-6 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm text-amber-600 dark:text-amber-400">
@@ -265,6 +259,5 @@ export default async function AccountLayout({
         {children}
       </CollapsibleSidebar>
     </div>
-    </>
   );
 }

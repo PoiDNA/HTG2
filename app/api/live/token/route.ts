@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Fetch live session with explicit FK hint
     const { data: session, error: sessionError } = await adminClient
       .from('live_sessions')
-      .select('id, room_name, booking:bookings!live_sessions_booking_id_fkey(user_id)')
+      .select('id, room_name, booking_id, booking:bookings!live_sessions_booking_id_fkey(user_id)')
       .eq('id', sessionId)
       .single();
 
@@ -43,7 +43,21 @@ export async function POST(request: NextRequest) {
     const isBookingOwner = (session as any).booking?.user_id === user.id;
 
     if (!staff && !isBookingOwner) {
-      return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
+      // Check if user is an accepted companion
+      let isCompanion = false;
+      if ((session as any).booking_id) {
+        const { data: companion } = await adminClient
+          .from('booking_companions')
+          .select('id')
+          .eq('booking_id', (session as any).booking_id)
+          .eq('user_id', user.id)
+          .not('accepted_at', 'is', null)
+          .maybeSingle();
+        isCompanion = !!companion;
+      }
+      if (!isCompanion) {
+        return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
+      }
     }
 
     // Fetch display name from profile

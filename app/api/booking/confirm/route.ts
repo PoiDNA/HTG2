@@ -25,6 +25,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    // RPC returns TABLE(success BOOLEAN, message TEXT) — check result
+    const result = Array.isArray(data) ? data[0] : data;
+    if (result && !result.success) {
+      return NextResponse.json({ error: result.message || 'Confirmation failed' }, { status: 400 });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Confirm error:', error);

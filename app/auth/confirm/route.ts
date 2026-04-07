@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 import { getRoleForEmail } from '@/lib/roles';
-import { isNagraniaPortal, NAGRANIA_HOME } from '@/lib/portal';
+import { getPortalHome } from '@/lib/portal';
+import { locales } from '@/i18n-config';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -11,13 +12,13 @@ export async function GET(request: NextRequest) {
   const isLoginFlow = (['email', 'signup', 'magiclink', 'invite'] as string[]).includes(type);
 
   // Detect locale from 'next' param or default to 'pl'
-  const isNagrania = isNagraniaPortal(request.headers.get('host'));
-  const defaultNext = isNagrania ? `/pl${NAGRANIA_HOME}` : '/pl/konto';
+  const portalHome = getPortalHome(request.headers.get('host'));
+  const defaultNext = `/pl${portalHome}`;
   const next = searchParams.get('next') ?? defaultNext;
-  const localeMatch = next.match(/^\/([a-z]{2})(?:\/|$)/);
-  const locale = localeMatch ? localeMatch[1] : 'pl';
+  const rawLocale = next.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || 'pl';
+  const locale = (locales as readonly string[]).includes(rawLocale) ? rawLocale : 'pl';
 
-  const defaultHome = isNagrania ? NAGRANIA_HOME : '/konto';
+  const defaultHome = portalHome;
   // Honor `next` if it's a safe same-origin path; otherwise fall back to defaultHome
   const successPath = (next && next.startsWith('/') && !next.startsWith('//')) ? next : `/${locale}${defaultHome}`;
   const successRedirect = new URL(successPath, origin);

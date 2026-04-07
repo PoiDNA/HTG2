@@ -7,6 +7,7 @@ import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { Mail, KeyRound, ArrowLeft, Loader2, User } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { getRoleForEmail } from '@/lib/roles';
+import { getPortalHomeClient, isAnyPortalClient } from '@/lib/portal';
 import type { Provider } from '@supabase/supabase-js';
 
 type Step = 'email' | 'code' | 'link-sent' | 'name' | 'register';
@@ -33,13 +34,18 @@ export default function LoginForm() {
 
   const isNagrania = typeof window !== 'undefined' &&
     (window.location.hostname === 'nagrania.htg.cyou' || window.location.hostname === 'nagrania.localhost');
-  const portalHome = isNagrania ? '/konto/nagrania-sesji' : '/konto';
+  const portalHome = getPortalHomeClient();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    // Only accept same-origin paths as returnTo to prevent open redirect
-    const rawReturnTo = params.get('returnTo') || '';
-    setReturnTo(rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '');
+    // Sanitize returnTo to prevent open redirect
+    const raw = (params.get('returnTo') || '').trim();
+    let decoded: string;
+    try { decoded = decodeURIComponent(raw); } catch { decoded = ''; }
+    decoded = decoded.replace(/[\x00-\x1f]/g, ''); // strip control chars
+    const safe = decoded.startsWith('/') && !decoded.startsWith('//') && !decoded.startsWith('/\\')
+      && !decoded.includes('://') ? decoded : '';
+    setReturnTo(safe);
 
     // Handle auth error redirects
     const errorParam = params.get('error');
@@ -316,7 +322,7 @@ export default function LoginForm() {
 
   async function finishLogin(name?: string) {
     const locale = getLocale();
-    if (!returnTo && !isNagrania) {
+    if (!returnTo && !isAnyPortalClient()) {
       try {
         const { data: { user: u } } = await supabase.auth.getUser();
         if (u) {

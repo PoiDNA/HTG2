@@ -12,7 +12,6 @@ import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
 import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import CompanionInvite from '@/components/booking/CompanionInvite';
-import BankTransferCard from '@/components/booking/BankTransferCard';
 import PrivateRecordingsSection from '../_sections/PrivateRecordingsSection';
 import { getSessionCountdown, formatCountdownParts } from '@/lib/booking/countdown-phrases';
 import { Suspense } from 'react';
@@ -418,18 +417,6 @@ export default async function IndividualSessionsPage({
               buy: tInd('buy'),
               cancel_policy: tInd('cancel_policy'),
               per_session: tInd('per_session'),
-            }}
-          />
-
-          <BankTransferCard
-            email={userEmail}
-            labels={{
-              title: tInd('transfer_title'),
-              recipient: tInd('transfer_recipient'),
-              account: tInd('transfer_account'),
-              reference: tInd('transfer_reference'),
-              download: tInd('transfer_download'),
-              print: tInd('transfer_print'),
             }}
           />
         </div>

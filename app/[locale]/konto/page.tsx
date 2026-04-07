@@ -8,6 +8,7 @@ import { isAdminEmail } from '@/lib/roles';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { getDesignVariant } from '@/lib/design-variant';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
+import NextSessionSection from './_sections/NextSessionSection';
 import VodLibrarySection from './_sections/VodLibrarySection';
 import RemainingSessionsSection from './_sections/RemainingSessionsSection';
 import SanctuaryHero from './_sections/SanctuaryHero';
@@ -103,6 +104,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
   return (
     <div>
       <ActiveCallsWidget locale={locale} />
+
+      <Suspense fallback={null}>
+        <NextSessionSection locale={locale} />
+      </Suspense>
 
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />

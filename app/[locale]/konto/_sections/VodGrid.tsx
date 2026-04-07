@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Play, Clock, CheckCircle2, Bookmark } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
-import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
+import { usePlayer } from '@/lib/player-context';
 
 type Props = {
   sections: MonthSection[];
@@ -16,15 +16,14 @@ type Props = {
 
 /**
  * V3 "Sanctum" VOD — 3-column grid with dropdown filters.
- * Dense, content-first layout.
+ * Dispatches playback to global PlayerContext (StickyPlayer).
  */
-export default function VodGrid({ sections, singleSessions, userId, userEmail, listenedSessionIds, bookmarkedSessionIds }: Props) {
+export default function VodGrid({ sections, singleSessions, listenedSessionIds, bookmarkedSessionIds }: Props) {
   const [statusFilter, setStatusFilter] = useState<'all' | 'unlistened' | 'bookmarked'>('all');
-  const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
   const [listened] = useState<Set<string>>(() => new Set(listenedSessionIds));
   const [bookmarked] = useState<Set<string>>(() => new Set(bookmarkedSessionIds));
+  const { startPlayback, activeSession } = usePlayer();
 
-  // Flatten all sessions
   const allSessions = [
     ...sections.flatMap(s => s.sessions),
     ...singleSessions,
@@ -36,12 +35,20 @@ export default function VodGrid({ sections, singleSessions, userId, userEmail, l
     return true;
   });
 
+  const handlePlay = (session: VodSession) => {
+    if (!session.isPlayable) return;
+    startPlayback({
+      playbackId: session.id,
+      idFieldName: 'sessionId',
+      tokenEndpoint: '/api/video/token',
+      title: session.title,
+    });
+  };
+
   return (
     <section className="mb-10">
       <div className="flex items-center justify-between gap-4 mb-4">
         <h2 className="text-base font-semibold text-htg-fg">Nagrania z sesji</h2>
-
-        {/* Filter dropdown */}
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
@@ -57,17 +64,27 @@ export default function VodGrid({ sections, singleSessions, userId, userEmail, l
         <p className="text-sm text-htg-fg-muted py-4">Brak sesji.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((session) => (
-            <div key={session.id}>
+          {filtered.map((session) => {
+            const isActive = activeSession?.playbackId === session.id;
+            return (
               <button
-                onClick={() => setPlayingSessionId(prev => prev === session.id ? null : session.id)}
-                className="w-full bg-htg-card border border-htg-card-border rounded-lg p-3.5 text-left hover:border-htg-warm/30 transition-colors group"
+                key={session.id}
+                onClick={() => handlePlay(session)}
+                className={`w-full bg-htg-card border rounded-lg p-3.5 text-left transition-colors group ${
+                  isActive
+                    ? 'border-htg-warm/50 bg-htg-warm/5'
+                    : 'border-htg-card-border hover:border-htg-warm/30'
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-htg-fg line-clamp-2 flex-1 group-hover:text-htg-warm transition-colors">
+                  <p className={`text-sm font-medium line-clamp-2 flex-1 transition-colors ${
+                    isActive ? 'text-htg-warm' : 'text-htg-fg group-hover:text-htg-warm'
+                  }`}>
                     {session.title}
                   </p>
-                  <div className="shrink-0 w-7 h-7 rounded-md bg-htg-warm/10 flex items-center justify-center group-hover:bg-htg-warm/20 transition-colors">
+                  <div className={`shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                    isActive ? 'bg-htg-warm/20' : 'bg-htg-warm/10 group-hover:bg-htg-warm/20'
+                  }`}>
                     <Play className="w-3 h-3 text-htg-warm" />
                   </div>
                 </div>
@@ -86,21 +103,8 @@ export default function VodGrid({ sections, singleSessions, userId, userEmail, l
                   )}
                 </div>
               </button>
-
-              {/* Inline player */}
-              {playingSessionId === session.id && session.isPlayable && (
-                <div className="mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <SessionReviewPlayer
-                    playbackId={session.id}
-                    idFieldName="sessionId"
-                    userEmail={userEmail}
-                    userId={userId}
-                    tokenEndpoint="/api/video/token"
-                  />
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

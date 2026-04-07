@@ -1,11 +1,12 @@
 import SiteNav from '@/components/SiteNav';
-import NavLinks from '@/components/NavLinks';
 import Footer from '@/components/Footer';
 import HeaderLogo from '@/components/HeaderLogo';
 import { Link } from '@/i18n-config';
+import NavLinksV2 from './NavLinksV2';
 
 /**
- * V2 Global Shell — wider layout, centered nav, expanded brand area.
+ * V2 „Sanctuary" Global Shell
+ * Transparent blur header, wider layout, calm nav visible for logged-in users.
  */
 export default function GlobalShellV2({
   isNagrania,
@@ -17,13 +18,13 @@ export default function GlobalShellV2({
   return (
     <>
       {!isNagrania && (
-        <header className="bg-htg-bg border-b-2 border-htg-indigo/30 sticky top-0 z-50 transition-colors duration-300">
+        <header className="bg-htg-card/30 backdrop-blur-lg border-b border-htg-card-border/50 sticky top-0 z-50 transition-colors duration-300">
           <div className="mx-auto max-w-7xl px-8 py-5 flex items-center justify-between gap-6">
-            <Link href="/" className="flex items-center gap-2" aria-label="Strona główna HTG">
+            <Link href="/" className="flex items-center" aria-label="Strona główna HTG">
               <HeaderLogo />
             </Link>
             <div className="flex-1 flex justify-center">
-              <NavLinks />
+              <NavLinksV2 />
             </div>
             <SiteNav />
           </div>

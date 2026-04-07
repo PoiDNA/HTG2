@@ -1,9 +1,10 @@
-import { Eye } from 'lucide-react';
+import { Eye, ChevronLeft } from 'lucide-react';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
+import { Link } from '@/i18n-config';
 
 /**
- * V2 Account Shell — horizontal top navigation instead of sidebar,
- * full-width content area, wider max-width.
+ * V2 „Sanctuary" Account Shell
+ * Simple vertical nav list (no sidebar, no grid), full-width content, breadcrumb.
  */
 export default function AccountShellV2({
   sidebar,
@@ -31,14 +32,14 @@ export default function AccountShellV2({
         </div>
       )}
 
-      {/* Horizontal nav — sidebar items displayed as a scrollable top bar */}
+      {/* Simple nav list — compact, one column */}
       <nav className="mb-8 border-b border-htg-card-border pb-4">
         <div className="flex flex-wrap gap-1 overflow-x-auto">
           {sidebar}
         </div>
       </nav>
 
-      {/* Content — full width */}
+      {/* Full-width content */}
       <div className="w-full">
         {children}
       </div>

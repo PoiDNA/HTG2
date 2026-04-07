@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
+import { getPortalHomeClient } from '@/lib/portal';
 import { ExternalLink, ShieldCheck } from 'lucide-react';
 
 const REQUIRED_CONSENTS = [
@@ -10,13 +12,13 @@ const REQUIRED_CONSENTS = [
     type: 'terms_v3',
     label: 'Akceptuję Regulamin serwisu (v3.0)',
     text: 'Akceptacja Regulaminu Sesji HTG w wersji 3.0, obowiązującego od 1 kwietnia 2025 r.',
-    href: '/terms',
+    hrefSuffix: '/terms',
   },
   {
     type: 'privacy_v3',
     label: 'Akceptuję Politykę prywatności',
     text: 'Akceptacja Polityki Prywatności HTG w wersji 1.1',
-    href: '/privacy',
+    hrefSuffix: '/privacy',
   },
   {
     type: 'sensitive_data',
@@ -34,6 +36,7 @@ const REQUIRED_CONSENTS = [
 
 export default function ConsentGatePage() {
   const router = useRouter();
+  const locale = useLocale();
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -67,9 +70,8 @@ export default function ConsentGatePage() {
         return;
       }
 
-      // Redirect to account panel (or recordings on nagrania portal)
-      const isNagrania = window.location.hostname === 'nagrania.htg.cyou' || window.location.hostname === 'nagrania.localhost';
-      router.push(isNagrania ? '/konto/nagrania-sesji' : '/konto');
+      // Redirect to portal home (nagrania, sesja, or default /konto)
+      router.push(`/${locale}${getPortalHomeClient()}`);
       router.refresh();
     } catch {
       setError('Wystąpił błąd. Spróbuj ponownie.');
@@ -106,11 +108,11 @@ export default function ConsentGatePage() {
             <div className="min-w-0">
               <span className="text-sm font-medium text-htg-fg leading-relaxed">
                 {consent.label}
-                {'href' in consent && consent.href && (
+                {'hrefSuffix' in consent && consent.hrefSuffix && (
                   <>
                     {' '}
                     <a
-                      href={consent.href}
+                      href={`/${locale}${consent.hrefSuffix}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-htg-indigo hover:underline inline-flex items-center gap-0.5"

@@ -10,7 +10,7 @@ import { getMessages } from "next-intl/server";
 import { locales, routing } from "@/i18n-config";
 import { Toaster } from "sonner";
 import { cookies, headers } from "next/headers";
-import { isNagraniaPortal } from "@/lib/portal";
+import { isAnyPortal } from "@/lib/portal";
 import { getDesignVariant, canSwitchVariant } from "@/lib/design-variant";
 import { DesignVariantProvider } from "@/lib/design-variant-context";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -85,7 +85,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   const headersList = await headers();
-  const isNagrania = isNagraniaPortal(headersList.get('host'));
+  const isNagrania = isAnyPortal(headersList.get('host'));
 
   // Design variant (cookie-based, admin-only switching)
   const cookieStore = await cookies();

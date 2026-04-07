@@ -5,8 +5,9 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 import { cookies, headers } from 'next/headers';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
-import { isNagraniaPortal } from '@/lib/portal';
+import { isNagraniaPortal, isSesjaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
+import SesjaHeader from '@/components/portal/SesjaHeader';
 import SidebarLink from './SidebarLink';
 import SpiritIcon from './SpiritIcon';
 import { getDesignVariant } from '@/lib/design-variant';
@@ -43,6 +44,18 @@ export default async function AccountLayout({
     return (
       <div className="mx-auto max-w-3xl px-6 py-8">
         <NagraniaHeader userEmail={user?.email ?? ''} locale={locale} />
+        {children}
+      </div>
+    );
+  }
+
+  // ─── Sesja portal: minimal layout without sidebar ──────────
+  if (isSesjaPortal(host)) {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-8">
+        <SesjaHeader userEmail={user?.email ?? ''} locale={locale} />
         {children}
       </div>
     );

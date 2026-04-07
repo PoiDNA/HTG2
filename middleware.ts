@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { routing, locales } from './i18n-config';
-import { isNagraniaPortal, NAGRANIA_HOME } from './lib/portal';
+import { isNagraniaPortal, NAGRANIA_HOME, isSesjaPortal, SESJA_HOME, isAnyPortal, getPortalHome } from './lib/portal';
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -25,17 +25,27 @@ function getLocaleFromPath(pathname: string): string {
 }
 
 // Paths allowed on the nagrania.htg.cyou portal (without locale prefix)
-const NAGRANIA_ALLOWED = ['/login', '/auth', '/konto/nagrania-sesji', '/konto/zgody'];
+const NAGRANIA_ALLOWED = ['/login', '/auth', '/konto/nagrania-sesji', '/konto/zgody', '/privacy', '/terms'];
 
 function isNagraniaAllowed(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
   return NAGRANIA_ALLOWED.some(p => withoutLocale === p || withoutLocale.startsWith(`${p}/`));
 }
 
+// Paths allowed on the sesja.htg.cyou portal (without locale prefix)
+const SESJA_ALLOWED = ['/login', '/auth', '/konto/zgody', '/konto/sesja-panel', '/live', '/privacy', '/terms'];
+
+function isSesjaAllowed(pathname: string): boolean {
+  const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
+  return SESJA_ALLOWED.some(p => withoutLocale === p || withoutLocale.startsWith(`${p}/`));
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
   const host = request.headers.get('host');
   const isNagrania = isNagraniaPortal(host);
+  const isSesja = isSesjaPortal(host);
+  const isPortal = isNagrania || isSesja;
 
   // Skip static assets
   if (pathname.includes('/_next/') || pathname.includes('/favicon.ico') || pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)) {
@@ -52,7 +62,9 @@ export async function middleware(request: NextRequest) {
   const authCode = searchParams.get('code');
   if (authCode && authCode.length > 20) {
     const nextParam = searchParams.get('next');
-    const locale = nextParam?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || getLocaleFromPath(pathname);
+    const rawLocale = nextParam?.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] || getLocaleFromPath(pathname);
+    const locale = (locales as readonly string[]).includes(rawLocale) ? rawLocale : routing.defaultLocale;
+    const portalHome = getPortalHome(host);
 
     // Defensive: if the code lands on nagrania.htg.cyou but `next` does NOT point to the
     // nagrania-sesji path (or is absent), the user was logging in via htgcyou.com and
@@ -65,7 +77,7 @@ export async function middleware(request: NextRequest) {
       destUrl = new URL(`https://htgcyou.com${dest}`);
     } else {
       const url = request.nextUrl.clone();
-      url.pathname = nextParam || `/${locale}${isNagrania ? NAGRANIA_HOME : '/konto'}`;
+      url.pathname = nextParam || `/${locale}${portalHome}`;
       url.searchParams.delete('code');
       url.searchParams.delete('next');
       url.searchParams.delete('consent');
@@ -123,12 +135,18 @@ export async function middleware(request: NextRequest) {
     url.pathname = `/${locale}${NAGRANIA_HOME}`;
     return NextResponse.redirect(url);
   }
+  if (isSesja && !isSesjaAllowed(pathname)) {
+    const locale = getLocaleFromPath(pathname);
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}${SESJA_HOME}`;
+    return NextResponse.redirect(url);
+  }
 
   // ─── i18n Middleware ──────────────────────────────────────────
   const response = intlMiddleware(request);
 
-  // ─── Nagrania portal: redirect logged-in users from /login to recordings ──
-  if (isNagrania && isPublicPath(pathname)) {
+  // ─── Portal: redirect logged-in users from /login to portal home ──
+  if (isPortal && isPublicPath(pathname)) {
     const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
     if (withoutLocale === '/login') {
       const supabaseCheck = createServerClient(
@@ -150,7 +168,7 @@ export async function middleware(request: NextRequest) {
       if (user) {
         const locale = getLocaleFromPath(pathname);
         const url = request.nextUrl.clone();
-        url.pathname = `/${locale}${NAGRANIA_HOME}`;
+        url.pathname = `/${locale}${getPortalHome(host)}`;
         return NextResponse.redirect(url);
       }
     }
@@ -185,6 +203,11 @@ export async function middleware(request: NextRequest) {
     const locale = getLocaleFromPath(pathname);
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
+    // Preserve original path as returnTo (pathname only — no query for security)
+    const withoutLocaleForReturn = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
+    if (withoutLocaleForReturn !== '/' && withoutLocaleForReturn !== '/login') {
+      url.searchParams.set('returnTo', withoutLocaleForReturn);
+    }
     return NextResponse.redirect(url);
   }
 

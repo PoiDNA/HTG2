@@ -10,6 +10,7 @@ import { Headphones, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import AuditPageView from './AuditPageView';
 import RecordingActions from './RecordingActions';
 import ImportRecording from './ImportRecording';
+import ScanBunnyButton from './ScanBunnyButton';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -141,7 +142,10 @@ export default async function AdminRecordingsPage({
       </div>
 
       {/* Import section */}
-      <ImportRecording />
+      <div className="flex items-start gap-4 flex-wrap">
+        <ImportRecording />
+        <ScanBunnyButton />
+      </div>
 
       {/* Filters */}
       <form className="flex flex-wrap items-center gap-3 mb-6">

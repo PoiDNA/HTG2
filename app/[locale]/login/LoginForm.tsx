@@ -26,6 +26,7 @@ export default function LoginForm() {
   const [loggedInUser, setLoggedInUser] = useState<SupabaseUser | null>(null);
   const [checkingSession, setCheckingSession] = useState(true);
   const [notRegistered, setNotRegistered] = useState(false);
+  const [passkeyVerifying, setPasskeyVerifying] = useState(false);
   const passkeyAbortRef = useRef<AbortController | null>(null);
 
   const supabase = createSupabaseBrowser();
@@ -101,19 +102,24 @@ export default function LoginForm() {
         useBrowserAutofill: true,
       });
 
-      // User selected a passkey from autofill — verify it (fully silent, no UI state changes)
+      // User confirmed TouchID/passkey — hide the form and show spinner
+      setPasskeyVerifying(true);
+
       const verifyRes = await fetch('/api/auth/passkey/auth-verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ response: authResponse }),
       });
 
-      if (!verifyRes.ok) return; // Silent fail — user can still use email/OTP
+      if (!verifyRes.ok) {
+        setPasskeyVerifying(false);
+        return;
+      }
 
       // Success — redirect to account
       await handlePostLogin();
     } catch {
-      // Silent — user didn't select passkey, cancelled, or no credential available
+      setPasskeyVerifying(false);
     }
   }
 
@@ -358,8 +364,7 @@ export default function LoginForm() {
     );
   }
 
-  if (loggedInUser) {
-    // Show loading spinner while redirecting to portal
+  if (loggedInUser || passkeyVerifying) {
     return (
       <div className="p-8 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-htg-sage animate-spin" />

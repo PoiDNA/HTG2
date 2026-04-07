@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
     const { data: session, error: fetchError } = await admin
       .from('live_sessions')
       .select(`
-        id, phase, room_name, booking_id, slot_id,
+        id, phase, room_name, booking_id, slot_id, metadata,
         started_at, sesja_started_at, podsumowanie_started_at,
         egress_wstep_id, egress_sesja_id, egress_sesja_tracks_ids, egress_podsumowanie_id,
-        session_type
+        booking:bookings!live_sessions_booking_id_fkey(session_type)
       `)
       .eq('id', sessionId)
       .single();
@@ -202,7 +202,8 @@ export async function POST(request: NextRequest) {
         // Auto-settle: trigger transfer to assistant after session ends
         try {
           const { SESSION_PAYOUT_CONFIG } = await import('@/lib/stripe-connect');
-          const config = SESSION_PAYOUT_CONFIG[session.session_type || ''];
+          const sessionType = (session as any).booking?.session_type || '';
+          const config = SESSION_PAYOUT_CONFIG[sessionType];
 
           // Get booking to find payment info
           const { data: booking } = await admin

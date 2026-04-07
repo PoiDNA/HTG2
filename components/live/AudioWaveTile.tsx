@@ -225,19 +225,15 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
   return (
     <div
       ref={containerRef}
-      className={`relative flex-1 h-full flex flex-col items-center justify-center gap-4 overflow-hidden
-        transition-all duration-500
-        ${speaking ? 'ring-4 ring-[#4ade80]/40 ring-inset' : ''}`}
+      className="relative flex-1 h-full flex flex-col items-center justify-center gap-4 overflow-hidden transition-all duration-500"
       style={{ background: 'transparent' }}
     >
+      {/* Soft glow behind speaker — no ring, no waveform */}
       <div className="absolute inset-0 pointer-events-none transition-opacity duration-500"
         style={{ background: `radial-gradient(ellipse 55% 45% at 50% 40%, ${glowColor}, transparent 70%)` }} />
 
       <div
-        className={`relative z-10 flex items-center justify-center rounded-full transition-all duration-300
-          ${speaking
-            ? 'ring-4 ring-[#4ade80]/70 shadow-[0_0_32px_8px_rgba(74,222,128,0.25)]'
-            : 'ring-2 ring-white/15'}`}
+        className="relative z-10 flex items-center justify-center rounded-full transition-all duration-300 ring-2 ring-white/15"
         style={{ width: 96, height: 96, background: speaking ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.06)' }}
       >
         <span className="text-4xl font-serif text-white/90 select-none">{initial}</span>
@@ -250,10 +246,6 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
             <MicOff className="w-3 h-3" /> wyciszony
           </span>
         )}
-      </div>
-
-      <div className="relative z-10">
-        <VoiceWaveform speaking={speaking} muted={muted} height={50} width={widthRef.current} seed={seed} />
       </div>
     </div>
   );

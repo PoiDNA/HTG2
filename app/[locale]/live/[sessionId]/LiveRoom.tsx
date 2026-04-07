@@ -335,9 +335,9 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         </>
       )}
 
-      {/* ── Volume sliders — sesja phase, all participants ────────────── */}
+      {/* ── Volume sliders — sesja phase, small icons next to controls ── */}
       {phase === 'sesja' && (
-        <div className="fixed bottom-20 right-4 sm:right-6 z-50 hidden sm:flex flex-col gap-2">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1">
           {Array.from(room.remoteParticipants.values()).map((p) => (
             <VolumeSlider
               key={p.identity}

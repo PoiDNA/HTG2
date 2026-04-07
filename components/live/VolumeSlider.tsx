@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Volume2 } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Volume2, VolumeX } from 'lucide-react';
 
 interface VolumeSliderProps {
   participantName: string;
-  /** Callback to adjust volume (0-1) */
   onVolumeChange: (volume: number) => void;
   initialVolume?: number;
 }
@@ -16,6 +15,8 @@ export default function VolumeSlider({
   initialVolume = 1,
 }: VolumeSliderProps) {
   const [volume, setVolume] = useState(initialVolume);
+  const [expanded, setExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,27 +27,52 @@ export default function VolumeSlider({
     [onVolumeChange],
   );
 
+  // Close on click outside
+  useEffect(() => {
+    if (!expanded) return;
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setExpanded(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [expanded]);
+
   return (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-htg-surface">
-      <Volume2 className="w-4 h-4 text-htg-fg-muted flex-shrink-0" />
-      <span className="text-sm text-htg-fg-muted min-w-[80px] truncate">
-        {participantName}
-      </span>
-      <input
-        type="range"
-        min="0"
-        max="1"
-        step="0.01"
-        value={volume}
-        onChange={handleChange}
-        className="flex-1 h-2 rounded-full appearance-none bg-htg-card-border
-          [&::-webkit-slider-thumb]:appearance-none
-          [&::-webkit-slider-thumb]:w-4
-          [&::-webkit-slider-thumb]:h-4
-          [&::-webkit-slider-thumb]:rounded-full
-          [&::-webkit-slider-thumb]:bg-htg-warm
-          [&::-webkit-slider-thumb]:cursor-pointer"
-      />
+    <div ref={containerRef} className="relative">
+      {/* Icon button — always visible */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        title={`Głośność: ${participantName}`}
+        className={`flex items-center justify-center w-9 h-9 rounded-full transition-all
+          ${expanded ? 'bg-white/20 text-white' : 'bg-white/10 text-white/40 hover:bg-white/15 hover:text-white/70'}`}
+      >
+        {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+      </button>
+
+      {/* Expandable slider — appears above the icon */}
+      {expanded && (
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2
+          bg-black/80 backdrop-blur-md rounded-xl px-3 py-3 shadow-xl border border-white/10">
+          <span className="text-[10px] text-white/60 whitespace-nowrap">{participantName}</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={handleChange}
+            className="w-24 h-1.5 rounded-full appearance-none bg-white/20 rotate-0
+              [&::-webkit-slider-thumb]:appearance-none
+              [&::-webkit-slider-thumb]:w-3
+              [&::-webkit-slider-thumb]:h-3
+              [&::-webkit-slider-thumb]:rounded-full
+              [&::-webkit-slider-thumb]:bg-htg-warm
+              [&::-webkit-slider-thumb]:cursor-pointer"
+          />
+        </div>
+      )}
     </div>
   );
 }

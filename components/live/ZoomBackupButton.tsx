@@ -60,7 +60,7 @@ export default function ZoomBackupButton({ room, slotId, compact = false, onUrlS
       <button
         onClick={handleActivate}
         disabled={sending}
-        title={sent ? 'Zoom wysłany ✓' : 'Przejdź do Zoom — wyświetl link wszystkim uczestnikom'}
+        title={sent ? 'Zoom wysłany ✓' : 'Przełącz spotkanie na ZOOM'}
         className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors active:scale-95
           ${sent
             ? 'bg-green-700/80 text-white cursor-default'
@@ -77,7 +77,7 @@ export default function ZoomBackupButton({ room, slotId, compact = false, onUrlS
     <button
       onClick={handleActivate}
       disabled={sending}
-      title="Przejdź do Zoom — wyświetl link wszystkim uczestnikom"
+      title="Przełącz spotkanie na ZOOM"
       className={`flex items-center gap-1.5 px-4 h-10 rounded-full text-sm font-medium transition-colors
         ${sent
           ? 'bg-green-700/80 text-white cursor-default'

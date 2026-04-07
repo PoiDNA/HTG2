@@ -288,15 +288,17 @@ export default function LiveVideoLayout({
           </div>
         ))}
 
-        {/* Controls row */}
-        <div className="flex items-center gap-4">
-          <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />
-          {staffRight && (
-            <div className="flex items-center gap-2">
-              {staffRight}
-            </div>
-          )}
-        </div>
+        {/* Controls — only in video phases (wstep/podsumowanie). Audio phases use bottom bar. */}
+        {!audioMode && (
+          <div className="flex items-center gap-4">
+            <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />
+            {staffRight && (
+              <div className="flex items-center gap-2">
+                {staffRight}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

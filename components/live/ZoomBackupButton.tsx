@@ -86,7 +86,7 @@ export default function ZoomBackupButton({ room, slotId, compact = false, onUrlS
         disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       <Video className="w-4 h-4 flex-shrink-0" />
-      {sent ? 'Zoom wysłany ✓' : sending ? 'Wysyłanie…' : 'Przejdź do Zoom'}
+      {sent ? '✓' : sending ? '…' : 'ZOOM'}
     </button>
   );
 }

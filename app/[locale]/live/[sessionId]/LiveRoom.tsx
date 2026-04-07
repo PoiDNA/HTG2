@@ -178,13 +178,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         <div className="relative z-30 flex-shrink-0 h-[60px] flex items-center justify-between px-4">
           <LiveControls backUrl={backUrl} standalone={false} />
 
-          {/* REC indicator — staff only during sesja */}
-          {isStaff && phase === 'sesja' && (
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 backdrop-blur-sm pointer-events-none">
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span className="text-white text-xs font-bold tracking-wide">REC</span>
-            </div>
-          )}
+          {/* REC indicator removed — consent covers recording */}
 
           {/* Connection state badge */}
           {!isConnected && (
@@ -357,43 +351,72 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
 
       {/* Bottom bar — audio/transition phases only (video phases have inline controls) */}
       {!isVideoPhase && phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
-        <div className="relative z-20 flex flex-wrap items-center justify-center gap-3
-          px-4 py-3 bg-black/40 backdrop-blur-sm border-t border-white/10
-          sm:justify-between sm:px-6 sm:py-4">
+        <div className="relative z-20 flex items-center justify-between
+          px-3 py-2 sm:px-6 sm:py-3">
 
-          {/* Media controls (mic + pause for clients) — always visible */}
-          <div className="flex items-center gap-3 order-1">
-            <MediaControls room={room} showVideo={false} showBreak={!isStaff} />
+          {/* Left: phase button (mobile) or Zoom + private talk (desktop) */}
+          <div className="flex items-center gap-2">
+            {isStaff && (
+              <>
+                {/* Phase button — left on mobile, right on desktop */}
+                <div className="sm:hidden">
+                  <PhaseControls
+                    sessionId={sessionId}
+                    currentPhase={phase}
+                    isStaff={isStaff}
+                    onPhaseChanged={handlePhaseChanged}
+                    compact
+                  />
+                </div>
+                {/* Zoom + Private talk — desktop only */}
+                <div className="hidden sm:flex items-center gap-2">
+                  <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
+                  {phase === 'sesja' && (
+                    <PrivateTalkButton room={room} isStaff={isStaff} />
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Volume sliders — hidden on mobile, visible sm+ */}
-          {!isStaff && phase === 'sesja' && (
-            <div className="hidden sm:flex items-center gap-2 order-2">
-              {Array.from(room.remoteParticipants.values()).map((p) => (
-                <VolumeSlider
-                  key={p.identity}
-                  participantName={p.name ?? p.identity}
-                  onVolumeChange={(vol) => handleVolumeChange(p.identity, vol)}
-                />
-              ))}
-            </div>
-          )}
+          {/* Center: mic/camera controls */}
+          <div className="flex items-center gap-3">
+            <MediaControls room={room} showVideo={false} showBreak={!isStaff} />
+            {/* Mobile-only: Zoom + private talk as small buttons */}
+            {isStaff && (
+              <div className="flex sm:hidden items-center gap-1">
+                <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
+                {phase === 'sesja' && (
+                  <PrivateTalkButton room={room} isStaff={isStaff} />
+                )}
+              </div>
+            )}
+          </div>
 
-          {/* Staff controls */}
-          {isStaff && (
-            <div className="flex items-center gap-2 order-3">
-              <ZoomBackupButton room={room} onUrlSent={setZoomBackupUrl} />
-              {phase === 'sesja' && (
-                <PrivateTalkButton room={room} isStaff={isStaff} />
-              )}
-              <PhaseControls
-                sessionId={sessionId}
-                currentPhase={phase}
-                isStaff={isStaff}
-                onPhaseChanged={handlePhaseChanged}
-              />
-            </div>
-          )}
+          {/* Right: phase button (desktop) or volume (client) */}
+          <div className="flex items-center gap-2">
+            {isStaff && (
+              <div className="hidden sm:block">
+                <PhaseControls
+                  sessionId={sessionId}
+                  currentPhase={phase}
+                  isStaff={isStaff}
+                  onPhaseChanged={handlePhaseChanged}
+                />
+              </div>
+            )}
+            {!isStaff && phase === 'sesja' && (
+              <div className="hidden sm:flex items-center gap-2">
+                {Array.from(room.remoteParticipants.values()).map((p) => (
+                  <VolumeSlider
+                    key={p.identity}
+                    participantName={p.name ?? p.identity}
+                    onVolumeChange={(vol) => handleVolumeChange(p.identity, vol)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

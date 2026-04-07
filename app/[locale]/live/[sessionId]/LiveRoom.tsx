@@ -157,7 +157,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
     : 0;
 
   return (
-    <div className="relative w-full h-screen bg-[#0a0e1a] flex flex-col">
+    <div className="relative w-full h-screen bg-htg-bg flex flex-col">
 
       {/* Branding — always visible 20px from top, centered */}
       {phase !== 'poczekalnia' && phase !== 'ended' && (
@@ -283,18 +283,6 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             phase={phase}
             showVideo={false}
             audioMode={true}
-            staffRight={isStaff ? (
-              <div className="flex flex-col items-end gap-2">
-                <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
-                <PhaseControls
-                  sessionId={sessionId}
-                  currentPhase={phase}
-                  isStaff={isStaff}
-                  onPhaseChanged={handlePhaseChanged}
-                  compact
-                />
-              </div>
-            ) : undefined}
           />
         )}
 

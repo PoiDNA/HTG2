@@ -137,7 +137,7 @@ interface LiveVideoLayoutProps {
 }
 
 const CIRCLE_BASE = 132;      // px — bottom self-view circles
-const ASST_SIZE   = 88;       // px — assistant overlay circles
+const ASST_SIZE   = 220;      // px — assistant overlay circle (right side)
 const VIDEO_TOP   = 60;       // px — offset from top of LiveVideoLayout area
 const VIDEO_PCT   = 67;       // % — video height as % of container
 
@@ -161,52 +161,41 @@ export default function LiveVideoLayout({
   const remoteStaff    = useMemo(() => participants.filter((p) => !p.isLocal && isStaffParticipant(p)),  [participants]);
   const remoteClients  = useMemo(() => participants.filter((p) => !p.isLocal && !isStaffParticipant(p)), [participants]);
 
-  // Primary = who goes in the big video area
-  // Client sees Natalia (first remote staff) in main; staff sees client in main
-  const primaryMain: Participant[] = useMemo(() =>
-    viewerIsStaff ? remoteClients : remoteStaff.slice(0, 1),
-  [viewerIsStaff, remoteClients, remoteStaff]);
+  // Natalia = first remote staff (practitioner). Always default main.
+  // Assistants = additional remote staff (Agata, Justyna, Przemek)
+  const natalia = remoteStaff[0] ?? null;
+  const assistants = useMemo(() => remoteStaff.slice(1), [remoteStaff]);
 
-  // Assistants = additional staff shown as overlay circles on main video
-  // Client: staff[1+] (beyond Natalia);  staff: all remote staff (other assistants)
-  const assistants: Participant[] = useMemo(() =>
-    viewerIsStaff ? remoteStaff : remoteStaff.slice(1),
-  [viewerIsStaff, remoteStaff]);
+  // Default main participant = Natalia (for everyone)
+  // If local user IS Natalia (first staff), main = client instead
+  const defaultMainParticipant = useMemo(() => {
+    if (natalia) return natalia;
+    // Fallback: if no remote staff, show first client
+    return remoteClients[0] ?? null;
+  }, [natalia, remoteClients]);
 
-  // Bottom circles = local self-view (+ other clients if multi-client)
-  const defaultCircles: Participant[] = useMemo(() => [
-    ...(localParticipant ? [localParticipant] : []),
-    ...(viewerIsStaff ? [] : remoteClients),
-  ], [localParticipant, viewerIsStaff, remoteClients]);
+  // Swap: clicking any circle swaps that person into main
+  const mainParticipant = useMemo(() => {
+    if (!swappedId) return defaultMainParticipant;
+    const found = participants.find((p) => p.identity === swappedId);
+    return found ?? defaultMainParticipant;
+  }, [swappedId, defaultMainParticipant, participants]);
 
-  // Swap mechanic (main ↔ circles)
-  const { mainParticipants, circleParticipants } = useMemo(() => {
-    if (!swappedId || !localParticipant) {
-      return { mainParticipants: primaryMain, circleParticipants: defaultCircles };
-    }
-    const swapped = participants.find((p) => p.identity === swappedId);
-    if (!swapped) return { mainParticipants: primaryMain, circleParticipants: defaultCircles };
-
-    if (primaryMain.some((p) => p.identity === swappedId)) {
-      return {
-        mainParticipants:  primaryMain.map((p)  => p.identity === swappedId ? localParticipant : p),
-        circleParticipants: defaultCircles.map((p) => p.isLocal ? swapped : p),
-      };
-    }
-    return {
-      mainParticipants: primaryMain,
-      circleParticipants: defaultCircles.map((p) => {
-        if (p.isLocal) return swapped;
-        if (p.identity === swappedId) return localParticipant;
-        return p;
-      }),
-    };
-  }, [swappedId, localParticipant, primaryMain, defaultCircles, participants]);
+  // Bottom circles = everyone except main participant
+  const circleParticipants = useMemo(() => {
+    const all = [
+      ...(localParticipant ? [localParticipant] : []),
+      ...remoteClients,
+      // Natalia goes to circles if swapped out of main
+      ...(natalia && mainParticipant?.identity !== natalia.identity ? [natalia] : []),
+    ];
+    // Remove whoever is currently in main
+    return all.filter((p) => p.identity !== mainParticipant?.identity);
+  }, [localParticipant, remoteClients, natalia, mainParticipant]);
 
   const handleSwap = useCallback((id: string) => {
-    if (id === localParticipant?.identity) return;
     setSwappedId((prev) => (prev === id ? null : id));
-  }, [localParticipant]);
+  }, []);
 
   const circleCount = circleParticipants.length;
   const circleSize  = circleCount <= 1 ? CIRCLE_BASE + 8 : circleCount === 2 ? CIRCLE_BASE : circleCount === 3 ? CIRCLE_BASE - 16 : CIRCLE_BASE - 28;
@@ -229,45 +218,46 @@ export default function LiveVideoLayout({
         {/* Relative wrapper: video tiles + assistant overlay */}
         <div className="relative h-full" style={{ width: '70%' }}>
 
-          {/* Video / Audio wave tiles — all corners rounded */}
+          {/* Video / Audio wave tile — single main participant */}
           <div className="absolute inset-0 flex gap-px overflow-hidden rounded-2xl">
-            {mainParticipants.length === 0 ? (
+            {!mainParticipant ? (
               <div className="flex-1 bg-black/30 flex items-center justify-center">
                 <p className="text-htg-cream/30 text-sm">Oczekiwanie na uczestników...</p>
               </div>
             ) : audioMode ? (
-              mainParticipants.map((p) => (
-                <AudioMainTile key={p.identity} participant={p} />
-              ))
+              <AudioMainTile key={mainParticipant.identity} participant={mainParticipant} />
             ) : (
-              mainParticipants.map((p) => (
-                <MainTile
-                  key={p.identity}
-                  participant={p}
-                  videoTrack={getVideoTrack(videoTracks, p.identity)}
-                  clickable={!p.isLocal}
-                  onClick={() => handleSwap(p.identity)}
-                />
-              ))
+              <MainTile
+                key={mainParticipant.identity}
+                participant={mainParticipant}
+                videoTrack={getVideoTrack(videoTracks, mainParticipant.identity)}
+                clickable={false}
+              />
             )}
           </div>
 
-          {/* ── Assistant overlay circles — top-left of video, 1/3 hanging outside ── */}
+          {/* ── Assistant overlay circle — RIGHT side, 2/3 on screen ── */}
           {assistants.length > 0 && (
             <div
-              className="absolute left-0 z-10 flex flex-col"
-              style={{ top: 50, gap: 40 }}
+              className="absolute right-0 z-10 flex flex-col items-end"
+              style={{ top: '50%', transform: 'translateY(-50%)', gap: 24 }}
             >
               {assistants.map((p) => (
-                <div key={p.identity} style={{ transform: 'translateX(-33%)' }}>
+                <div key={p.identity} style={{ transform: 'translateX(33%)' }}>
                   {audioMode ? (
-                    <AudioCircleTile participant={p} size={ASST_SIZE} clickable={false} />
+                    <AudioCircleTile
+                      participant={p}
+                      size={ASST_SIZE}
+                      clickable
+                      onClick={() => handleSwap(p.identity)}
+                    />
                   ) : (
                     <CircleTile
                       participant={p}
                       videoTrack={getVideoTrack(videoTracks, p.identity)}
                       size={ASST_SIZE}
-                      clickable={false}
+                      clickable
+                      onClick={() => handleSwap(p.identity)}
                     />
                   )}
                 </div>

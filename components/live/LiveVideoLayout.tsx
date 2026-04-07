@@ -219,7 +219,8 @@ export default function LiveVideoLayout({
   }, [circleParticipants]);
 
   const videoBottom = `${VIDEO_PCT}%`;
-  const circleTop = `calc(${VIDEO_PCT}% + 16px)`;
+  const overlapPx = Math.round(circleSize / 3);
+  const circleTop = `calc(${VIDEO_PCT}% - ${overlapPx}px)`;
 
   return (
     <div className="relative w-full h-full overflow-visible">

@@ -260,12 +260,24 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         )}
 
         {phase === 'przejscie_1' && (
-          <PhaseTransition
-            variant={1}
-            musicSrc="https://htg2-cdn.b-cdn.net/music-sessions/music-1.mp3"
-            autoFade={transitionAutoFade}
-            onComplete={handleTransitionComplete}
-          />
+          <div className="relative">
+            <PhaseTransition
+              variant={1}
+              musicSrc="https://htg2-cdn.b-cdn.net/music-sessions/music-1.mp3"
+              autoFade={transitionAutoFade}
+              onComplete={handleTransitionComplete}
+            />
+            {isStaff && (
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+                <PhaseControls
+                  sessionId={sessionId}
+                  currentPhase={phase}
+                  isStaff={isStaff}
+                  onPhaseChanged={handlePhaseChanged}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {phase === 'sesja' && (
@@ -291,12 +303,24 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         )}
 
         {phase === 'przejscie_2' && (
-          <PhaseTransition
-            variant={2}
-            musicSrc="https://htg2-cdn.b-cdn.net/music-sessions/music-2.mp3"
-            autoFade={transitionAutoFade}
-            onComplete={handleTransitionComplete}
-          />
+          <div className="relative">
+            <PhaseTransition
+              variant={2}
+              musicSrc="https://htg2-cdn.b-cdn.net/music-sessions/music-2.mp3"
+              autoFade={transitionAutoFade}
+              onComplete={handleTransitionComplete}
+            />
+            {isStaff && (
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+                <PhaseControls
+                  sessionId={sessionId}
+                  currentPhase={phase}
+                  isStaff={isStaff}
+                  onPhaseChanged={handlePhaseChanged}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {phase === 'podsumowanie' && (

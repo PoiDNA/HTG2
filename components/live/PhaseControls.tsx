@@ -22,6 +22,7 @@ const PHASE_ICONS: Partial<Record<Phase, React.ReactNode>> = {
   wstep: <ArrowRight className="w-5 h-5" />,
   przejscie_1: <Play className="w-5 h-5" />,
   sesja: <Square className="w-5 h-5" />,
+  przejscie_2: <ArrowRight className="w-5 h-5" />,
   podsumowanie: <LogOut className="w-5 h-5" />,
 };
 

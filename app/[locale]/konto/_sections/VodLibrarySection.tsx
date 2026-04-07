@@ -37,7 +37,7 @@ export default async function VodLibrarySection({ locale }: { locale: string }) 
       <section>
         <div className="flex items-center gap-2 mb-4">
           <Film className="w-5 h-5 text-htg-sage" />
-          <h2 className="text-lg font-serif font-semibold text-htg-fg">Biblioteka audio</h2>
+          <h2 className="text-lg font-serif font-semibold text-htg-fg">Biblioteka</h2>
         </div>
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">
           <Film className="w-10 h-10 text-htg-fg-muted/30 mx-auto mb-3" />

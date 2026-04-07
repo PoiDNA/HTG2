@@ -1,9 +1,12 @@
-import { Eye } from 'lucide-react';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Eye, PanelLeftOpen, PanelLeftClose } from 'lucide-react';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
 
 /**
- * V3 Account Shell — right sidebar (reversed), narrower max-width
- * for a focused reading experience.
+ * V3 „Sanctum" Account Shell
+ * Left collapsible sidebar: 48px icons-only → 200px expanded.
  */
 export default function AccountShellV3({
   sidebar,
@@ -16,6 +19,17 @@ export default function AccountShellV3({
   locale: string;
   children: React.ReactNode;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       {viewAsUserEmail && (
@@ -30,13 +44,39 @@ export default function AccountShellV3({
           </form>
         </div>
       )}
-      <div className="flex flex-col md:flex-row-reverse gap-8">
-        {/* Right sidebar */}
-        <nav className="md:w-48 shrink-0">
-          <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-            {sidebar}
-          </div>
-        </nav>
+
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Collapsible left sidebar */}
+        {isDesktop ? (
+          <nav
+            className={`shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
+              expanded ? 'w-[200px]' : 'w-12'
+            }`}
+            onMouseEnter={() => setExpanded(true)}
+            onMouseLeave={() => setExpanded(false)}
+          >
+            <div className="flex flex-col gap-0.5">
+              <button
+                onClick={() => setExpanded(e => !e)}
+                className="flex items-center gap-2 px-3 py-2 mb-2 text-xs text-htg-fg-muted hover:text-htg-fg transition-colors"
+                aria-label={expanded ? 'Zwiń menu' : 'Rozwiń menu'}
+              >
+                {expanded ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+                {expanded && <span>Zwiń</span>}
+              </button>
+              <div className={expanded ? '' : '[&_a]:justify-center [&_a>span:last-child]:hidden [&_p]:hidden [&_a]:px-2'}>
+                {sidebar}
+              </div>
+            </div>
+          </nav>
+        ) : (
+          /* Mobile: horizontal scroll */
+          <nav className="overflow-x-auto pb-2">
+            <div className="flex gap-1">
+              {sidebar}
+            </div>
+          </nav>
+        )}
 
         {/* Content */}
         <div className="flex-grow min-w-0">

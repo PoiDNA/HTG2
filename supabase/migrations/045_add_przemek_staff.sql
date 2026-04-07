@@ -1,13 +1,26 @@
--- Migration 045: Add przemek@htg.cyou as practitioner staff member
+-- Migration 045: Add natalia_przemek session type + Przemek as assistant
 -- ===================================================================
--- Gives Przemek the same panel view as Natalia (sees all session types)
+
+-- ─── 1. Extend booking_slots session_type CHECK for natalia_przemek ──
+
+ALTER TABLE public.booking_slots
+  DROP CONSTRAINT IF EXISTS booking_slots_session_type_check;
+
+ALTER TABLE public.booking_slots
+  ADD CONSTRAINT booking_slots_session_type_check
+  CHECK (session_type IN (
+    'natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_przemek',
+    'pre_session', 'natalia_para', 'natalia_asysta'
+  ));
+
+-- ─── 2. Add Przemek as assistant staff member ──────────────────────
 
 INSERT INTO public.staff_members (name, slug, role, session_types, email, is_active)
 VALUES (
   'Przemek',
   'przemek',
-  'practitioner',
-  ARRAY['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para', 'natalia_asysta'],
+  'assistant',
+  ARRAY['natalia_przemek'],
   'przemek@htg.cyou',
   true
 )

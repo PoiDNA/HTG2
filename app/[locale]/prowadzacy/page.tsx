@@ -16,13 +16,14 @@ const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }>
   partial_payment:      { label: PAYMENT_STATUS_LABELS.partial_payment,      className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
   pending_verification: { label: PAYMENT_STATUS_LABELS.pending_verification, className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
 };
-import { SESSION_CONFIG } from '@/lib/booking/constants';
+import { SESSION_CONFIG, ALL_SESSION_TYPES } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
 const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
   natalia_solo: { className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
   natalia_agata: { className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
   natalia_justyna: { className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  natalia_przemek: { className: 'bg-sky-900/40 text-sky-300 border border-sky-700/30' },
   natalia_para: { className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
   natalia_asysta: { className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
@@ -57,7 +58,7 @@ export default async function StaffDashboard({
         id, session_type, status, topics, live_session_id, user_id, payment_status,
         slot:booking_slots!inner(slot_date, start_time, end_time)
       `)
-      .in('session_type', isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para', 'natalia_asysta'] : sessionTypes)
+      .in('session_type', isPractitioner ? ALL_SESSION_TYPES : sessionTypes)
       .in('status', ['confirmed', 'pending_confirmation'])
       .gte('slot.slot_date', todayStr)
       .order('slot_date', { referencedTable: 'booking_slots', ascending: true })

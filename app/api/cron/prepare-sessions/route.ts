@@ -40,7 +40,9 @@ export async function GET(request: NextRequest) {
         const slot = (booking as any).slot;
         if (!slot) continue;
 
-        const slotDateTime = new Date(slot.slot_date + 'T' + slot.start_time);
+        // Parse slot time in Warsaw timezone (+02:00 CEST / +01:00 CET)
+        // slot.start_time is "HH:MM:SS", slot.slot_date is "YYYY-MM-DD"
+        const slotDateTime = new Date(slot.slot_date + 'T' + slot.start_time + '+02:00');
 
         // Create live_session if slot is within 30 minutes from now
         if (slotDateTime <= in30min && slotDateTime > new Date(now.getTime() - 3 * 60 * 60 * 1000)) {

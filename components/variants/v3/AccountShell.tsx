@@ -45,44 +45,46 @@ export default function AccountShellV3({
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Collapsible left sidebar */}
-        {isDesktop ? (
-          <nav
-            className={`shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
-              expanded ? 'w-[200px]' : 'w-12'
-            }`}
-            onMouseEnter={() => setExpanded(true)}
-            onMouseLeave={() => setExpanded(false)}
-          >
-            <div className="flex flex-col gap-0.5">
-              <button
-                onClick={() => setExpanded(e => !e)}
-                className="flex items-center gap-2 px-3 py-2 mb-2 text-xs text-htg-fg-muted hover:text-htg-fg transition-colors"
-                aria-label={expanded ? 'Zwiń menu' : 'Rozwiń menu'}
-              >
-                {expanded ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
-                {expanded && <span>Zwiń</span>}
-              </button>
-              <div className={expanded ? '' : '[&_a]:justify-center [&_a>span:last-child]:hidden [&_p]:hidden [&_a]:px-2'}>
+      {sidebar ? (
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Collapsible left sidebar (admin/staff only) */}
+          {isDesktop ? (
+            <nav
+              className={`shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
+                expanded ? 'w-[200px]' : 'w-12'
+              }`}
+              onMouseEnter={() => setExpanded(true)}
+              onMouseLeave={() => setExpanded(false)}
+            >
+              <div className="flex flex-col gap-0.5">
+                <button
+                  onClick={() => setExpanded(e => !e)}
+                  className="flex items-center gap-2 px-3 py-2 mb-2 text-xs text-htg-fg-muted hover:text-htg-fg transition-colors"
+                  aria-label={expanded ? 'Zwiń menu' : 'Rozwiń menu'}
+                >
+                  {expanded ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+                  {expanded && <span>Zwiń</span>}
+                </button>
+                <div className={expanded ? '' : '[&_a]:justify-center [&_a>span:last-child]:hidden [&_p]:hidden [&_a]:px-2'}>
+                  {sidebar}
+                </div>
+              </div>
+            </nav>
+          ) : (
+            <nav className="overflow-x-auto pb-2">
+              <div className="flex gap-1">
                 {sidebar}
               </div>
-            </div>
-          </nav>
-        ) : (
-          /* Mobile: horizontal scroll */
-          <nav className="overflow-x-auto pb-2">
-            <div className="flex gap-1">
-              {sidebar}
-            </div>
-          </nav>
-        )}
+            </nav>
+          )}
 
-        {/* Content */}
-        <div className="flex-grow min-w-0">
-          {children}
+          <div className="flex-grow min-w-0">
+            {children}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div>{children}</div>
+      )}
     </div>
   );
 }

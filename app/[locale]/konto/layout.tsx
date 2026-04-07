@@ -227,6 +227,8 @@ export default async function AccountLayout({
     </>
   );
 
+  const hasSidebar = isAdmin || isStaff || isPublikacja;
+
   // Select shell based on variant
   const cookieStore = await cookies();
   const variant = getDesignVariant(cookieStore);
@@ -236,7 +238,7 @@ export default async function AccountLayout({
 
   return (
     <Shell
-      sidebar={sidebarContent}
+      sidebar={hasSidebar ? sidebarContent : null}
       viewAsUserEmail={viewAsUserEmail}
       locale={locale}
     >

@@ -32,12 +32,14 @@ export default function AccountShellV2({
         </div>
       )}
 
-      {/* Simple nav list — compact, one column */}
-      <nav className="mb-8 border-b border-htg-card-border pb-4">
-        <div className="flex flex-wrap gap-1 overflow-x-auto">
-          {sidebar}
-        </div>
-      </nav>
+      {/* Nav list (only if sidebar has content — admin/staff) */}
+      {sidebar && (
+        <nav className="mb-8 border-b border-htg-card-border pb-4">
+          <div className="flex flex-wrap gap-1 overflow-x-auto">
+            {sidebar}
+          </div>
+        </nav>
+      )}
 
       {/* Full-width content */}
       <div className="w-full">

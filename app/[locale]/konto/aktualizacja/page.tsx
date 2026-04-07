@@ -42,11 +42,8 @@ export default async function AktualizacjaPage({
 
   return (
     <div className="space-y-10">
-      {/* Section 1: Account update (client component — loads its own data) */}
-      <AccountUpdateClient />
-
-      {/* Section 2: Profile */}
-      <div className="border-t border-htg-card-border pt-8 space-y-8">
+      {/* Section 1: Profile */}
+      <div className="space-y-8">
         <h2 className="text-xl font-serif font-semibold text-htg-fg">{t('profile')}</h2>
 
         <ProfileForm
@@ -67,7 +64,10 @@ export default async function AktualizacjaPage({
             deleteAccount: t('delete_account'),
           }}
         />
+      </div>
 
+      {/* Section 2: Passkeys */}
+      <div className="border-t border-htg-card-border pt-8">
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
           <PasskeySection
             labels={{
@@ -88,15 +88,21 @@ export default async function AktualizacjaPage({
             }}
           />
         </div>
+      </div>
 
-        <div>
-          <h2 className="text-xl font-serif font-semibold text-htg-fg mb-4">
-            Powiadomienia społeczności
-          </h2>
-          <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-            <NotificationPreferences />
-          </div>
+      {/* Section 3: Notification preferences */}
+      <div>
+        <h2 className="text-xl font-serif font-semibold text-htg-fg mb-4">
+          Powiadomienia społeczności
+        </h2>
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
+          <NotificationPreferences />
         </div>
+      </div>
+
+      {/* Section 4: Account update (purchases, requests) — moved below Passkeys */}
+      <div className="border-t border-htg-card-border pt-8">
+        <AccountUpdateClient />
       </div>
     </div>
   );

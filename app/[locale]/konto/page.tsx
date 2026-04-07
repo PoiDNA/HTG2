@@ -104,6 +104,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
     <div>
       <ActiveCallsWidget locale={locale} />
 
+      <Suspense fallback={<SectionSkeleton title="Twoja Sesja" />}>
+        <SanctuaryHero locale={locale} />
+      </Suspense>
+
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />
       </Suspense>

@@ -85,7 +85,7 @@ export default async function SanctuaryHero({ locale }: { locale: string }) {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-medium text-htg-fg-muted uppercase tracking-wider mb-2">
-                Następna sesja
+                Twoja Sesja
               </p>
               <p className="text-2xl font-serif font-semibold text-htg-fg mb-1">
                 {formatRelativeDate(nextSlot.slot_date)}

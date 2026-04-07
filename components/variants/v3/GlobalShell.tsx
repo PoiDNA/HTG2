@@ -2,7 +2,7 @@ import SiteNav from '@/components/SiteNav';
 import Footer from '@/components/Footer';
 import HeaderLogo from '@/components/HeaderLogo';
 import { Link } from '@/i18n-config';
-import NavLinksV3 from './NavLinksV3';
+import NavLinks from '@/components/NavLinks';
 import SlideOverMenu from './SlideOverMenu';
 
 /**
@@ -28,7 +28,7 @@ export default function GlobalShellV3({
               </Link>
             </div>
             <nav className="flex-1 flex justify-center">
-              <NavLinksV3 />
+              <NavLinks />
             </nav>
             <SiteNav />
           </div>

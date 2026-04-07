@@ -1,38 +1,46 @@
 'use client';
 
 import { Link, usePathname } from '@/i18n-config';
-import { useTranslations } from 'next-intl';
-import { useUserRole } from '@/lib/useUserRole';
+import { Film, CalendarDays, MessagesSquare } from 'lucide-react';
 
 const navLinks = [
-  { href: '/sesje', key: 'sessions' },
-  { href: '/sesje-indywidualne', key: 'individual' },
-  { href: '/nagrania', key: 'recordings' },
+  { href: '/konto', label: 'Nagrania', icon: Film },
+  { href: '/konto/sesje-indywidualne', label: 'Spotkania', icon: CalendarDays },
+  { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
 ] as const;
 
+/**
+ * Unified top navigation — visible for all users (logged in and out).
+ * Icons + text, active = dot indicator underneath.
+ */
 export default function NavLinks() {
-  const t = useTranslations('Nav');
   const pathname = usePathname();
-  const { isLoggedIn, loading } = useUserRole();
-
-  // Hide nav links when logged in or while auth state is loading
-  if (loading || isLoggedIn) return <div />;
 
   return (
     <div className="hidden md:flex items-center justify-center gap-1">
-      {navLinks.map(({ href, key }) => (
-        <Link
-          key={href}
-          href={href}
-          className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-300 border ${
-            pathname.startsWith(href)
-              ? 'bg-htg-fg/10 text-htg-fg border-htg-fg/20'
-              : 'text-htg-fg/30 border-transparent hover:text-htg-fg/80 hover:bg-htg-fg/5 hover:border-htg-fg/10'
-          }`}
-        >
-          {t(key)}
-        </Link>
-      ))}
+      {navLinks.map(({ href, label, icon: Icon }) => {
+        const isActive = href === '/konto'
+          ? pathname.endsWith('/konto') || (pathname.includes('/konto/') && !pathname.includes('/sesje-indywidualne'))
+          : pathname.includes(href);
+
+        return (
+          <Link
+            key={href}
+            href={href}
+            className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isActive
+                ? 'text-htg-fg'
+                : 'text-htg-fg-muted hover:text-htg-fg'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+            {isActive && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-htg-indigo" />
+            )}
+          </Link>
+        );
+      })}
     </div>
   );
 }

@@ -223,8 +223,7 @@ export default async function AccountLayout({
         </>
       )}
 
-      {/* USER role (no special role): full MOJE KONTO */}
-      {!isAdmin && !isStaff && !isPublikacja && renderUserSection(t('title'))}
+      {/* USER role: no sidebar — navigation moved to top Menu button */}
     </>
   );
 

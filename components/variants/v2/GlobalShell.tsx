@@ -2,7 +2,7 @@ import SiteNav from '@/components/SiteNav';
 import Footer from '@/components/Footer';
 import HeaderLogo from '@/components/HeaderLogo';
 import { Link } from '@/i18n-config';
-import NavLinksV2 from './NavLinksV2';
+import NavLinks from '@/components/NavLinks';
 
 /**
  * V2 „Sanctuary" Global Shell
@@ -24,7 +24,7 @@ export default function GlobalShellV2({
               <HeaderLogo />
             </Link>
             <div className="flex-1 flex justify-center">
-              <NavLinksV2 />
+              <NavLinks />
             </div>
             <SiteNav />
           </div>

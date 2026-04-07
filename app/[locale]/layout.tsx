@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
-import SiteNav from "@/components/SiteNav";
-import NavLinks from "@/components/NavLinks";
-import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
 // LocaleSwitcher removed — Polish only for now
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -11,11 +8,17 @@ import { hasLocale } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { locales, routing } from "@/i18n-config";
-import { Link } from "@/i18n-config";
 import { Toaster } from "sonner";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { isNagraniaPortal } from "@/lib/portal";
-import HeaderLogo from "@/components/HeaderLogo";
+import { getDesignVariant } from "@/lib/design-variant";
+import { DesignVariantProvider } from "@/lib/design-variant-context";
+import { isAdminEmail } from "@/lib/roles";
+import { createSupabaseServer } from "@/lib/supabase/server";
+import GlobalShellV1 from "@/components/variants/v1/GlobalShell";
+import GlobalShellV2 from "@/components/variants/v2/GlobalShell";
+import GlobalShellV3 from "@/components/variants/v3/GlobalShell";
+import DesignVariantSwitcher from "@/components/DesignVariantSwitcher";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -82,6 +85,23 @@ export default async function LocaleLayout({
   const headersList = await headers();
   const isNagrania = isNagraniaPortal(headersList.get('host'));
 
+  // Design variant (cookie-based, admin-only switching)
+  const cookieStore = await cookies();
+  const variant = getDesignVariant(cookieStore);
+
+  // Check admin for switcher visibility
+  let isAdmin = false;
+  try {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) isAdmin = isAdminEmail(user.email);
+  } catch { /* not logged in — no switcher */ }
+
+  // Select shell based on variant
+  const Shell = variant === 'v3' ? GlobalShellV3
+              : variant === 'v2' ? GlobalShellV2
+              : GlobalShellV1;
+
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
@@ -118,28 +138,15 @@ export default async function LocaleLayout({
         </a>
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
-            {!isNagrania && (
-              <header className="bg-htg-card border-b border-htg-card-border sticky top-0 z-50 transition-colors duration-300">
-                <div className="mx-auto max-w-6xl px-6 py-4 grid grid-cols-[auto_1fr_auto] items-center gap-4 relative">
-                  <Link href="/" className="flex items-center" aria-label="Strona główna HTG">
-                    <HeaderLogo />
-                  </Link>
-                  <NavLinks />
-                  <div className="col-start-3 flex justify-end">
-                    <SiteNav />
-                  </div>
-                </div>
-              </header>
-            )}
-
-            <main id="main-content" className="flex-grow w-full">
-              {children}
-            </main>
-
-            {!isNagrania && <Footer />}
-            <Toaster richColors position="bottom-right" />
+            <DesignVariantProvider variant={variant}>
+              <Shell isNagrania={isNagrania}>
+                {children}
+              </Shell>
+              {isAdmin && <DesignVariantSwitcher currentVariant={variant} locale={locale} />}
+            </DesignVariantProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
+        <Toaster richColors position="bottom-right" />
       </body>
     </html>
   );

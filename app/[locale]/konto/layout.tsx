@@ -1,24 +1,24 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { locales, Link } from '@/i18n-config';
+import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 import { cookies, headers } from 'next/headers';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
-import { stopUserImpersonation } from '@/lib/admin/impersonate';
 import { isNagraniaPortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
-import CollapsibleSidebar from './CollapsibleSidebar';
 import SidebarLink from './SidebarLink';
 import SpiritIcon from './SpiritIcon';
+import { getDesignVariant } from '@/lib/design-variant';
+import AccountShellV1 from '@/components/variants/v1/AccountShell';
+import AccountShellV2 from '@/components/variants/v2/AccountShell';
+import AccountShellV3 from '@/components/variants/v3/AccountShell';
 import {
-  Film, CreditCard, FileText, UserCircle, CalendarDays, Heart, Gift, Mail,
+  Film, CreditCard, CalendarDays, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, BarChart2,
   MessagesSquare, ClipboardCheck, RefreshCw, Headphones,
 } from 'lucide-react';
-
-/* Required consent types for full panel access */
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -108,11 +108,8 @@ export default async function AccountLayout({
     } catch { /* ignore */ }
   }
 
-  // --- Consent gate is handled in middleware.ts ---
-
   // --- Build sections based on role ---
 
-  // ADMIN section (admin only)
   const adminItems = [
     { href: '/konto/admin/uzytkownicy', label: tPanel('admin_users'), icon: Users },
     { href: '/konto/admin/sesje', label: tPanel('admin_sessions'), icon: BookOpen },
@@ -128,7 +125,6 @@ export default async function AccountLayout({
     { href: '/konto/admin/nagrania-klientow', label: 'Nagrania klientów', icon: Headphones },
   ] as const;
 
-  // PIASKOWNICA section (admin only — narzędzia i testy)
   const piaskownicaItems = [
     { href: '/prowadzacy/spotkania-htg', label: 'Spotkania', icon: Presentation },
     { href: '/konto/admin/zestawy', label: tPanel('admin_sets'), icon: Package },
@@ -141,7 +137,6 @@ export default async function AccountLayout({
     { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
   ] as const;
 
-  // STAFF section (moderator/prowadzacy — NOT admin)
   const staffItems = [
     { href: '/prowadzacy', label: tPanel('staff_panel'), icon: LayoutDashboard },
     { href: '/prowadzacy/grafik', label: tPanel('staff_schedule'), icon: Calendar },
@@ -151,7 +146,6 @@ export default async function AccountLayout({
     { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', icon: MessagesSquare },
   ] as const;
 
-  // PUBLIKACJA section (admin, moderator, publikacja)
   const showPublikacja = isPublikacja || isAdmin || isStaff;
   const publikacjaItems = [
     { href: '/publikacja', label: tPanel('pub_panel'), icon: LayoutDashboard },
@@ -160,7 +154,6 @@ export default async function AccountLayout({
     { href: '/publikacja/dodaj', label: tPanel('pub_add'), icon: PlusCircle },
   ] as const;
 
-  // USER section (regular clients only) — ethereal metaphor icons
   const userItems = [
     { href: '/konto', label: 'Biblioteka sesji', spiritIcon: 'portal' as const },
     { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', spiritIcon: 'eye' as const },
@@ -171,10 +164,9 @@ export default async function AccountLayout({
     { href: '/konto/aktualizacja', label: 'Aktualizacja', spiritIcon: 'spiral' as const },
   ] as const;
 
-  // Aktualizacja item (replaces standalone Profil)
   const profileItem = { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw } as const;
 
-  // Helper to render a nav section
+  // Helper to render a nav section with lucide icons
   const renderSection = (title: string, items: ReadonlyArray<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>) => (
     <>
       <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
@@ -187,77 +179,69 @@ export default async function AccountLayout({
     </>
   );
 
-  return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
-      {viewAsUserEmail && (
-        <div className="flex items-center gap-3 px-4 py-3 mb-6 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm text-amber-600 dark:text-amber-400">
-          <Eye className="w-4 h-4 flex-shrink-0" />
-          <span className="flex-1">Przeglądasz konto jako: <strong>{viewAsUserEmail}</strong></span>
-          <form action={stopUserImpersonation}>
-            <input type="hidden" name="locale" value={locale} />
-            <button type="submit" className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg text-xs font-medium transition-colors whitespace-nowrap">
-              Wróć do admina
-            </button>
-          </form>
-        </div>
+  // Helper to render user section with spirit icons
+  const renderUserSection = (title: string) => (
+    <>
+      <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
+      {userItems.map(({ href, label, spiritIcon }) => (
+        <SidebarLink key={href} href={href} label={label} locale={locale}>
+          <SpiritIcon type={spiritIcon} />
+        </SidebarLink>
+      ))}
+      <div className="hidden md:block border-t border-htg-card-border my-2" />
+    </>
+  );
+
+  // Build sidebar JSX
+  const sidebarContent = (
+    <>
+      {/* ADMIN role: ADMIN + PUBLIKACJA + Piaskownica + Widok użytkownika + Profil */}
+      {isAdmin && !viewAsUserEmail && (
+        <>
+          {renderSection('Admin', adminItems)}
+          {showPublikacja && renderSection('Publikacja', publikacjaItems)}
+          {renderSection('Piaskownica', piaskownicaItems)}
+          {renderUserSection('Widok użytkownika')}
+          {renderSection('Profil', [profileItem])}
+        </>
       )}
-      <CollapsibleSidebar
-        sidebar={
-          <>
-            {/* ADMIN role: ADMIN + PUBLIKACJA + Profil (but show user nav when impersonating) */}
-            {isAdmin && !viewAsUserEmail && (
-              <>
-                {renderSection('Admin', adminItems)}
-                {showPublikacja && renderSection('Publikacja', publikacjaItems)}
-                {renderSection('Piaskownica', piaskownicaItems)}
-                {renderSection('Profil', [profileItem])}
-              </>
-            )}
-            {isAdmin && viewAsUserEmail && (
-              <>
-                <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">Moje konto</p>
-                {userItems.map(({ href, label, spiritIcon }) => (
-                  <SidebarLink key={href} href={href} label={label} locale={locale}>
-                    <SpiritIcon type={spiritIcon} />
-                  </SidebarLink>
-                ))}
-                <div className="hidden md:block border-t border-htg-card-border my-2" />
-              </>
-            )}
+      {isAdmin && viewAsUserEmail && renderUserSection('Moje konto')}
 
-            {/* MODERATOR role (staff, not admin): PANEL PROWADZACEGO + Profil */}
-            {isStaff && !isAdmin && (
-              <>
-                {renderSection('Panel prowadzącego', staffItems)}
-                {renderSection('Profil', [profileItem])}
-              </>
-            )}
+      {/* MODERATOR role (staff, not admin): PANEL PROWADZACEGO + Profil */}
+      {isStaff && !isAdmin && (
+        <>
+          {renderSection('Panel prowadzącego', staffItems)}
+          {renderSection('Profil', [profileItem])}
+        </>
+      )}
 
-            {/* PUBLIKACJA role (not admin, not staff): PUBLIKACJA + Profil */}
-            {isPublikacja && !isAdmin && !isStaff && (
-              <>
-                {renderSection('Publikacja', publikacjaItems)}
-                {renderSection('Profil', [profileItem])}
-              </>
-            )}
+      {/* PUBLIKACJA role (not admin, not staff): PUBLIKACJA + Profil */}
+      {isPublikacja && !isAdmin && !isStaff && (
+        <>
+          {renderSection('Publikacja', publikacjaItems)}
+          {renderSection('Profil', [profileItem])}
+        </>
+      )}
 
-            {/* USER role (no special role): full MOJE KONTO */}
-            {!isAdmin && !isStaff && !isPublikacja && (
-              <>
-                <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{t('title')}</p>
-                {userItems.map(({ href, label, spiritIcon }) => (
-                  <SidebarLink key={href} href={href} label={label} locale={locale}>
-                    <SpiritIcon type={spiritIcon} />
-                  </SidebarLink>
-                ))}
-                <div className="hidden md:block border-t border-htg-card-border my-2" />
-              </>
-            )}
-          </>
-        }
-      >
-        {children}
-      </CollapsibleSidebar>
-    </div>
+      {/* USER role (no special role): full MOJE KONTO */}
+      {!isAdmin && !isStaff && !isPublikacja && renderUserSection(t('title'))}
+    </>
+  );
+
+  // Select shell based on variant
+  const cookieStore = await cookies();
+  const variant = getDesignVariant(cookieStore);
+  const Shell = variant === 'v3' ? AccountShellV3
+              : variant === 'v2' ? AccountShellV2
+              : AccountShellV1;
+
+  return (
+    <Shell
+      sidebar={sidebarContent}
+      viewAsUserEmail={viewAsUserEmail}
+      locale={locale}
+    >
+      {children}
+    </Shell>
   );
 }

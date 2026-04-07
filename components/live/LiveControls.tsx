@@ -39,10 +39,10 @@ export default function LiveControls({ backUrl = '/pl/konto/sesje-indywidualne',
         Wróć
       </button>
 
-      {/* Fullscreen toggle */}
+      {/* Fullscreen toggle — hidden on mobile */}
       <button
         onClick={toggleFullscreen}
-        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl backdrop-blur-md text-sm font-medium transition-all ${
+        className={`hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl backdrop-blur-md text-sm font-medium transition-all ${
           isFullscreen
             ? 'bg-black/30 text-white/70 hover:text-white'
             : 'bg-white/15 border border-white/25 text-white hover:bg-white/25'

@@ -73,10 +73,14 @@ export async function assignRecordingAccess(
     });
   }
 
-  // Update confidence if manual_review → admin_assigned
+  // Update confidence if manual_review → admin_assigned + set expires_at if null
+  const fallbackExpiry = new Date(Date.now() + 365 * 86400000).toISOString();
   await db
     .from('booking_recordings')
-    .update({ import_confidence: 'admin_assigned' })
+    .update({
+      import_confidence: 'admin_assigned',
+      expires_at: fallbackExpiry, // Ensure expiry is always set after admin assignment
+    })
     .eq('id', recordingId)
     .eq('import_confidence', 'manual_review');
 

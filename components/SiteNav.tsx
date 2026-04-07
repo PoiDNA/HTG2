@@ -1,26 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Menu, X, LogOut, Users2 } from 'lucide-react'; // Users2 kept for mobile menu
+import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
 import UserPanelNav from './UserPanelNav';
 import { NotificationBell } from './community/NotificationBell';
 
-const navLinks = [
-  { href: '/sesje', key: 'sessions' },
-  { href: '/sesje-indywidualne', key: 'individual' },
-  { href: '/nagrania', key: 'recordings' },
+const menuItems = [
+  { href: '/konto/sesje-indywidualne', label: 'Umów Sesję', icon: CalendarDays },
+  { href: '/konto/polubieni', label: 'Twoi Znajomi', icon: Users },
+  { href: '/konto/podarowane-sesje', label: 'Podarowane Sesje', icon: Gift },
+  { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw },
+  { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', icon: Mail },
 ] as const;
 
 export default function SiteNav() {
-  const [open, setOpen] = useState(false);
-  const t = useTranslations('Nav');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const tPanel = useTranslations('PanelNav');
   const pathname = usePathname();
   const router = useRouter();
@@ -30,87 +33,146 @@ export default function SiteNav() {
     const supabase = createSupabaseBrowser();
     await supabase.auth.signOut();
     router.push('/');
-    setOpen(false);
+    setMenuOpen(false);
+    setMobileOpen(false);
   }
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
+
+  // Close menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+    setMobileOpen(false);
+  }, [pathname]);
 
   const isCommunityActive = pathname.startsWith('/spolecznosc');
 
   return (
     <nav aria-label="Nawigacja główna">
-      {/* Desktop: FontSize + Theme + Notifications + Auth — po prawej */}
+      {/* Desktop */}
       <div className="hidden md:flex items-center gap-2">
         <FontSizeToggle />
         <ThemeToggle />
-        {!loading && isLoggedIn && (
-          <>
-            <GhostNavLink href="/nagrania" label="Na początek" pathname={pathname} />
-            <GhostNavLink href="/sesje-indywidualne" label="Umów sesję" pathname={pathname} />
-            <GhostNavLink href="/konto" label="Biblioteka" pathname={pathname} />
-          </>
-        )}
         {!loading && isLoggedIn && user && <NotificationBell userId={user.id} alwaysShow={isCommunityActive} />}
+
+        {/* MENU dropdown (logged in only) */}
+        {!loading && isLoggedIn && (
+          <div ref={menuRef} className="relative">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                menuOpen
+                  ? 'bg-htg-surface text-htg-fg'
+                  : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+              }`}
+            >
+              Menu
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-htg-card border border-htg-card-border rounded-xl shadow-xl py-2 z-50">
+                {menuItems.map(({ href, label, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                      pathname.includes(href)
+                        ? 'text-htg-fg bg-htg-surface'
+                        : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                  </Link>
+                ))}
+
+                {/* Admin/Staff links */}
+                {(isAdmin || isStaff) && (
+                  <>
+                    <div className="border-t border-htg-card-border my-1.5" />
+                    {isAdmin && (
+                      <Link href="/konto/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface">
+                        Admin
+                      </Link>
+                    )}
+                    {isStaff && !isAdmin && (
+                      <Link href="/prowadzacy" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface">
+                        Panel prowadzącego
+                      </Link>
+                    )}
+                  </>
+                )}
+
+                <div className="border-t border-htg-card-border my-1.5" />
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-htg-surface transition-colors"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  Wyloguj
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {!loading && isLoggedIn ? <UserPanelNav /> : <HeaderAuthButton />}
       </div>
 
       {/* Mobile hamburger */}
       <button
         className="md:hidden p-2 rounded-lg hover:bg-htg-surface"
-        onClick={() => setOpen(!open)}
-        aria-label={open ? 'Zamknij menu' : 'Otwórz menu'}
-        aria-expanded={open}
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label={mobileOpen ? 'Zamknij menu' : 'Otwórz menu'}
+        aria-expanded={mobileOpen}
       >
-        {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
       {/* Mobile menu overlay */}
-      {open && (
+      {mobileOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-htg-card border-b border-htg-card-border shadow-lg z-40">
           <div className="flex flex-col p-4 gap-1">
-            {/* Main navigation */}
-            <MobileLink href="/sesje" label="Biblioteka sesji" pathname={pathname} onClick={() => setOpen(false)} />
-            <MobileLink href="/sesje-indywidualne" label="Sesje z Natalią" pathname={pathname} onClick={() => setOpen(false)} />
-            <MobileLink href="/spolecznosc" label="Społeczność" pathname={pathname} onClick={() => setOpen(false)} />
-            <MobileLink href="/wiadomosci" label="Centrum Kontaktu" pathname={pathname} onClick={() => setOpen(false)} />
+            {/* Main nav */}
+            <MobileLink href="/konto" label="Nagrania" pathname={pathname} onClick={() => setMobileOpen(false)} />
+            <MobileLink href="/konto/sesje-indywidualne" label="Spotkania" pathname={pathname} onClick={() => setMobileOpen(false)} />
+            <MobileLink href="/spolecznosc" label="Społeczność" pathname={pathname} onClick={() => setMobileOpen(false)} />
 
-            {/* User section */}
+            {/* Menu items */}
             {isLoggedIn && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
-                <MobileLink href="/konto/subskrypcje" label="Twoje Aktywacje" pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/polubieni" label="Twoi Znajomi" pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/podarowane-sesje" label="Podarowane sesje" pathname={pathname} onClick={() => setOpen(false)} />
-
-                <div className="border-t border-htg-card-border my-2" />
-                <MobileLink href="/konto/aktualizacja" label="Aktualizacja" pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/prowadzacy/spotkania-htg" label="Spotkania" pathname={pathname} onClick={() => setOpen(false)} />
+                {menuItems.map(({ href, label }) => (
+                  <MobileLink key={href} href={href} label={label} pathname={pathname} onClick={() => setMobileOpen(false)} />
+                ))}
               </>
             )}
 
-            {/* Staff section */}
-            {isStaff && !isAdmin && (
-              <>
-                <div className="border-t border-htg-card-border my-2" />
-                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{tPanel('staff_panel')}</p>
-                <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/prowadzacy/sesje" label={tPanel('staff_sessions')} pathname={pathname} onClick={() => setOpen(false)} />
-              </>
-            )}
-
-            {/* Admin section */}
+            {/* Admin/Staff */}
             {isAdmin && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
                 <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">Admin</p>
-                <MobileLink href="/konto/admin" label={tPanel('admin_panel')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/admin/kalendarz" label={tPanel('admin_calendar')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/admin/kolejka" label={tPanel('admin_queue')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/admin/sloty" label={tPanel('admin_slots')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/konto/admin/uzytkownicy" label={tPanel('admin_users')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/konto/admin" label={tPanel('admin_panel')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+                <MobileLink href="/konto/admin/kalendarz" label={tPanel('admin_calendar')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+                <MobileLink href="/konto/admin/uzytkownicy" label={tPanel('admin_users')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+              </>
+            )}
+            {isStaff && !isAdmin && (
+              <>
                 <div className="border-t border-htg-card-border my-2" />
-                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">{tPanel('staff_panel')}</p>
-                <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setOpen(false)} />
-                <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setOpen(false)} />
+                <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+                <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setMobileOpen(false)} />
               </>
             )}
 
@@ -119,10 +181,10 @@ export default function SiteNav() {
                 <div className="border-t border-htg-card-border my-2" />
                 <button
                   onClick={handleLogout}
-                  className="py-3 px-4 rounded-lg text-base font-medium text-red-600 dark:text-red-400 hover:bg-htg-surface transition-colors text-left flex items-center gap-2"
+                  className="py-2.5 px-4 rounded-lg text-sm font-medium text-red-500 hover:bg-htg-surface transition-colors text-left flex items-center gap-2"
                 >
-                  <LogOut className="w-5 h-5" />
-                  {tPanel('logout')}
+                  <LogOut className="w-4 h-4" />
+                  Wyloguj
                 </button>
               </>
             )}
@@ -130,24 +192,10 @@ export default function SiteNav() {
             <div className="flex items-center gap-3 pt-2 border-t border-htg-card-border mt-2">
               <FontSizeToggle />
               <ThemeToggle />
-              {!loading && (
-                isLoggedIn ? (
-                  <button
-                    onClick={handleLogout}
-                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-500 hover:bg-htg-surface transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    {tPanel('logout')}
-                  </button>
-                ) : (
-                  <Link
-                    href="/login"
-                    onClick={() => setOpen(false)}
-                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-htg-indigo hover:bg-htg-surface transition-colors"
-                  >
-                    Zaloguj
-                  </Link>
-                )
+              {!loading && !isLoggedIn && (
+                <Link href="/login" onClick={() => setMobileOpen(false)} className="ml-auto px-3 py-1.5 rounded-lg text-sm font-medium text-htg-indigo hover:bg-htg-surface">
+                  Zaloguj
+                </Link>
               )}
             </div>
           </div>
@@ -157,29 +205,13 @@ export default function SiteNav() {
   );
 }
 
-function GhostNavLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
-  const isActive = pathname === href || pathname.startsWith(href + '/');
-  return (
-    <Link
-      href={href}
-      className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-300 border ${
-        isActive
-          ? 'bg-htg-fg/10 text-htg-fg border-htg-fg/20'
-          : 'text-htg-fg/30 border-transparent hover:text-htg-fg/80 hover:bg-htg-fg/5 hover:border-htg-fg/10'
-      }`}
-    >
-      {label}
-    </Link>
-  );
-}
-
 function MobileLink({ href, label, pathname, onClick }: { href: string; label: string; pathname: string; onClick: () => void }) {
   return (
     <Link
       href={href}
       onClick={onClick}
       className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-colors ${
-        pathname === href
+        pathname === href || pathname.includes(href + '/')
           ? 'bg-htg-surface text-htg-indigo'
           : 'text-htg-fg hover:bg-htg-surface'
       }`}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isStaffEmail } from '@/lib/roles';
 import { createRoom } from '@/lib/live/livekit';
 import { generateRoomName } from '@/lib/live/constants';
@@ -7,6 +8,7 @@ import type { CreateSessionRequest } from '@/lib/live/types';
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth check — user-level client
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -14,7 +16,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only staff can create live sessions
     if (!isStaffEmail(user.email ?? '')) {
       return NextResponse.json({ error: 'Staff only' }, { status: 403 });
     }
@@ -25,8 +26,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'bookingId required' }, { status: 400 });
     }
 
+    // Use service role for DB operations (avoids RLS recursion on profiles)
+    const db = createSupabaseServiceRole();
+
     // Fetch booking + slot
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await db
       .from('bookings')
       .select('id, slot_id, status, live_session_id')
       .eq('id', bookingId)
@@ -42,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Check if live session already exists
     if (booking.live_session_id) {
-      const { data: existing } = await supabase
+      const { data: existing } = await db
         .from('live_sessions')
         .select('*')
         .eq('id', booking.live_session_id)
@@ -62,11 +66,10 @@ export async function POST(request: NextRequest) {
       roomSid = room.sid;
     } catch (err) {
       console.warn('LiveKit room creation failed (keys may not be set):', err);
-      // Continue without room_sid — room will be created on first join
     }
 
     // Insert live_session
-    const { data: session, error: insertError } = await supabase
+    const { data: session, error: insertError } = await db
       .from('live_sessions')
       .insert({
         booking_id: bookingId,
@@ -83,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Link live session to booking
-    await supabase
+    await db
       .from('bookings')
       .update({ live_session_id: session.id })
       .eq('id', bookingId);

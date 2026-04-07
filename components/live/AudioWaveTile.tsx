@@ -228,7 +228,7 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
       className={`relative flex-1 h-full flex flex-col items-center justify-center gap-4 overflow-hidden
         transition-all duration-500
         ${speaking ? 'ring-4 ring-[#4ade80]/40 ring-inset' : ''}`}
-      style={{ background: 'radial-gradient(ellipse at 50% 35%, rgba(15,20,40,0.95), #07091a 80%)' }}
+      style={{ background: 'radial-gradient(ellipse at 50% 35%, #1C1418, #14100E 80%)' }}
     >
       <div className="absolute inset-0 pointer-events-none transition-opacity duration-500"
         style={{ background: `radial-gradient(ellipse 55% 45% at 50% 40%, ${glowColor}, transparent 70%)` }} />
@@ -253,7 +253,7 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
       </div>
 
       <div className="relative z-10">
-        <VoiceWaveform speaking={speaking} muted={muted} height={48} width={widthRef.current} seed={seed} />
+        <VoiceWaveform speaking={speaking} muted={muted} height={50} width={widthRef.current} seed={seed} />
       </div>
     </div>
   );

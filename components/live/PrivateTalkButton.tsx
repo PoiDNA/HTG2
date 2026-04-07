@@ -39,14 +39,15 @@ export default function PrivateTalkButton({ room, isStaff }: PrivateTalkButtonPr
   return (
     <button
       onClick={togglePrivateTalk}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors ${
         isPrivate
           ? 'bg-red-600/20 text-red-400 border border-red-600/30'
           : 'bg-htg-surface text-htg-fg-muted hover:bg-htg-surface/80 border border-htg-card-border'
       }`}
     >
-      {isPrivate ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-      {isPrivate ? t('private_talk_active') : t('private_talk')}
+      {isPrivate ? <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Unlock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+      <span className="hidden sm:inline">{isPrivate ? t('private_talk_active') : t('private_talk')}</span>
+      <span className="sm:hidden">{isPrivate ? 'Prywatna' : 'Prywatna'}</span>
     </button>
   );
 }

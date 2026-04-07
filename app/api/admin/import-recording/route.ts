@@ -7,12 +7,14 @@ import crypto from 'crypto';
 
 const BUNNY_API_KEY = process.env.BUNNY_API_KEY!;
 const BUNNY_LIBRARY_ID = process.env.BUNNY_LIBRARY_ID!;
+const BUNNY_TUS_ENDPOINT = 'https://video.bunnycdn.com/tusupload';
 
 /**
  * POST /api/admin/import-recording
  *
- * Creates a Bunny Stream video object + booking_recordings row + access rows.
- * Returns TUS upload config so the browser can upload directly to Bunny.
+ * Creates a Bunny Stream video, initialises TUS upload server-side (so the
+ * API key never leaves the server), and returns the TUS Location URL so the
+ * browser can stream the file directly to Bunny with a single PATCH request.
  *
  * Body: {
  *   sessionType: string,
@@ -22,6 +24,8 @@ const BUNNY_LIBRARY_ID = process.env.BUNNY_LIBRARY_ID!;
  *   fileSize: number,
  *   fileName: string,
  * }
+ *
+ * Response: { recordingId, tusUploadUrl, resolvedUsers }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -68,11 +72,43 @@ export async function POST(request: NextRequest) {
     const videoTitle = title || `Import — ${sessionDate} — ${sessionType}`;
     const { guid: bunnyVideoId } = await createVideo(BUNNY_LIBRARY_ID, videoTitle);
 
-    // 4. Generate TUS upload signature
+    // 4. Initialise TUS upload server-side — API key stays on the server
     // SHA256(library_id + api_key + expiration_time + video_id)
-    const expirationTime = Math.floor(Date.now() / 1000) + 24 * 3600; // 24h
-    const signaturePayload = BUNNY_LIBRARY_ID + BUNNY_API_KEY + expirationTime + bunnyVideoId;
-    const authSignature = crypto.createHash('sha256').update(signaturePayload).digest('hex');
+    const expirationTime = Math.floor(Date.now() / 1000) + 24 * 3600;
+    const authSignature = crypto
+      .createHash('sha256')
+      .update(BUNNY_LIBRARY_ID + BUNNY_API_KEY + String(expirationTime) + bunnyVideoId)
+      .digest('hex');
+
+    const tusRes = await fetch(BUNNY_TUS_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Tus-Resumable': '1.0.0',
+        'Upload-Length': String(fileSize),
+        'AuthorizationSignature': authSignature,
+        'AuthorizationExpire': String(expirationTime),
+        'VideoId': bunnyVideoId,
+        'LibraryId': BUNNY_LIBRARY_ID,
+      },
+    });
+
+    if (!tusRes.ok) {
+      const body = await tusRes.text().catch(() => '');
+      console.error(`[import-recording] Bunny TUS init failed ${tusRes.status}: ${body}`);
+      return NextResponse.json(
+        { error: `Błąd inicjalizacji uploadu Bunny (${tusRes.status})` },
+        { status: 502 },
+      );
+    }
+
+    const tusUploadUrl = tusRes.headers.get('location');
+    if (!tusUploadUrl) {
+      console.error('[import-recording] Bunny TUS init: no Location header');
+      return NextResponse.json(
+        { error: 'Bunny nie zwrócił adresu uploadu' },
+        { status: 502 },
+      );
+    }
 
     // 5. Create booking_recordings row
     const { data: recording, error: insertError } = await db
@@ -99,11 +135,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError || !recording) {
-      // Cleanup Bunny video on DB failure
       console.error('[import-recording] DB insert error:', insertError);
-      return NextResponse.json({
-        error: 'Błąd tworzenia rekordu nagrania',
-      }, { status: 500 });
+      return NextResponse.json({ error: 'Błąd tworzenia rekordu nagrania' }, { status: 500 });
     }
 
     // 6. Grant access to each user
@@ -140,14 +173,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 8. Return upload config
+    // 8. Return TUS upload URL — browser PATCHes file data directly to Bunny
     return NextResponse.json({
       recordingId: recording.id,
-      videoId: bunnyVideoId,
-      libraryId: BUNNY_LIBRARY_ID,
-      authSignature,
-      authExpire: expirationTime,
-      tusEndpoint: 'https://video.bunnycdn.com/tusupload',
+      tusUploadUrl,
       resolvedUsers: resolvedUsers.map(u => ({
         email: u.email,
         displayName: u.displayName,
@@ -155,9 +184,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error('[import-recording] Error:', err);
-    return NextResponse.json(
-      { error: 'Błąd serwera' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Błąd serwera' }, { status: 500 });
   }
 }

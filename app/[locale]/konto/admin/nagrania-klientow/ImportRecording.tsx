@@ -84,87 +84,37 @@ export default function ImportRecording({ onDone }: { onDone?: () => void }) {
   }, []);
 
   // -------------------------------------------------------------------------
-  // TUS upload to Bunny Stream
+  // TUS PATCH — server already initialised the upload and returned the URL
   // -------------------------------------------------------------------------
-  async function tusUpload(
-    file: File,
-    config: {
-      tusEndpoint: string;
-      videoId: string;
-      libraryId: string;
-      authSignature: string;
-      authExpire: number;
-    },
-  ): Promise<void> {
+  async function tusUpload(file: File, tusUploadUrl: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Step 1: TUS POST to create upload
-      const createXhr = new XMLHttpRequest();
-      createXhr.open('POST', config.tusEndpoint, true);
-      createXhr.setRequestHeader('Tus-Resumable', '1.0.0');
-      createXhr.setRequestHeader('Upload-Length', file.size.toString());
-      const safeType = btoa(file.type || 'application/octet-stream');
-      const safeTitle = btoa(unescape(encodeURIComponent(file.name)));
-      createXhr.setRequestHeader('Upload-Metadata',
-        `filetype ${safeType},title ${safeTitle}`);
-      createXhr.setRequestHeader('AuthorizationSignature', config.authSignature);
-      createXhr.setRequestHeader('AuthorizationExpire', config.authExpire.toString());
-      createXhr.setRequestHeader('VideoId', config.videoId);
-      createXhr.setRequestHeader('LibraryId', config.libraryId);
+      const xhr = new XMLHttpRequest();
+      abortRef.current = xhr;
 
-      createXhr.onload = () => {
-        if (createXhr.status !== 201 && createXhr.status !== 200) {
-          reject(new Error(`TUS create failed: ${createXhr.status} ${createXhr.responseText}`));
-          return;
+      xhr.open('PATCH', tusUploadUrl, true);
+      xhr.setRequestHeader('Tus-Resumable', '1.0.0');
+      xhr.setRequestHeader('Upload-Offset', '0');
+      xhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          setProgress(Math.round((e.loaded / e.total) * 100));
         }
-
-        const uploadUrl = createXhr.getResponseHeader('Location');
-        if (!uploadUrl) {
-          reject(new Error('TUS create did not return Location header'));
-          return;
-        }
-
-        // Step 2: TUS PATCH to upload file data
-        const patchXhr = new XMLHttpRequest();
-        abortRef.current = patchXhr;
-
-        patchXhr.open('PATCH', uploadUrl, true);
-        patchXhr.setRequestHeader('Tus-Resumable', '1.0.0');
-        patchXhr.setRequestHeader('Upload-Offset', '0');
-        patchXhr.setRequestHeader('Content-Type', 'application/offset+octet-stream');
-
-        patchXhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            setProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        };
-
-        patchXhr.onload = () => {
-          abortRef.current = null;
-          if (patchXhr.status >= 200 && patchXhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`TUS upload failed: ${patchXhr.status}`));
-          }
-        };
-
-        patchXhr.onerror = () => {
-          abortRef.current = null;
-          reject(new Error('Network error during upload'));
-        };
-
-        patchXhr.onabort = () => {
-          abortRef.current = null;
-          reject(new Error('Upload cancelled'));
-        };
-
-        patchXhr.send(file);
       };
 
-      createXhr.onerror = () => {
-        reject(new Error('Network error creating TUS upload'));
+      xhr.onload = () => {
+        abortRef.current = null;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`TUS upload failed: ${xhr.status}`));
+        }
       };
 
-      createXhr.send(null);
+      xhr.onerror = () => { abortRef.current = null; reject(new Error('Network error during upload')); };
+      xhr.onabort = () => { abortRef.current = null; reject(new Error('Upload cancelled')); };
+
+      xhr.send(file);
     });
   }
 
@@ -207,13 +157,7 @@ export default function ImportRecording({ onDone }: { onDone?: () => void }) {
       // Step 2: Upload file via TUS
       setUploadState('uploading');
 
-      await tusUpload(file, {
-        tusEndpoint: data.tusEndpoint,
-        videoId: data.videoId,
-        libraryId: data.libraryId,
-        authSignature: data.authSignature,
-        authExpire: data.authExpire,
-      });
+      await tusUpload(file, data.tusUploadUrl);
 
       // Step 3: Done — cron will poll Bunny for processing status
       setUploadState('done');

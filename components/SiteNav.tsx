@@ -5,11 +5,10 @@ import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail } from 'lucide-react';
+import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
-import UserPanelNav from './UserPanelNav';
 import { NotificationBell } from './community/NotificationBell';
 
 const menuItems = [
@@ -65,7 +64,7 @@ export default function SiteNav() {
         <ThemeToggle />
         {!loading && isLoggedIn && user && <NotificationBell userId={user.id} alwaysShow={isCommunityActive} />}
 
-        {/* MENU dropdown (logged in only) */}
+        {/* MENU dropdown (logged in) — contains user email, menu items, logout */}
         {!loading && isLoggedIn && (
           <div ref={menuRef} className="relative">
             <button
@@ -80,7 +79,16 @@ export default function SiteNav() {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 bg-htg-card border border-htg-card-border rounded-xl shadow-xl py-2 z-50">
+              <div className="absolute right-0 top-full mt-2 w-60 bg-htg-card border border-htg-card-border rounded-xl shadow-xl py-2 z-50">
+                {/* User email */}
+                <div className="px-4 py-2.5 border-b border-htg-card-border mb-1">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-htg-fg-muted shrink-0" />
+                    <span className="text-sm text-htg-fg truncate">{user?.email}</span>
+                  </div>
+                </div>
+
+                {/* Menu items */}
                 {menuItems.map(({ href, label, icon: Icon }) => (
                   <Link
                     key={href}
@@ -113,6 +121,7 @@ export default function SiteNav() {
                   </>
                 )}
 
+                {/* Logout */}
                 <div className="border-t border-htg-card-border my-1.5" />
                 <button
                   onClick={handleLogout}
@@ -126,7 +135,8 @@ export default function SiteNav() {
           </div>
         )}
 
-        {!loading && isLoggedIn ? <UserPanelNav /> : <HeaderAuthButton />}
+        {/* Auth button (logged out only) */}
+        {!loading && !isLoggedIn && <HeaderAuthButton />}
       </div>
 
       {/* Mobile hamburger */}
@@ -143,6 +153,13 @@ export default function SiteNav() {
       {mobileOpen && (
         <div className="md:hidden absolute top-full left-0 right-0 bg-htg-card border-b border-htg-card-border shadow-lg z-40">
           <div className="flex flex-col p-4 gap-1">
+            {/* User email */}
+            {isLoggedIn && user?.email && (
+              <div className="px-4 py-2 mb-1 text-sm text-htg-fg-muted truncate border-b border-htg-card-border pb-3">
+                {user.email}
+              </div>
+            )}
+
             {/* Main nav */}
             <MobileLink href="/konto" label="Nagrania" pathname={pathname} onClick={() => setMobileOpen(false)} />
             <MobileLink href="/konto/sesje-indywidualne" label="Spotkania" pathname={pathname} onClick={() => setMobileOpen(false)} />

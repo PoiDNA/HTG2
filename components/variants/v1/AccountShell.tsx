@@ -27,9 +27,13 @@ export default function AccountShellV1({
           </form>
         </div>
       )}
-      <CollapsibleSidebar sidebar={sidebar}>
-        {children}
-      </CollapsibleSidebar>
+      {sidebar ? (
+        <CollapsibleSidebar sidebar={sidebar}>
+          {children}
+        </CollapsibleSidebar>
+      ) : (
+        <div>{children}</div>
+      )}
     </div>
   );
 }

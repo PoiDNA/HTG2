@@ -68,7 +68,10 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
   const [selectedUser, setSelectedUser] = useState<UserSuggestion | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [sessionType, setSessionType] = useState<string>('natalia_solo');
-  const [slotDate, setSlotDate] = useState('');
+  const [slotDate, setSlotDate] = useState(() => {
+    // Default to today in YYYY-MM-DD (Warsaw timezone)
+    return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+  });
   const [startTime, setStartTime] = useState('09:00');
   const [paymentStatus, setPaymentStatus] = useState('pending_verification');
   const [saving, setSaving] = useState(false);

@@ -7,7 +7,7 @@ import { isNagraniaPortal, NAGRANIA_HOME } from './lib/portal';
 const intlMiddleware = createMiddleware(routing);
 
 // Paths that don't require authentication
-const PUBLIC_PATHS = ['/', '/sesje', '/sesje-indywidualne', '/subskrypcje', '/nagrania', '/login', '/privacy', '/terms', '/auth', '/host', '/host-v2', '/host-v3', '/host-v4'];
+const PUBLIC_PATHS = ['/login', '/privacy', '/terms', '/auth', '/host', '/host-v2', '/host-v3', '/host-v4'];
 
 function isPublicPath(pathname: string): boolean {
   // Strip locale prefix

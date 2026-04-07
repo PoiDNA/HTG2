@@ -10,13 +10,14 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Admin only' }, { status: 403 });
   }
 
-  const { userId, displayName, phone } = await req.json();
+  const { userId, displayName, phone, secondEmail } = await req.json();
   if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
   const db = createSupabaseServiceRole();
   const { error } = await db.from('profiles').update({
     display_name: displayName ?? undefined,
     phone: phone ?? undefined,
+    second_email: secondEmail !== undefined ? (secondEmail || null) : undefined,
   }).eq('id', userId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -219,20 +219,30 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // ── 5. Bulk insert recordings ─────────────────────────────────
-  const { data: inserted, error: insertError } = await db
-    .from('booking_recordings')
-    .upsert(recordingsBatch, { onConflict: 'source_url', ignoreDuplicates: true })
-    .select('id, source_url, import_confidence');
+  // ── 5. Insert recordings one-by-one (partial unique index doesn't work with bulk upsert)
+  const insertedRecordings: Array<{ id: string; source_url: string; import_confidence: string }> = [];
+  let skippedCount = 0;
 
-  if (insertError) {
-    console.error('scan-bunny/import: recordings insert error:', insertError);
-    return NextResponse.json({ error: 'Błąd zapisu nagrań' }, { status: 500 });
+  for (const row of recordingsBatch) {
+    const { data: rec, error: err } = await db
+      .from('booking_recordings')
+      .insert(row)
+      .select('id, source_url, import_confidence')
+      .single();
+
+    if (err) {
+      if (err.code === '23505') {
+        // Duplicate source_url — skip silently
+        skippedCount++;
+      } else {
+        console.error('scan-bunny/import: insert error:', err, 'file:', row.source_url);
+      }
+      continue;
+    }
+    if (rec) insertedRecordings.push(rec);
   }
 
-  const insertedRecordings = inserted || [];
   const insertedIds = insertedRecordings.map(r => r.id);
-  const skippedCount = recordingsBatch.length - insertedRecordings.length;
 
   // ── 6. Build access batch (only exact_email) ──────────────────
   const accessBatch: Array<{ recording_id: string; user_id: string; granted_reason: string }> = [];

@@ -11,9 +11,8 @@ import { locales, routing } from "@/i18n-config";
 import { Toaster } from "sonner";
 import { cookies, headers } from "next/headers";
 import { isNagraniaPortal } from "@/lib/portal";
-import { getDesignVariant } from "@/lib/design-variant";
+import { getDesignVariant, canSwitchVariant } from "@/lib/design-variant";
 import { DesignVariantProvider } from "@/lib/design-variant-context";
-import { isAdminEmail } from "@/lib/roles";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import GlobalShellV1 from "@/components/variants/v1/GlobalShell";
 import GlobalShellV2 from "@/components/variants/v2/GlobalShell";
@@ -89,12 +88,12 @@ export default async function LocaleLayout({
   const cookieStore = await cookies();
   const variant = getDesignVariant(cookieStore);
 
-  // Check admin for switcher visibility
-  let isAdmin = false;
+  // Check if user can switch variants (admin or tester)
+  let showSwitcher = false;
   try {
     const supabase = await createSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
-    if (user?.email) isAdmin = isAdminEmail(user.email);
+    if (user?.email) showSwitcher = canSwitchVariant(user.email);
   } catch { /* not logged in — no switcher */ }
 
   // Select shell based on variant
@@ -152,7 +151,7 @@ export default async function LocaleLayout({
               <Shell isNagrania={isNagrania}>
                 {children}
               </Shell>
-              {isAdmin && <DesignVariantSwitcher currentVariant={variant} locale={locale} />}
+              {showSwitcher && <DesignVariantSwitcher currentVariant={variant} locale={locale} />}
             </DesignVariantProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

@@ -159,6 +159,15 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   return (
     <div className="relative w-full h-screen bg-[#0a0e1a] flex flex-col">
 
+      {/* Branding — always visible 20px from top, centered */}
+      {phase !== 'poczekalnia' && phase !== 'ended' && (
+        <div className="absolute top-[20px] inset-x-0 z-40 flex justify-center pointer-events-none">
+          <span className="text-white/25 text-xs font-light tracking-[0.35em] uppercase select-none">
+            Hacking The Game
+          </span>
+        </div>
+      )}
+
       {/* Persistent ambient particle animation — behind all content */}
       {phase !== 'wstep' && phase !== 'podsumowanie' && phase !== 'poczekalnia' && (
         <SessionAnimation variant={animVariant} opacity={0.45} active />
@@ -168,13 +177,6 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
       {phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
         <div className="relative z-30 flex-shrink-0 h-[60px] flex items-center justify-between px-4">
           <LiveControls backUrl={backUrl} standalone={false} />
-
-          {/* Centered branding */}
-          <div className="absolute inset-x-0 flex justify-center pointer-events-none">
-            <span className="text-white/25 text-xs font-light tracking-[0.35em] uppercase select-none">
-              Hacking The Game
-            </span>
-          </div>
 
           {/* REC indicator — staff only during sesja */}
           {isStaff && phase === 'sesja' && (

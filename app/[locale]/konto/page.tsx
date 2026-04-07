@@ -6,9 +6,12 @@ import { cookies } from 'next/headers';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
+import { getDesignVariant } from '@/lib/design-variant';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import VodLibrarySection from './_sections/VodLibrarySection';
 import RemainingSessionsSection from './_sections/RemainingSessionsSection';
+import SanctuaryHero from './_sections/SanctuaryHero';
+import ContinueCard from './_sections/ContinueCard';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -50,6 +53,53 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
     }
   }
 
+  const variant = getDesignVariant(cookieStore);
+
+  // ─── V2 "Sanctuary" — focused listening ─────────────────────
+  if (variant === 'v2') {
+    return (
+      <div>
+        {/* ActiveCalls only as critical exception */}
+        <ActiveCallsWidget locale={locale} />
+
+        <Suspense fallback={<SectionSkeleton title="Następna sesja" />}>
+          <SanctuaryHero locale={locale} />
+        </Suspense>
+
+        <Suspense fallback={<SectionSkeleton title="Biblioteka audio" />}>
+          <VodLibrarySection locale={locale} />
+        </Suspense>
+
+        <Suspense fallback={<SectionSkeleton title="Pozostałe Sesje" />}>
+          <RemainingSessionsSection locale={locale} />
+        </Suspense>
+      </div>
+    );
+  }
+
+  // ─── V3 "Sanctum" — continuity ──────────────────────────────
+  if (variant === 'v3') {
+    return (
+      <div>
+        {/* ActiveCalls only as critical exception */}
+        <ActiveCallsWidget locale={locale} />
+
+        <Suspense fallback={<SectionSkeleton title="Kontynuuj" />}>
+          <ContinueCard locale={locale} />
+        </Suspense>
+
+        <Suspense fallback={<SectionSkeleton title="Nagrania z sesji" />}>
+          <VodLibrarySection locale={locale} />
+        </Suspense>
+
+        <Suspense fallback={<SectionSkeleton title="Pozostałe Sesje" />}>
+          <RemainingSessionsSection locale={locale} />
+        </Suspense>
+      </div>
+    );
+  }
+
+  // ─── V1 default ─────────────────────────────────────────────
   return (
     <div>
       <ActiveCallsWidget locale={locale} />

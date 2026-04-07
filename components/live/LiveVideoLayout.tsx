@@ -225,6 +225,16 @@ export default function LiveVideoLayout({
   return (
     <div className="relative w-full h-full overflow-visible">
 
+      {/* ── Branding — 20px above video ───────────────────────────────────── */}
+      <div
+        className="absolute inset-x-0 flex justify-center pointer-events-none"
+        style={{ top: VIDEO_TOP - 20 }}
+      >
+        <span className="text-white/25 text-xs font-light tracking-[0.35em] uppercase select-none">
+          Hacking The Game
+        </span>
+      </div>
+
       {/* ── Main video ────────────────────────────────────────────────────── */}
       <div
         className="absolute inset-x-0 flex justify-center"
@@ -288,17 +298,10 @@ export default function LiveVideoLayout({
           </div>
         ))}
 
-        {/* Controls — only in video phases (wstep/podsumowanie). Audio phases use bottom bar. */}
-        {!audioMode && (
-          <div className="flex items-center gap-4">
-            <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />
-            {staffRight && (
-              <div className="flex items-center gap-2">
-                {staffRight}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Media controls — mic/camera below circles */}
+        <div className="flex items-center gap-4">
+          <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />
+        </div>
       </div>
     </div>
   );

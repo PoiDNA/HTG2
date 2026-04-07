@@ -61,14 +61,14 @@ export default function ZoomBackupButton({ room, slotId, compact = false, onUrlS
         onClick={handleActivate}
         disabled={sending}
         title={sent ? 'Zoom wysłany ✓' : 'Przełącz spotkanie na ZOOM'}
-        className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors active:scale-95
+        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95
           ${sent
             ? 'bg-green-700/80 text-white cursor-default'
-            : 'bg-blue-600/90 text-white hover:bg-blue-500/90'
+            : 'bg-white/10 text-white/50 hover:bg-blue-600/90 hover:text-white'
           }
           disabled:opacity-50 disabled:cursor-not-allowed`}
       >
-        {sent ? <span className="text-base">✓</span> : <Video className="w-5 h-5" />}
+        {sent ? <span className="text-base">✓</span> : <Video className="w-4 h-4" />}
       </button>
     );
   }

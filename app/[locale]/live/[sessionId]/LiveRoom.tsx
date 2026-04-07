@@ -159,14 +159,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   return (
     <div className="relative w-full h-screen bg-htg-bg flex flex-col">
 
-      {/* Branding — always visible 20px from top, centered */}
-      {phase !== 'poczekalnia' && phase !== 'ended' && (
-        <div className="absolute top-[20px] inset-x-0 z-40 flex justify-center pointer-events-none">
-          <span className="text-white/25 text-xs font-light tracking-[0.35em] uppercase select-none">
-            Hacking The Game
-          </span>
-        </div>
-      )}
+      {/* Branding removed from here — rendered inside LiveVideoLayout instead */}
 
       {/* Persistent ambient particle animation — behind all content */}
       {phase !== 'wstep' && phase !== 'podsumowanie' && phase !== 'poczekalnia' && (
@@ -240,18 +233,6 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             room={room}
             phase={phase}
             showVideo={true}
-            staffRight={isStaff ? (
-              <div className="flex flex-col items-end gap-2">
-                <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
-                <PhaseControls
-                  sessionId={sessionId}
-                  currentPhase={phase}
-                  isStaff={isStaff}
-                  onPhaseChanged={handlePhaseChanged}
-                  compact
-                />
-              </div>
-            ) : undefined}
           />
         )}
 
@@ -313,18 +294,6 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
             room={room}
             phase={phase}
             showVideo={true}
-            staffRight={isStaff ? (
-              <div className="flex flex-col items-end gap-2">
-                <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
-                <PhaseControls
-                  sessionId={sessionId}
-                  currentPhase={phase}
-                  isStaff={isStaff}
-                  onPhaseChanged={handlePhaseChanged}
-                  compact
-                />
-              </div>
-            ) : undefined}
           />
         )}
 
@@ -337,74 +306,52 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
         )}
       </div>
 
-      {/* Bottom bar — audio/transition phases only (video phases have inline controls) */}
-      {!isVideoPhase && phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && (
-        <div className="relative z-20 flex items-center justify-between
-          px-3 py-2 sm:px-6 sm:py-3">
-
-          {/* Left: phase button (mobile) or Zoom + private talk (desktop) */}
-          <div className="flex items-center gap-2">
-            {isStaff && (
-              <>
-                {/* Phase button — left on mobile, right on desktop */}
-                <div className="sm:hidden">
-                  <PhaseControls
-                    sessionId={sessionId}
-                    currentPhase={phase}
-                    isStaff={isStaff}
-                    onPhaseChanged={handlePhaseChanged}
-                    compact
-                  />
-                </div>
-                {/* Zoom + Private talk — desktop only */}
-                <div className="hidden sm:flex items-center gap-2">
-                  <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
-                  {phase === 'sesja' && (
-                    <PrivateTalkButton room={room} isStaff={isStaff} />
-                  )}
-                </div>
-              </>
-            )}
+      {/* ── Staff fixed controls — all active phases ───────────────────── */}
+      {isStaff && phase !== 'poczekalnia' && phase !== 'outro' && phase !== 'ended' && phase !== 'przejscie_1' && phase !== 'przejscie_2' && (
+        <>
+          {/* ZOOM — top-left, transparent, blue on hover */}
+          <div className="fixed top-20 left-4 z-50">
+            <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
           </div>
 
-          {/* Center: mic/camera controls */}
-          <div className="flex items-center gap-3">
-            <MediaControls room={room} showVideo={false} showBreak={!isStaff} />
-            {/* Mobile-only: Zoom + private talk as small buttons */}
-            {isStaff && (
-              <div className="flex sm:hidden items-center gap-1">
-                <ZoomBackupButton room={room} compact onUrlSent={setZoomBackupUrl} />
-                {phase === 'sesja' && (
-                  <PrivateTalkButton room={room} isStaff={isStaff} />
-                )}
-              </div>
-            )}
+          {/* Phase button — bottom-right on desktop, bottom-left on mobile (arrow only) */}
+          <div className="fixed bottom-6 right-6 z-50 hidden sm:block">
+            <PhaseControls
+              sessionId={sessionId}
+              currentPhase={phase}
+              isStaff={isStaff}
+              onPhaseChanged={handlePhaseChanged}
+            />
+          </div>
+          <div className="fixed bottom-6 left-4 z-50 sm:hidden">
+            <PhaseControls
+              sessionId={sessionId}
+              currentPhase={phase}
+              isStaff={isStaff}
+              onPhaseChanged={handlePhaseChanged}
+              compact
+            />
           </div>
 
-          {/* Right: phase button (desktop) or volume (client) */}
-          <div className="flex items-center gap-2">
-            {isStaff && (
-              <div className="hidden sm:block">
-                <PhaseControls
-                  sessionId={sessionId}
-                  currentPhase={phase}
-                  isStaff={isStaff}
-                  onPhaseChanged={handlePhaseChanged}
-                />
-              </div>
-            )}
-            {!isStaff && phase === 'sesja' && (
-              <div className="hidden sm:flex items-center gap-2">
-                {Array.from(room.remoteParticipants.values()).map((p) => (
-                  <VolumeSlider
-                    key={p.identity}
-                    participantName={p.name ?? p.identity}
-                    onVolumeChange={(vol) => handleVolumeChange(p.identity, vol)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Private talk — desktop only, bottom-left */}
+          {phase === 'sesja' && (
+            <div className="fixed bottom-6 left-6 z-50 hidden sm:block">
+              <PrivateTalkButton room={room} isStaff={isStaff} />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Client volume sliders — audio phase only ──────────────────── */}
+      {!isStaff && phase === 'sesja' && (
+        <div className="fixed bottom-6 right-6 z-50 hidden sm:flex items-center gap-2">
+          {Array.from(room.remoteParticipants.values()).map((p) => (
+            <VolumeSlider
+              key={p.identity}
+              participantName={p.name ?? p.identity}
+              onVolumeChange={(vol) => handleVolumeChange(p.identity, vol)}
+            />
+          ))}
         </div>
       )}
 

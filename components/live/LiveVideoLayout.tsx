@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   VideoTrack,
   useParticipants,
@@ -65,15 +65,6 @@ function MainTile({
           {p.name || (p.isLocal ? 'Ty' : 'Uczestnik')}
         </span>
       </div>
-      {/* Swap hint on hover */}
-      {clickable && (
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none">
-          <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity
-            bg-black/50 rounded-full px-2 py-0.5 text-[10px] text-white/80">
-            zamień ⇄
-          </span>
-        </div>
-      )}
     </div>
   );
 }
@@ -87,6 +78,7 @@ function CircleTile({
   onClick,
   clickable,
   speaking,
+  pinned,
 }: {
   participant: Participant;
   videoTrack: TrackReference | null;
@@ -94,16 +86,18 @@ function CircleTile({
   onClick?: () => void;
   clickable?: boolean;
   speaking?: boolean;
+  pinned?: boolean;
 }) {
   const isSpeaking = speaking ?? p.isSpeaking;
   return (
     <div
       className={`relative flex-shrink-0 rounded-full overflow-hidden shadow-xl
         ${isSpeaking ? 'ring-4 ring-htg-sage' : 'ring-2 ring-white/30'}
+        ${pinned ? 'ring-4 ring-htg-warm' : ''}
         ${clickable ? 'cursor-pointer hover:ring-4 hover:ring-white/60 transition-all' : ''}`}
       style={{ width: size, height: size }}
       onClick={clickable ? onClick : undefined}
-      title={clickable ? `Zamień z ${p.name || 'uczestnikiem'}` : undefined}
+      title={clickable ? `Przypnij ${p.name || 'uczestnika'} na główny ekran` : undefined}
     >
       {videoTrack ? (
         <VideoTrack trackRef={videoTrack} className="w-full h-full object-cover" />
@@ -130,16 +124,14 @@ interface LiveVideoLayoutProps {
   room: Room;
   phase: Phase;
   showVideo: boolean;
-  /** Faza 2: zachowaj układ kafelków ale pokaż fale audio zamiast wideo */
   audioMode?: boolean;
-  /** Optional staff controls rendered at the right side of the circle row */
   staffRight?: React.ReactNode;
 }
 
-const CIRCLE_BASE = 132;      // px — bottom self-view circles
-const ASST_SIZE   = 220;      // px — assistant overlay circle (right side)
-const VIDEO_TOP   = 60;       // px — offset from top of LiveVideoLayout area
-const VIDEO_PCT   = 67;       // % — video height as % of container
+const CIRCLE_SIZE  = 120;      // px — circle tiles
+const MAX_PER_ROW  = 5;        // max circles per row before wrapping
+const VIDEO_TOP    = 40;       // px — offset from top
+const VIDEO_PCT    = 65;       // % — video height as % of container
 
 export default function LiveVideoLayout({
   viewerIsStaff,
@@ -155,57 +147,79 @@ export default function LiveVideoLayout({
     { onlySubscribed: false },
   );
 
-  const [swappedId, setSwappedId] = useState<string | null>(null);
+  // ── Active speaker tracking ──────────────────────────────────────────
+  // pinnedId: staff clicked to pin someone → stays on main until unpin
+  // activeSpeakerId: auto-tracked from isSpeaking (for users / unpinned staff)
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  const activeSpeakerRef = useRef<string | null>(null);
+  const [activeSpeakerId, setActiveSpeakerId] = useState<string | null>(null);
+
+  // Track active speaker — debounce to avoid flickering
+  useEffect(() => {
+    const speaking = participants.find((p) => p.isSpeaking && !p.isLocal);
+    if (speaking) {
+      activeSpeakerRef.current = speaking.identity;
+      setActiveSpeakerId(speaking.identity);
+    }
+    // Don't clear when nobody speaks — keep last speaker on screen
+  }, [participants]);
 
   const localParticipant = participants.find((p) => p.isLocal) ?? null;
-  const remoteStaff    = useMemo(() => participants.filter((p) => !p.isLocal && isStaffParticipant(p)),  [participants]);
-  const remoteClients  = useMemo(() => participants.filter((p) => !p.isLocal && !isStaffParticipant(p)), [participants]);
+  const remoteParticipants = useMemo(() => participants.filter((p) => !p.isLocal), [participants]);
 
-  // Natalia = first remote staff (practitioner). Always default main.
-  // Assistants = additional remote staff (Agata, Justyna, Przemek)
-  const natalia = remoteStaff[0] ?? null;
-  const assistants = useMemo(() => remoteStaff.slice(1), [remoteStaff]);
-
-  // Default main participant = Natalia (for everyone)
-  // If local user IS Natalia (first staff), main = client instead
-  const defaultMainParticipant = useMemo(() => {
-    if (natalia) return natalia;
-    // Fallback: if no remote staff, show first client
-    return remoteClients[0] ?? null;
-  }, [natalia, remoteClients]);
-
-  // Swap: clicking any circle swaps that person into main
+  // ── Determine main participant ───────────────────────────────────────
   const mainParticipant = useMemo(() => {
-    if (!swappedId) return defaultMainParticipant;
-    const found = participants.find((p) => p.identity === swappedId);
-    return found ?? defaultMainParticipant;
-  }, [swappedId, defaultMainParticipant, participants]);
+    // Staff: pinned person stays, otherwise active speaker
+    if (viewerIsStaff) {
+      if (pinnedId) {
+        const pinned = participants.find((p) => p.identity === pinnedId);
+        if (pinned) return pinned;
+      }
+      // Fallback to active speaker or first remote
+      if (activeSpeakerId) {
+        const speaker = participants.find((p) => p.identity === activeSpeakerId);
+        if (speaker) return speaker;
+      }
+      return remoteParticipants[0] ?? localParticipant;
+    }
 
-  // Bottom circles = everyone except main participant
+    // User: always show active speaker (no pinning)
+    if (activeSpeakerId) {
+      const speaker = participants.find((p) => p.identity === activeSpeakerId);
+      if (speaker) return speaker;
+    }
+    // Fallback: first remote staff (Natalia)
+    const staff = remoteParticipants.find((p) => isStaffParticipant(p));
+    return staff ?? remoteParticipants[0] ?? localParticipant;
+  }, [viewerIsStaff, pinnedId, activeSpeakerId, participants, remoteParticipants, localParticipant]);
+
+  // ── Circle participants = everyone except main ───────────────────────
   const circleParticipants = useMemo(() => {
-    const all = [
-      ...(localParticipant ? [localParticipant] : []),
-      ...remoteClients,
-      // Natalia goes to circles if swapped out of main
-      ...(natalia && mainParticipant?.identity !== natalia.identity ? [natalia] : []),
-    ];
-    // Remove whoever is currently in main
-    return all.filter((p) => p.identity !== mainParticipant?.identity);
-  }, [localParticipant, remoteClients, natalia, mainParticipant]);
+    return participants.filter((p) => p.identity !== mainParticipant?.identity);
+  }, [participants, mainParticipant]);
 
-  const handleSwap = useCallback((id: string) => {
-    setSwappedId((prev) => (prev === id ? null : id));
-  }, []);
+  // ── Handle circle click ──────────────────────────────────────────────
+  const handleCircleClick = useCallback((id: string) => {
+    if (!viewerIsStaff) return; // Users can't pin
+    // Toggle pin: click again to unpin
+    setPinnedId((prev) => (prev === id ? null : id));
+  }, [viewerIsStaff]);
 
+  // ── Circle sizing — responsive rows ──────────────────────────────────
   const circleCount = circleParticipants.length;
-  const circleSize  = circleCount <= 1 ? CIRCLE_BASE + 8 : circleCount === 2 ? CIRCLE_BASE : circleCount === 3 ? CIRCLE_BASE - 16 : CIRCLE_BASE - 28;
-  const overlapPx   = Math.round(circleSize / 3);
+  const circleSize = circleCount <= 3 ? CIRCLE_SIZE : circleCount <= 6 ? CIRCLE_SIZE - 16 : CIRCLE_SIZE - 28;
 
-  // CSS helpers for video positioning
-  // Video: starts VIDEO_TOP px from top, ends at VIDEO_PCT% of container height
+  // Split circles into rows
+  const circleRows = useMemo(() => {
+    const rows: Participant[][] = [];
+    for (let i = 0; i < circleParticipants.length; i += MAX_PER_ROW) {
+      rows.push(circleParticipants.slice(i, i + MAX_PER_ROW));
+    }
+    return rows;
+  }, [circleParticipants]);
+
   const videoBottom = `${VIDEO_PCT}%`;
-  const circleTop   = `calc(${VIDEO_PCT}% - ${overlapPx}px)`;
-  const gradientTop = `calc(${VIDEO_PCT}% - 48px)`;
+  const circleTop = `calc(${VIDEO_PCT}% + 16px)`;
 
   return (
     <div className="relative w-full h-full overflow-visible">
@@ -215,11 +229,8 @@ export default function LiveVideoLayout({
         className="absolute inset-x-0 flex justify-center"
         style={{ top: VIDEO_TOP, bottom: `calc(100% - ${videoBottom})` }}
       >
-        {/* Relative wrapper: video tiles + assistant overlay */}
-        <div className="relative h-full" style={{ width: '70%' }}>
-
-          {/* Video / Audio wave tile — single main participant */}
-          <div className="absolute inset-0 flex gap-px overflow-hidden rounded-2xl">
+        <div className="relative h-full" style={{ width: '80%', maxWidth: 900 }}>
+          <div className="absolute inset-0 flex overflow-hidden rounded-2xl">
             {!mainParticipant ? (
               <div className="flex-1 bg-black/30 flex items-center justify-center">
                 <p className="text-htg-cream/30 text-sm">Oczekiwanie na uczestników...</p>
@@ -236,62 +247,30 @@ export default function LiveVideoLayout({
             )}
           </div>
 
-          {/* ── Assistant overlay circle — RIGHT side, 2/3 on screen ── */}
-          {assistants.length > 0 && (
-            <div
-              className="absolute right-0 z-10 flex flex-col items-end"
-              style={{ top: '50%', transform: 'translateY(-50%)', gap: 24 }}
-            >
-              {assistants.map((p) => (
-                <div key={p.identity} style={{ transform: 'translateX(33%)' }}>
-                  {audioMode ? (
-                    <AudioCircleTile
-                      participant={p}
-                      size={ASST_SIZE}
-                      clickable
-                      onClick={() => handleSwap(p.identity)}
-                    />
-                  ) : (
-                    <CircleTile
-                      participant={p}
-                      videoTrack={getVideoTrack(videoTracks, p.identity)}
-                      size={ASST_SIZE}
-                      clickable
-                      onClick={() => handleSwap(p.identity)}
-                    />
-                  )}
-                </div>
-              ))}
+          {/* Pin indicator */}
+          {viewerIsStaff && pinnedId && mainParticipant?.identity === pinnedId && (
+            <div className="absolute top-3 left-3 z-10 bg-htg-warm/90 text-white text-[10px] font-bold px-2 py-1 rounded-full">
+              PRZYPIĘTY
             </div>
           )}
         </div>
       </div>
 
-      {/* Soft gradient at bottom edge of video */}
+      {/* ── Circles — centered rows below video ──────────────────────────── */}
       <div
-        className="absolute inset-x-0 pointer-events-none"
-        style={{ top: gradientTop, height: 48, background: 'linear-gradient(to bottom, transparent, rgba(6,8,28,0.5))' }}
-      />
-
-      {/* ── Circle row (self-view) + controls ────────────────────────────── */}
-      <div
-        className="absolute inset-x-0 flex items-start justify-between px-6"
+        className="absolute inset-x-0 flex flex-col items-center gap-3"
         style={{ top: circleTop }}
       >
-        {/* Left spacer */}
-        <div style={{ minWidth: 48 }} />
-
-        {/* Center: self-view circle(s) + controls */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-start justify-center gap-4">
-            {circleParticipants.map((p) => (
+        {circleRows.map((row, ri) => (
+          <div key={ri} className="flex items-center justify-center gap-4">
+            {row.map((p) => (
               audioMode ? (
                 <AudioCircleTile
                   key={p.identity}
                   participant={p}
                   size={circleSize}
-                  clickable={!p.isLocal}
-                  onClick={() => handleSwap(p.identity)}
+                  clickable={viewerIsStaff}
+                  onClick={() => handleCircleClick(p.identity)}
                 />
               ) : (
                 <CircleTile
@@ -299,18 +278,23 @@ export default function LiveVideoLayout({
                   participant={p}
                   videoTrack={getVideoTrack(videoTracks, p.identity)}
                   size={circleSize}
-                  clickable={!p.isLocal}
-                  onClick={() => handleSwap(p.identity)}
+                  clickable={viewerIsStaff}
+                  onClick={() => handleCircleClick(p.identity)}
+                  pinned={pinnedId === p.identity}
                 />
               )
             ))}
           </div>
-          <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />
-        </div>
+        ))}
 
-        {/* Right: staff controls (Zoom + PhaseControls) at circle height */}
-        <div className="flex flex-col items-end gap-2 self-center" style={{ minWidth: 48 }}>
-          {staffRight}
+        {/* Controls row */}
+        <div className="flex items-center gap-4">
+          <MediaControls room={room} showVideo={showVideo} showBreak={!viewerIsStaff} />
+          {staffRight && (
+            <div className="flex items-center gap-2">
+              {staffRight}
+            </div>
+          )}
         </div>
       </div>
     </div>

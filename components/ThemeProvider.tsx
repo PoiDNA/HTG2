@@ -84,6 +84,17 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export const useTheme = () => useContext(ThemeContext);
 
+/* ── Per-variant accent overrides ───────────────────────────────── */
+
+const VARIANT_ACCENTS: Partial<Record<DesignVariant, ColorVars>> = {
+  v3: {
+    '--color-htg-indigo': '#B8860B',      // dark goldenrod as primary accent
+    '--color-htg-indigo-light': '#D4A840', // warm gold hover
+    '--color-htg-sage': '#5A8A4E',         // sage stays for CTA
+    '--color-htg-sage-dark': '#4A7A3E',    // slightly darker sage
+  },
+};
+
 function applyTheme(isDark: boolean, variant: DesignVariant = 'v1') {
   const d = document.documentElement;
   const vars = isDark ? VARIANT_DARK[variant] : VARIANT_LIGHT[variant];
@@ -93,6 +104,11 @@ function applyTheme(isDark: boolean, variant: DesignVariant = 'v1') {
     d.classList.remove('dark');
   }
   Object.entries(vars).forEach(([k, v]) => d.style.setProperty(k, v));
+  // Apply accent overrides for variant
+  const accents = VARIANT_ACCENTS[variant];
+  if (accents) {
+    Object.entries(accents).forEach(([k, v]) => d.style.setProperty(k, v));
+  }
 }
 
 export default function ThemeProvider({
@@ -115,7 +131,8 @@ export default function ThemeProvider({
 
   useEffect(() => {
     const stored = localStorage.getItem('htg-theme') as Theme | null;
-    const t = stored || 'system';
+    // V3 defaults to dark if user has no explicit preference
+    const t = stored || (variant === 'v3' ? 'dark' : 'system');
     setThemeState(t);
     const isDark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme:dark)').matches);
     setResolvedTheme(isDark ? 'dark' : 'light');

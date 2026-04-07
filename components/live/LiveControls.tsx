@@ -39,17 +39,17 @@ export default function LiveControls({ backUrl = '/pl/konto/sesje-indywidualne',
         Wróć
       </button>
 
-      {/* Fullscreen toggle — hidden on mobile */}
+      {/* Fullscreen toggle — icon only, top-right area */}
       <button
         onClick={toggleFullscreen}
-        className={`hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-xl backdrop-blur-md text-sm font-medium transition-all ${
+        title={isFullscreen ? 'Wyjdź z pełnego ekranu' : 'Pełny ekran'}
+        className={`hidden sm:flex items-center justify-center w-10 h-10 rounded-full transition-all ${
           isFullscreen
             ? 'bg-black/30 text-white/70 hover:text-white'
-            : 'bg-white/15 border border-white/25 text-white hover:bg-white/25'
+            : 'bg-white/10 text-white/50 hover:bg-white/25 hover:text-white'
         }`}
       >
-        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-5 h-5" />}
-        {isFullscreen ? 'Wyjdź' : 'Włącz pełny ekran'}
+        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
       </button>
     </>
   );

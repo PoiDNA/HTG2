@@ -80,13 +80,13 @@ export default function PhaseControls({
       <button
         onClick={handleAdvance}
         disabled={loading}
-        className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl
-          bg-htg-warm text-white font-medium text-xs
+        title={t(buttonLabel)}
+        className="flex items-center justify-center w-12 h-12 rounded-full
+          bg-htg-warm text-white
           hover:bg-htg-warm/90 transition-colors active:scale-95
           disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {PHASE_ICONS[currentPhase]}
-        <span className="whitespace-nowrap">{loading ? '...' : t(buttonLabel)}</span>
       </button>
     );
   }

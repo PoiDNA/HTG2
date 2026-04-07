@@ -228,7 +228,7 @@ export function AudioMainTile({ participant: p }: AudioMainTileProps) {
       className={`relative flex-1 h-full flex flex-col items-center justify-center gap-4 overflow-hidden
         transition-all duration-500
         ${speaking ? 'ring-4 ring-[#4ade80]/40 ring-inset' : ''}`}
-      style={{ background: 'radial-gradient(ellipse at 50% 35%, #1C1418, #14100E 80%)' }}
+      style={{ background: 'transparent' }}
     >
       <div className="absolute inset-0 pointer-events-none transition-opacity duration-500"
         style={{ background: `radial-gradient(ellipse 55% 45% at 50% 40%, ${glowColor}, transparent 70%)` }} />

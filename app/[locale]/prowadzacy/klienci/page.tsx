@@ -3,6 +3,7 @@ import { locales } from '@/i18n-config';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Users, Mail, Calendar, Hash } from 'lucide-react';
 import type { SessionType } from '@/lib/booking/types';
+import { ALL_SESSION_TYPES } from '@/lib/booking/constants';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
@@ -18,7 +19,7 @@ export default async function StaffClientsPage({ params }: { params: Promise<{ l
   const admin = createSupabaseServiceRole();
 
   const isPractitioner = staffMember?.role === 'practitioner';
-  const sessionTypes = isPractitioner ? ['natalia_solo', 'natalia_agata', 'natalia_justyna'] : (staffMember?.session_types || []);
+  const sessionTypes = isPractitioner ? ALL_SESSION_TYPES : (staffMember?.session_types || []);
   const todayStr = new Date().toISOString().split('T')[0];
 
   const { data: bookings } = await admin.from('bookings')

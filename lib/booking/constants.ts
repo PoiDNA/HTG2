@@ -33,6 +33,14 @@ export const SESSION_CONFIG: Record<SessionType, {
     requiredStaff: ['natalia', 'justyna'],
     color: 'bg-htg-warm',
   },
+  natalia_przemek: {
+    label: 'Sesja z Natalią i Przemkiem',
+    labelShort: 'Natalia + Przemek',
+    durationMinutes: 90,
+    pricePln: 1600,
+    requiredStaff: ['natalia', 'przemek'],
+    color: 'bg-sky-600',
+  },
   natalia_para: {
     label: 'Sesja dla par',
     labelShort: 'Sesja dla par',
@@ -70,7 +78,7 @@ export const PRODUCT_SLUGS = {
   SESSION_PARA:        'sesja-natalia-para',
 } as const;
 
-export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_para', 'natalia_asysta'];
+export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_przemek', 'natalia_para', 'natalia_asysta'];
 export const PRE_SESSION_DURATION = 15;
 
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {

@@ -300,6 +300,27 @@ async function section6ClientRecordingsPurge(db: DB, stats: Record<string, numbe
         continue;
       }
 
+      // Audit write (Faza 6): log the cron-initiated purge. actor_id stays
+      // null (no user — it's the system). The audit row survives the purge
+      // because client_recording_audit has no FK on recording_id.
+      try {
+        await db.from('client_recording_audit').insert({
+          recording_id: rec.id,
+          actor_id: null,
+          action: 'purged',
+          details: {
+            grace_days: GRACE_DAYS,
+            storage_path: rec.storage_url,
+            original_owner: rec.user_id,
+          },
+        });
+      } catch (auditErr) {
+        console.error(
+          `[cron:recordings] Section 6: audit write failed for ${rec.id} (non-fatal):`,
+          auditErr
+        );
+      }
+
       stats.cleaned++;
       console.log(
         `[cron:recordings] Section 6: purged client_recording ${rec.id} ` +

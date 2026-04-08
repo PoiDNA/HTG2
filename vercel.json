@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/process-recordings",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/analyze-client",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWebhookReceiver } from '@/lib/live/livekit';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { extractR2ObjectKey } from '@/lib/r2-presigned';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 const RECORDING_TYPES = ['natalia_solo', 'natalia_asysta', 'natalia_para'];
@@ -57,26 +58,6 @@ function getPhaseTitle(phase: RecordingPhase, dateStr: string | null): string {
  */
 function getMinDurationSeconds(phase: RecordingPhase): number {
   return phase === 'sesja' ? 60 : 10;
-}
-
-/**
- * Extract R2 object key from a full R2 URL.
- * R2 URL format: https://<account>.r2.cloudflarestorage.com/<bucket>/<key>
- * We store only the key (e.g. 'live_sessions/abc.mp4') in source_url.
- */
-function extractR2ObjectKey(fileUrl: string): string | null {
-  if (!fileUrl) return null;
-  try {
-    const u = new URL(fileUrl);
-    let path = u.pathname.replace(/^\//, '');
-    const bucketName = process.env.R2_BUCKET_NAME;
-    if (bucketName && path.startsWith(bucketName + '/')) {
-      path = path.slice(bucketName.length + 1);
-    }
-    return path || null;
-  } catch {
-    return fileUrl || null;
-  }
 }
 
 async function auditRecording(
@@ -140,33 +121,36 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // ── 2. Individual track recordings — via atomic RPC ─────────────────
+      // ── 2. Individual track recordings — via atomic RPC (legacy) ────────
       const fileUrl = egress.fileResults?.[0]?.location ?? null;
 
       if (fileUrl && !session) {
+        // Not a composite — try legacy sesja tracks first, then analytics
         const { data: rpcResult, error: rpcError } = await supabase
           .rpc('complete_session_track_egress', {
             p_egress_id: egressId,
             p_file_url:  fileUrl,
           });
 
+        const legacyRow = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
+        const legacyMatched = !!legacyRow?.session_id;
+
         if (rpcError) {
           console.error('[webhook] complete_session_track_egress RPC error:', rpcError.message);
-        } else {
-          const row = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
-
-          if (row?.all_tracks_done && row?.session_id) {
+        } else if (legacyMatched) {
+          // Legacy match — auto-create session_publication when all tracks done
+          if (legacyRow.all_tracks_done && legacyRow.session_id) {
             const { data: existingPub } = await supabase
               .from('session_publications')
               .select('id')
-              .eq('live_session_id', row.session_id)
+              .eq('live_session_id', legacyRow.session_id)
               .maybeSingle();
 
             if (!existingPub) {
               const { data: fullSession } = await supabase
                 .from('live_sessions')
                 .select('id, room_name, created_at, recording_sesja_tracks, recording_sesja_url')
-                .eq('id', row.session_id)
+                .eq('id', legacyRow.session_id)
                 .single();
 
               if (fullSession) {
@@ -184,8 +168,8 @@ export async function POST(request: NextRequest) {
                 const { error: insertError } = await supabase
                   .from('session_publications')
                   .insert({
-                    title:                `Sesja ${sessionDate} — ${fullSession.room_name ?? row.session_id.slice(0, 8)}`,
-                    live_session_id:      row.session_id,
+                    title:                `Sesja ${sessionDate} — ${fullSession.room_name ?? legacyRow.session_id.slice(0, 8)}`,
+                    live_session_id:      legacyRow.session_id,
                     status:               'raw',
                     source_tracks:        sourceTracks,
                     source_composite_url: fullSession.recording_sesja_url ?? null,
@@ -196,10 +180,25 @@ export async function POST(request: NextRequest) {
                 if (insertError && !insertError.code?.includes('23505')) {
                   console.error('[webhook] auto-create publication error:', insertError.message);
                 } else if (!insertError) {
-                  console.log(`[webhook] Auto-created session_publication for live session ${row.session_id}`);
+                  console.log(`[webhook] Auto-created session_publication for live session ${legacyRow.session_id}`);
                 }
               }
             }
+          }
+        } else {
+          // 2b. Not legacy — try analytics track egresses (separate pipeline)
+          const { data: analyticsRow, error: analyticsErr } = await supabase
+            .from('analytics_track_egresses')
+            .update({ file_url: fileUrl, ended_at: new Date().toISOString() })
+            .eq('egress_id', egressId)
+            .is('file_url', null)
+            .select('id, live_session_id, phase')
+            .maybeSingle();
+
+          if (analyticsErr) {
+            console.error('[webhook] analytics_track_egresses update error:', analyticsErr.message);
+          } else if (!analyticsRow) {
+            console.warn('[webhook] Unknown track egress:', egressId);
           }
         }
       }

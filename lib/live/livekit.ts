@@ -121,6 +121,7 @@ export async function createLiveKitToken(
   roomName: string,
   isStaff: boolean,
   displayName?: string,
+  options?: { ttl?: string },
 ): Promise<string> {
   ensureConfig();
 
@@ -128,7 +129,7 @@ export async function createLiveKitToken(
     identity,
     name: displayName ?? identity,
     metadata: JSON.stringify({ isStaff }),
-    ttl: '4h',
+    ttl: options?.ttl ?? '4h',
   });
 
   const grant: VideoGrant = {
@@ -188,6 +189,27 @@ export async function createRoom(roomName: string) {
 export async function listRoomParticipants(roomName: string) {
   const svc = getRoomService();
   return svc.listParticipants(roomName);
+}
+
+/**
+ * List all active rooms on the LiveKit server.
+ * Used by HTG Meeting orphan reaper (PR #6) to cross-check egresses against
+ * our junction table.
+ */
+export async function listRooms() {
+  const svc = getRoomService();
+  return svc.listRooms();
+}
+
+/**
+ * Forcibly remove a participant from a room (server-side kick).
+ * Used by HTG Meeting control/start room-side consent re-check (PR #4):
+ * after composite recording starts, any participant without valid consent
+ * is removed from the room to keep them out of composite audio.
+ */
+export async function removeParticipant(roomName: string, identity: string) {
+  const svc = getRoomService();
+  return svc.removeParticipant(roomName, identity);
 }
 
 // ============================================================

@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n-config';
+import StaffFooterLinks from './StaffFooterLinks';
 
 export default function Footer() {
   const t = useTranslations('Footer');
@@ -26,6 +27,7 @@ export default function Footer() {
             <Link href="/konto/wiadomosci" className="whitespace-nowrap hover:text-white transition-colors">
               {t('contact_center')}
             </Link>
+            <StaffFooterLinks />
           </div>
         </div>
 

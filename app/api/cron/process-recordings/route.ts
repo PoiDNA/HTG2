@@ -5,6 +5,7 @@ import { generateR2PresignedUrl, deleteR2Object } from '@/lib/r2-presigned';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 const BUNNY_LIBRARY_ID = process.env.BUNNY_LIBRARY_ID!;
+const BUNNY_BACKUP_LIBRARY_ID = process.env.BUNNY_BACKUP_LIBRARY_ID; // Optional — backup of sesja recordings
 const CRON_SECRET = process.env.CRON_SECRET;
 
 /**
@@ -77,11 +78,19 @@ async function section1UploadWorker(db: DB, stats: Record<string, number>) {
       // Explicit guard: skip if duration still null (shouldn't happen given query, but be safe)
       if (rec.duration_seconds == null) continue;
 
+      const phase = (rec.recording_phase as string | null) ?? 'sesja';
+      const isSesja = phase === 'sesja';
+
       // Duration check — ignore short fragments
-      if (rec.duration_seconds < (rec.min_duration_seconds ?? 60)) {
+      // For wstep/podsumowanie use 10s threshold (these phases can be brief)
+      const effectiveMinDuration = isSesja
+        ? (rec.min_duration_seconds ?? 60)
+        : Math.min(rec.min_duration_seconds ?? 60, 10);
+
+      if (rec.duration_seconds < effectiveMinDuration) {
         await db.from('booking_recordings').update({
           status: 'ignored',
-          last_error: `Recording too short: ${rec.duration_seconds}s < ${rec.min_duration_seconds ?? 60}s`,
+          last_error: `Recording too short: ${rec.duration_seconds}s < ${effectiveMinDuration}s`,
           updated_at: new Date().toISOString(),
         }).eq('id', rec.id);
         await audit(db, rec.id, 'recording_ignored', { duration: rec.duration_seconds });
@@ -131,8 +140,36 @@ async function section1UploadWorker(db: DB, stats: Record<string, number>) {
         continue;
       }
 
-      // Grant access based on consent
-      await grantAccessIfConsented(db, rec);
+      // ── Backup fan-out: copy sesja recordings to backup library ─────────
+      // Only sesja phase gets backup (the user-facing material).
+      // Failure is non-blocking — primary continues normally.
+      if (isSesja && BUNNY_BACKUP_LIBRARY_ID) {
+        try {
+          const { guid: backupGuid } = await createVideo(BUNNY_BACKUP_LIBRARY_ID, `Backup — ${rec.title ?? 'Sesja'}`);
+          await fetchVideoFromUrl(BUNNY_BACKUP_LIBRARY_ID, backupGuid, presignedUrl);
+          await db.from('booking_recordings').update({
+            backup_bunny_video_id: backupGuid,
+            backup_bunny_library_id: BUNNY_BACKUP_LIBRARY_ID,
+            backup_status: 'uploading',
+          }).eq('id', rec.id);
+          await audit(db, rec.id, 'backup_started', { backup_video_id: backupGuid });
+        } catch (backupErr) {
+          // Backup failure is non-blocking — primary upload already succeeded
+          console.warn(`[cron:recordings] Backup fan-out failed for ${rec.id}:`, backupErr);
+          await db.from('booking_recordings').update({
+            backup_status: 'failed',
+          }).eq('id', rec.id);
+          await audit(db, rec.id, 'backup_failed', {
+            error: backupErr instanceof Error ? backupErr.message : 'unknown',
+          });
+        }
+      }
+
+      // Grant access based on consent — ONLY for sesja phase
+      // Wstep/podsumowanie are admin-only and never get client access rows
+      if (isSesja) {
+        await grantAccessIfConsented(db, rec);
+      }
 
       stats.uploaded++;
     } catch (e) {
@@ -154,10 +191,11 @@ async function section2StatusPolling(db: DB, stats: Record<string, number>) {
   const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 
   // Active uploads/processing (throttled to 5min intervals)
+  // Includes records where primary is done but backup still uploading/processing
   const { data: active } = await db
     .from('booking_recordings')
-    .select('id, bunny_video_id, bunny_library_id, status, retry_count, max_retries')
-    .in('status', ['uploading', 'processing'])
+    .select('id, bunny_video_id, bunny_library_id, status, backup_bunny_video_id, backup_bunny_library_id, backup_status, retry_count, max_retries')
+    .or('status.in.(uploading,processing),backup_status.in.(uploading,processing)')
     .or(`last_checked_at.is.null,last_checked_at.lt.${fiveMinAgo}`)
     .order('last_checked_at', { ascending: true, nullsFirst: true })
     .limit(10);
@@ -181,55 +219,95 @@ async function section2StatusPolling(db: DB, stats: Record<string, number>) {
     stats.checked++;
   }
 
-  // Poll Bunny status
+  // Poll Bunny status (primary)
   for (const rec of active ?? []) {
-    if (!rec.bunny_video_id || !rec.bunny_library_id) continue;
+    // Poll primary if still uploading/processing
+    if (
+      rec.bunny_video_id &&
+      rec.bunny_library_id &&
+      (rec.status === 'uploading' || rec.status === 'processing')
+    ) {
+      try {
+        const { status: bunnyStatus, length: bunnyLength } = await getVideoStatus(rec.bunny_library_id, rec.bunny_video_id);
 
-    try {
-      const { status: bunnyStatus, length: bunnyLength } = await getVideoStatus(rec.bunny_library_id, rec.bunny_video_id);
-
-      if (bunnyStatus === 4) {
-        // Finished — save duration_seconds from Bunny (used for playback token TTL)
-        await db.from('booking_recordings').update({
-          status: 'ready',
-          ...(bunnyLength > 0 ? { duration_seconds: bunnyLength } : {}),
-          last_checked_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }).eq('id', rec.id);
-        await audit(db, rec.id, 'bunny_ready', { duration_seconds: bunnyLength || null });
-      } else if (bunnyStatus === 3 || bunnyStatus === 2 || bunnyStatus === 1) {
-        // Still processing
-        await db.from('booking_recordings').update({
-          status: 'processing',
-          last_checked_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }).eq('id', rec.id);
-      } else if (bunnyStatus === 5) {
-        // Failed
-        const newRetry = (rec.retry_count ?? 0) + 1;
-        if (newRetry >= (rec.max_retries ?? 3)) {
+        if (bunnyStatus === 4) {
+          // Finished — save duration_seconds from Bunny (used for playback token TTL)
           await db.from('booking_recordings').update({
-            status: 'failed',
-            retry_count: newRetry,
-            last_error: 'Bunny encoding failed',
+            status: 'ready',
+            ...(bunnyLength > 0 ? { duration_seconds: bunnyLength } : {}),
             last_checked_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }).eq('id', rec.id);
-          await audit(db, rec.id, 'bunny_failed', { retry_count: newRetry });
-        } else {
+          await audit(db, rec.id, 'bunny_ready', { duration_seconds: bunnyLength || null });
+        } else if (bunnyStatus === 3 || bunnyStatus === 2 || bunnyStatus === 1) {
+          // Still processing
           await db.from('booking_recordings').update({
-            status: 'queued',
-            retry_count: newRetry,
-            last_error: 'Bunny encoding failed — retrying',
+            status: 'processing',
+            last_checked_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }).eq('id', rec.id);
-          await audit(db, rec.id, 'retry', { retry_count: newRetry });
+        } else if (bunnyStatus === 5) {
+          // Failed
+          const newRetry = (rec.retry_count ?? 0) + 1;
+          if (newRetry >= (rec.max_retries ?? 3)) {
+            await db.from('booking_recordings').update({
+              status: 'failed',
+              retry_count: newRetry,
+              last_error: 'Bunny encoding failed',
+              last_checked_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }).eq('id', rec.id);
+            await audit(db, rec.id, 'bunny_failed', { retry_count: newRetry });
+          } else {
+            await db.from('booking_recordings').update({
+              status: 'queued',
+              retry_count: newRetry,
+              last_error: 'Bunny encoding failed — retrying',
+              updated_at: new Date().toISOString(),
+            }).eq('id', rec.id);
+            await audit(db, rec.id, 'retry', { retry_count: newRetry });
+          }
         }
-      }
 
-      stats.checked++;
-    } catch (e) {
-      console.warn(`[cron:recordings] Status check failed for ${rec.id}:`, e);
+        stats.checked++;
+      } catch (e) {
+        console.warn(`[cron:recordings] Status check failed for ${rec.id}:`, e);
+      }
+    }
+
+    // ── Poll backup independently (if exists and still in progress) ─────
+    if (
+      rec.backup_bunny_video_id &&
+      rec.backup_bunny_library_id &&
+      (rec.backup_status === 'uploading' || rec.backup_status === 'processing')
+    ) {
+      try {
+        const { status: backupStatus } = await getVideoStatus(
+          rec.backup_bunny_library_id,
+          rec.backup_bunny_video_id,
+        );
+
+        if (backupStatus === 4) {
+          await db.from('booking_recordings').update({
+            backup_status: 'ready',
+            updated_at: new Date().toISOString(),
+          }).eq('id', rec.id);
+          await audit(db, rec.id, 'backup_ready', {});
+        } else if (backupStatus === 3 || backupStatus === 2 || backupStatus === 1) {
+          await db.from('booking_recordings').update({
+            backup_status: 'processing',
+            updated_at: new Date().toISOString(),
+          }).eq('id', rec.id);
+        } else if (backupStatus === 5) {
+          await db.from('booking_recordings').update({
+            backup_status: 'failed',
+            updated_at: new Date().toISOString(),
+          }).eq('id', rec.id);
+          await audit(db, rec.id, 'backup_failed', { reason: 'bunny_encoding_failed' });
+        }
+      } catch (e) {
+        console.warn(`[cron:recordings] Backup status check failed for ${rec.id}:`, e);
+      }
     }
   }
 }
@@ -240,7 +318,7 @@ async function section3RetentionExpiry(db: DB, stats: Record<string, number>) {
 
   const { data: expired } = await db
     .from('booking_recordings')
-    .select('id, bunny_video_id, bunny_library_id, source_url, source_cleaned_at')
+    .select('id, bunny_video_id, bunny_library_id, source_url, source_cleaned_at, backup_bunny_video_id, backup_bunny_library_id')
     .eq('status', 'ready')
     .eq('legal_hold', false)
     .lt('expires_at', now)
@@ -248,10 +326,20 @@ async function section3RetentionExpiry(db: DB, stats: Record<string, number>) {
 
   for (const rec of expired ?? []) {
     try {
-      // Delete from Bunny
+      // Delete from Bunny (primary)
       if (rec.bunny_video_id && rec.bunny_library_id) {
         await deleteVideo(rec.bunny_library_id, rec.bunny_video_id);
         await audit(db, rec.id, 'bunny_deleted', { bunny_video_id: rec.bunny_video_id });
+      }
+
+      // Delete from Bunny (backup) — same retention applies to both copies
+      if (rec.backup_bunny_video_id && rec.backup_bunny_library_id) {
+        try {
+          await deleteVideo(rec.backup_bunny_library_id, rec.backup_bunny_video_id);
+          await audit(db, rec.id, 'backup_deleted', { backup_video_id: rec.backup_bunny_video_id });
+        } catch (e) {
+          console.warn(`[cron:recordings] Backup delete failed for ${rec.id} (non-blocking):`, e);
+        }
       }
 
       // Clean R2 source if not already cleaned
@@ -283,19 +371,22 @@ async function section3RetentionExpiry(db: DB, stats: Record<string, number>) {
 
 // ── Section 4: ORPHAN GC — recordings with no access rows ──────────────────
 async function section4OrphanGC(db: DB, stats: Record<string, number>) {
-  // Grace period: 6 hours (gives time for cron grant + manual operations)
+  // Grace period: 6 hours for sesja, 12 hours for non-sesja (wstep/podsumowanie)
   const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
   // Exclusions:
   // - legal_hold recordings are never orphaned
   // - manual_review imports have no access rows by design (waiting for admin_assigned)
   // - duration_seconds IS NULL = still waiting for egress_ended (not truly orphaned yet)
+  //   FIX: previous version had this in comment but not in query — now actually filtered
   const { data: candidates } = await db
     .from('booking_recordings')
-    .select('id, bunny_video_id, bunny_library_id, source_url, source_cleaned_at, legal_hold, import_confidence')
+    .select('id, live_session_id, bunny_video_id, bunny_library_id, backup_bunny_video_id, backup_bunny_library_id, source_url, source_cleaned_at, legal_hold, import_confidence, recording_phase, created_at')
     .in('status', ['ready', 'uploading', 'processing', 'queued'])
     .eq('legal_hold', false)
     .not('import_confidence', 'eq', 'manual_review')
+    .not('duration_seconds', 'is', null)  // FIX: actually filter null durations (was missing before)
     .lt('created_at', sixHoursAgo)
     .limit(20);
 
@@ -303,13 +394,39 @@ async function section4OrphanGC(db: DB, stats: Record<string, number>) {
     // Re-check: legal_hold guard (defensive)
     if (rec.legal_hold) continue;
 
-    // Check access rows
-    const { count } = await db
-      .from('booking_recording_access')
-      .select('id', { count: 'exact', head: true })
-      .eq('recording_id', rec.id);
+    const phase = (rec.recording_phase as string | null) ?? 'sesja';
+    const isSesja = phase === 'sesja';
 
-    if ((count ?? 0) > 0) continue;
+    if (isSesja) {
+      // Sesja phase: orphan if no access rows after 6h grace period
+      const { count } = await db
+        .from('booking_recording_access')
+        .select('id', { count: 'exact', head: true })
+        .eq('recording_id', rec.id);
+
+      if ((count ?? 0) > 0) continue;
+    } else {
+      // Non-sesja phase (wstep/podsumowanie): no client access rows by design.
+      // Orphan only if NO sesja recording exists for the same live_session_id
+      // in an active state (queued/preparing/uploading/processing/ready).
+      // AND we're past the 12h grace period (longer than sesja because non-sesja
+      // is admin-only and less time-sensitive).
+      if ((rec.created_at as string) > twelveHoursAgo) continue;
+      if (!rec.live_session_id) continue;
+
+      const { count: sesjaCount } = await db
+        .from('booking_recordings')
+        .select('id', { count: 'exact', head: true })
+        .eq('live_session_id', rec.live_session_id)
+        .eq('recording_phase', 'sesja')
+        .in('status', ['queued', 'preparing', 'uploading', 'processing', 'ready']);
+
+      if ((sesjaCount ?? 0) > 0) {
+        // Sesja exists for this session — wstep/podsumowanie are part of a real session
+        continue;
+      }
+      // No sesja → this non-sesja recording is from an aborted/broken session
+    }
 
     // Orphan confirmed — delete external assets FIRST
     // CRITICAL: if external delete fails, do NOT mark as expired (retry next cycle)
@@ -322,6 +439,16 @@ async function section4OrphanGC(db: DB, stats: Record<string, number>) {
       console.error(`[cron:recordings] Orphan GC: Bunny delete failed for ${rec.id}, skipping:`, e);
       stats.errors++;
       continue; // Do NOT expire — Bunny file still exists, retry next cycle
+    }
+
+    // Delete backup (best-effort)
+    if (rec.backup_bunny_video_id && rec.backup_bunny_library_id) {
+      try {
+        await deleteVideo(rec.backup_bunny_library_id, rec.backup_bunny_video_id);
+        await audit(db, rec.id, 'backup_deleted', { reason: 'orphan' });
+      } catch (e) {
+        console.warn(`[cron:recordings] Orphan GC: Backup delete failed for ${rec.id} (non-blocking):`, e);
+      }
     }
 
     // R2 cleanup (best-effort — file will become inaccessible naturally, don't block on failure)
@@ -342,7 +469,7 @@ async function section4OrphanGC(db: DB, stats: Record<string, number>) {
       status: 'expired',
       updated_at: new Date().toISOString(),
     }).eq('id', rec.id);
-    await audit(db, rec.id, 'orphan_deleted', { reason: 'no_access_rows' });
+    await audit(db, rec.id, 'orphan_deleted', { reason: 'no_access_rows', recording_phase: phase });
     stats.orphaned++;
   }
 }
@@ -447,7 +574,7 @@ async function grantAccessIfConsented(db: DB, rec: Record<string, unknown>) {
     .maybeSingle();
 
   if (!accessConsent) {
-    await audit(db, rec.id as string, 'consent_missing_at_grant' as never, { user_id: userId });
+    await audit(db, rec.id as string, 'consent_missing_at_grant', { user_id: userId });
     return;
   }
 
@@ -477,7 +604,7 @@ async function grantAccessIfConsented(db: DB, rec: Record<string, unknown>) {
         .maybeSingle();
 
       if (!compConsent) {
-        await audit(db, rec.id as string, 'consent_missing_at_grant' as never, { user_id: compUserId });
+        await audit(db, rec.id as string, 'consent_missing_at_grant', { user_id: compUserId });
         continue;
       }
 

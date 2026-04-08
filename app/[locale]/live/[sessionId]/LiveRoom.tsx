@@ -52,6 +52,9 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const [zoomBackupUrl, setZoomBackupUrl] = useState<string | null>(null);
   // Timer: tracks when current phase started (updated locally on phase change)
   const [phaseChangedAt, setPhaseChangedAt] = useState(initialSession.phase_changed_at);
+  // Recording status (staff-only, sesja phase) — polled every 30s + on tab focus
+  const [recordingStatus, setRecordingStatus] = useState<'active' | 'pending' | 'error' | 'unknown'>('unknown');
+  const [retryLoading, setRetryLoading] = useState(false);
 
   const sessionId = initialSession.id;
 
@@ -144,6 +147,80 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
     if (phase === 'ended') router.push(`/${locale}/konto`);
   }, [phase, router, locale]);
 
+  // Recording status polling — staff-only, sesja phase only
+  // Polls /api/live/recording-status every 30s + immediately on tab focus.
+  // anti-burst guard prevents stacked requests after browser tab throttling.
+  useEffect(() => {
+    if (!isStaff || phase !== 'sesja') {
+      setRecordingStatus('unknown');
+      return;
+    }
+
+    let inFlight = false;
+    let cancelled = false;
+
+    const check = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      try {
+        const res = await fetch(`/api/live/recording-status?sessionId=${sessionId}`);
+        if (!res.ok) {
+          if (!cancelled) setRecordingStatus('unknown');
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setRecordingStatus(data.status ?? 'unknown');
+        }
+      } catch {
+        if (!cancelled) setRecordingStatus('unknown');
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    check(); // immediate check on entering sesja
+    const interval = setInterval(check, 30_000);
+
+    // Refresh when tab becomes visible (background tab throttling fix)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [isStaff, phase, sessionId]);
+
+  // Manual retry recording action (staff)
+  const handleRetryRecording = useCallback(async () => {
+    if (retryLoading) return;
+    setRetryLoading(true);
+    try {
+      const res = await fetch('/api/live/retry-recording', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('[retry-recording]', data.error);
+        alert(`Nie udało się ponowić nagrywania: ${data.error ?? 'unknown'}`);
+      } else {
+        // Force immediate status refresh
+        setRecordingStatus('pending');
+      }
+    } catch (err) {
+      console.error('[retry-recording]', err);
+      alert('Błąd sieci przy próbie ponowienia nagrywania.');
+    } finally {
+      setRetryLoading(false);
+    }
+  }, [retryLoading, sessionId]);
+
   const phaseConfig = PHASE_CONFIG[phase];
   const isConnected = connectionState === ConnectionState.Connected;
   const isConnecting = connectionState === ConnectionState.Connecting;
@@ -178,6 +255,44 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
               {isConnecting ? 'Łączenie...' : connectionState}
             </div>
           )}
+
+          {/* Recording status badge — staff only, sesja phase only */}
+          {isStaff && phase === 'sesja' && isConnected && (
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+              {recordingStatus === 'active' && (
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 backdrop-blur-sm pointer-events-none">
+                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <span className="text-white text-xs font-bold tracking-wide">REC</span>
+                </div>
+              )}
+              {recordingStatus === 'pending' && (
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-600/90 backdrop-blur-sm pointer-events-none">
+                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <span className="text-white text-xs font-bold tracking-wide">OCZEKIWANIE</span>
+                </div>
+              )}
+              {recordingStatus === 'error' && (
+                <>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-800/95 backdrop-blur-sm border-2 border-red-300 pointer-events-none">
+                    <span className="text-white text-xs font-bold tracking-wide">⚠ BRAK NAGRYWANIA</span>
+                  </div>
+                  <button
+                    onClick={handleRetryRecording}
+                    disabled={retryLoading}
+                    className="px-3 py-1 rounded-full bg-htg-warm text-white text-xs font-bold hover:bg-htg-warm/90 disabled:opacity-50 transition-colors"
+                  >
+                    {retryLoading ? '...' : 'Ponów'}
+                  </button>
+                </>
+              )}
+              {recordingStatus === 'unknown' && (
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-600/80 backdrop-blur-sm pointer-events-none">
+                  <div className="w-2 h-2 rounded-full bg-white/70 animate-pulse" />
+                  <span className="text-white/90 text-xs font-medium tracking-wide">SPRAWDZANIE…</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -210,6 +325,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
                 currentPhase={phase}
                 isStaff={isStaff}
                 onPhaseChanged={handlePhaseChanged}
+                recordingStatus={recordingStatus}
               />
             </div>
           </div>
@@ -320,6 +436,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
                 currentPhase={phase}
                 isStaff={isStaff}
                 onPhaseChanged={handlePhaseChanged}
+                recordingStatus={recordingStatus}
               />
             </div>
             <div className="sm:hidden">
@@ -329,6 +446,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
                 isStaff={isStaff}
                 onPhaseChanged={handlePhaseChanged}
                 compact
+                recordingStatus={recordingStatus}
               />
             </div>
           </div>

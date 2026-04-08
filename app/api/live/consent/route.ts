@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { startRoomCompositeEgress, startParticipantEgress, listRoomParticipants } from '@/lib/live/livekit';
+import { acquireRecordingLock, releaseRecordingLock } from '@/lib/live/recording-lock';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 
@@ -25,6 +26,41 @@ export async function POST(request: NextRequest) {
     }
 
     const db = createSupabaseServiceRole();
+
+    // ── IDOR fix: verify user has a relationship with this booking ──────
+    // Without this check, any authenticated user could submit consent for
+    // any bookingId they could guess (RODO violation + potential to trigger
+    // recording for someone else's session).
+    const { data: bookingOwner } = await db
+      .from('bookings')
+      .select('user_id')
+      .eq('id', bookingId)
+      .maybeSingle();
+
+    if (!bookingOwner) {
+      return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+    }
+
+    let isAuthorized = bookingOwner.user_id === user.id;
+
+    if (!isAuthorized) {
+      // Check accepted companion (para session)
+      const { data: companion } = await db
+        .from('booking_companions')
+        .select('id')
+        .eq('booking_id', bookingId)
+        .eq('user_id', user.id)
+        .eq('status', 'accepted')
+        .maybeSingle();
+      isAuthorized = !!companion;
+    }
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: 'You are not a participant of this booking' },
+        { status: 403 },
+      );
+    }
 
     const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '';
     const ua = request.headers.get('user-agent') ?? '';
@@ -111,13 +147,23 @@ async function tryStartRecording(
   const sessionId = result.session_id;
   const roomName = result.room_name;
 
+  // ── Race condition fix: lease lock ───────────────────────────────────
+  // /api/live/phase may be racing to start egress. Only one wins.
+  const lockAcquired = await acquireRecordingLock(sessionId);
+  if (!lockAcquired) {
+    console.log(`[consent] Recording lock held — phase endpoint already starting egress for ${sessionId}`);
+    return { started: false, reason: 'lock_held_by_phase' };
+  }
+
   try {
     // Start composite audio egress
     const compositeEgress = await startRoomCompositeEgress(roomName, { audioOnly: true });
 
     // Update live_sessions — this is the source of truth
+    // Release lock atomically by setting recording_lock_until = null in same UPDATE
     await db.from('live_sessions').update({
       egress_sesja_id: compositeEgress.egressId,
+      recording_lock_until: null,
       metadata: { recording_pending: false, recording_consent_triggered: true },
     }).eq('id', sessionId);
 
@@ -149,6 +195,7 @@ async function tryStartRecording(
     return { started: true, reason: 'consent_complete' };
   } catch (e) {
     console.error('[consent] Failed to start Egress:', e);
+    await releaseRecordingLock(sessionId);
     return { started: false, reason: 'egress_start_failed' };
   }
 }

@@ -2,6 +2,36 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 
 /**
+ * Authorization helper for HTG Meeting recording control actions
+ * (control/start, control/end, control/* mutations).
+ *
+ * Intentionally narrower than canControlRecording() — staff email alone is
+ * NOT sufficient for HTG Meetings. Any staff member would otherwise be able
+ * to control any group meeting, including ones they're not moderating.
+ *
+ * Allowed:
+ *   - Global admin (isAdminEmail)
+ *   - User whose id == htg_meeting_sessions.moderator_id for this session
+ */
+export async function canControlMeetingRecording(
+  userId: string,
+  userEmail: string | null | undefined,
+  meetingSessionId: string,
+): Promise<boolean> {
+  const email = userEmail ?? '';
+  if (isAdminEmail(email)) return true;
+
+  const db = createSupabaseServiceRole();
+  const { data: session } = await db
+    .from('htg_meeting_sessions')
+    .select('moderator_id')
+    .eq('id', meetingSessionId)
+    .maybeSingle();
+
+  return session?.moderator_id === userId;
+}
+
+/**
  * Unified authorization helper for recording-status and retry-recording endpoints.
  *
  * Returns true if the user is allowed to monitor / control recording for the given session.

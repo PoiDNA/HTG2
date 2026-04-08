@@ -13,15 +13,20 @@ export default function RegisterButton({ sessionId, initialRegistered, isFull }:
   const [registered, setRegistered] = useState(initialRegistered);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
   const handleRegister = async () => {
+    if (!consentAccepted) {
+      setError('Wymagana akceptacja zgody na nagrywanie.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const res = await fetch('/api/htg-meeting/session/self-register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ sessionId, recordingConsent: consentAccepted }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Błąd rejestracji'); return; }
@@ -73,11 +78,26 @@ export default function RegisterButton({ sessionId, initialRegistered, isFull }:
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-end gap-2 max-w-sm">
+      <label className="flex items-start gap-2 text-xs text-htg-fg-muted cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={consentAccepted}
+          onChange={(e) => setConsentAccepted(e.target.checked)}
+          className="mt-0.5 accent-htg-sage cursor-pointer"
+        />
+        <span className="leading-snug">
+          Wyrażam zgodę na nagrywanie spotkania (audio). Nagranie będzie dostępne
+          dla uczestników bezterminowo w panelu użytkownika. Per-speaker track audio
+          będzie wykorzystany do analizy po stronie administratora. Zgodę mogę wycofać
+          w każdej chwili — cofnięcie blokuje mój dalszy dostęp do nagrania, ale nie
+          usuwa istniejących kopii.
+        </span>
+      </label>
       <button
         onClick={handleRegister}
-        disabled={loading}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage/80 transition-colors disabled:opacity-50"
+        disabled={loading || !consentAccepted}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         Zapisz się

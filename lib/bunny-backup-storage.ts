@@ -91,3 +91,52 @@ export async function deleteBackupFile(path: string): Promise<boolean> {
   // 404 = already gone, treat as success
   return res.ok || res.status === 404;
 }
+
+/**
+ * Sanitize a string for safe use inside a Bunny Storage path segment.
+ * Keeps ASCII letters, digits, dot, dash, underscore, @. Replaces anything
+ * else (including Polish diacritics, spaces, `+`, `/`) with an underscore.
+ * Also lowercases and collapses consecutive underscores.
+ *
+ *   "Łukasz+test@example.com" → "_ukasz_test@example.com"
+ *   "Jan Kowalski"            → "jan_kowalski"
+ */
+function sanitizeForPath(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9.\-_@]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'unknown';
+}
+
+/**
+ * Build the Bunny Storage path for a live session recording.
+ *
+ * Format: `recordings/{YYYY-MM-DD}/{email}/{phase}-{session_type}-{short_id}.{ext}`
+ *
+ * The path is designed to be human-navigable after downloading to a local disk:
+ *   - Date folder → chronological sorting by `ls`
+ *   - Email folder → one folder per client per day
+ *   - Filename prefix `{phase}-{session_type}` → filter with `find -name "sesja-*"`
+ *   - `short_id` (first 8 chars of recording UUID) → uniqueness in case of retry
+ *
+ * Example:
+ *   recordings/2026-04-08/jan.kowalski@example.com/sesja-natalia_solo-f7d9e2a5.mp4
+ */
+export function buildRecordingStoragePath(params: {
+  sessionDate: string | null;    // booking_slots.slot_date (YYYY-MM-DD)
+  userEmail: string | null;       // profiles.email of booking owner
+  phase: string | null;           // booking_recordings.recording_phase
+  sessionType: string | null;     // bookings.session_type
+  recordingId: string;            // booking_recordings.id (UUID)
+  extension: string;              // file extension from source_url (e.g. "mp4")
+}): string {
+  const date = params.sessionDate ?? 'unknown-date';
+  const email = sanitizeForPath(params.userEmail ?? 'unknown-user');
+  const phase = sanitizeForPath(params.phase ?? 'sesja');
+  const sessionType = sanitizeForPath(params.sessionType ?? 'unknown');
+  const shortId = params.recordingId.slice(0, 8);
+  const ext = sanitizeForPath(params.extension || 'mp4');
+
+  return `recordings/${date}/${email}/${phase}-${sessionType}-${shortId}.${ext}`;
+}

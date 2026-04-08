@@ -5,6 +5,7 @@ import {
   isBackupStorageConfigured,
   getBackupStorageZone,
   uploadBackupFile,
+  buildRecordingStoragePath,
 } from '@/lib/bunny-backup-storage';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
@@ -126,10 +127,33 @@ async function section1UploadWorker(db: DB, stats: Record<string, number>) {
       }
       const buffer = await r2Response.arrayBuffer();
 
-      // Upload directly to Bunny Storage zone
-      // Path: recordings/{booking_id}/{recording_id}.{ext}
+      // Look up booking owner email for a human-readable storage path
+      // (one extra query per record — cron limits to 5 records/run so cost is negligible)
+      const bookingData = rec.booking as Record<string, unknown> | null;
+      const userId = bookingData?.user_id as string | undefined;
+      let userEmail: string | null = null;
+      if (userId) {
+        const { data: profile } = await db
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .maybeSingle();
+        userEmail = (profile?.email as string | null) ?? null;
+      }
+
+      // Build human-navigable storage path:
+      //   recordings/{YYYY-MM-DD}/{email}/{phase}-{session_type}-{short_id}.{ext}
+      // Example:
+      //   recordings/2026-04-08/jan.kowalski@example.com/sesja-natalia_solo-f7d9e2a5.mp4
       const ext = (rec.source_url as string).split('.').pop() || 'mp4';
-      const storagePath = `recordings/${rec.booking_id}/${rec.id}.${ext}`;
+      const storagePath = buildRecordingStoragePath({
+        sessionDate: (rec.session_date as string | null) ?? null,
+        userEmail,
+        phase,
+        sessionType: (rec.session_type as string | null) ?? null,
+        recordingId: rec.id as string,
+        extension: ext,
+      });
       await uploadBackupFile(storagePath, buffer);
 
       // Mark ready immediately — Storage has no encoding step, no polling needed

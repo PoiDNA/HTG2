@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
       .insert({
         bunny_video_id: bunnyVideoId,
         bunny_library_id: BUNNY_LIBRARY_ID,
+        recording_phase: 'sesja', // Imports are always treated as sesja recordings
         session_type: sessionType,
         session_date: sessionDate,
         title: videoTitle,

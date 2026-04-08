@@ -5,6 +5,60 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 const RECORDING_TYPES = ['natalia_solo', 'natalia_asysta', 'natalia_para'];
 
+type RecordingPhase = 'wstep' | 'sesja' | 'podsumowanie';
+
+interface SessionLike {
+  id: string;
+  booking_id: string;
+  egress_wstep_id: string | null;
+  egress_sesja_id: string | null;
+  egress_podsumowanie_id: string | null;
+  started_at?: string | null;
+  sesja_started_at?: string | null;
+  podsumowanie_started_at?: string | null;
+}
+
+/**
+ * Match an egress ID to its session phase by checking the corresponding
+ * column in live_sessions. Returns null if the egress is a track egress
+ * (per-participant) or doesn't belong to this session.
+ */
+function matchEgressPhase(session: SessionLike, egressId: string): RecordingPhase | null {
+  if (session.egress_wstep_id === egressId) return 'wstep';
+  if (session.egress_sesja_id === egressId) return 'sesja';
+  if (session.egress_podsumowanie_id === egressId) return 'podsumowanie';
+  return null;
+}
+
+/**
+ * Get the recording_started_at timestamp for a given phase.
+ * Falls back to current time if the column is missing.
+ */
+function getPhaseStartedAt(session: SessionLike, phase: RecordingPhase): string {
+  if (phase === 'wstep') return session.started_at ?? new Date().toISOString();
+  if (phase === 'sesja') return session.sesja_started_at ?? new Date().toISOString();
+  return session.podsumowanie_started_at ?? new Date().toISOString();
+}
+
+/**
+ * Get the title prefix for a recording based on phase.
+ */
+function getPhaseTitle(phase: RecordingPhase, dateStr: string | null): string {
+  const date = dateStr ?? new Date().toISOString().slice(0, 10);
+  if (phase === 'wstep') return `Wstęp — ${date}`;
+  if (phase === 'sesja') return `Sesja — ${date}`;
+  return `Podsumowanie — ${date}`;
+}
+
+/**
+ * Min duration threshold per phase.
+ * Wstep/podsumowanie can be very short (admin-only material), so use 10s.
+ * Sesja uses the default (60s) to ignore brief technical fragments.
+ */
+function getMinDurationSeconds(phase: RecordingPhase): number {
+  return phase === 'sesja' ? 60 : 10;
+}
+
 /**
  * Extract R2 object key from a full R2 URL.
  * R2 URL format: https://<account>.r2.cloudflarestorage.com/<bucket>/<key>
@@ -14,7 +68,6 @@ function extractR2ObjectKey(fileUrl: string): string | null {
   if (!fileUrl) return null;
   try {
     const u = new URL(fileUrl);
-    // Pathname: /<bucket>/<key> or just /<key>
     let path = u.pathname.replace(/^\//, '');
     const bucketName = process.env.R2_BUCKET_NAME;
     if (bucketName && path.startsWith(bucketName + '/')) {
@@ -22,7 +75,6 @@ function extractR2ObjectKey(fileUrl: string): string | null {
     }
     return path || null;
   } catch {
-    // Not a URL — might already be a key
     return fileUrl || null;
   }
 }
@@ -50,20 +102,19 @@ export async function POST(request: NextRequest) {
     try {
       receiver = getWebhookReceiver();
     } catch {
-      // LiveKit not configured — log and acknowledge silently
       console.warn('[webhook] LiveKit webhook secret missing — skipping signature verification');
       return NextResponse.json({ ok: true });
     }
 
     const event = await receiver.receive(body, authHeader);
 
-    // ── 1. egress_ended → live_sessions URL update ────────────────────────
+    // ── 1. egress_ended → live_sessions URL update (all 3 phases) ─────────
     if (event.event === 'egress_ended' && event.egressInfo) {
       const egress = event.egressInfo;
       const egressId = egress.egressId;
       const supabase = createSupabaseServiceRole();
 
-      // Composite recordings (wstep / sesja / podsumowanie)
+      // Find session matching any of the 3 composite egress columns
       const { data: session } = await supabase
         .from('live_sessions')
         .select('id, egress_wstep_id, egress_sesja_id, egress_podsumowanie_id')
@@ -87,14 +138,12 @@ export async function POST(request: NextRequest) {
             .update({ [urlColumn]: fileUrl })
             .eq('id', session.id);
         }
-        // NOTE: do NOT return here — we still need to handle booking_recordings below
       }
 
       // ── 2. Individual track recordings — via atomic RPC ─────────────────
       const fileUrl = egress.fileResults?.[0]?.location ?? null;
 
       if (fileUrl && !session) {
-        // Only run track recording logic if this is NOT a composite recording
         const { data: rpcResult, error: rpcError } = await supabase
           .rpc('complete_session_track_egress', {
             p_egress_id: egressId,
@@ -156,95 +205,129 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── 3. egress_started → booking_recordings INSERT ────────────────────
+    // ── 3. egress_started → booking_recordings UPSERT (all 3 phases) ──────
     // Creates the record immediately when recording starts (duration_seconds = NULL)
     // Cron skips records with duration_seconds IS NULL until egress_ended updates them.
+    //
+    // Conditional UPSERT: if a record already exists (egress_ended arrived first
+    // due to webhook reordering), don't clobber duration_seconds/source_url/status.
     if (event.event === 'egress_started' && event.egressInfo) {
       const egress = event.egressInfo;
       const egressId = egress.egressId;
       const db = createSupabaseServiceRole();
 
-      // Find the live session via egress_sesja_id (set by consent endpoint)
-      const { data: recSession } = await db
+      // Find session matching any of 3 composite egress columns
+      const { data: recSessionRaw } = await db
         .from('live_sessions')
-        .select('id, booking_id, sesja_started_at, booking:bookings(session_type, user_id), slot:booking_slots(slot_date)')
-        .eq('egress_sesja_id', egressId)
+        .select(
+          'id, booking_id, started_at, sesja_started_at, podsumowanie_started_at, ' +
+          'egress_wstep_id, egress_sesja_id, egress_podsumowanie_id, ' +
+          'booking:bookings(session_type, user_id), slot:booking_slots(slot_date)'
+        )
+        .or(
+          `egress_wstep_id.eq.${egressId},` +
+          `egress_sesja_id.eq.${egressId},` +
+          `egress_podsumowanie_id.eq.${egressId}`
+        )
         .maybeSingle();
 
+      const recSession = recSessionRaw as unknown as (SessionLike & {
+        booking?: { session_type?: string; user_id?: string } | null;
+        slot?: { slot_date?: string } | null;
+      }) | null;
+
       if (recSession?.booking_id) {
+        const phase = matchEgressPhase(recSession, egressId);
         const sessionType = (recSession.booking as unknown as Record<string, unknown>)?.session_type as string | undefined;
 
-        if (sessionType && RECORDING_TYPES.includes(sessionType)) {
+        if (phase && sessionType && RECORDING_TYPES.includes(sessionType)) {
           const slotDate = (recSession.slot as unknown as Record<string, unknown>)?.slot_date as string | undefined;
           const fileUrl = egress.fileResults?.[0]?.location ?? null;
           const sourceKey = fileUrl ? extractR2ObjectKey(fileUrl) : null;
-          const retentionDays = 365; // TODO: read from site_settings
+          const retentionDays = 365;
+          const startedAt = getPhaseStartedAt(recSession as SessionLike, phase);
+          const title = getPhaseTitle(phase, slotDate ?? null);
+          const minDuration = getMinDurationSeconds(phase);
 
-          const { data: newRec, error: insertErr } = await db
+          // Check if a record already exists (out-of-order webhook: ended arrived first)
+          const { data: existing } = await db
             .from('booking_recordings')
-            .insert({
-              booking_id: recSession.booking_id,
-              live_session_id: recSession.id,
-              egress_id: egressId,
-              session_type: sessionType,
-              session_date: slotDate ?? null,
-              recording_started_at: recSession.sesja_started_at ?? new Date().toISOString(),
-              source: 'live',
-              status: 'queued',
-              source_url: sourceKey,      // R2 object key (not a presigned URL)
-              duration_seconds: null,     // Unknown until egress_ended — cron will wait
-              title: `Sesja — ${slotDate ?? new Date().toISOString().slice(0, 10)}`,
-              expires_at: slotDate
-                ? new Date(new Date(slotDate).getTime() + retentionDays * 86400000).toISOString()
-                : new Date(Date.now() + retentionDays * 86400000).toISOString(),
-            })
-            .select('id')
-            .single();
+            .select('id, duration_seconds, source_url, status')
+            .eq('egress_id', egressId)
+            .maybeSingle();
 
-          if (insertErr && insertErr.code !== '23505') {
-            console.error('[webhook] booking_recordings insert (egress_started) error:', insertErr.message);
-          } else if (!insertErr && newRec) {
-            console.log(`[webhook] Created booking recording ${newRec.id} for egress_started ${egressId}`);
-            await auditRecording(db, newRec.id, 'recording_created', {
-              booking_id: recSession.booking_id,
-              egress_id: egressId,
-            });
+          if (existing) {
+            // Existing record: only update startup fields, preserve duration/source/status
+            // unless duration_seconds is set (egress_ended arrived) — then unstick from 'failed'.
+            const updates: Record<string, unknown> = {
+              recording_phase: phase,
+              recording_started_at: startedAt,
+              title,
+              min_duration_seconds: minDuration,
+              updated_at: new Date().toISOString(),
+            };
+            // If duration is already set (egress_ended ran), promote 'failed' → 'queued' for cron pickup
+            if (existing.duration_seconds != null && existing.status === 'failed') {
+              updates.status = 'queued';
+              updates.last_error = null;
+            }
+            await db.from('booking_recordings').update(updates).eq('id', existing.id);
+            console.log(`[webhook] Updated existing booking_recording ${existing.id} on egress_started (out-of-order)`);
+          } else {
+            // Normal flow: insert new record
+            const { data: newRec, error: insertErr } = await db
+              .from('booking_recordings')
+              .insert({
+                booking_id: recSession.booking_id,
+                live_session_id: recSession.id,
+                egress_id: egressId,
+                recording_phase: phase,
+                session_type: sessionType,
+                session_date: slotDate ?? null,
+                recording_started_at: startedAt,
+                source: 'live',
+                status: 'queued',
+                source_url: sourceKey,
+                duration_seconds: null,
+                title,
+                min_duration_seconds: minDuration,
+                expires_at: slotDate
+                  ? new Date(new Date(slotDate).getTime() + retentionDays * 86400000).toISOString()
+                  : new Date(Date.now() + retentionDays * 86400000).toISOString(),
+              })
+              .select('id')
+              .single();
+
+            if (insertErr && insertErr.code !== '23505') {
+              console.error('[webhook] booking_recordings insert (egress_started) error:', insertErr.message);
+            } else if (!insertErr && newRec) {
+              console.log(`[webhook] Created booking recording ${newRec.id} for ${phase} egress ${egressId}`);
+              await auditRecording(db, newRec.id, 'recording_created', {
+                booking_id: recSession.booking_id,
+                egress_id: egressId,
+                recording_phase: phase,
+              });
+            }
           }
         }
       }
     }
 
-    // ── 4. egress_ended → booking_recordings UPDATE duration_seconds ──────
+    // ── 4. egress_ended → booking_recordings UPDATE duration_seconds (all 3 phases) ──
     // Updates the record created by egress_started with final duration and source key.
-    // If egress_started record is missing (webhook lost), creates a 'failed' record
-    // flagged for manual admin review.
+    // RETRY-SAFE: looks up booking_recordings by egress_id FIRST (independent of
+    // live_sessions state), so old segments survive even after retry replaces
+    // egress_sesja_id. If no record found, falls back to live_sessions matching
+    // and creates a 'failed' record for manual review.
     if (event.event === 'egress_ended' && event.egressInfo) {
       const egress = event.egressInfo;
       const egressId = egress.egressId;
       const db = createSupabaseServiceRole();
 
-      // Find the live session (sesja composite only)
-      const { data: recSession } = await db
-        .from('live_sessions')
-        .select('id, booking_id, sesja_started_at, booking:bookings(session_type), slot:booking_slots(slot_date)')
-        .eq('egress_sesja_id', egressId)
-        .maybeSingle();
-
-      if (!recSession?.booking_id) {
-        // This egress is not a booking recording sesja — skip
-        return NextResponse.json({ ok: true });
-      }
-
-      const sessionType = (recSession.booking as unknown as Record<string, unknown>)?.session_type as string | undefined;
-      if (!sessionType || !RECORDING_TYPES.includes(sessionType)) {
-        return NextResponse.json({ ok: true });
-      }
-
       const fileUrl = egress.fileResults?.[0]?.location ?? null;
       const sourceKey = fileUrl ? extractR2ObjectKey(fileUrl) : null;
 
       // Compute duration from LiveKit timestamps
-      // startedAt / endedAt are typically Unix ms in JS SDK
       let durationSeconds: number | null = null;
       if (egress.endedAt && egress.startedAt) {
         const startMs = typeof egress.startedAt === 'bigint'
@@ -254,20 +337,21 @@ export async function POST(request: NextRequest) {
           ? Number(egress.endedAt) / 1_000_000
           : Number(egress.endedAt);
         const diff = endMs - startMs;
-        // Sanity check: if diff looks like nanoseconds (> 1e12), convert
         durationSeconds = diff > 1e12 ? Math.round(diff / 1_000_000_000) : Math.round(diff / 1000);
         if (durationSeconds <= 0) durationSeconds = null;
       }
 
-      // Check if record exists (from egress_started)
+      // ── PRIMARY LOOKUP: by egress_id in booking_recordings ──────────────
+      // Survives retry-recording: even if live_sessions.egress_sesja_id was
+      // overwritten with a new ID, the old booking_recordings row still has
+      // the old egress_id and gets finalized properly.
       const { data: existing } = await db
         .from('booking_recordings')
-        .select('id')
+        .select('id, recording_phase')
         .eq('egress_id', egressId)
         .maybeSingle();
 
       if (existing) {
-        // Normal flow: update duration + final source key
         const updates: Record<string, unknown> = {
           updated_at: new Date().toISOString(),
         };
@@ -275,44 +359,89 @@ export async function POST(request: NextRequest) {
         if (sourceKey) updates.source_url = sourceKey;
 
         await db.from('booking_recordings').update(updates).eq('id', existing.id);
-        console.log(`[webhook] Updated booking recording ${existing.id} with duration=${durationSeconds}s`);
-      } else {
-        // egress_started webhook was lost — create record flagged for manual review
-        const slotDate = (recSession.slot as unknown as Record<string, unknown>)?.slot_date as string | undefined;
-        const retentionDays = 365;
+        console.log(`[webhook] Updated booking recording ${existing.id} (${existing.recording_phase}) with duration=${durationSeconds}s`);
+        return NextResponse.json({ ok: true });
+      }
 
-        const { data: newRec, error: insertErr } = await db
-          .from('booking_recordings')
-          .insert({
-            booking_id: recSession.booking_id,
-            live_session_id: recSession.id,
-            egress_id: egressId,
-            session_type: sessionType,
-            session_date: slotDate ?? null,
-            recording_started_at: recSession.sesja_started_at ?? null,
-            source: 'live',
-            status: 'failed',
-            source_url: sourceKey,
-            duration_seconds: durationSeconds,
-            last_error: 'egress_started_webhook_missing',
-            title: `Sesja — ${slotDate ?? new Date().toISOString().slice(0, 10)}`,
-            expires_at: slotDate
-              ? new Date(new Date(slotDate).getTime() + retentionDays * 86400000).toISOString()
-              : new Date(Date.now() + retentionDays * 86400000).toISOString(),
-            metadata: { needs_manual_review: true, booking_id: recSession.booking_id },
-          })
-          .select('id')
-          .single();
+      // ── FALLBACK LOOKUP: by live_sessions match ─────────────────────────
+      // Either egress_started never arrived, or this egress is a track egress
+      // (per-participant). Match against composite egress columns.
+      const { data: recSessionRaw } = await db
+        .from('live_sessions')
+        .select(
+          'id, booking_id, started_at, sesja_started_at, podsumowanie_started_at, ' +
+          'egress_wstep_id, egress_sesja_id, egress_podsumowanie_id, ' +
+          'booking:bookings(session_type), slot:booking_slots(slot_date)'
+        )
+        .or(
+          `egress_wstep_id.eq.${egressId},` +
+          `egress_sesja_id.eq.${egressId},` +
+          `egress_podsumowanie_id.eq.${egressId}`
+        )
+        .maybeSingle();
 
-        if (insertErr && insertErr.code !== '23505') {
-          console.error('[webhook] booking_recordings insert (egress_started missing) error:', insertErr.message);
-        } else if (!insertErr && newRec) {
-          console.warn(`[webhook] egress_started missing — created failed record ${newRec.id} for egress ${egressId}`);
-          await auditRecording(db, newRec.id, 'retry', {
-            reason: 'egress_started_missing',
-            egress_id: egressId,
-          });
-        }
+      const recSession = recSessionRaw as unknown as (SessionLike & {
+        booking?: { session_type?: string } | null;
+        slot?: { slot_date?: string } | null;
+      }) | null;
+
+      if (!recSession?.booking_id) {
+        // Not a composite booking recording (probably a track egress) — already
+        // handled by section 2 above. Done.
+        return NextResponse.json({ ok: true });
+      }
+
+      const phase = matchEgressPhase(recSession, egressId);
+      if (!phase) {
+        return NextResponse.json({ ok: true });
+      }
+
+      const sessionType = (recSession.booking as unknown as Record<string, unknown>)?.session_type as string | undefined;
+      if (!sessionType || !RECORDING_TYPES.includes(sessionType)) {
+        return NextResponse.json({ ok: true });
+      }
+
+      // Create as 'failed' for manual admin review (egress_started webhook missing)
+      const slotDate = (recSession.slot as unknown as Record<string, unknown>)?.slot_date as string | undefined;
+      const retentionDays = 365;
+      const startedAt = getPhaseStartedAt(recSession as SessionLike, phase);
+      const title = getPhaseTitle(phase, slotDate ?? null);
+      const minDuration = getMinDurationSeconds(phase);
+
+      const { data: newRec, error: insertErr } = await db
+        .from('booking_recordings')
+        .insert({
+          booking_id: recSession.booking_id,
+          live_session_id: recSession.id,
+          egress_id: egressId,
+          recording_phase: phase,
+          session_type: sessionType,
+          session_date: slotDate ?? null,
+          recording_started_at: startedAt,
+          source: 'live',
+          status: 'failed',
+          source_url: sourceKey,
+          duration_seconds: durationSeconds,
+          last_error: 'egress_started_webhook_missing',
+          title,
+          min_duration_seconds: minDuration,
+          expires_at: slotDate
+            ? new Date(new Date(slotDate).getTime() + retentionDays * 86400000).toISOString()
+            : new Date(Date.now() + retentionDays * 86400000).toISOString(),
+          metadata: { needs_manual_review: true, booking_id: recSession.booking_id },
+        })
+        .select('id')
+        .single();
+
+      if (insertErr && insertErr.code !== '23505') {
+        console.error('[webhook] booking_recordings insert (egress_started missing) error:', insertErr.message);
+      } else if (!insertErr && newRec) {
+        console.warn(`[webhook] egress_started missing — created failed record ${newRec.id} for ${phase} egress ${egressId}`);
+        await auditRecording(db, newRec.id, 'retry', {
+          reason: 'egress_started_missing',
+          egress_id: egressId,
+          recording_phase: phase,
+        });
       }
     }
 

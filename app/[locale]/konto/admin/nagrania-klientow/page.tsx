@@ -26,6 +26,25 @@ const STATUS_OPTIONS = [
   { value: 'manual_review', label: 'Do przeglądu (import)' },
 ] as const;
 
+const PHASE_OPTIONS = [
+  { value: 'all', label: 'Wszystkie fazy' },
+  { value: 'wstep', label: 'Wstęp' },
+  { value: 'sesja', label: 'Sesja' },
+  { value: 'podsumowanie', label: 'Podsumowanie' },
+] as const;
+
+const PHASE_BADGE_COLORS: Record<string, string> = {
+  wstep: 'bg-blue-600',
+  sesja: 'bg-htg-sage',
+  podsumowanie: 'bg-orange-600',
+};
+
+const PHASE_BADGE_LABELS: Record<string, string> = {
+  wstep: 'Wstęp',
+  sesja: 'Sesja',
+  podsumowanie: 'Podsumowanie',
+};
+
 export default async function AdminRecordingsPage({
   params,
   searchParams,
@@ -44,6 +63,7 @@ export default async function AdminRecordingsPage({
 
   const sp = await searchParams;
   const statusFilter = (sp.status as string) ?? 'all';
+  const phaseFilter = (sp.phase as string) ?? 'all';
   const searchQuery = (sp.q as string) ?? '';
   const page = Math.max(1, parseInt((sp.page as string) ?? '1', 10));
   const offset = (page - 1) * PAGE_SIZE;
@@ -54,15 +74,20 @@ export default async function AdminRecordingsPage({
     .from('booking_recordings')
     .select(`
       id, title, session_type, session_date, status, duration_seconds,
-      source, import_confidence, legal_hold, metadata,
+      source, import_confidence, legal_hold, metadata, recording_phase, backup_status,
       booking_recording_access(user_id, revoked_at)
     `, { count: 'exact' })
-    .order('session_date', { ascending: false, nullsFirst: false });
+    .order('session_date', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false }); // secondary sort to keep phases of same session grouped
 
   if (statusFilter === 'manual_review') {
     query = query.eq('import_confidence', 'manual_review');
   } else if (statusFilter !== 'all') {
     query = query.eq('status', statusFilter);
+  }
+
+  if (phaseFilter !== 'all') {
+    query = query.eq('recording_phase', phaseFilter);
   }
 
   // When searching: fetch all records and filter in memory (no cross-page pagination issue)
@@ -159,6 +184,16 @@ export default async function AdminRecordingsPage({
           ))}
         </select>
 
+        <select
+          name="phase"
+          defaultValue={phaseFilter}
+          className="bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg"
+        >
+          {PHASE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+
         <input
           name="q"
           type="text"
@@ -182,6 +217,7 @@ export default async function AdminRecordingsPage({
             <tr className="border-b border-htg-card-border text-left text-htg-fg-muted">
               <th className="pb-3 pr-4 font-medium">Email z nagrania</th>
               <th className="pb-3 pr-4 font-medium">Typ</th>
+              <th className="pb-3 pr-4 font-medium">Faza</th>
               <th className="pb-3 pr-4 font-medium">Data sesji</th>
               <th className="pb-3 pr-4 font-medium">Przydzielono</th>
               <th className="pb-3 font-medium w-20"></th>
@@ -191,6 +227,9 @@ export default async function AdminRecordingsPage({
             {displayedRows.map((rec) => {
               const sessionType = rec.session_type as SessionType | null;
               const config = sessionType ? SESSION_CONFIG[sessionType] : null;
+              const phase = (rec.recording_phase as string | null) ?? 'sesja';
+              const isNonSesja = phase !== 'sesja';
+              const backupStatus = (rec as Record<string, unknown>).backup_status as string | null;
 
               return (
                 <tr key={rec.id} className="border-b border-htg-card-border/50 hover:bg-htg-surface/50 transition-colors group">
@@ -212,6 +251,20 @@ export default async function AdminRecordingsPage({
                     )}
                   </td>
 
+                  {/* Faza + backup status */}
+                  <td className="py-3 pr-4">
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] text-white w-fit ${PHASE_BADGE_COLORS[phase] ?? 'bg-gray-500'}`}>
+                        {PHASE_BADGE_LABELS[phase] ?? phase}
+                      </span>
+                      {phase === 'sesja' && backupStatus && (
+                        <span className={`text-[9px] ${backupStatus === 'ready' ? 'text-green-400' : backupStatus === 'failed' ? 'text-red-400' : 'text-htg-fg-muted'}`}>
+                          Backup: {backupStatus}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
                   {/* Data sesji */}
                   <td className="py-3 pr-4 text-htg-fg whitespace-nowrap">
                     {rec.session_date
@@ -221,7 +274,9 @@ export default async function AdminRecordingsPage({
 
                   {/* Przydzielono */}
                   <td className="py-3 pr-4">
-                    {rec.participants.length === 0 ? (
+                    {isNonSesja ? (
+                      <span className="text-htg-fg-muted italic text-xs">Nagranie wewnętrzne</span>
+                    ) : rec.participants.length === 0 ? (
                       <span className="text-htg-fg-muted italic text-xs">Brak przydziału</span>
                     ) : (
                       <div className="space-y-0.5">
@@ -265,7 +320,7 @@ export default async function AdminRecordingsPage({
 
             {filteredRows.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-htg-fg-muted">
+                <td colSpan={6} className="py-8 text-center text-htg-fg-muted">
                   Brak nagrań spełniających kryteria.
                 </td>
               </tr>
@@ -279,7 +334,7 @@ export default async function AdminRecordingsPage({
         <div className="flex items-center justify-center gap-4 mt-6">
           {page > 1 ? (
             <a
-              href={`?status=${statusFilter}&q=${searchQuery}&page=${page - 1}`}
+              href={`?status=${statusFilter}&phase=${phaseFilter}&q=${searchQuery}&page=${page - 1}`}
               className="flex items-center gap-1 text-sm text-htg-sage hover:underline"
             >
               <ChevronLeft className="w-4 h-4" /> Poprzednia
@@ -296,7 +351,7 @@ export default async function AdminRecordingsPage({
 
           {page < totalPages ? (
             <a
-              href={`?status=${statusFilter}&q=${searchQuery}&page=${page + 1}`}
+              href={`?status=${statusFilter}&phase=${phaseFilter}&q=${searchQuery}&page=${page + 1}`}
               className="flex items-center gap-1 text-sm text-htg-sage hover:underline"
             >
               Następna <ChevronRight className="w-4 h-4" />

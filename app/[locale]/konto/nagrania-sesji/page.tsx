@@ -64,7 +64,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
         revoked_at,
         recording:booking_recordings(
           id, title, session_type, session_date, status, duration_seconds,
-          expires_at, legal_hold, booking_id, recording_started_at, metadata
+          expires_at, legal_hold, booking_id, recording_started_at, metadata, recording_phase
         )
       `)
       .eq('user_id', userId)
@@ -75,10 +75,13 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
   const userEmail = authUser?.user?.email ?? '';
 
   // Flatten and filter
+  // Defense in depth: also filter recording_phase to ensure clients ONLY see sesja recordings
+  // (wstep/podsumowanie are admin-only — they should never have access rows, but defensive)
   const items = (recordings ?? [])
     .map((r) => (Array.isArray(r.recording) ? r.recording[0] : r.recording) as Record<string, any>)
     .filter(Boolean)
-    .filter((r) => ['queued', 'preparing', 'uploading', 'processing', 'ready'].includes(r.status as string));
+    .filter((r) => ['queued', 'preparing', 'uploading', 'processing', 'ready'].includes(r.status as string))
+    .filter((r) => !r.recording_phase || r.recording_phase === 'sesja');
 
   const format = await getFormatter({ locale });
 

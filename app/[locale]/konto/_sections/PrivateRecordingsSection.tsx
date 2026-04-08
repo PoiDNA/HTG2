@@ -24,7 +24,7 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
         granted_at,
         recording:booking_recordings(
           id, title, session_type, session_date, status, duration_seconds,
-          expires_at, legal_hold, booking_id, recording_started_at
+          expires_at, legal_hold, booking_id, recording_started_at, recording_phase
         )
       `)
       .eq('user_id', userId)
@@ -35,13 +35,18 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
 
   const userEmail = authUser?.user?.email ?? '';
 
+  // Defense in depth: filter recording_phase to ensure clients ONLY see sesja recordings
   const items = (recordings ?? [])
     .map((r) => {
       const rec = r.recording;
       return (Array.isArray(rec) ? rec[0] : rec) as Record<string, unknown> | null;
     })
     .filter(Boolean)
-    .filter((r) => ['queued', 'preparing', 'uploading', 'processing', 'ready'].includes(r!.status as string)) as Record<string, unknown>[];
+    .filter((r) => ['queued', 'preparing', 'uploading', 'processing', 'ready'].includes(r!.status as string))
+    .filter((r) => {
+      const phase = (r as Record<string, unknown>).recording_phase as string | null | undefined;
+      return !phase || phase === 'sesja';
+    }) as Record<string, unknown>[];
 
   const hasMore = items.length > 5;
   const displayItems = items.slice(0, 5);

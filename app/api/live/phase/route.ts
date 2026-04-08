@@ -4,6 +4,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isStaffEmail } from '@/lib/roles';
 import { VALID_TRANSITIONS } from '@/lib/live/constants';
 import { startRoomCompositeEgress, startParticipantEgress, stopEgress } from '@/lib/live/livekit';
+import { acquireRecordingLock, releaseRecordingLock } from '@/lib/live/recording-lock';
 import type { Phase, PhaseChangeRequest } from '@/lib/live/types';
 
 // GET — poll current phase (requires authenticated user)
@@ -146,35 +147,52 @@ export async function POST(request: NextRequest) {
         const allConsented = consent?.can_start === true;
 
         if (allConsented) {
-          // All consents present — start Egress immediately
-          try {
-            const compositeEgress = await startRoomCompositeEgress(session.room_name, { audioOnly: true });
-            update.egress_sesja_id = compositeEgress.egressId;
-          } catch (e) {
-            console.warn('Failed to start sesja composite egress:', e);
-          }
+          // ── Race condition fix: lease lock ─────────────────────────────
+          // Both /api/live/phase and /api/live/consent can try to start egress
+          // simultaneously. Only one process should win — protected by lease lock.
+          const lockAcquired = await acquireRecordingLock(sessionId);
 
-          // Start per-participant track egresses
-          try {
-            const { listRoomParticipants: listParts } = await import('@/lib/live/livekit');
-            const participants = await listParts(session.room_name);
-            const trackEgressIds: Record<string, string> = {};
+          if (lockAcquired) {
+            let egressStarted = false;
+            try {
+              const compositeEgress = await startRoomCompositeEgress(session.room_name, { audioOnly: true });
+              update.egress_sesja_id = compositeEgress.egressId;
+              update.recording_lock_until = null; // release lock atomically with egress_sesja_id
 
-            for (const participant of participants) {
-              if (!participant.identity) continue;
+              egressStarted = true;
+            } catch (e) {
+              console.warn('Failed to start sesja composite egress:', e);
+              await releaseRecordingLock(sessionId);
+            }
+
+            // Start per-participant track egresses (only if composite succeeded)
+            if (egressStarted) {
               try {
-                const egress = await startParticipantEgress(session.room_name, participant.identity);
-                trackEgressIds[participant.identity] = egress.egressId;
+                const { listRoomParticipants: listParts } = await import('@/lib/live/livekit');
+                const participants = await listParts(session.room_name);
+                const trackEgressIds: Record<string, string> = {};
+
+                for (const participant of participants) {
+                  if (!participant.identity) continue;
+                  try {
+                    const egress = await startParticipantEgress(session.room_name, participant.identity);
+                    trackEgressIds[participant.identity] = egress.egressId;
+                  } catch (e) {
+                    console.warn(`Failed to start track egress for ${participant.identity}:`, e);
+                  }
+                }
+
+                if (Object.keys(trackEgressIds).length > 0) {
+                  update.egress_sesja_tracks_ids = trackEgressIds;
+                }
               } catch (e) {
-                console.warn(`Failed to start track egress for ${participant.identity}:`, e);
+                console.warn('Failed to start participant egresses:', e);
               }
             }
-
-            if (Object.keys(trackEgressIds).length > 0) {
-              update.egress_sesja_tracks_ids = trackEgressIds;
-            }
-          } catch (e) {
-            console.warn('Failed to start participant egresses:', e);
+          } else {
+            // Lock not acquired — another process is already starting egress
+            // (consent endpoint racing with phase). Just proceed with phase change.
+            console.log(`[phase] Recording lock held by another process for session ${sessionId}`);
           }
         } else {
           // Consent incomplete — set recording_pending flag

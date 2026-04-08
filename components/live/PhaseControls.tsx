@@ -13,8 +13,14 @@ interface PhaseControlsProps {
   onPhaseChanged?: (newPhase: Phase) => void;
   /** Compact single-column variant for circle row */
   compact?: boolean;
-  /** True when session is in 'sesja' phase but recording hasn't started yet (waiting for partner consent) */
-  recordingPending?: boolean;
+  /**
+   * Real-time recording status from /api/live/recording-status polling.
+   * - 'active'  — egress running normally, no warning shown
+   * - 'pending' — waiting for consent OR LiveKit cold start (amber info)
+   * - 'error'   — egress should be running but is not (red warning + Zoom suggestion)
+   * - 'unknown' — could not verify, no warning shown
+   */
+  recordingStatus?: 'active' | 'pending' | 'error' | 'unknown';
 }
 
 const PHASE_ICONS: Partial<Record<Phase, React.ReactNode>> = {
@@ -32,7 +38,7 @@ export default function PhaseControls({
   isStaff,
   onPhaseChanged,
   compact = false,
-  recordingPending = false,
+  recordingStatus,
 }: PhaseControlsProps) {
   const t = useTranslations('Live');
   const [loading, setLoading] = useState(false);
@@ -91,11 +97,20 @@ export default function PhaseControls({
     );
   }
 
+  // Recording warnings only relevant during sesja phase
+  const showPendingWarning = currentPhase === 'sesja' && recordingStatus === 'pending';
+  const showErrorWarning = currentPhase === 'sesja' && recordingStatus === 'error';
+
   return (
     <div className="flex flex-col gap-2">
-      {recordingPending && (
+      {showPendingWarning && (
         <p className="text-xs text-amber-300/80 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2">
-          Czekamy na potwierdzenie od drugiej osoby. Sesja nie jest jeszcze nagrywana.
+          Sesja jeszcze się nie nagrywa. Czekamy na potwierdzenie od drugiej osoby lub start nagrywania.
+        </p>
+      )}
+      {showErrorWarning && (
+        <p className="text-xs text-red-200 bg-red-900/40 border border-red-500/40 rounded-lg px-3 py-2">
+          ⚠ Nagrywanie nie działa! Rozważ przełączenie sesji na ZOOM (przycisk u dołu po lewej).
         </p>
       )}
       <div className="flex items-center gap-3">

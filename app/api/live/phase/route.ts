@@ -5,6 +5,7 @@ import { isStaffEmail } from '@/lib/roles';
 import { VALID_TRANSITIONS } from '@/lib/live/constants';
 import { startRoomCompositeEgress, startParticipantEgress, stopEgress } from '@/lib/live/livekit';
 import { acquireRecordingLock, releaseRecordingLock } from '@/lib/live/recording-lock';
+import { startAllAnalyticsAudioTrackEgresses } from '@/lib/live/analytics-egress';
 import type { Phase, PhaseChangeRequest } from '@/lib/live/types';
 
 // GET — poll current phase (requires authenticated user)
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
         id, phase, room_name, booking_id, slot_id, metadata,
         started_at, sesja_started_at, podsumowanie_started_at,
         egress_wstep_id, egress_sesja_id, egress_sesja_tracks_ids, egress_podsumowanie_id,
+        analytics_wstep_claimed_at, analytics_podsumowanie_claimed_at,
         booking:bookings!live_sessions_booking_id_fkey(session_type)
       `)
       .eq('id', sessionId)
@@ -86,26 +88,62 @@ export async function POST(request: NextRequest) {
       return Math.max(0, Math.floor((to.getTime() - new Date(from).getTime()) / 1000));
     }
 
+    // Stop analytics track egresses for the phase we're leaving.
+    // Shared helper: query pending (ended_at IS NULL) rows, stopEgress + optimistic UPDATE.
+    const sessionIdLocal = session.id;
+    async function stopAnalyticsTracksForPhase(phaseToStop: Phase) {
+      const analyticsPhase: 'wstep' | 'sesja' | 'podsumowanie' | null =
+        phaseToStop === 'wstep' || phaseToStop === 'sesja' || phaseToStop === 'podsumowanie'
+          ? phaseToStop
+          : null;
+      if (!analyticsPhase) return;
+      const { data: pending } = await admin
+        .from('analytics_track_egresses')
+        .select('id, egress_id')
+        .eq('live_session_id', sessionIdLocal)
+        .eq('phase', analyticsPhase)
+        .is('ended_at', null);
+      if (!pending) return;
+      for (const ate of pending) {
+        await stopEgress(ate.egress_id).catch((e) => {
+          console.warn(`[phase] stop analytics egress ${ate.egress_id} failed:`, e);
+        });
+        // Optimistic ended_at — webhook will still fill file_url asynchronously
+        await admin
+          .from('analytics_track_egresses')
+          .update({ ended_at: new Date().toISOString() })
+          .eq('id', ate.id)
+          .is('ended_at', null);
+      }
+    }
+
     // Phase-specific actions
     try {
       // Stop recording from previous phase + compute phase durations
-      if (currentPhase === 'wstep' && session.egress_wstep_id) {
-        await stopEgress(session.egress_wstep_id);
+      if (currentPhase === 'wstep') {
+        if (session.egress_wstep_id) {
+          await stopEgress(session.egress_wstep_id).catch(() => {});
+        }
+        await stopAnalyticsTracksForPhase('wstep');
       }
       if (currentPhase === 'sesja') {
         if (session.egress_sesja_id) {
-          await stopEgress(session.egress_sesja_id);
+          await stopEgress(session.egress_sesja_id).catch(() => {});
         }
-        // Stop individual track egresses
+        // Stop legacy individual track egresses
         if (session.egress_sesja_tracks_ids) {
           const trackIds = session.egress_sesja_tracks_ids as Record<string, string>;
           for (const egressId of Object.values(trackIds)) {
-            await stopEgress(egressId);
+            await stopEgress(egressId).catch(() => {});
           }
         }
+        await stopAnalyticsTracksForPhase('sesja');
       }
-      if (currentPhase === 'podsumowanie' && session.egress_podsumowanie_id) {
-        await stopEgress(session.egress_podsumowanie_id);
+      if (currentPhase === 'podsumowanie') {
+        if (session.egress_podsumowanie_id) {
+          await stopEgress(session.egress_podsumowanie_id).catch(() => {});
+        }
+        await stopAnalyticsTracksForPhase('podsumowanie');
       }
 
       // ── Save phase end timestamps / durations ─────────────────────────────
@@ -125,16 +163,9 @@ export async function POST(request: NextRequest) {
         if (dur !== null) update.podsumowanie_duration_seconds = dur;
       }
 
-      // Start recording for new phase + set phase start timestamps
-      if (newPhase === 'wstep') {
-        update.started_at = nowIso;
-        try {
-          const egress = await startRoomCompositeEgress(session.room_name);
-          update.egress_wstep_id = egress.egressId;
-        } catch (e) {
-          console.warn('Failed to start wstep egress:', e);
-        }
-      }
+      // NOTE: poczekalnia → wstep is handled by /api/live/admit endpoint.
+      // The wstep composite + analytics start logic lives there, not here.
+      // We only set started_at defensively if admin manually calls phase route for wstep.
 
       if (newPhase === 'sesja') {
         update.sesja_started_at = nowIso;
@@ -194,6 +225,20 @@ export async function POST(request: NextRequest) {
             // (consent endpoint racing with phase). Just proceed with phase change.
             console.log(`[phase] Recording lock held by another process for session ${sessionId}`);
           }
+
+          // Start analytics audio track egresses for sesja (new pipeline).
+          // Helper has its own race guard (count > 0) — safe against concurrent
+          // invocation from consent/route.ts late-consent path.
+          try {
+            await startAllAnalyticsAudioTrackEgresses(
+              admin,
+              session.room_name,
+              'sesja',
+              session.id,
+            );
+          } catch (e) {
+            console.warn('[phase] sesja analytics tracks failed:', e);
+          }
         } else {
           // Consent incomplete — set recording_pending flag
           // Egress will start dynamically via POST /api/live/consent when all consent arrives
@@ -209,6 +254,42 @@ export async function POST(request: NextRequest) {
           update.egress_podsumowanie_id = egress.egressId;
         } catch (e) {
           console.warn('Failed to start podsumowanie egress:', e);
+        }
+
+        // Start analytics audio track egresses for podsumowanie.
+        // Uses check_analytics_consent (not check_recording_consent which requires phase='sesja').
+        // Atomic claim via analytics_podsumowanie_claimed_at prevents race.
+        if (!session.analytics_podsumowanie_claimed_at) {
+          const { data: consentOk } = await admin.rpc('check_analytics_consent', {
+            p_booking_id: session.booking_id,
+          });
+          if (consentOk === true) {
+            const { data: claim } = await admin
+              .from('live_sessions')
+              .update({ analytics_podsumowanie_claimed_at: new Date().toISOString() })
+              .eq('id', session.id)
+              .is('analytics_podsumowanie_claimed_at', null)
+              .select('id')
+              .maybeSingle();
+
+            if (claim) {
+              try {
+                await startAllAnalyticsAudioTrackEgresses(
+                  admin,
+                  session.room_name,
+                  'podsumowanie',
+                  session.id,
+                );
+              } catch (e) {
+                // Reset claim on failure — allow retry via future code paths
+                console.warn('[phase] podsumowanie analytics failed, resetting claim:', e);
+                await admin
+                  .from('live_sessions')
+                  .update({ analytics_podsumowanie_claimed_at: null })
+                  .eq('id', session.id);
+              }
+            }
+          }
         }
       }
 

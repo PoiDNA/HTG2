@@ -5,33 +5,53 @@ import {
   WebhookReceiver,
   EncodedFileOutput,
   EncodedFileType,
+  DirectFileOutput,
   S3Upload,
 } from 'livekit-server-sdk';
 import type { VideoGrant } from 'livekit-server-sdk';
 
 // ============================================================
-// R2 / S3 egress output helper
+// R2 / S3 egress output helpers
 // ============================================================
 
-function makeS3Output(filepath: string): EncodedFileOutput {
+function makeR2S3Upload(): S3Upload {
   const R2_ACCESS_KEY = (process.env.R2_ACCESS_KEY ?? '').trim();
   const R2_SECRET_KEY = (process.env.R2_SECRET_KEY ?? '').trim();
   const R2_BUCKET = (process.env.R2_BUCKET ?? 'htg-rec').trim();
   const R2_ENDPOINT = (process.env.R2_ENDPOINT ?? '').trim();
 
+  return new S3Upload({
+    bucket: R2_BUCKET,
+    region: 'auto',
+    endpoint: R2_ENDPOINT,
+    accessKey: R2_ACCESS_KEY,
+    secret: R2_SECRET_KEY,
+    forcePathStyle: true,
+  });
+}
+
+function makeS3Output(filepath: string): EncodedFileOutput {
   return new EncodedFileOutput({
     fileType: EncodedFileType.MP4,
     filepath,
     output: {
       case: 's3',
-      value: new S3Upload({
-        bucket: R2_BUCKET,
-        region: 'auto',
-        endpoint: R2_ENDPOINT,
-        accessKey: R2_ACCESS_KEY,
-        secret: R2_SECRET_KEY,
-        forcePathStyle: true,
-      }),
+      value: makeR2S3Upload(),
+    },
+  });
+}
+
+/**
+ * DirectFileOutput for raw track egress — writes original track format
+ * without re-encoding. For Opus audio tracks produces .ogg (Opus in Ogg container),
+ * which Whisper API accepts natively as audio/ogg.
+ */
+function makeDirectR2Output(filepath: string): DirectFileOutput {
+  return new DirectFileOutput({
+    filepath,
+    output: {
+      case: 's3',
+      value: makeR2S3Upload(),
     },
   });
 }
@@ -190,7 +210,8 @@ export async function startRoomCompositeEgress(
 }
 
 /**
- * Start a participant egress — individual audio track per participant → R2.
+ * Start a participant egress — records ALL published tracks of the participant
+ * composited into one MP4 (video + audio). Used by legacy session_publications flow.
  */
 export async function startParticipantEgress(
   roomName: string,
@@ -201,6 +222,28 @@ export async function startParticipantEgress(
   return client.startParticipantEgress(roomName, participantIdentity, {
     file: output,
   });
+}
+
+/**
+ * Start a track egress on a single audio track SID.
+ * Writes the raw track (Opus in Ogg container) to R2 without re-encoding.
+ * Used by the client-analysis pipeline — produces small audio-only files
+ * (~5-10 MB per 10 min) that Whisper API processes directly.
+ *
+ * @param roomName - LiveKit room name
+ * @param trackSid - Audio track SID (from ParticipantInfo.tracks[].sid)
+ * @param participantIdentity - Used only for filename convention
+ */
+export async function startAudioTrackEgress(
+  roomName: string,
+  trackSid: string,
+  participantIdentity: string,
+) {
+  const client = getEgressClient();
+  const output = makeDirectR2Output(
+    `recordings/${roomName}/analytics/${participantIdentity}-${trackSid}-{time}`
+  );
+  return client.startTrackEgress(roomName, output, trackSid);
 }
 
 /**

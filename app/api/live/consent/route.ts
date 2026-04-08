@@ -3,6 +3,7 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { startRoomCompositeEgress, startParticipantEgress, listRoomParticipants } from '@/lib/live/livekit';
 import { acquireRecordingLock, releaseRecordingLock } from '@/lib/live/recording-lock';
+import { startAllAnalyticsAudioTrackEgresses } from '@/lib/live/analytics-egress';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 
@@ -105,8 +106,66 @@ export async function POST(request: NextRequest) {
         details: { booking_id: bookingId } },
     ]);
 
-    // Try to start recording if consent is now complete
+    // ── Retroactive analytics for wstep ──────────────────────────────────
+    // If the session is still in wstep phase and analytics haven't started yet,
+    // start them now (consent was just submitted). Guarded by phase === 'wstep'
+    // to prevent phase falsification — if the session has moved on, we accept
+    // that wstep analytics will be missing for this session.
+    const { data: sessionRow } = await db
+      .from('live_sessions')
+      .select('id, phase, room_name, analytics_wstep_claimed_at')
+      .eq('booking_id', bookingId)
+      .single();
+
+    if (sessionRow?.phase === 'wstep' && !sessionRow.analytics_wstep_claimed_at) {
+      const { data: consentOk } = await db.rpc('check_analytics_consent', { p_booking_id: bookingId });
+      if (consentOk === true) {
+        const { data: claim } = await db
+          .from('live_sessions')
+          .update({ analytics_wstep_claimed_at: new Date().toISOString() })
+          .eq('id', sessionRow.id)
+          .is('analytics_wstep_claimed_at', null)
+          .select('id')
+          .maybeSingle();
+
+        if (claim) {
+          try {
+            await startAllAnalyticsAudioTrackEgresses(db, sessionRow.room_name, 'wstep', sessionRow.id);
+          } catch (e) {
+            // Reset claim on failure so other call sites can retry
+            console.warn('[consent] wstep retro analytics failed, resetting claim:', e);
+            await db
+              .from('live_sessions')
+              .update({ analytics_wstep_claimed_at: null })
+              .eq('id', sessionRow.id);
+          }
+        }
+      }
+    }
+
+    // Try to start recording if consent is now complete (legacy sesja path)
     const result = await tryStartRecording(db, bookingId);
+
+    // ── Late-consent analytics for sesja ─────────────────────────────────
+    // Two scenarios:
+    //   1. started=true: tryStartRecording just started legacy egresses in this request.
+    //   2. reason='already_recording': legacy was started earlier (e.g. by phase/route.ts),
+    //      but analytics may have failed. Give them another chance.
+    // Guarded by phase === 'sesja' to avoid firing after ended.
+    if (
+      sessionRow?.phase === 'sesja' &&
+      sessionRow.room_name &&
+      (result.started === true || result.reason === 'already_recording')
+    ) {
+      try {
+        await startAllAnalyticsAudioTrackEgresses(db, sessionRow.room_name, 'sesja', sessionRow.id);
+      } catch (e) {
+        // Helper doesn't use a claimed_at flag for sesja (count-based race guard),
+        // so no reset needed — failure is logged and next invocation will retry naturally
+        // via the count > 0 check not blocking it (count is 0 on failed insert).
+        console.warn('[consent] sesja late-consent analytics failed:', e);
+      }
+    }
 
     return NextResponse.json({
       ok: true,

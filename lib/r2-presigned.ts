@@ -15,6 +15,33 @@ const R2_SECRET_KEY = () => (process.env.R2_SECRET_KEY ?? '').trim();
 const R2_ENDPOINT = () => (process.env.R2_ENDPOINT ?? '').trim();
 const R2_BUCKET = () => (process.env.R2_BUCKET ?? 'htg-rec').trim();
 
+/**
+ * Extract an R2 object key from a full R2 URL.
+ * R2 URL format: https://<account>.r2.cloudflarestorage.com/<bucket>/<key>
+ * Returns the key alone (e.g. 'recordings/room123/sesja.mp4'), which is what
+ * generateR2PresignedUrl expects.
+ *
+ * Previously duplicated in app/api/live/webhook/route.ts as extractR2ObjectKey
+ * using R2_BUCKET_NAME env var (inconsistent with R2_BUCKET used here). This is
+ * the single source of truth — webhook should import from this module.
+ */
+export function extractR2ObjectKey(fileUrl: string | null | undefined): string | null {
+  if (!fileUrl) return null;
+  try {
+    const u = new URL(fileUrl);
+    // Pathname: /<bucket>/<key> or just /<key>
+    let path = u.pathname.replace(/^\//, '');
+    const bucketName = R2_BUCKET();
+    if (bucketName && path.startsWith(bucketName + '/')) {
+      path = path.slice(bucketName.length + 1);
+    }
+    return path || null;
+  } catch {
+    // Not a URL — might already be a key
+    return fileUrl || null;
+  }
+}
+
 function hmacSha256(key: Buffer | string, data: string): Buffer {
   return crypto.createHmac('sha256', key).update(data).digest();
 }

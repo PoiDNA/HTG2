@@ -7,6 +7,7 @@ import {
   uploadBackupFile,
   buildRecordingStoragePath,
 } from '@/lib/bunny-backup-storage';
+import { deleteFile as deleteBunnyFile } from '@/lib/bunny-storage';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -49,6 +50,10 @@ export async function POST(request: NextRequest) {
   try {
     await section5SourceCleanup(db, stats);
   } catch (e) { console.error('[cron:recordings] Section 5 error:', e); stats.errors++; }
+
+  try {
+    await section6ClientRecordingsPurge(db, stats);
+  } catch (e) { console.error('[cron:recordings] Section 6 error:', e); stats.errors++; }
 
   try {
     await section7StuckEgressCleanup(db, stats);
@@ -226,6 +231,85 @@ async function section4OrphanGC(_db: DB, _stats: Record<string, number>) {
 // recording (alongside Bunny Storage) — keep indefinitely.
 async function section5SourceCleanup(_db: DB, _stats: Record<string, number>) {
   // no-op: user requested "keep everything, never delete automatically"
+}
+
+// ── Section 6: CLIENT RECORDINGS PURGE (user-initiated soft delete only) ──
+// Processes client_recordings (nagrania przed/po sesji) that a user has
+// explicitly soft-deleted by clicking the delete button in /konto/nagrania-klienta.
+//
+// IMPORTANT: this is NOT automatic retention / orphan GC / expiry.
+//
+// The rest of HTG2 intentionally has no automatic deletion ("keep everything,
+// never delete automatically"). Section 6 does NOT respect client_recordings.expires_at
+// (which exists as an informational snapshot of the retention policy at insert
+// time, but the cron does not enforce it). The only thing this section processes
+// is rows where the user themselves called DELETE /api/live/client-recording/{id},
+// which sets deleted_at. After a 14-day grace period (long enough for the user
+// to reach out to support if they regret the delete, short enough that the
+// "permanently deleted within 14 days" promise is honored), the row and its
+// file in Bunny Storage are hard-deleted.
+//
+// This is required for RODO art. 17 compliance: the user has the right to
+// have their data erased, and "soft-delete that never actually cleans up"
+// does not satisfy that right — the file must actually leave Bunny Storage
+// within a reasonable window.
+async function section6ClientRecordingsPurge(db: DB, stats: Record<string, number>) {
+  const GRACE_DAYS = 14;
+  const graceCutoff = new Date(Date.now() - GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: toPurge, error } = await db
+    .from('client_recordings')
+    .select('id, storage_url, user_id')
+    .not('deleted_at', 'is', null)
+    .lt('deleted_at', graceCutoff)
+    .limit(50);
+
+  if (error) {
+    console.error('[cron:recordings] Section 6 query error:', error);
+    stats.errors++;
+    return;
+  }
+
+  if (!toPurge?.length) return;
+
+  for (const rec of toPurge) {
+    try {
+      // Best-effort: delete the file from Bunny Storage first. If it fails
+      // (e.g. already deleted, network error), we still delete the DB row —
+      // an orphan file can be cleaned up later via a separate audit, but an
+      // orphan DB row blocks future deletion attempts on the same path.
+      try {
+        await deleteBunnyFile(rec.storage_url);
+      } catch (bunnyErr) {
+        console.error(
+          `[cron:recordings] Section 6: Bunny delete failed for ${rec.id} ` +
+          `(path=${rec.storage_url}):`,
+          bunnyErr
+        );
+        // Don't increment errors — continue with DB delete
+      }
+
+      const { error: delError } = await db
+        .from('client_recordings')
+        .delete()
+        .eq('id', rec.id);
+
+      if (delError) {
+        console.error(`[cron:recordings] Section 6: DB delete failed for ${rec.id}:`, delError);
+        stats.errors++;
+        continue;
+      }
+
+      stats.cleaned++;
+      console.log(
+        `[cron:recordings] Section 6: purged client_recording ${rec.id} ` +
+        `after ${GRACE_DAYS}-day grace period`
+      );
+    } catch (e) {
+      console.error(`[cron:recordings] Section 6: unexpected error for ${rec.id}:`, e);
+      stats.errors++;
+    }
+  }
 }
 
 // ── Section 7: STUCK EGRESS CLEANUP ────────────────────────────────────────

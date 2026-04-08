@@ -99,6 +99,25 @@ export async function POST(request: NextRequest) {
         console.error('[recording-play] start insert failed:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+
+      // Audit write (Faza 6): log who played this recording and when.
+      // Best-effort — if the audit insert fails we still return the event ID
+      // to the client, because the play event itself was recorded successfully
+      // and telemetry shouldn't block playback.
+      try {
+        await db.from('client_recording_audit').insert({
+          recording_id: recordingId,
+          actor_id: user.id,
+          action: 'played',
+          details: {
+            event_id: data?.id,
+            is_staff: staff,
+          },
+        });
+      } catch (auditErr) {
+        console.error('[recording-play] audit write failed (non-fatal):', auditErr);
+      }
+
       return NextResponse.json({ eventId: data?.id });
     }
 

@@ -71,6 +71,19 @@ export async function DELETE(
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    // Audit write (Faza 6): log who deleted and when. Best-effort — audit
+    // failure shouldn't prevent the delete from succeeding.
+    try {
+      await db.from('client_recording_audit').insert({
+        recording_id: id,
+        actor_id: user.id,
+        action: 'deleted',
+        details: { grace_days: 14 },
+      });
+    } catch (auditErr) {
+      console.error('[client-recording-delete] audit write failed (non-fatal):', auditErr);
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     console.error('[client-recording-delete] handler error:', err);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Video, Mic, Square, Upload, Check, Loader2, Trash2 } from 'lucide-react';
 
 interface ClientRecorderProps {
@@ -9,6 +9,62 @@ interface ClientRecorderProps {
   type: 'before' | 'after';
   onRecordingStart?: () => void;
   onRecordingStop?: () => void;
+}
+
+// Rigorous video constraints to avoid OOM on mobile (Safari iOS especially).
+// MediaRecorder keeps the full blob in browser RAM. 5 minutes of 1080p30 from
+// a modern phone camera can be 100-500 MB, crashing the tab around minute 3-4.
+// For a before/after "therapeutic diary" 640x480 @ 15fps is plenty.
+// 'ideal' vs 'exact' — browsers may still give a different resolution if the
+// native camera size fits better; this is a hint to the selector, not a guarantee.
+const VIDEO_CONSTRAINTS: MediaTrackConstraints = {
+  width: { ideal: 640, max: 1280 },
+  height: { ideal: 480, max: 720 },
+  frameRate: { ideal: 15, max: 24 },
+  facingMode: 'user',
+};
+
+// Different time limits per type to avoid bufferbloat killing the LiveKit
+// upload that starts right after a 'before' recording. 'after' has no
+// follow-up WebRTC session so can be longer.
+const MAX_DURATION_SECONDS: Record<'before' | 'after', number> = {
+  before: 60,
+  after: 300,
+};
+
+// Candidate MIME types ordered by quality preference. isTypeSupported() picks
+// the first one the browser accepts. Safari iOS historically does not support
+// WebM recording — needs MP4/H.264 fallback.
+function pickSupportedMimeType(format: 'video' | 'audio'): string | null {
+  const candidates = format === 'video'
+    ? [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2', // Safari iOS
+        'video/mp4',
+      ]
+    : [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4;codecs=mp4a.40.2', // Safari iOS
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+      ];
+
+  for (const mime of candidates) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mime)) {
+      return mime;
+    }
+  }
+  return null;
+}
+
+function extFromMimeType(mime: string): string {
+  if (mime.includes('webm')) return 'webm';
+  if (mime.includes('mp4')) return mime.startsWith('audio/') ? 'm4a' : 'mp4';
+  if (mime.includes('ogg')) return 'ogg';
+  return 'bin';
 }
 
 export default function ClientRecorder({ bookingId, liveSessionId, type, onRecordingStart, onRecordingStop }: ClientRecorderProps) {
@@ -33,13 +89,18 @@ export default function ClientRecorder({ bookingId, liveSessionId, type, onRecor
     };
   }, []);
 
+  const stopRecording = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    mediaRecorderRef.current?.stop();
+  }, []);
+
   async function startRecording() {
     setError('');
     chunksRef.current = [];
 
     try {
-      const constraints = format === 'video'
-        ? { video: true, audio: true }
+      const constraints: MediaStreamConstraints = format === 'video'
+        ? { video: VIDEO_CONSTRAINTS, audio: true }
         : { audio: true };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -50,9 +111,12 @@ export default function ClientRecorder({ bookingId, liveSessionId, type, onRecor
         videoPreviewRef.current.srcObject = stream;
       }
 
-      const mimeType = format === 'video'
-        ? (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm')
-        : (MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm');
+      // Pick the best supported MIME type for this device.
+      // Safari iOS does not support WebM recording — must fall back to MP4.
+      const mimeType = pickSupportedMimeType(format);
+      if (!mimeType) {
+        throw new Error('Twoja przeglądarka nie wspiera nagrywania w żadnym znanym formacie');
+      }
 
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
@@ -84,15 +148,11 @@ export default function ClientRecorder({ bookingId, liveSessionId, type, onRecor
       timerRef.current = setInterval(() => {
         setDuration(d => d + 1);
       }, 1000);
-    } catch (err: any) {
-      setError('Nie udało się uzyskać dostępu do ' + (format === 'video' ? 'kamery' : 'mikrofonu'));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Nieznany błąd';
+      setError(`Nie udało się uzyskać dostępu do ${format === 'video' ? 'kamery' : 'mikrofonu'}: ${message}`);
       setMode('choosing');
     }
-  }
-
-  function stopRecording() {
-    if (timerRef.current) clearInterval(timerRef.current);
-    mediaRecorderRef.current?.stop();
   }
 
   function discardRecording() {
@@ -106,15 +166,22 @@ export default function ClientRecorder({ bookingId, liveSessionId, type, onRecor
   }
 
   async function uploadRecording() {
-    if (!recordingBlobRef.current) return;
+    // Concurrency guard — prevent double-submit from impatient double-click
+    // or React re-render firing onClick twice on laggy devices.
+    if (!recordingBlobRef.current || mode === 'uploading' || mode === 'done') return;
     setMode('uploading');
     setError('');
 
     try {
+      const blob = recordingBlobRef.current;
+      // Use the actual recorded MIME type — Safari iOS outputs MP4 even when
+      // we asked for WebM first, so hardcoding .webm would give the wrong
+      // extension and confuse the backend's magic-bytes check.
+      const ext = extFromMimeType(blob.type);
+
       const formData = new FormData();
-      const ext = format === 'video' ? 'webm' : 'webm';
       const fileName = `${type}-${Date.now()}.${ext}`;
-      formData.append('file', recordingBlobRef.current, fileName);
+      formData.append('file', blob, fileName);
       formData.append('bookingId', bookingId);
       formData.append('liveSessionId', liveSessionId);
       formData.append('type', type);
@@ -127,13 +194,13 @@ export default function ClientRecorder({ bookingId, liveSessionId, type, onRecor
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Upload failed');
       }
 
       setMode('done');
-    } catch (err: any) {
-      setError(err.message || 'Błąd uploadu');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Błąd uploadu');
       setMode('preview');
     }
   }
@@ -144,12 +211,15 @@ export default function ClientRecorder({ bookingId, liveSessionId, type, onRecor
     return `${m}:${String(s).padStart(2, '0')}`;
   }
 
-  // Max 5 minutes
+  // Max duration depends on type — 'before' is short (60s) to avoid bufferbloat
+  // killing the LiveKit session that starts right after the waiting room.
+  // 'after' has no follow-up WebRTC so can be longer (5 min).
   useEffect(() => {
-    if (mode === 'recording' && duration >= 300) {
+    const maxDuration = MAX_DURATION_SECONDS[type];
+    if (mode === 'recording' && duration >= maxDuration) {
       stopRecording();
     }
-  }, [duration, mode]);
+  }, [duration, mode, type, stopRecording]);
 
   if (mode === 'done') {
     return (
@@ -176,7 +246,7 @@ export default function ClientRecorder({ bookingId, liveSessionId, type, onRecor
         {/* Choose mode */}
         {(mode === 'idle' || mode === 'choosing') && (
           <div className="space-y-3">
-            <p className="text-white/50 text-xs">Nagraj swoje przemyślenia {label} (max 5 min)</p>
+            <p className="text-white/50 text-xs">Nagraj swoje przemyślenia {label} (max {formatTime(MAX_DURATION_SECONDS[type])})</p>
 
             <div className="flex gap-2">
               <button
@@ -234,7 +304,7 @@ export default function ClientRecorder({ bookingId, liveSessionId, type, onRecor
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                 <span className="text-red-400 text-sm font-mono">{formatTime(duration)}</span>
-                <span className="text-white/30 text-xs">/ 5:00</span>
+                <span className="text-white/30 text-xs">/ {formatTime(MAX_DURATION_SECONDS[type])}</span>
               </div>
               <button
                 onClick={stopRecording}

@@ -53,7 +53,7 @@ describe('transcribeAudio', () => {
     expect(result.words).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledOnce();
 
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(init.method).toBe('POST');
     const form = init.body as FormData;
     const file = form.get('file') as File;
@@ -72,7 +72,7 @@ describe('transcribeAudio', () => {
 
     await transcribeAudio(new ArrayBuffer(100), 'id', 'https://r2/file.mp4');
 
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     const file = (init.body as FormData).get('file') as File;
     expect(file.type).toBe('audio/mp4');
   });

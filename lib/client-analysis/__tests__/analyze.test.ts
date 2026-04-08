@@ -158,7 +158,7 @@ describe('analyzeSessionJourney', () => {
 
     await analyzeSessionJourney(segments);
 
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.anthropic.com/v1/messages');
     const body = JSON.parse(init.body as string);
     expect(body.model).toBe('claude-sonnet-4-6');

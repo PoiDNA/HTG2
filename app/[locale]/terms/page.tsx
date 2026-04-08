@@ -100,8 +100,8 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li><strong>Zespół HTG</strong> — osoby prowadzące sesje w ramach inicjatywy Hacking&nbsp;The&nbsp;Game. Kontaktują się z Tobą z adresów e-mail w domenie @htg.cyou.</li>
             <li><strong>Prowadząca</strong> — Natalia, osoba prowadząca każdą Sesję HTG z wykorzystaniem autorskiej metodyki.</li>
             <li><strong>Operator/ka sesji</strong> — osoba asystująca Prowadzącej podczas Sesji HTG. Uczestnik może wskazać preferowaną Operatorkę przy rezerwacji lub pozostawić wybór Zespołowi HTG.</li>
-            <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie o&nbsp;charakterze rozwoju osobistego, prowadzone przez Prowadzącą samodzielnie lub w&nbsp;asyście Operatora/ki sesji, z&nbsp;wykorzystaniem autorskiej metodyki HTG. Co do zasady Sesja HTG odbywa się online; w&nbsp;szczególnych przypadkach może odbyć się na żywo (stacjonarnie) — szczegóły w&nbsp;pkt&nbsp;2.</li>
-            <li><strong>Spotkanie</strong> — organizowane online spotkanie dla kilku lub kilkunastu osób, o&nbsp;charakterze wymiany poglądów i&nbsp;pogłębiania świadomości, prowadzone przez Zespół HTG. Szczegóły w&nbsp;pkt&nbsp;2.</li>
+            <li><strong>Sesja HTG</strong> — jednorazowa, około 90-minutowa rozmowa o&nbsp;charakterze rozwoju osobistego, prowadzona przez Prowadzącą samodzielnie lub w&nbsp;asyście Operatora/ki sesji, z&nbsp;wykorzystaniem autorskiej metodyki HTG. Co do zasady Sesja HTG odbywa się online; w&nbsp;szczególnych przypadkach może odbyć się na żywo (stacjonarnie) — szczegóły w&nbsp;pkt&nbsp;2.</li>
+            <li><strong>Spotkanie</strong> — organizowane online wydarzenie grupowe dla kilku lub kilkunastu osób, o&nbsp;charakterze wymiany poglądów i&nbsp;pogłębiania świadomości, prowadzone przez Zespół HTG. Szczegóły w&nbsp;pkt&nbsp;2.</li>
             <li><strong>Uczestnik</strong> — osoba fizyczna (pełnoletnia), która zawiera z nami umowę na Sesję HTG. Osoby w wieku 16–17 lat mogą uczestniczyć wyłącznie po dostarczeniu pisemnego oświadczenia rodzica lub opiekuna prawnego na adres htg@htg.cyou przed rozpoczęciem sesji. Oświadczenie musi zawierać zgodę na udział oraz potwierdzenie, że opiekun rozumie niekonwencjonalny charakter pracy HTG i bierze odpowiedzialność za proces rozwojowy podopiecznego. Operator zastrzega sobie prawo do indywidualnej oceny możliwości realizacji sesji z osobą niepełnoletnią, z uwzględnieniem charakteru tematu i dobra uczestnika. Sesja osoby niepełnoletniej odbywa się bez obecności opiekuna, chyba że strony ustalą inaczej.</li>
             <li><strong>Zainteresowany</strong> — osoba, która złożyła zapytanie o&nbsp;Sesję HTG za pośrednictwem htgcyou.com, ale której rezerwacja nie została jeszcze zaakceptowana przez Zespół HTG. Z&nbsp;chwilą akceptacji Zainteresowany staje się Uczestnikiem.</li>
             <li><strong>Subskrypcja</strong> — dostęp do biblioteki nagrań sesji HTG w panelu klienta na htgcyou.com. Dostępne warianty: pojedyncza sesja, pakiet miesięczny lub pakiet roczny. Szczegóły w pkt&nbsp;3.</li>
@@ -149,7 +149,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           </UL>
           <Info>
             <strong>Twój czas.</strong> Czas sesji jest zarezerwowany specjalnie dla Ciebie.
-            Jeśli spóźnisz się więcej niż 15&nbsp;minut, spotkanie wciąż się odbędzie,
+            Jeśli spóźnisz się więcej niż 15&nbsp;minut, sesja wciąż się odbędzie,
             ale potrwa odpowiednio krócej (opłata pozostaje bez zmian), aby nie zakłócać
             sesji kolejnych osób. Zachęcamy, aby przygotować sprzęt kilka minut wcześniej.
           </Info>
@@ -262,7 +262,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <P>
             Szanujemy czas naszych prowadzących oraz innych osób oczekujących na wolne terminy.
             Jeśli nie pojawisz się na sesji lub zgłosisz chęć zmiany terminu na mniej niż 7 dni
-            przed spotkaniem, sesja przepada, a wniesiona opłata nie podlega zwrotowi. Zastrzegamy
+            przed sesją, sesja przepada, a wniesiona opłata nie podlega zwrotowi. Zastrzegamy
             jednak, że w wyjątkowych, udokumentowanych sytuacjach losowych zawsze staramy się
             znaleźć wspólnie ludzkie rozwiązanie.
           </P>
@@ -292,7 +292,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
               akceptujesz jej subiektywny i eksperymentalny charakter.
             </p>
             <p className="mb-3">
-              Nasze spotkania <strong>nie są formą diagnozy, terapii psychologicznej,
+              Nasze sesje <strong>nie są formą diagnozy, terapii psychologicznej,
               psychoterapii, porady medycznej, prawnej ani finansowej</strong>. Jeśli zmagasz się
               z problemami zdrowotnymi, psychicznymi lub potrzebujesz profesjonalnej pomocy —
               zachęcamy do kontaktu z odpowiednim specjalistą.
@@ -320,7 +320,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           <P>
             Sesje HTG mają charakter rozwojowy i subiektywny, dlatego Administrator Serwisu nie składa obietnic
             ani gwarancji osiągnięcia określonych rezultatów życiowych, zdrowotnych czy finansowych.
-            Wkładamy w nasze spotkania całą wiedzę i doświadczenie — pamiętaj jednak, że ze względów
+            Wkładamy w nasze sesje całą wiedzę i doświadczenie — pamiętaj jednak, że ze względów
             prawnych nasza odpowiedzialność finansowa związana z realizacją sesji jest ograniczona
             do kwoty, jaką za nią zapłaciłeś/aś (z wyłączeniem szkód wyrządzonych umyślnie
             lub wskutek rażącego niedbalstwa, zgodnie z bezwzględnie obowiązującymi przepisami prawa).

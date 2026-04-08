@@ -40,7 +40,39 @@ export function signBunnyUrl(videoId: string, libraryId: string, ttlSeconds = 90
 export function signPrivateCdnUrl(storagePath: string, ttlSeconds = 14400): string {
   const cdnBase = process.env.BUNNY_PRIVATE_CDN_URL || 'https://htg-private.b-cdn.net';
   const tokenKey = process.env.BUNNY_PRIVATE_TOKEN_KEY || process.env.BUNNY_TOKEN_KEY!;
+  return signBunnyCdnUrlInternal(cdnBase, tokenKey, storagePath, ttlSeconds);
+}
 
+/**
+ * Generate a signed URL for HTG2 recordings stored in the dedicated Bunny Storage zone
+ * (e.g. htg-backup-sessions). Used for live session recordings — Phase 2 audio files
+ * served to clients via a dedicated Pull Zone with Token Authentication.
+ *
+ * Required env vars (all must be set, otherwise returns null → client must fall back):
+ *   BUNNY_HTG2_CDN_URL        — Pull Zone URL (e.g. https://htg-backup-sessions.b-cdn.net)
+ *   BUNNY_HTG2_CDN_TOKEN_KEY  — Pull Zone Token Auth key (from Bunny panel → Security)
+ *
+ * @param storagePath - Path within the HTG2 storage zone (e.g. "recordings/{booking_id}/{recording_id}.mp4")
+ * @param ttlSeconds - URL validity in seconds (default: 4h)
+ * @returns Signed CDN URL, or null if env vars not configured
+ */
+export function signHtg2StorageUrl(storagePath: string, ttlSeconds = 14400): string | null {
+  const cdnBase = process.env.BUNNY_HTG2_CDN_URL;
+  const tokenKey = process.env.BUNNY_HTG2_CDN_TOKEN_KEY;
+  if (!cdnBase || !tokenKey) return null;
+  return signBunnyCdnUrlInternal(cdnBase, tokenKey, storagePath, ttlSeconds);
+}
+
+/**
+ * Internal helper — shared HMAC token signing logic for any Bunny Pull Zone with Token Auth.
+ * Both signPrivateCdnUrl and signHtg2StorageUrl delegate here.
+ */
+function signBunnyCdnUrlInternal(
+  cdnBase: string,
+  tokenKey: string,
+  storagePath: string,
+  ttlSeconds: number,
+): string {
   const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
   // Path must start with /
   const path = storagePath.startsWith('/') ? storagePath : `/${storagePath}`;

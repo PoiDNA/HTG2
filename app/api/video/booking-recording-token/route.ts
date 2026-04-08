@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { signBunnyUrl, signPrivateCdnUrl } from '@/lib/bunny';
+import { signBunnyUrl, signPrivateCdnUrl, signHtg2StorageUrl } from '@/lib/bunny';
 import { isAdminEmail } from '@/lib/roles';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // 2. Recording details (fetched FIRST so we can check recording_phase before access check)
     const { data: recording } = await db
       .from('booking_recordings')
-      .select('bunny_video_id, bunny_library_id, source_url, status, expires_at, session_type, session_date, legal_hold, duration_seconds, recording_phase')
+      .select('bunny_video_id, bunny_library_id, backup_storage_path, source_url, status, expires_at, session_type, session_date, legal_hold, duration_seconds, recording_phase')
       .eq('id', recordingId)
       .single();
 
@@ -161,11 +161,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. Check recording availability — supports both Bunny Stream (HLS) and Storage (direct file)
+    // 7. Check recording availability — 3 possible sources (priority order):
+    //   a) backup_storage_path → HTG2 primary (Bunny Storage via HTG2 Pull Zone)
+    //   b) bunny_video_id      → legacy HTG Stream imports (historical)
+    //   c) source_url          → legacy private CDN (pre-HTG2 archival imports)
+    const backupStoragePath = (recording as Record<string, unknown>).backup_storage_path as string | null;
+    const hasHtg2Storage = !!backupStoragePath;
     const hasStreamVideo = recording.bunny_video_id && recording.bunny_library_id;
-    const hasStorageFile = recording.source_url;
+    const hasLegacySource = recording.source_url;
 
-    if (!hasStreamVideo && !hasStorageFile) {
+    if (!hasHtg2Storage && !hasStreamVideo && !hasLegacySource) {
       return NextResponse.json({
         allowed: false,
         title: 'Nagranie niedostępne',
@@ -207,21 +212,40 @@ export async function POST(request: NextRequest) {
         last_heartbeat: new Date().toISOString(),
       }, { onConflict: 'user_id,device_id' });
 
-    // 10. Sign URL — Bunny Stream (HLS) or Private CDN (direct file)
+    // 10. Sign URL — HTG2 Storage (preferred), legacy Stream, or legacy Private CDN
     let url: string;
     let deliveryType: 'hls' | 'direct';
-    if (hasStreamVideo) {
+    let pathForMimeDetection: string | null = null;
+
+    if (hasHtg2Storage) {
+      // HTG2 primary: signed URL via dedicated HTG2 Pull Zone
+      const signed = signHtg2StorageUrl(backupStoragePath!, tokenTtl);
+      if (!signed) {
+        return NextResponse.json({
+          allowed: false,
+          title: 'Nagranie niedostępne',
+          message: 'Serwer CDN nie jest skonfigurowany. Skontaktuj się z administracją.',
+          supportContact: 'htg@htg.cyou',
+        });
+      }
+      url = signed;
+      deliveryType = 'direct';
+      pathForMimeDetection = backupStoragePath;
+    } else if (hasStreamVideo) {
+      // Legacy HTG: Bunny Stream HLS playback
       url = signBunnyUrl(recording.bunny_video_id!, recording.bunny_library_id!, tokenTtl);
       deliveryType = 'hls';
     } else {
+      // Legacy private CDN: direct file (pre-HTG2 archival imports)
       url = signPrivateCdnUrl(recording.source_url!, tokenTtl);
       deliveryType = 'direct';
+      pathForMimeDetection = recording.source_url!;
     }
 
-    // Guess MIME type from source_url extension for direct files
+    // Guess MIME type from file extension (direct only; HLS has its own manifest)
     let mimeType: string | null = null;
-    if (deliveryType === 'direct' && recording.source_url) {
-      const ext = recording.source_url.split('.').pop()?.toLowerCase();
+    if (deliveryType === 'direct' && pathForMimeDetection) {
+      const ext = pathForMimeDetection.split('.').pop()?.toLowerCase();
       const mimeMap: Record<string, string> = {
         'm4a': 'audio/mp4',
         'mp3': 'audio/mpeg',
@@ -229,7 +253,7 @@ export async function POST(request: NextRequest) {
         'wav': 'audio/wav',
         'aac': 'audio/aac',
         'webm': 'audio/webm',
-        'mp4': 'video/mp4',
+        'mp4': 'audio/mp4',    // HTG2 sesja is audio-only composite MP4 — use audio MIME
         'm4v': 'video/mp4',
         'mov': 'video/quicktime',
       };

@@ -158,6 +158,34 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
     playback_url: signPrivateCdnUrl(rec.storage_url, PLAYBACK_TTL_SECONDS),
   }));
 
+  // Fetch active share token counts per recording (Faza 7). A token is "active"
+  // when revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now()).
+  // Shown to the owner so they know how many outstanding share links exist and
+  // whether the "Cofnij wszystkie linki" button should appear.
+  //
+  // Only fetches for the non-staff case (owner view). Staff don't see sharing
+  // controls at all (isOwner=false), so there's no need to compute counts for
+  // them.
+  if (!staff && recordings.length > 0) {
+    const recordingIds = recordings.map(r => r.id);
+    const nowIso = new Date().toISOString();
+    const { data: shares } = await admin
+      .from('client_recording_shares')
+      .select('recording_id, expires_at')
+      .in('recording_id', recordingIds)
+      .is('revoked_at', null);
+    const activeCountByRecording = new Map<string, number>();
+    for (const s of shares ?? []) {
+      if (s.expires_at && s.expires_at <= nowIso) continue; // expired
+      const current = activeCountByRecording.get(s.recording_id) ?? 0;
+      activeCountByRecording.set(s.recording_id, current + 1);
+    }
+    recordings = recordings.map(rec => ({
+      ...rec,
+      active_shares_count: activeCountByRecording.get(rec.id) ?? 0,
+    }));
+  }
+
   // Fetch profile names for staff view
   const userIds = [...new Set(recordings.map(r => r.user_id))];
   const { data: profiles } = userIds.length > 0

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
-import { Video, Mic, Globe, Users, Lock, UserPlus } from 'lucide-react';
+import { Video, Mic, Lock } from 'lucide-react';
 
 interface Recording {
   id: string;
@@ -18,22 +18,21 @@ interface RecordingsPairProps {
   after?: Recording;
   clientName?: string;
   sessionDate?: string;
-  showSharingControls?: boolean;
-  onSharingChange?: (recordingId: string, mode: string) => void;
 }
 
+// Informational labels only — showing the current sharing mode as a static badge.
+// Interactive sharing controls were removed in Faza 0.A because the backend
+// never implemented the onSharingChange callback; clicking would have given
+// the user a false sense of privacy control (placebo privacy). Real sharing
+// modes will be implemented in Faza 7 with a proper backend. Until then the
+// badge shows the effective mode (always 'private' at insert time).
 const SHARING_LABELS: Record<string, { icon: typeof Lock; label: string }> = {
   private: { icon: Lock, label: 'Prywatne' },
-  favorites: { icon: Users, label: 'Polubieni' },
-  invited: { icon: UserPlus, label: 'Zaproszeni' },
-  public: { icon: Globe, label: 'Wszyscy' },
 };
 
-function RecordingCard({ recording, label, showSharingControls, onSharingChange }: {
+function RecordingCard({ recording, label }: {
   recording: Recording | undefined;
   label: string;
-  showSharingControls?: boolean;
-  onSharingChange?: (recordingId: string, mode: string) => void;
 }) {
   const eventIdRef = useRef<string | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -68,7 +67,8 @@ function RecordingCard({ recording, label, showSharingControls, onSharingChange 
   }
 
   const Icon = recording.format === 'video' ? Video : Mic;
-  const sharing = SHARING_LABELS[recording.sharing_mode] || SHARING_LABELS.private;
+  // Only 'private' is a valid mode in Faza 0–3; any other value (legacy/future) falls back to it.
+  const sharing = SHARING_LABELS.private;
   const SharingIcon = sharing.icon;
   const mins = Math.floor(recording.duration_seconds / 60);
   const secs = recording.duration_seconds % 60;
@@ -115,26 +115,6 @@ function RecordingCard({ recording, label, showSharingControls, onSharingChange 
             {sharing.label}
           </span>
         </div>
-
-        {/* Sharing controls */}
-        {showSharingControls && onSharingChange && (
-          <div className="flex gap-1">
-            {Object.entries(SHARING_LABELS).map(([mode, { icon: MIcon, label: mLabel }]) => (
-              <button
-                key={mode}
-                onClick={() => onSharingChange(recording.id, mode)}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
-                  recording.sharing_mode === mode
-                    ? 'bg-htg-sage text-white'
-                    : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
-                }`}
-              >
-                <MIcon className="w-3 h-3" />
-                {mLabel}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -145,8 +125,6 @@ export default function RecordingsPair({
   after,
   clientName,
   sessionDate,
-  showSharingControls,
-  onSharingChange,
 }: RecordingsPairProps) {
   return (
     <div className="space-y-2">
@@ -157,18 +135,8 @@ export default function RecordingsPair({
         </div>
       )}
       <div className="flex gap-3 flex-col sm:flex-row">
-        <RecordingCard
-          recording={before}
-          label="Przed sesją"
-          showSharingControls={showSharingControls}
-          onSharingChange={onSharingChange}
-        />
-        <RecordingCard
-          recording={after}
-          label="Po sesji"
-          showSharingControls={showSharingControls}
-          onSharingChange={onSharingChange}
-        />
+        <RecordingCard recording={before} label="Przed sesją" />
+        <RecordingCard recording={after} label="Po sesji" />
       </div>
     </div>
   );

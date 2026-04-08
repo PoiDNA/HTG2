@@ -98,14 +98,7 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
                   {SESSION_CONFIG[meta.sessionType as SessionType]?.labelShort || meta.sessionType}
                 </span>
               </div>
-              <RecordingsPair
-                before={before}
-                after={after}
-                showSharingControls={!staff}
-                onSharingChange={async (recordingId, mode) => {
-                  // Client-side sharing change handled via API
-                }}
-              />
+              <RecordingsPair before={before} after={after} />
             </div>
           ))}
         </div>

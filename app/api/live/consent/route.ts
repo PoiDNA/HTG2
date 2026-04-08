@@ -69,13 +69,29 @@ export async function POST(request: NextRequest) {
     const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '';
     const ua = request.headers.get('user-agent') ?? '';
 
-    // One checkbox → two consent records
+    // One checkbox → two consent records.
+    //
+    // PRE-1 update: the `session_recording_capture` text now explicitly covers all
+    // three phases of a session (Wstęp, Sesja, Podsumowanie) and the AI analytics
+    // pipeline (transcription via OpenAI Whisper, insights via Anthropic Claude).
+    // This broader scope matches what the pipeline actually does — previously the
+    // text only mentioned the sesja phase, which did not cover the analytics
+    // processing of wstep/podsumowanie tracks. Historical records with the narrower
+    // text remain valid for their original scope; CLIENT_ANALYTICS_ENABLED should
+    // only be flipped to true on prod AFTER this new text has been legal-reviewed
+    // (PRE-2) and users have re-consented via the waiting room UI.
     const consentTypes = ['session_recording_capture', 'session_recording_access'] as const;
     const consentTexts: Record<string, string> = {
       session_recording_capture:
-        'Wyrażam zgodę na utrwalenie fazy sesyjnej mojego spotkania.',
+        'Wyrażam zgodę na nagranie wszystkich trzech faz mojego spotkania HTG ' +
+        '(Wstęp, Sesja, Podsumowanie) oraz na wspomaganą AI analizę transkrypcji ' +
+        'przez podprocesorów OpenAI (Whisper) i Anthropic (Claude) na potrzeby ' +
+        'wsparcia prowadzącej. Rozumiem, że treści mogą dotyczyć mojego zdrowia ' +
+        '(RODO art. 9) i są przetwarzane wyłącznie dla tej sesji.',
       session_recording_access:
-        'Wyrażam zgodę na przechowywanie nagrania i udostępnienie mi go przez okres do 12 miesięcy.',
+        'Wyrażam zgodę na przechowywanie nagrania i udostępnienie mi go przez ' +
+        'okres do 12 miesięcy. Rozumiem, że mogę w każdej chwili wycofać zgodę ' +
+        '— wtedy nagranie i wygenerowane insights zostaną trwale usunięte.',
     };
 
     for (const consentType of consentTypes) {

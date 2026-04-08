@@ -240,9 +240,28 @@ export async function POST(request: NextRequest) {
 
     await uploadFile(path, buffer, detectedMime);
 
-    const cdnUrl = `${process.env.NEXT_PUBLIC_BUNNY_CDN_URL}/${path}`;
+    // 10. Compute retention snapshot: session_date + RETENTION_DAYS, fallback
+    // to created_at + RETENTION_DAYS if the booking has no slot date.
+    // Default retention is 365 days to match booking_recordings convention.
+    // Stored as a snapshot so future policy changes don't affect existing rows
+    // retroactively.
+    const RETENTION_DAYS = 365;
+    const { data: bookingRow } = await admin
+      .from('bookings')
+      .select('slot:booking_slots(slot_date)')
+      .eq('id', bookingId)
+      .maybeSingle();
+    const slotDate = (bookingRow as { slot?: { slot_date?: string } | Array<{ slot_date?: string }> } | null)?.slot;
+    const slotDateStr = Array.isArray(slotDate) ? slotDate[0]?.slot_date : slotDate?.slot_date;
+    const baseDate = slotDateStr ? new Date(slotDateStr).getTime() : Date.now();
+    const expiresAt = new Date(baseDate + RETENTION_DAYS * 24 * 3600 * 1000).toISOString();
 
-    // 10. Save to DB (use server-clamped duration, not client-provided).
+    // 11. Save to DB (use server-clamped duration, not client-provided).
+    // storage_url stores the PATH ONLY (e.g. "client-recordings/<uid>/<bid>/<file>.webm"),
+    // not a full URL. Playback URLs are signed on-demand server-side via
+    // signPrivateCdnUrl() using the htg-private.b-cdn.net pull zone. This closes
+    // the main P0 RODO gap where recordings were reachable via the public CDN
+    // without any authentication.
     // If INSERT fails, best-effort delete the already-uploaded Bunny file so
     // we don't accumulate orphaned storage (cost + uncontrolled artifacts).
     const { data: recording, error: dbError } = await admin
@@ -253,10 +272,11 @@ export async function POST(request: NextRequest) {
         live_session_id: liveSessionId,
         type,
         format,
-        storage_url: cdnUrl,
+        storage_url: path,
         duration_seconds: safeDuration,
         file_size_bytes: buffer.length,
         sharing_mode: 'private',
+        expires_at: expiresAt,
       })
       .select('id')
       .single();
@@ -272,7 +292,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ id: recording.id, url: cdnUrl });
+    return NextResponse.json({ id: recording.id });
   } catch (error: unknown) {
     console.error('Client recording upload error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -280,7 +300,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET — list recordings for a booking (scoped to current user unless staff)
+// GET — list recordings for a booking (scoped to current user unless staff).
+// Soft-deleted rows (deleted_at IS NOT NULL) are filtered out for everyone
+// including staff — admin delete / undelete is a separate future endpoint.
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -291,7 +313,10 @@ export async function GET(request: NextRequest) {
   const { isStaffEmail } = await import('@/lib/roles');
   const staff = isStaffEmail(user.email ?? '');
 
-  let query = admin.from('client_recordings').select('*');
+  let query = admin
+    .from('client_recordings')
+    .select('*')
+    .is('deleted_at', null);
 
   if (bookingId) {
     query = query.eq('booking_id', bookingId);

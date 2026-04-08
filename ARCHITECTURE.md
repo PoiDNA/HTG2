@@ -15,9 +15,11 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 | Backend | Next.js API Routes (serverless) |
 | Baza danych | Supabase (PostgreSQL + Auth + Realtime + RLS) |
 | Płatności | Stripe (Checkout + Webhooks + Invoicing) |
-| Wideo live | LiveKit Cloud (WebRTC, Egress recording MP4) |
-| VOD streaming | Bunny Stream (HLS + Token Auth) |
-| Storage plików | Bunny Storage (WAV, MP3, assety) |
+| Wideo live | LiveKit Cloud (WebRTC, Egress recording MP4 — composite + per-participant tracks) |
+| Storage nagrań źródłowych | Cloudflare R2 (bucket `htg-rec`, S3-compat, presigned URLs 24h — permanentna druga kopia) |
+| **Primary storage dla HTG2 live recordings** | **Bunny Storage zone `htg-backup-sessions` + Pull Zone `htg-backup-sessions.b-cdn.net` z Token Auth** (raw MP4, bez transcoding — 10× taniej niż Stream) |
+| Legacy VOD streaming (pre-HTG2) | Bunny Stream (HLS + Token Auth) — tylko dla starych importów historycznego HTG |
+| Storage plików (VOD, assety, publikacje) | Bunny Storage zone `htg2` (WAV, MP3, assety publikacje) |
 | Email (wysyłka+odbiór) | Resend (outbound + inbound webhooks, Svix verify) |
 | CDN/DNS | Cloudflare |
 | Hosting | Vercel (serverless, Edge) |
@@ -57,10 +59,13 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 ### Sesje Live
 | Tabela | Opis |
 |--------|------|
-| `live_sessions` | Pokoje LiveKit (8 faz, 3 egress ID, nagrania MP4) |
+| `live_sessions` | Pokoje LiveKit (8 faz, 3 composite egress ID, JSONB tracks per uczestnik, `recording_lock_until` lease lock, `last_retry_at` cooldown) |
 | `active_streams` | Concurrent stream limiter (1 urządzenie) |
 | `session_sharing` | Udostępnianie sesji live (sharing_mode: open/favorites/invited, invited_emails[]) |
 | `session_listeners` | Słuchacze towarzyszący listen-only (joined_at, left_at) |
+| `booking_recordings` | Pipeline R2→Bunny Storage per faza (`recording_phase`: wstep/sesja/podsumowanie; `backup_storage_path`, `backup_storage_zone`; status lifecycle; `expires_at` — NULL dla HTG2 = retencja off) |
+| `booking_recording_access` | RLS: kto może odtwarzać które nagranie (granted_reason, revoked_at) |
+| `booking_recording_audit` | Immutable audit trail (recording_created/bunny_*/backup_*/access_*/orphan_deleted) |
 
 ### Publikacja
 | Tabela | Opis |
@@ -146,8 +151,12 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 | `023_communication_hub.sql` | Communication Hub: mailboxes, conversations, messages, templates, autoresponders, RPC (claim_pending_messages, get_customer_card) |
 | `024–034` | Importy, płatności, community, auth, site_settings |
 | `035_portal_messaging.sql` | Centrum Kontaktu: channel 'portal', RPC `create_portal_conversation()`, portal mailbox, indeksy, read_at |
+| `035_booking_recordings.sql` | Pipeline R2→Bunny: `booking_recordings`, `booking_recording_access` (RLS), `booking_recording_audit` |
 | `036_portal_rodo_onboarding.sql` | RODO: `delete_user_portal_data()`, `export_user_portal_data()`, trigger `auto_manage_portal_mailbox_member()` |
+| `036_recording_security_fixes.sql` | Recording security: RPC `check_recording_consent()` z FOR UPDATE lock |
 | `037_footer_templates.sql` | Stopki email: `is_default_footer` na message_templates, unique partial index |
+| `046_recording_phase_and_backup.sql` | **3 fazy + lease lock**: `booking_recordings.recording_phase` (wstep/sesja/podsumowanie), `live_sessions.recording_lock_until` (lease 60s auto-expire), `last_retry_at` (retry cooldown), rozszerzone audit actions |
+| `047_backup_storage_pivot.sql` | **Storage pivot**: `backup_storage_path`, `backup_storage_zone` — ścieżka pliku w Bunny Storage zone |
 
 ---
 
@@ -188,11 +197,95 @@ poczekalnia → wstep → przejscie_1 → sesja → przejscie_2 → podsumowanie
 - **Suwak głośności** — klient reguluje głośność prowadzących
 - **Udostępnianie** — klient może udostępnić fazę Sesja innym (listen-only)
 
-### Egress recording:
-- Format: MP4 (kompatybilny z Whisper API)
-- 3 nagrania: wstep_mp4, sesja_mp4, podsumowanie_mp4
-- Atomowy update via RPC `complete_session_track_egress()` z FOR UPDATE lock (brak race condition)
-- Po zakończeniu wszystkich tracks: automatyczne tworzenie session_publication
+### Egress recording — pipeline R2 → Bunny Storage (3 fazy)
+
+**Format źródłowy**: MP4 composite per faza (kompatybilny z Whisper API) + per-participant audio tracks dla fazy sesja.
+
+**Pełna ścieżka flow**:
+```
+LiveKit egress
+    ↓
+Cloudflare R2 (bucket htg-rec, permanentna druga kopia — nic nie usuwane)
+    ↓
+Cron /api/cron/process-recordings (co 2 min, Section 1)
+    ↓
+Bunny Storage zone htg-backup-sessions
+    └─ recordings/{YYYY-MM-DD}/{email}/{phase}-{session_type}-{short_id}.{ext}
+    ↓
+HTG2 Pull Zone htg-backup-sessions.b-cdn.net + Token Auth (15 min TTL)
+    ↓
+Klient słucha przez <audio> tag (MP4 z MIME audio/mp4)
+```
+
+**3 fazy recording_phase** (kolumna w `booking_recordings`):
+| Faza | Composite MP4 | Per-participant tracks | Widoczność klienta |
+|------|:-:|:-:|:-:|
+| **wstep** (video+audio) | ✅ | ❌ | ❌ admin only |
+| **sesja** (audio only) | ✅ | ✅ (do edycji/publikacji) | ✅ `/konto/nagrania-sesji` |
+| **podsumowanie** (video+audio) | ✅ | ❌ | ❌ admin only |
+
+**Klient widzi TYLKO sesja** (3 warstwy ochrony):
+1. Cron Section 1: `grantAccessIfConsented` odpala się TYLKO dla `recording_phase='sesja'` — wstep/podsumowanie nigdy nie dostają access rows
+2. UI (`nagrania-sesji/page.tsx` + `PrivateRecordingsSection.tsx`) ma defensywny filtr `recording_phase === 'sesja'`
+3. Token endpoint: gdy `recording_phase !== 'sesja'`, blokuje wszystkich oprócz direct admina (bez impersonacji)
+
+**Ścieżka w Bunny Storage — human-navigable** (migracja 047 + PR #253):
+```
+recordings/2026-04-08/jan.kowalski@example.com/sesja-natalia_solo-f7d9e2a5.mp4
+recordings/2026-04-08/jan.kowalski@example.com/wstep-natalia_solo-a8b3c4d1.mp4
+recordings/2026-04-08/jan.kowalski@example.com/podsumowanie-natalia_solo-e5f6a7b2.mp4
+```
+Po ściągnięciu na dysk: sortowanie chronologiczne przez `ls`, filtry przez `find -path "*email*"` i `find -name "sesja-*"`. Edge cases: polskie znaki w emailu sanitizowane (`Łukasz+test@...` → `_ukasz_test@...`).
+
+**Webhook + race safety** (`app/api/live/webhook/route.ts`):
+- `matchEgressPhase()` matchuje egress_id do `egress_wstep_id` / `egress_sesja_id` / `egress_podsumowanie_id`
+- **Warunkowy UPSERT** w `egress_started` — chroni `duration_seconds`/`source_url`/`status` przed clobberem przy out-of-order webhooks
+- **RETRY-SAFE `egress_ended`**: najpierw lookup w `booking_recordings.egress_id`, dopiero potem fallback do `live_sessions` — chroni stare segmenty po retry-recording przed osieroceniem
+- Atomowy RPC `complete_session_track_egress()` z FOR UPDATE lock (sesja tracks)
+- Po zakończeniu wszystkich tracks: automatyczne `session_publication`
+
+**Monitoring nagrywania — real-time dla prowadzącego**:
+- `GET /api/live/recording-status`: matchuje konkretny `egress_sesja_id` w `listEgress` (ignoruje track egressy), grace period 20s dla LiveKit cold start, zwraca `'unknown'` przy timeout (nie fałszywy alarm)
+- LiveRoom polling co 30s + `visibilitychange` refresh (background tab fix) + anti-burst guard (`inFlight`)
+- **4-stanowy REC badge**: REC (active) / OCZEKIWANIE (pending) / ⚠ BRAK NAGRYWANIA (error) / SPRAWDZANIE… (unknown)
+- PhaseControls: warning "Rozważ przełączenie na Zoom" przy error
+- `POST /api/live/retry-recording`: idempotent (sprawdza czy egress nadal działa), RODO consent re-check, restart composite + track egresses (post-produkcja!), DB cooldown 60s w `live_sessions.last_retry_at`, audit log
+
+**Race condition fix — lease lock** (`lib/live/recording-lock.ts`):
+- `phase` i `consent` mogły równolegle wywołać `startRoomCompositeEgress` → race
+- `live_sessions.recording_lock_until`: lease timestamp z auto-expire 60s
+- Atomowy UPDATE `WHERE recording_lock_until IS NULL OR recording_lock_until < NOW() AND egress_sesja_id IS NULL` — tylko pierwszy proces wygrywa
+- Po crashu Vercel: lock auto-wygasa, zero stuck locks
+
+**Retencja OFF dla HTG2**:
+- Nowe rekordy HTG2: `expires_at = NULL` → retention query nie matchuje → nic nie jest kasowane
+- Cron Sections 2/3/4/5 są **no-op** dla HTG2 (brak polling, brak retention expiry, brak orphan GC, brak R2 cleanup)
+- R2 działa jako permanentna druga kopia obok Bunny Storage
+- Section 7 (stuck egress) zostaje — tylko flaguje jako `failed`, nie usuwa
+
+**Auth matrix — recording-status + retry-recording** (`lib/live/recording-auth.ts`):
+- `isAdminEmail()` (globalny admin) **LUB**
+- `isStaffEmail()` (Natalia/Agata/Justyna/Przemek) **LUB**
+- Asystent przypisany do slota — JOIN przez `staff_members.user_id === auth.users.id` (bo `booking_slots.assistant_id` to FK do `staff_members.id`, NIE `auth.users.id`)
+
+**Pre-existing fix — consent IDOR**:
+- `POST /api/live/consent` wcześniej zapisywał consent dla dowolnego `bookingId` bez sprawdzenia właściciela
+- Fix: weryfikacja `bookings.user_id === user.id OR booking_companions.user_id === user.id` przed zapisem (RODO)
+
+**Dlaczego Bunny Storage zamiast Stream** (pivot w PR #252):
+- HTG2 serwuje audio, nie wideo → HLS transcoding zbędny
+- Bunny Stream: multi-bitrate HLS variants = 10× koszt
+- Bunny Storage: raw MP4 = 1× koszt + prostsze (brak encoding step, brak polling)
+- Stream zostaje tylko dla legacy historycznych importów pre-HTG2
+
+**Env vars HTG2 recording pipeline**:
+- `BUNNY_BACKUP_STORAGE_ZONE=htg-backup-sessions` — storage zone (write side)
+- `BUNNY_BACKUP_STORAGE_API_KEY` — zone-specific password (FTP & API Access)
+- `BUNNY_BACKUP_STORAGE_HOSTNAME=storage.bunnycdn.com` (lub regionalny endpoint)
+- `BUNNY_HTG2_CDN_URL=https://htg-backup-sessions.b-cdn.net` — Pull Zone URL (read side)
+- `BUNNY_HTG2_CDN_TOKEN_KEY` — Pull Zone Token Auth key
+
+**Healthcheck**: `GET /api/admin/bunny-storage-check` — testuje env vars + upload + signed URL fetch + delete end-to-end bez czekania na sesję.
 
 ---
 
@@ -307,9 +400,12 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 ### Live Sessions
 - POST /api/live/token — LiveKit JWT
 - POST /api/live/create — utwórz room
-- POST /api/live/phase — zmiana fazy (+ egress start/stop)
+- POST /api/live/phase — zmiana fazy (+ egress start/stop, lease lock chroni przed race z consent)
 - POST /api/live/admit — wpuść klienta
-- POST /api/live/webhook — LiveKit egress events (atomowy update via RPC)
+- POST /api/live/consent — RODO consent z IDOR fix (booking ownership check) + lease lock przy starcie egressu
+- POST /api/live/webhook — LiveKit egress events: `matchEgressPhase` dla 3 faz + warunkowy UPSERT + RETRY-SAFE egress_ended (lookup po booking_recordings.egress_id)
+- GET /api/live/recording-status — real-time status egress (admin/staff/asystent przez staff_members JOIN; grace period 20s; status: active/pending/error/unknown)
+- POST /api/live/retry-recording — manual retry (idempotent + RODO consent re-check + restart composite + track egresses + DB cooldown 60s + audit log)
 
 ### Publikacja
 - GET/PATCH /api/publikacja/sessions — lista + update
@@ -322,6 +418,8 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 ### Admin
 - GET/POST /api/admin/staff — lista prowadzących
 - PATCH /api/admin/flags — resolve flag, block/unblock user
+- GET /api/admin/bunny-storage-check — healthcheck Bunny Storage pipeline (env vars + upload + signed URL fetch + delete, end-to-end)
+- POST /api/admin/import-recording — import archiwalnych nagrań z Bunny Storage do bazy
 
 ### Sharing & Favorites
 - POST /api/sharing/configure — ustaw tryb udostępniania
@@ -620,7 +718,7 @@ Kanał `'portal'` w istniejącym Communication Hub. Klient pisze krótkie wiadom
 
 ---
 
-## Env vars (22)
+## Env vars (30+)
 
 | Zmienna | Serwis |
 |---------|--------|
@@ -630,13 +728,24 @@ Kanał `'portal'` w istniejącym Communication Hub. Klient pisze krótkie wiadom
 | STRIPE_SECRET_KEY | Stripe (sk_live_) |
 | STRIPE_WEBHOOK_SECRET | Stripe (whsec_) |
 | NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY | Stripe (pk_live_) |
-| BUNNY_TOKEN_KEY | Bunny Stream |
-| BUNNY_API_KEY | Bunny Stream |
-| BUNNY_LIBRARY_ID | Bunny Stream |
-| BUNNY_STORAGE_API_KEY | Bunny Storage |
+| BUNNY_TOKEN_KEY | Bunny Stream (legacy HTG) |
+| BUNNY_API_KEY | Bunny Stream (legacy HTG) |
+| BUNNY_LIBRARY_ID | Bunny Stream (legacy HTG library) |
+| BUNNY_STORAGE_API_KEY | Bunny Storage `htg2` zone (publikacje, assety) |
 | BUNNY_STORAGE_HOSTNAME | Bunny Storage |
-| BUNNY_STORAGE_ZONE | Bunny Storage |
-| NEXT_PUBLIC_BUNNY_CDN_URL | Bunny CDN |
+| BUNNY_STORAGE_ZONE | Bunny Storage `htg2` zone |
+| NEXT_PUBLIC_BUNNY_CDN_URL | Bunny CDN (`htg2-cdn.b-cdn.net`, publiczne assety) |
+| BUNNY_PRIVATE_CDN_URL | Bunny CDN (`htg-private.b-cdn.net`, archiwalne importy) |
+| BUNNY_PRIVATE_TOKEN_KEY | Bunny Pull Zone Token Auth (archiwalne importy) |
+| **BUNNY_BACKUP_STORAGE_ZONE** | **HTG2 recording storage zone** (`htg-backup-sessions`) |
+| **BUNNY_BACKUP_STORAGE_API_KEY** | **HTG2 storage zone password** (FTP & API Access) |
+| **BUNNY_BACKUP_STORAGE_HOSTNAME** | **Bunny Storage endpoint** (`storage.bunnycdn.com` lub regionalny) |
+| **BUNNY_HTG2_CDN_URL** | **HTG2 Pull Zone URL** (`https://htg-backup-sessions.b-cdn.net`) |
+| **BUNNY_HTG2_CDN_TOKEN_KEY** | **HTG2 Pull Zone Token Auth key** (Security panel) |
+| R2_ACCESS_KEY | Cloudflare R2 (LiveKit egress destination) |
+| R2_SECRET_KEY | Cloudflare R2 |
+| R2_ENDPOINT | Cloudflare R2 |
+| R2_BUCKET | Cloudflare R2 bucket name (`htg-rec`) |
 | LIVEKIT_URL | LiveKit Cloud |
 | LIVEKIT_API_KEY | LiveKit |
 | LIVEKIT_API_SECRET | LiveKit |

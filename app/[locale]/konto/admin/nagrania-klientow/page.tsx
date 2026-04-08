@@ -74,7 +74,7 @@ export default async function AdminRecordingsPage({
     .from('booking_recordings')
     .select(`
       id, title, session_type, session_date, status, duration_seconds,
-      source, import_confidence, legal_hold, metadata, recording_phase, backup_status,
+      source, import_confidence, legal_hold, metadata, recording_phase, backup_status, backup_storage_path,
       booking_recording_access(user_id, revoked_at)
     `, { count: 'exact' })
     .order('session_date', { ascending: false, nullsFirst: false })
@@ -230,6 +230,7 @@ export default async function AdminRecordingsPage({
               const phase = (rec.recording_phase as string | null) ?? 'sesja';
               const isNonSesja = phase !== 'sesja';
               const backupStatus = (rec as Record<string, unknown>).backup_status as string | null;
+              const backupStoragePath = (rec as Record<string, unknown>).backup_storage_path as string | null;
 
               return (
                 <tr key={rec.id} className="border-b border-htg-card-border/50 hover:bg-htg-surface/50 transition-colors group">
@@ -258,8 +259,12 @@ export default async function AdminRecordingsPage({
                         {PHASE_BADGE_LABELS[phase] ?? phase}
                       </span>
                       {phase === 'sesja' && backupStatus && (
-                        <span className={`text-[9px] ${backupStatus === 'ready' ? 'text-green-400' : backupStatus === 'failed' ? 'text-red-400' : 'text-htg-fg-muted'}`}>
+                        <span
+                          className={`text-[9px] ${backupStatus === 'ready' ? 'text-green-400' : backupStatus === 'failed' ? 'text-red-400' : 'text-htg-fg-muted'}`}
+                          title={backupStoragePath ?? undefined}
+                        >
                           Backup: {backupStatus}
+                          {backupStoragePath && backupStatus === 'ready' ? ' ✓' : ''}
                         </span>
                       )}
                     </div>

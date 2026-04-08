@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // 2. Recording details (fetched FIRST so we can check recording_phase before access check)
     const { data: recording } = await db
       .from('booking_recordings')
-      .select('bunny_video_id, bunny_library_id, backup_bunny_video_id, backup_bunny_library_id, backup_status, source_url, status, expires_at, session_type, session_date, legal_hold, duration_seconds, recording_phase')
+      .select('bunny_video_id, bunny_library_id, source_url, status, expires_at, session_type, session_date, legal_hold, duration_seconds, recording_phase')
       .eq('id', recordingId)
       .single();
 
@@ -122,11 +122,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Status check — primary OR backup must be ready (hot failover)
-    const backupStatus = (recording as Record<string, unknown>).backup_status as string | null;
-    const primaryReady = recording.status === 'ready';
-    const backupReady = backupStatus === 'ready';
-    if (!primaryReady && !backupReady) {
+    // 5. Status check
+    // Note: backup is in Bunny Storage (warm DR, not hot replica). No automatic
+    // failover here — if primary fails, admin manually recovers from Bunny panel.
+    if (recording.status !== 'ready') {
       return NextResponse.json({
         allowed: false,
         title: recording.status === 'expired' ? 'Nagranie wygasło' : 'Nagranie w przygotowaniu',
@@ -163,13 +162,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Check recording availability — supports both Bunny Stream (HLS) and Storage (direct file)
-    // Hot failover: if primary is not ready but backup is, use backup video.
-    const backupVideoId = (recording as Record<string, unknown>).backup_bunny_video_id as string | null;
-    const backupLibraryId = (recording as Record<string, unknown>).backup_bunny_library_id as string | null;
-    const usePrimary = primaryReady && recording.bunny_video_id && recording.bunny_library_id;
-    const useBackup = !usePrimary && backupReady && backupVideoId && backupLibraryId;
-
-    const hasStreamVideo = !!(usePrimary || useBackup);
+    const hasStreamVideo = recording.bunny_video_id && recording.bunny_library_id;
     const hasStorageFile = recording.source_url;
 
     if (!hasStreamVideo && !hasStorageFile) {
@@ -217,11 +210,8 @@ export async function POST(request: NextRequest) {
     // 10. Sign URL — Bunny Stream (HLS) or Private CDN (direct file)
     let url: string;
     let deliveryType: 'hls' | 'direct';
-    if (usePrimary) {
+    if (hasStreamVideo) {
       url = signBunnyUrl(recording.bunny_video_id!, recording.bunny_library_id!, tokenTtl);
-      deliveryType = 'hls';
-    } else if (useBackup) {
-      url = signBunnyUrl(backupVideoId!, backupLibraryId!, tokenTtl);
       deliveryType = 'hls';
     } else {
       url = signPrivateCdnUrl(recording.source_url!, tokenTtl);

@@ -101,6 +101,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li><strong>Prowadząca</strong> — Natalia, osoba prowadząca każdą Sesję HTG z wykorzystaniem autorskiej metodyki.</li>
             <li><strong>Operator/ka sesji</strong> — osoba asystująca Prowadzącej podczas Sesji HTG. Uczestnik może wskazać preferowaną Operatorkę przy rezerwacji lub pozostawić wybór Zespołowi HTG.</li>
             <li><strong>Sesja HTG</strong> — jednorazowe, około 90-minutowe spotkanie o&nbsp;charakterze rozwoju osobistego, prowadzone przez Prowadzącą samodzielnie lub w&nbsp;asyście Operatora/ki sesji, z&nbsp;wykorzystaniem autorskiej metodyki HTG. Co do zasady Sesja HTG odbywa się online; w&nbsp;szczególnych przypadkach może odbyć się na żywo (stacjonarnie) — szczegóły w&nbsp;pkt&nbsp;2.</li>
+            <li><strong>Spotkanie</strong> — organizowane online spotkanie dla kilku lub kilkunastu osób, o&nbsp;charakterze wymiany poglądów i&nbsp;pogłębiania świadomości, prowadzone przez Zespół HTG. Szczegóły w&nbsp;pkt&nbsp;2.</li>
             <li><strong>Uczestnik</strong> — osoba fizyczna (pełnoletnia), która zawiera z nami umowę na Sesję HTG. Osoby w wieku 16–17 lat mogą uczestniczyć wyłącznie po dostarczeniu pisemnego oświadczenia rodzica lub opiekuna prawnego na adres htg@htg.cyou przed rozpoczęciem sesji. Oświadczenie musi zawierać zgodę na udział oraz potwierdzenie, że opiekun rozumie niekonwencjonalny charakter pracy HTG i bierze odpowiedzialność za proces rozwojowy podopiecznego. Operator zastrzega sobie prawo do indywidualnej oceny możliwości realizacji sesji z osobą niepełnoletnią, z uwzględnieniem charakteru tematu i dobra uczestnika. Sesja osoby niepełnoletniej odbywa się bez obecności opiekuna, chyba że strony ustalą inaczej.</li>
             <li><strong>Zainteresowany</strong> — osoba, która złożyła zapytanie o&nbsp;Sesję HTG za pośrednictwem htgcyou.com, ale której rezerwacja nie została jeszcze zaakceptowana przez Zespół HTG. Z&nbsp;chwilą akceptacji Zainteresowany staje się Uczestnikiem.</li>
             <li><strong>Subskrypcja</strong> — dostęp do biblioteki nagrań sesji HTG w panelu klienta na htgcyou.com. Dostępne warianty: pojedyncza sesja, pakiet miesięczny lub pakiet roczny. Szczegóły w pkt&nbsp;3.</li>
@@ -170,6 +171,20 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             Decyzja o&nbsp;dopuszczeniu do sesji na żywo należy wyłącznie do Zespołu HTG
             i&nbsp;nie wymaga uzasadnienia. Miejsce, termin oraz ewentualne dodatkowe warunki
             organizacyjne sesji na żywo ustalane są indywidualnie.
+          </P>
+
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Spotkania</h3>
+          <P>
+            Obok Sesji HTG Zespół HTG organizuje <strong>Spotkania</strong> — online,
+            dla kilku lub kilkunastu Uczestników, o&nbsp;charakterze wymiany poglądów
+            i&nbsp;pogłębiania świadomości. Spotkania mają charakter otwartej rozmowy —
+            każdy Uczestnik dzieli się swoimi doświadczeniami i&nbsp;spostrzeżeniami
+            w&nbsp;atmosferze wzajemnego szacunku.
+          </P>
+          <P>
+            Udział w&nbsp;Spotkaniu rezerwujesz na htgcyou.com w&nbsp;tym samym trybie
+            co Sesję HTG (zapytanie → akceptacja → umowa). Charakter grupowy oznacza,
+            że Twoje wypowiedzi będą słyszane i&nbsp;widziane przez innych Uczestników.
           </P>
         </Section>
 
@@ -361,6 +376,27 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             prawnych w przypadku naruszenia naszych dóbr osobistych i praw autorskich.
           </P>
 
+          <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Nagrania Spotkań</h3>
+          <P>
+            Spotkania HTG są nagrywane w&nbsp;formie audio. W&nbsp;szczególnych przypadkach
+            również w&nbsp;formie wideo. Nagrywanie stanowi integralną część usługi —
+            Administrator Serwisu rozpowszechnia nagrania Spotkań wraz z&nbsp;ich tłumaczeniami
+            (w&nbsp;panelu klienta, w&nbsp;ramach subskrypcji biblioteki nagrań lub jako zakup jednorazowy).
+          </P>
+          <Info>
+            <strong>Przy rezerwacji Spotkania poprosimy Cię o&nbsp;potwierdzenie osobnym checkboxem:</strong>
+            „Rozumiem, że Spotkanie jest nagrywane, a&nbsp;nagranie wraz z&nbsp;tłumaczeniem może być
+            rozpowszechniane przez Administratora Serwisu jako część biblioteki nagrań HTG.
+            Mój wizerunek, głos oraz wypowiedzi utrwalone podczas spotkania mogą zostać wykorzystane
+            w&nbsp;tym celu." Ta zgoda jest warunkiem udziału w&nbsp;Spotkaniu.
+          </Info>
+          <P>
+            Ze względu na grupowy charakter Spotkania oraz prawa pozostałych Uczestników,
+            <strong> nie jest możliwe selektywne usunięcie Twoich wypowiedzi z&nbsp;nagrania</strong> po jego
+            rejestracji — Twoje wypowiedzi są nierozerwalnie powiązane z&nbsp;rozmową pozostałych osób.
+            Jeśli nie akceptujesz tego warunku, prosimy o&nbsp;nieuczestniczenie w&nbsp;Spotkaniu.
+          </P>
+
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Nasza odpowiedzialność za poufność</h3>
           <P>
             Zespół HTG traktuje treść każdej sesji jako poufną. Informacje, które nam powierzasz,
@@ -403,6 +439,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
             <li>Publikacja w internecie, w tym na stronach www, w mediach społecznościowych i na platformach wideo (YouTube, Vimeo itp.).</li>
             <li>Wykorzystanie w materiałach edukacyjnych, szkoleniowych i informacyjnych.</li>
             <li>Tworzenie kompilacji, montaży i materiałów promocyjnych.</li>
+            <li>Rozpowszechnianie nagrań Spotkań HTG wraz z&nbsp;ich tłumaczeniami na inne języki, w&nbsp;ramach subskrypcji biblioteki nagrań lub jako zakup jednorazowy.</li>
           </UL>
 
           <h3 className="text-lg font-serif font-medium text-htg-fg mt-6 mb-3">Ochrona metodyki HTG</h3>

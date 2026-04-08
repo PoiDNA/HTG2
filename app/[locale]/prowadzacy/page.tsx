@@ -8,6 +8,7 @@ import InitiateCallModal from '@/components/quick-call/InitiateCallModal';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 import CreateRoomButton from '@/components/staff/CreateRoomButton';
+import OperatorTermsBanner from '@/components/staff/OperatorTermsBanner';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -126,6 +127,9 @@ export default async function StaffDashboard({
         </div>
         <InitiateCallModal locale={locale} />
       </div>
+
+      {/* Operator regulamin acceptance banner — disappears once accepted */}
+      <OperatorTermsBanner />
 
       {/* Active calls widget */}
       <ActiveCallsWidget locale={locale} />

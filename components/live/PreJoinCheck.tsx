@@ -17,6 +17,7 @@ export default function PreJoinCheck({ onReady, bookingId, sessionType }: PreJoi
   const [errorMsg, setErrorMsg] = useState('');
   const [consentRecording, setConsentRecording] = useState(false);
   const [consentSubmitting, setConsentSubmitting] = useState(false);
+  const [consentError, setConsentError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animRef = useRef<number>(0);
@@ -236,27 +237,55 @@ export default function PreJoinCheck({ onReady, bookingId, sessionType }: PreJoi
             </div>
           )}
 
+          {consentError && (
+            <div className="bg-red-900/30 border border-red-500/40 rounded-lg p-3">
+              <p className="text-red-200 text-xs leading-relaxed">
+                {consentError}
+              </p>
+            </div>
+          )}
+
           {allTested && (
             <button
               disabled={consentSubmitting}
               onClick={async () => {
-                cancelAnimationFrame(animRef.current);
-                streamRef.current?.getTracks().forEach(t => t.stop());
-
-                // Submit consent if checked
+                // Submit consent if checked — fail-closed: if POST fails, show error
+                // and DO NOT proceed to onReady(). Previously the fetch error was
+                // silently swallowed (console.warn) and the user proceeded without
+                // consent being recorded — RODO violation.
                 if (consentRecording && bookingId) {
                   setConsentSubmitting(true);
+                  setConsentError('');
                   try {
-                    await fetch('/api/live/consent', {
+                    const res = await fetch('/api/live/consent', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ bookingId }),
                     });
+                    if (!res.ok) {
+                      const data = await res.json().catch(() => ({}));
+                      setConsentError(
+                        `Nie udało się zapisać zgody (${res.status}): ${
+                          data?.error ?? 'spróbuj ponownie za chwilę'
+                        }`,
+                      );
+                      setConsentSubmitting(false);
+                      return;  // fail-closed: don't proceed
+                    }
                   } catch (e) {
+                    setConsentError(
+                      'Brak połączenia z serwerem — sprawdź Internet i spróbuj ponownie.',
+                    );
                     console.warn('Consent submit failed:', e);
+                    setConsentSubmitting(false);
+                    return;  // fail-closed
                   }
                   setConsentSubmitting(false);
                 }
+
+                // Stop media only after consent was successfully recorded (or skipped)
+                cancelAnimationFrame(animRef.current);
+                streamRef.current?.getTracks().forEach(t => t.stop());
 
                 onReady();
               }}

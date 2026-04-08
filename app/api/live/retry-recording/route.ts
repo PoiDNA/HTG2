@@ -105,14 +105,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
-    // Required consent count: 1 for solo, 1 + companions for para
+    // Required consent count: 1 for solo, 1 + companions for para.
+    // Schema: booking_companions uses `accepted_at` (timestamp) — see migration 020.
+    // There is NO status column; a previous version filtered by one and silently
+    // counted zero companions, making retry succeed with incomplete consent for
+    // para sessions (regression vs check_recording_consent RPC which correctly
+    // requires 2 consents for para).
     let requiredCount = 1;
     if (booking.session_type === 'natalia_para') {
       const { count } = await db
         .from('booking_companions')
         .select('id', { count: 'exact', head: true })
         .eq('booking_id', session.booking_id)
-        .eq('status', 'accepted');
+        .not('accepted_at', 'is', null);
       requiredCount = 1 + (count ?? 0);
     }
 

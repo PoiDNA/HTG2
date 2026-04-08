@@ -82,7 +82,7 @@ export default function WaitingRoom({ bookingId, liveSessionId, onAdmitted }: Wa
 
       {!deviceChecked ? (
         <div className="relative z-10 flex-1 flex items-center justify-center">
-          <PreJoinCheck onReady={() => setDeviceChecked(true)} />
+          <PreJoinCheck bookingId={bookingId} onReady={() => setDeviceChecked(true)} />
         </div>
       ) : (
         <div className="relative z-10 flex flex-col items-center w-full max-w-lg px-4 pt-20 pb-8 gap-6">

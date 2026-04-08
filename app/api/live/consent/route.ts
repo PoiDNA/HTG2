@@ -45,13 +45,16 @@ export async function POST(request: NextRequest) {
     let isAuthorized = bookingOwner.user_id === user.id;
 
     if (!isAuthorized) {
-      // Check accepted companion (para session)
+      // Check accepted companion (para session).
+      // Schema: booking_companions has `accepted_at TIMESTAMPTZ` (see migration 020).
+      // There is NO status column — a previous version filtered by a non-existent
+      // column and silently returned null, blocking para partners from consent.
       const { data: companion } = await db
         .from('booking_companions')
         .select('id')
         .eq('booking_id', bookingId)
         .eq('user_id', user.id)
-        .eq('status', 'accepted')
+        .not('accepted_at', 'is', null)
         .maybeSingle();
       isAuthorized = !!companion;
     }

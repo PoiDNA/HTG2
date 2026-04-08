@@ -222,9 +222,14 @@ export default function PreJoinCheck({ onReady, bookingId, sessionType }: PreJoi
                   className="mt-0.5 w-4 h-4 rounded accent-htg-sage"
                 />
                 <span className="text-white/80 text-xs leading-relaxed">
-                  Wyrażam zgodę na nagranie sesji, abym mógł/mogła wracać do niej
-                  w mojej prywatnej bibliotece (dostęp do 12 miesięcy).
-                  Ze względów bezpieczeństwa zastrzegamy sobie prawo do skrócenia tego czasu.
+                  Wyrażam zgodę na nagranie wszystkich trzech faz mojego spotkania
+                  HTG (Wstęp, Sesja, Podsumowanie) oraz na wspomaganą AI analizę
+                  transkrypcji (podprocesorzy: OpenAI Whisper, Anthropic Claude)
+                  w celu wsparcia prowadzącej. Zapis będzie dostępny w mojej
+                  prywatnej bibliotece przez do 12 miesięcy. Rozumiem, że treści
+                  mogą dotyczyć mojego zdrowia (RODO art. 9) i w każdej chwili
+                  mogę wycofać zgodę — wtedy nagranie oraz wygenerowane insights
+                  zostaną trwale usunięte.
                 </span>
               </label>
               {isPara && (

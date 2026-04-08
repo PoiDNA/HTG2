@@ -4,10 +4,17 @@ import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isStaffEmail } from '@/lib/roles';
+import { signPrivateCdnUrl } from '@/lib/bunny';
 import RecordingsPair from '@/components/live/RecordingsPair';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 import { Video } from 'lucide-react';
+
+// TTL for server-side signed playback URLs (4 hours = 14400s).
+// Matches signPrivateCdnUrl default and booking_recordings convention.
+// Long enough that a user keeping the page open through a normal session
+// won't hit a 403, short enough that a leaked URL expires quickly.
+const PLAYBACK_TTL_SECONDS = 14400;
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -24,13 +31,15 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
 
   const staff = !isImpersonating && user ? isStaffEmail(user.email ?? '') : false;
 
-  // Fetch recordings
+  // Fetch recordings. Soft-deleted rows (deleted_at IS NOT NULL) are filtered
+  // out for everyone — admin restore is a separate future flow.
   let recordings: any[] = [];
   if (staff) {
     // Staff see all recordings
     const { data } = await admin
       .from('client_recordings')
       .select('*, booking:bookings(session_type, slot:booking_slots(slot_date, start_time))')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(100);
     recordings = data || [];
@@ -40,10 +49,21 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
       .from('client_recordings')
       .select('*, booking:bookings(session_type, slot:booking_slots(slot_date, start_time))')
       .eq('user_id', userId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(50);
     recordings = data || [];
   }
+
+  // Sign playback URLs server-side via signPrivateCdnUrl with 4h TTL.
+  // storage_url is now a path-only string (e.g. "client-recordings/<uid>/<bid>/<file>.webm")
+  // pointing into the htg2 storage zone, served via the private htg-private.b-cdn.net
+  // pull zone with token authentication. Each card in RecordingsPair receives a freshly
+  // signed playback_url at SSR time — no client-side token roundtrip needed.
+  recordings = recordings.map(rec => ({
+    ...rec,
+    playback_url: signPrivateCdnUrl(rec.storage_url, PLAYBACK_TTL_SECONDS),
+  }));
 
   // Fetch profile names for staff view
   const userIds = [...new Set(recordings.map(r => r.user_id))];
@@ -98,7 +118,7 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
                   {SESSION_CONFIG[meta.sessionType as SessionType]?.labelShort || meta.sessionType}
                 </span>
               </div>
-              <RecordingsPair before={before} after={after} />
+              <RecordingsPair before={before} after={after} isOwner={!staff} />
             </div>
           ))}
         </div>

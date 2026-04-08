@@ -1,13 +1,18 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
-import { Video, Mic, Lock } from 'lucide-react';
+import { useRef, useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Video, Mic, Lock, Trash2, Loader2 } from 'lucide-react';
 
 interface Recording {
   id: string;
   type: 'before' | 'after';
   format: 'video' | 'audio';
-  storage_url: string;
+  // playback_url is signed server-side (4h TTL via signPrivateCdnUrl with
+  // BUNNY_PRIVATE_TOKEN_KEY against htg-private.b-cdn.net pull zone). The
+  // raw `storage_url` from DB is just the path within the htg2 storage zone,
+  // e.g. "client-recordings/<uid>/<bid>/<file>.webm".
+  playback_url: string;
   duration_seconds: number;
   sharing_mode: string;
   created_at: string;
@@ -18,6 +23,9 @@ interface RecordingsPairProps {
   after?: Recording;
   clientName?: string;
   sessionDate?: string;
+  // True when the viewer is the owner of these recordings (not staff
+  // viewing as admin). Controls delete button visibility.
+  isOwner?: boolean;
 }
 
 // Informational labels only — showing the current sharing mode as a static badge.
@@ -30,12 +38,16 @@ const SHARING_LABELS: Record<string, { icon: typeof Lock; label: string }> = {
   private: { icon: Lock, label: 'Prywatne' },
 };
 
-function RecordingCard({ recording, label }: {
+function RecordingCard({ recording, label, isOwner }: {
   recording: Recording | undefined;
   label: string;
+  isOwner?: boolean;
 }) {
+  const router = useRouter();
   const eventIdRef = useRef<string | null>(null);
   const startTimeRef = useRef<number>(0);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handlePlay = useCallback(() => {
     if (!recording) return;
@@ -58,6 +70,30 @@ function RecordingCard({ recording, label }: {
       body: JSON.stringify({ action: 'stop', eventId, durationSeconds: duration }),
     }).catch(() => {});
   }, []);
+
+  const handleDelete = useCallback(async () => {
+    if (!recording || deleting) return;
+    if (!confirm(`Na pewno chcesz usunąć nagranie ${label.toLowerCase()}? Operacji nie można cofnąć po 14 dniach.`)) {
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/live/client-recording/${recording.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Nie udało się usunąć nagrania');
+      }
+      // Refresh the server component to drop the deleted row from the list.
+      router.refresh();
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Błąd usuwania');
+      setDeleting(false);
+    }
+  }, [recording, deleting, label, router]);
+
   if (!recording) {
     return (
       <div className="flex-1 bg-htg-surface/50 border border-htg-card-border rounded-xl p-4 flex items-center justify-center min-h-[120px]">
@@ -79,7 +115,7 @@ function RecordingCard({ recording, label }: {
       <div className="relative bg-black">
         {recording.format === 'video' ? (
           <video
-            src={recording.storage_url}
+            src={recording.playback_url}
             controls
             playsInline
             controlsList="nodownload"
@@ -91,7 +127,7 @@ function RecordingCard({ recording, label }: {
         ) : (
           <div className="p-6 flex items-center justify-center">
             <audio
-              src={recording.storage_url}
+              src={recording.playback_url}
               controls
               controlsList="nodownload"
               className="w-full"
@@ -115,6 +151,30 @@ function RecordingCard({ recording, label }: {
             {sharing.label}
           </span>
         </div>
+
+        {isOwner && (
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs bg-htg-surface text-htg-fg-muted hover:text-red-400 hover:bg-red-950/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Usuń nagranie (z 14-dniowym okresem przywracania)"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" /> Usuwanie...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-3 h-3" /> Usuń
+                </>
+              )}
+            </button>
+            {deleteError && (
+              <p className="text-xs text-red-400 text-center">{deleteError}</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -125,6 +185,7 @@ export default function RecordingsPair({
   after,
   clientName,
   sessionDate,
+  isOwner,
 }: RecordingsPairProps) {
   return (
     <div className="space-y-2">
@@ -135,8 +196,8 @@ export default function RecordingsPair({
         </div>
       )}
       <div className="flex gap-3 flex-col sm:flex-row">
-        <RecordingCard recording={before} label="Przed sesją" />
-        <RecordingCard recording={after} label="Po sesji" />
+        <RecordingCard recording={before} label="Przed sesją" isOwner={isOwner} />
+        <RecordingCard recording={after} label="Po sesji" isOwner={isOwner} />
       </div>
     </div>
   );

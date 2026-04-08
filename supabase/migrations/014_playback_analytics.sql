@@ -1,6 +1,24 @@
 -- ============================================================
 -- 014: Playback Analytics — retention graphs + recording plays
 -- ============================================================
+--
+-- BACKFILL NOTE (added 2026-04-08 in PR for Faza 4.A):
+-- This migration originally referenced public.client_recordings in a FK
+-- constraint below (recording_play_events.recording_id), but the
+-- client_recordings table was never defined in any repo migration — it was
+-- created out-of-band directly on production. On fresh local resets this
+-- migration failed with "relation public.client_recordings does not exist".
+--
+-- The stub below creates a minimal placeholder so the FK reference resolves.
+-- On production it's a no-op (IF NOT EXISTS). Migration
+-- 049_client_recordings_canonical.sql then drops this stub (via CASCADE) and
+-- recreates client_recordings with its full canonical schema.
+--
+-- This edit is intentionally additive and idempotent — it preserves the
+-- original migration chain without breaking the applied-on-prod version.
+CREATE TABLE IF NOT EXISTS public.client_recordings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+);
 
 -- Position heartbeats: record where in the video the user is every 30s
 -- Used to build YouTube-like retention/engagement graphs

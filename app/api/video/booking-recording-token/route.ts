@@ -4,6 +4,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { signBunnyUrl, signPrivateCdnUrl, signHtg2StorageUrl } from '@/lib/bunny';
 import { isAdminEmail } from '@/lib/roles';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
+import { resolveStaffPlaybackScope, isSessionTypeInScope } from '@/lib/admin/require-playback-actor';
 
 /**
  * POST /api/video/booking-recording-token
@@ -72,6 +73,11 @@ export async function POST(request: NextRequest) {
     const recordingPhase = (recording as Record<string, unknown>).recording_phase as string | null;
     const isNonSesja = recordingPhase && recordingPhase !== 'sesja';
 
+    // Staff/admin bypass scope resolution.
+    // Impersonation DISABLES bypass: admin impersonating a client acts as that client
+    // and goes through the normal access check on effectiveUserId. Intentional.
+    const scope = impersonateId ? null : await resolveStaffPlaybackScope(user, db);
+
     // 3. Phase guard: non-sesja recordings (wstep/podsumowanie) are admin-only.
     // Direct admin (without impersonation) can access; impersonating admin acts as client.
     const isDirectAdmin = isAdminEmail(user.email ?? '') && !impersonateId;
@@ -85,34 +91,43 @@ export async function POST(request: NextRequest) {
       }
       // Direct admin: skip access check entirely (admin-only material has no access rows)
     } else {
-      // 4. Access check (sesja only)
-      const { data: access } = await db
-        .from('booking_recording_access')
-        .select('id, revoked_at')
-        .eq('recording_id', recordingId)
-        .eq('user_id', effectiveUserId)
-        .maybeSingle();
+      // 4. Access check (sesja only) — staff/admin in scope bypass the access-row requirement
+      const hasStaffBypass = isSessionTypeInScope(scope, recording.session_type);
 
-      if (!access || access.revoked_at) {
-        return NextResponse.json({
-          allowed: false,
-          title: 'Brak dostępu',
-          message: 'Nie masz dostępu do tego nagrania.',
-        });
+      if (!hasStaffBypass) {
+        const { data: access } = await db
+          .from('booking_recording_access')
+          .select('id, revoked_at')
+          .eq('recording_id', recordingId)
+          .eq('user_id', effectiveUserId)
+          .maybeSingle();
+
+        if (!access || access.revoked_at) {
+          return NextResponse.json({
+            allowed: false,
+            title: 'Brak dostępu',
+            message: 'Nie masz dostępu do tego nagrania.',
+          });
+        }
       }
     }
 
-    // 4. Para: ANY revoked → block ALL parties
+    // 4. Para: PARTNER-initiated revoke blocks ALL parties (including admin/staff preview).
+    // Filter by granted_reason so admin-initiated removes of preset share rows
+    // (granted_reason='admin_grant') don't trigger the para lockout.
+    // 'booking_client' + 'companion' are the partner consent relationships.
+    // 'import_match' and 'admin_grant' revokes are NOT partner consent events.
     if (recording.session_type === 'natalia_para') {
-      const { data: anyRevoked } = await db
+      const { data: partnerRevoked } = await db
         .from('booking_recording_access')
         .select('id')
         .eq('recording_id', recordingId)
         .not('revoked_at', 'is', null)
+        .in('granted_reason', ['booking_client', 'companion'])
         .limit(1)
         .maybeSingle();
 
-      if (anyRevoked) {
+      if (partnerRevoked) {
         return NextResponse.json({
           allowed: false,
           title: 'Nagranie niedostępne',

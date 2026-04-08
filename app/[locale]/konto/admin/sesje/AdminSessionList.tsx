@@ -1,10 +1,22 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Calendar, CheckCircle, Download, ExternalLink, Plus, X, Loader2, UserCheck } from 'lucide-react';
+import { Search, Calendar, CheckCircle, Download, ExternalLink, Plus, X, Loader2, UserCheck, UserPlus } from 'lucide-react';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
+import RowSessionPlayer from '@/components/recordings/RowSessionPlayer';
+import AssignRecordingModal from '@/components/recordings/AssignRecordingModal';
+
+const SessionReviewPlayer = dynamic(() => import('@/components/session-review/SessionReviewPlayer'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full aspect-video bg-black flex items-center justify-center">
+      <Loader2 className="w-6 h-6 text-white/50 animate-spin" />
+    </div>
+  ),
+});
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
@@ -266,10 +278,14 @@ export default function AdminSessionList({
   bookings,
   todayStr,
   locale,
+  adminUserEmail,
+  adminUserId,
 }: {
   bookings: any[];
   todayStr: string;
   locale: string;
+  adminUserEmail: string;
+  adminUserId: string;
 }) {
   const router = useRouter();
   const [typeTab, setTypeTab] = useState<TypeKey>('all');
@@ -278,6 +294,8 @@ export default function AdminSessionList({
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [expandedRecordingId, setExpandedRecordingId] = useState<string | null>(null);
+  const [assignModalForRecordingId, setAssignModalForRecordingId] = useState<string | null>(null);
 
   const q = search.toLowerCase().trim();
 
@@ -458,41 +476,74 @@ tr:nth-child(even){background:#f9f9f9}
             const isToday = slot?.slot_date === todayStr;
             const ps = PAYMENT_STATUS_BADGE[b.payment_status] || { label: '—', className: 'bg-htg-surface text-htg-fg-muted' };
 
+            const hasRecording = statusTab === 'past' && !!b.readySesjaRecordingId;
+            const isExpanded = expandedRecordingId === b.readySesjaRecordingId;
+
             return (
-              <div key={b.id}
-                className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
-                  isToday && statusTab === 'upcoming'
-                    ? 'bg-htg-sage/5 border-htg-sage/30'
-                    : 'bg-htg-card border-htg-card-border'
-                } ${statusTab === 'past' ? 'opacity-70' : ''}`}>
-                <Link href={`/${locale}/konto/admin/sesje/${b.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {isToday && statusTab === 'upcoming' && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
+              <div key={b.id}>
+                <div
+                  className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+                    isToday && statusTab === 'upcoming'
+                      ? 'bg-htg-sage/5 border-htg-sage/30'
+                      : 'bg-htg-card border-htg-card-border'
+                  } ${statusTab === 'past' ? 'opacity-70' : ''}`}
+                >
+                  <Link href={`/${locale}/konto/admin/sesje/${b.id}`} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {isToday && statusTab === 'upcoming' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
+                      )}
+                      <span className="text-xs text-htg-fg-muted font-normal">{getDayShort(slot?.slot_date)}</span>
+                      <span className="font-bold text-htg-fg">{slot?.slot_date || '—'}</span>
+                      <span className="text-htg-fg">{slot?.start_time?.slice(0, 5) || ''}</span>
+                      {typeTab === 'all' && <TypeBadge type={b.session_type} />}
+                    </div>
+                    <p className="text-sm text-htg-fg-muted mt-0.5">
+                      {client?.display_name || client?.email || '—'}
+                      {client?.email && client?.display_name && (
+                        <span className="text-xs ml-1 opacity-60">{client.email}</span>
+                      )}
+                    </p>
+                    {b.topics && statusTab === 'upcoming' && (
+                      <p className="text-xs text-htg-fg-muted mt-0.5 line-clamp-1">📝 {b.topics}</p>
                     )}
-                    <span className="text-xs text-htg-fg-muted font-normal">{getDayShort(slot?.slot_date)}</span>
-                    <span className="font-bold text-htg-fg">{slot?.slot_date || '—'}</span>
-                    <span className="text-htg-fg">{slot?.start_time?.slice(0, 5) || ''}</span>
-                    {typeTab === 'all' && <TypeBadge type={b.session_type} />}
-                  </div>
-                  <p className="text-sm text-htg-fg-muted mt-0.5">
-                    {client?.display_name || client?.email || '—'}
-                    {client?.email && client?.display_name && (
-                      <span className="text-xs ml-1 opacity-60">{client.email}</span>
-                    )}
-                  </p>
-                  {b.topics && statusTab === 'upcoming' && (
-                    <p className="text-xs text-htg-fg-muted mt-0.5 line-clamp-1">📝 {b.topics}</p>
-                  )}
-                </Link>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
-                  <Link href={`/${locale}/konto/admin/uzytkownicy/${b.user_id}`}
-                    className="p-1.5 rounded-lg text-htg-fg-muted hover:text-htg-indigo hover:bg-htg-indigo/10 transition-colors"
-                    title="Profil klienta" onClick={e => e.stopPropagation()}>
-                    <ExternalLink className="w-4 h-4" />
                   </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
+                    {hasRecording && (
+                      <>
+                        <RowSessionPlayer
+                          isExpanded={isExpanded}
+                          onToggle={() => setExpandedRecordingId(prev => prev === b.readySesjaRecordingId ? null : b.readySesjaRecordingId)}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setAssignModalForRecordingId(b.readySesjaRecordingId); }}
+                          className="p-1.5 rounded-lg hover:bg-htg-surface transition-colors text-htg-fg-muted hover:text-htg-fg"
+                          title="Przydziel nagranie"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    <Link href={`/${locale}/konto/admin/uzytkownicy/${b.user_id}`}
+                      className="p-1.5 rounded-lg text-htg-fg-muted hover:text-htg-indigo hover:bg-htg-indigo/10 transition-colors"
+                      title="Profil klienta" onClick={e => e.stopPropagation()}>
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  </div>
                 </div>
+                {hasRecording && isExpanded && (
+                  <div className="mt-1 rounded-xl overflow-hidden border border-htg-card-border bg-black">
+                    <SessionReviewPlayer
+                      playbackId={b.readySesjaRecordingId}
+                      idFieldName="recordingId"
+                      userEmail={adminUserEmail}
+                      userId={adminUserId}
+                      tokenEndpoint="/api/video/booking-recording-token"
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -505,6 +556,15 @@ tr:nth-child(even){background:#f9f9f9}
           locale={locale}
           onCreated={() => router.refresh()}
           onClose={() => setShowCreate(false)}
+        />
+      )}
+
+      {/* Assign recording modal */}
+      {assignModalForRecordingId && (
+        <AssignRecordingModal
+          recordingId={assignModalForRecordingId}
+          onClose={() => setAssignModalForRecordingId(null)}
+          onFinalChange={() => router.refresh()}
         />
       )}
     </div>

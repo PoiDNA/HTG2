@@ -45,15 +45,23 @@ export default async function SessionDetailPage({
   }
   const canEditPayment = isPractitioner || isAdmin;
 
-  // Fetch booking
-  const { data: booking } = await admin
+  // Fetch booking with staff scope enforcement.
+  // Assistant (non-practitioner, non-admin) must be limited to their session_types,
+  // otherwise they can open any booking by UUID via URL (pre-existing IDOR).
+  let bookingQuery = admin
     .from('bookings')
     .select(`
       id, session_type, status, topics, user_id, payment_status, payment_comment, created_at,
       slot:booking_slots(slot_date, start_time, end_time)
     `)
-    .eq('id', id)
-    .single();
+    .eq('id', id);
+
+  if (!isPractitioner && !isAdmin) {
+    const allowedTypes = staffMember?.session_types || [];
+    bookingQuery = bookingQuery.in('session_type', allowedTypes);
+  }
+
+  const { data: booking } = await bookingQuery.maybeSingle();
 
   if (!booking) {
     return (

@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       .from('playback_positions')
       .select('position_seconds, total_duration_seconds')
       .eq('session_id', sessionId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
     await db.from('playback_positions').insert({
       play_event_id: playEventId || null,
       session_id: sessionId,
+      user_id: user.id,
       position_seconds: Math.floor(positionSeconds),
       total_duration_seconds: totalDurationSeconds ? Math.floor(totalDurationSeconds) : null,
     });

@@ -1,9 +1,22 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { Search, Calendar, CheckCircle, Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Calendar, CheckCircle, Download, Loader2, UserPlus } from 'lucide-react';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
+import RowSessionPlayer from '@/components/recordings/RowSessionPlayer';
+import AssignRecordingModal from '@/components/recordings/AssignRecordingModal';
+
+const SessionReviewPlayer = dynamic(() => import('@/components/session-review/SessionReviewPlayer'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full aspect-video bg-black flex items-center justify-center">
+      <Loader2 className="w-6 h-6 text-white/50 animate-spin" />
+    </div>
+  ),
+});
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
@@ -18,6 +31,7 @@ const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
   natalia_solo: { className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
   natalia_agata: { className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
   natalia_justyna: { className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
+  natalia_przemek: { className: 'bg-sky-900/40 text-sky-300 border border-sky-700/30' },
   natalia_para: { className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
   natalia_asysta: { className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
 };
@@ -28,6 +42,7 @@ const TYPE_TABS = [
   { key: 'natalia_asysta', label: 'Sesje z Asystą', className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
   { key: 'natalia_justyna',label: 'Sesje z Justyną',className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
   { key: 'natalia_agata',  label: 'Sesje z Agatą',  className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
+  { key: 'natalia_przemek',label: 'Sesje z Przemkiem', className: 'bg-sky-900/40 text-sky-300 border border-sky-700/30' },
   { key: 'natalia_para',   label: 'Sesje dla Par',  className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
 ] as const;
 
@@ -50,17 +65,24 @@ export default function SessionList({
   todayStr,
   locale,
   isPractitioner,
+  userEmail,
+  userId,
 }: {
   upcoming: any[];
   past: any[];
   todayStr: string;
   locale: string;
   isPractitioner?: boolean;
+  userEmail: string;
+  userId: string;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [typeTab, setTypeTab] = useState<TypeKey>('all');
   const [search, setSearch] = useState('');
   const [deletedIds] = useState<Set<string>>(new Set());
+  const [expandedRecordingId, setExpandedRecordingId] = useState<string | null>(null);
+  const [assignModalForRecordingId, setAssignModalForRecordingId] = useState<string | null>(null);
   const q = search.toLowerCase().trim();
 
   function matchesSearch(b: any) {
@@ -83,7 +105,6 @@ export default function SessionList({
     const rows = filtered.map(b => {
       const slot = getSlot(b);
       const client = getClient(b);
-      const tb = SESSION_TYPE_BADGE[b.session_type];
       const ps = PAYMENT_STATUS_BADGE[b.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
       return `<tr>
         <td>${slot?.slot_date || ''}</td>
@@ -207,32 +228,74 @@ tr:nth-child(even){background:#f9f9f9}
             const client = getClient(b);
             const isToday = slot?.slot_date === todayStr;
             const ps = PAYMENT_STATUS_BADGE[b.payment_status] || PAYMENT_STATUS_BADGE.pending_verification;
+            const hasRecording = tab === 'past' && !!b.readySesjaRecordingId;
+            const isExpanded = expandedRecordingId === b.readySesjaRecordingId;
 
             return (
-              <div key={b.id} className={`flex items-center gap-4 p-4 rounded-xl border hover:bg-htg-surface/50 transition-colors ${
-                isToday && tab === 'upcoming' ? 'bg-htg-sage/5 border-htg-sage/30' : 'bg-htg-card border-htg-card-border'
-              } ${tab === 'past' ? 'opacity-70' : ''}`}>
-                <Link href={`/${locale}/prowadzacy/sesje/${b.id}`} className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {isToday && tab === 'upcoming' && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
-                    <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
-                    <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
-                    {(!isPractitioner || typeTab === 'all') && <TypeBadge type={b.session_type} />}
+              <div key={b.id}>
+                <div
+                  className={`flex items-center gap-4 p-4 rounded-xl border hover:bg-htg-surface/50 transition-colors ${
+                    isToday && tab === 'upcoming' ? 'bg-htg-sage/5 border-htg-sage/30' : 'bg-htg-card border-htg-card-border'
+                  } ${tab === 'past' ? 'opacity-70' : ''}`}
+                >
+                  <Link href={`/${locale}/prowadzacy/sesje/${b.id}`} className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {isToday && tab === 'upcoming' && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
+                      <span className="font-bold text-htg-fg">{slot?.slot_date}</span>
+                      <span className="text-htg-fg">{slot?.start_time?.slice(0, 5)}</span>
+                      {(!isPractitioner || typeTab === 'all') && <TypeBadge type={b.session_type} />}
+                    </div>
+                    <p className="text-sm text-htg-fg-muted mt-1">
+                      {client?.display_name || client?.email || '—'}
+                    </p>
+                    {b.topics && tab === 'upcoming' && (
+                      <p className="text-xs text-htg-fg-muted mt-1 line-clamp-1">📝 {b.topics}</p>
+                    )}
+                  </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
+                    {hasRecording && (
+                      <>
+                        <RowSessionPlayer
+                          isExpanded={isExpanded}
+                          onToggle={() => setExpandedRecordingId(prev => prev === b.readySesjaRecordingId ? null : b.readySesjaRecordingId)}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setAssignModalForRecordingId(b.readySesjaRecordingId); }}
+                          className="p-1.5 rounded-lg hover:bg-htg-surface transition-colors text-htg-fg-muted hover:text-htg-fg"
+                          title="Przydziel nagranie"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
-                  <p className="text-sm text-htg-fg-muted mt-1">
-                    {client?.display_name || client?.email || '—'}
-                  </p>
-                  {b.topics && tab === 'upcoming' && (
-                    <p className="text-xs text-htg-fg-muted mt-1 line-clamp-1">📝 {b.topics}</p>
-                  )}
-                </Link>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
                 </div>
+                {hasRecording && isExpanded && (
+                  <div className="mt-1 rounded-xl overflow-hidden border border-htg-card-border bg-black">
+                    <SessionReviewPlayer
+                      playbackId={b.readySesjaRecordingId}
+                      idFieldName="recordingId"
+                      userEmail={userEmail}
+                      userId={userId}
+                      tokenEndpoint="/api/video/booking-recording-token"
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Assign recording modal */}
+      {assignModalForRecordingId && (
+        <AssignRecordingModal
+          recordingId={assignModalForRecordingId}
+          onClose={() => setAssignModalForRecordingId(null)}
+          onFinalChange={() => router.refresh()}
+        />
       )}
     </div>
   );

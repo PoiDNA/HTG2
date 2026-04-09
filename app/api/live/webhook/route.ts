@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getWebhookReceiver } from '@/lib/live/livekit';
+import {
+  getWebhookReceiver,
+  startParticipantEgress,
+  stopEgress,
+} from '@/lib/live/livekit';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { extractR2ObjectKey } from '@/lib/r2-presigned';
+import {
+  HTG_MEETING_ROOM_PREFIX,
+  CONSENT_VERSION_KEY,
+  UUID_RE,
+  auditHtgRecording,
+  computeDurationFromEgress,
+} from '@/lib/live/meeting-constants';
+import { readSiteSettingString } from '@/lib/site-settings';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 const RECORDING_TYPES = ['natalia_solo', 'natalia_asysta', 'natalia_para'];
@@ -88,6 +100,451 @@ export async function POST(request: NextRequest) {
     }
 
     const event = await receiver.receive(body, authHeader);
+
+    // ============================================================
+    // HTG MEETINGS HANDLERS (PR #5, plan v9)
+    // ============================================================
+    // Filtered by HTG_MEETING_ROOM_PREFIX. Each handler early-returns on
+    // match so HTG events do not fall through into the live_sessions
+    // booking_recordings code path below.
+    //
+    // 4 events:
+    //   - egress_started      → htg_meeting_recordings_v2 row (queued)
+    //   - egress_ended        → finalize source_url + duration + resurrect
+    //   - participant_joined  → late-joiner track egress (two-phase commit)
+    //   - participant_left    → stopEgress + fail-closed
+    //
+    // Audit helper auditHtgRecording is imported from meeting-constants
+    // (single source of truth, MeetingAuditAction TS enforcement — v9 C1).
+    {
+      // ── HTG 1: egress_started → recordings_v2 + race lookup ─────────
+      if (event.event === 'egress_started' && event.egressInfo) {
+        const egressInfo = event.egressInfo;
+        const egressId = egressInfo.egressId;
+        const roomName = egressInfo.roomName ?? '';
+
+        if (roomName.startsWith(HTG_MEETING_ROOM_PREFIX)) {
+          const supabase = createSupabaseServiceRole();
+
+          // Lookup junction row by egress_id
+          const { data: egressRow } = await supabase
+            .from('htg_meeting_egresses' as any)
+            .select('id, meeting_session_id, egress_kind, participant_user_id')
+            .eq('egress_id', egressId)
+            .maybeSingle();
+
+          if (!egressRow) {
+            // Junction missing — could be real orphan OR webhook ahead of
+            // control/start commit. Two-step pending lookup (room → session → pending)
+            // with 1-min freshness window so stale pending rows don't mask orphans.
+            const { data: sess } = await supabase
+              .from('htg_meeting_sessions' as any)
+              .select('id')
+              .eq('room_name', roomName)
+              .maybeSingle();
+
+            let pendingFound = false;
+            if (sess) {
+              const oneMinAgo = new Date(Date.now() - 60 * 1000).toISOString();
+              const { data: pending } = await supabase
+                .from('htg_meeting_pending_egresses' as any)
+                .select('id')
+                .eq('meeting_session_id', (sess as any).id)
+                .gt('created_at', oneMinAgo)
+                .limit(1);
+              pendingFound = (pending?.length ?? 0) > 0;
+            }
+
+            if (pendingFound) {
+              // Race: webhook ahead of control/start commit. Junction will arrive
+              // within ms, egress_ended will find it. NO stopEgress kill.
+              await auditHtgRecording(supabase, null, egressId, 'race_webhook_ahead_of_commit', {
+                room: roomName,
+              });
+            } else {
+              // True orphan — Section 10 reaper handles cleanup after 30min TTL.
+              // NO stopEgress here (fail-closed: don't kill legal egresses mid-commit).
+              await auditHtgRecording(supabase, null, egressId, 'egress_orphan_started', {
+                room: roomName,
+              });
+            }
+            return NextResponse.json({ ok: true });
+          }
+
+          // Junction found — create/upsert recordings_v2 row (status='queued')
+          const er = egressRow as any;
+          const { data: meetingSession } = await supabase
+            .from('htg_meeting_sessions' as any)
+            .select('meeting_id, started_at, scheduled_at')
+            .eq('id', er.meeting_session_id)
+            .maybeSingle();
+
+          const ms = meetingSession as { meeting_id?: string; started_at?: string; scheduled_at?: string } | null;
+          const sessionDate = (ms?.started_at ?? ms?.scheduled_at ?? new Date().toISOString()).slice(0, 10);
+
+          // Upsert — egress_ended may have already created a partial row
+          // (out-of-order webhook delivery). source_url/duration not touched here;
+          // only egress_started fills recording_started_at + metadata.
+          await supabase.from('htg_meeting_recordings_v2' as any).upsert({
+            egress_id: egressId,
+            meeting_session_id: er.meeting_session_id,
+            meeting_id: ms?.meeting_id ?? null,
+            recording_kind: er.egress_kind,
+            participant_user_id: er.participant_user_id,
+            recording_started_at: new Date().toISOString(),
+            session_date: sessionDate,
+            status: 'queued',
+            expires_at: null,
+          }, { onConflict: 'egress_id', ignoreDuplicates: false });
+
+          await auditHtgRecording(supabase, null, egressId, 'egress_started', {
+            kind: er.egress_kind,
+          });
+          return NextResponse.json({ ok: true });
+        }
+      }
+
+      // ── HTG 2: egress_ended → finalize + resurrect path ────────────
+      if (event.event === 'egress_ended' && event.egressInfo) {
+        const egressInfo = event.egressInfo;
+        const egressId = egressInfo.egressId;
+        const roomName = egressInfo.roomName ?? '';
+
+        if (roomName.startsWith(HTG_MEETING_ROOM_PREFIX)) {
+          const supabase = createSupabaseServiceRole();
+
+          const { data: egressRow } = await supabase
+            .from('htg_meeting_egresses' as any)
+            .select('id, meeting_session_id, egress_kind, participant_user_id, started_at')
+            .eq('egress_id', egressId)
+            .maybeSingle();
+
+          if (!egressRow) {
+            // No junction — webhook arrived but no INSERT happened. Possibly
+            // a true orphan. NO stopEgress (Section 10 reaper handles cleanup).
+            await auditHtgRecording(supabase, null, egressId, 'egress_orphan_ended', {
+              room: roomName,
+            });
+            return NextResponse.json({ ok: true });
+          }
+
+          const er = egressRow as any;
+          const fileUrl = egressInfo.fileResults?.[0]?.location ?? null;
+          const durationSeconds = computeDurationFromEgress({
+            startedAt: egressInfo.startedAt as bigint | number | undefined,
+            endedAt: egressInfo.endedAt as bigint | number | undefined,
+          });
+
+          // Update junction first — control/end may have already set ended_at,
+          // so use is('ended_at', null) guard to avoid clobbering.
+          await supabase.from('htg_meeting_egresses' as any).update({
+            ended_at: new Date().toISOString(),
+            source_url: fileUrl ? extractR2ObjectKey(fileUrl) : null,
+            duration_seconds: durationSeconds,
+          }).eq('id', er.id).is('ended_at', null);
+
+          // Lookup parent session for date
+          const { data: meetingSession } = await supabase
+            .from('htg_meeting_sessions' as any)
+            .select('meeting_id, started_at, scheduled_at')
+            .eq('id', er.meeting_session_id)
+            .maybeSingle();
+
+          const ms = meetingSession as { meeting_id?: string; started_at?: string; scheduled_at?: string } | null;
+          const sessionDate = (ms?.started_at ?? ms?.scheduled_at ?? new Date().toISOString()).slice(0, 10);
+
+          // Resurrect path (v7 fix #7): SELECT previous status BEFORE upsert.
+          // If existing row is failed with 'egress_ended_never_received',
+          // late egress_ended arriving means we should bring it back to queued.
+          // Audit only fires when transition matches.
+          const { data: previousRec } = await supabase
+            .from('htg_meeting_recordings_v2' as any)
+            .select('status, last_error')
+            .eq('egress_id', egressId)
+            .maybeSingle();
+
+          // Upsert recordings_v2 with finalized data
+          await supabase.from('htg_meeting_recordings_v2' as any).upsert({
+            egress_id: egressId,
+            meeting_session_id: er.meeting_session_id,
+            meeting_id: ms?.meeting_id ?? null,
+            recording_kind: er.egress_kind,
+            participant_user_id: er.participant_user_id,
+            source_url: fileUrl ? extractR2ObjectKey(fileUrl) : null,
+            duration_seconds: durationSeconds,
+            session_date: sessionDate,
+            status: 'queued',
+            last_error: null,
+            expires_at: null,
+            // recording_started_at NOT set here — egress_started fills it.
+          }, { onConflict: 'egress_id', ignoreDuplicates: false });
+
+          // Resurrect audit if previous was failed-stuck
+          const pr = previousRec as { status?: string; last_error?: string } | null;
+          if (pr?.status === 'failed' && pr?.last_error === 'egress_ended_never_received') {
+            await auditHtgRecording(supabase, null, egressId, 'upload_resurrect_after_late_ended', {
+              previous_status: pr.status,
+              previous_error: pr.last_error,
+            });
+          }
+
+          await auditHtgRecording(supabase, null, egressId, 'egress_ended', {
+            duration: durationSeconds,
+            kind: er.egress_kind,
+          });
+          return NextResponse.json({ ok: true });
+        }
+      }
+
+      // ── HTG 3: participant_joined → late-joiner track egress ──────
+      if (event.event === 'participant_joined' && event.room && event.participant) {
+        const roomName = event.room.name;
+
+        if (roomName.startsWith(HTG_MEETING_ROOM_PREFIX)) {
+          const identity = event.participant.identity;
+
+          // Skip observers (admin/practitioner ghost peek — hidden, no track needed)
+          if (identity.startsWith('__obs__')) {
+            return NextResponse.json({ ok: true });
+          }
+
+          // Parse user_id from sanitized identity "uuid:displayName"
+          const firstColon = identity.indexOf(':');
+          const userId = firstColon > 0 ? identity.slice(0, firstColon) : identity;
+          if (!UUID_RE.test(userId)) {
+            return NextResponse.json({ ok: true });
+          }
+
+          const supabase = createSupabaseServiceRole();
+
+          // Find session by room_name + check composite_recording_started flag
+          const { data: session } = await supabase
+            .from('htg_meeting_sessions' as any)
+            .select('id, composite_recording_started')
+            .eq('room_name', roomName)
+            .maybeSingle();
+
+          const sess = session as { id?: string; composite_recording_started?: boolean } | null;
+          if (!sess?.composite_recording_started || !sess.id) {
+            // No session OR composite not started yet — late joiner before recording
+            // start (control/start hasn't fired yet). Track will be picked up by the
+            // control/start per-track loop when it runs.
+            return NextResponse.json({ ok: true });
+          }
+
+          const sessionId = sess.id;
+          const currentVersion = await readSiteSettingString(supabase, CONSENT_VERSION_KEY);
+
+          // Retry loop: join/route.ts inserts participant row with status='joined'
+          // shortly before token is returned, but LiveKit webhook delivery is
+          // at-most-once and may race. v8 fix: short backoff (max 750ms total)
+          // to stay within Vercel serverless function timeout budget.
+          type Participant = {
+            user_id: string;
+            recording_consent_at: string | null;
+            recording_consent_version: string | null;
+          };
+          let participant: Participant | null = null;
+          const retryDelays = [0, 250, 500];
+          for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) await new Promise((r) => setTimeout(r, retryDelays[attempt]));
+            const { data } = await supabase
+              .from('htg_meeting_participants' as any)
+              .select('user_id, recording_consent_at, recording_consent_version')
+              .eq('session_id', sessionId)
+              .eq('user_id', userId)
+              .eq('status', 'joined')
+              .maybeSingle();
+            if (data) {
+              participant = data as unknown as Participant;
+              break;
+            }
+          }
+
+          if (!participant) {
+            // 3x retry exhausted — DB commit from join/route.ts didn't catch up.
+            // Audit and return; track loss for one late-joiner is acceptable
+            // vs handler timeout for every late join.
+            await auditHtgRecording(supabase, null, null, 'participant_joined_before_db_commit', {
+              user_id: userId,
+              room: roomName,
+            });
+            return NextResponse.json({ ok: true });
+          }
+
+          // Consent gate: must have timestamp AND match current version
+          if (
+            !participant.recording_consent_at ||
+            participant.recording_consent_version !== currentVersion
+          ) {
+            await auditHtgRecording(supabase, null, null, 'consent_missing_at_track_start', {
+              user_id: userId,
+              has_timestamp: !!participant.recording_consent_at,
+              version_mismatch: participant.recording_consent_version !== currentVersion,
+            });
+            return NextResponse.json({ ok: true });
+          }
+
+          // Two-phase commit (v6 fix #5): pending INSERT → startEgress → junction INSERT
+          // → DELETE pending. No `finally` — on junction INSERT failure, we leave
+          // pending row + stopEgress, so reaper retries cleanup.
+          const clientRequestId = crypto.randomUUID();
+          await supabase.from('htg_meeting_pending_egresses' as any).insert({
+            client_request_id: clientRequestId,
+            meeting_session_id: sessionId,
+            egress_kind: 'track',
+            participant_user_id: userId,
+            participant_identity: identity,
+          });
+
+          let startSucceeded = false;
+          try {
+            const egress = await startParticipantEgress(roomName, identity);
+            startSucceeded = true;
+
+            const { error: insertError } = await supabase
+              .from('htg_meeting_egresses' as any)
+              .insert({
+                meeting_session_id: sessionId,
+                egress_id: egress.egressId,
+                egress_kind: 'track',
+                participant_user_id: userId,
+                participant_identity: identity,
+              });
+
+            if (insertError?.code === '23505') {
+              // Race with control/start per-track loop — stop our duplicate.
+              try {
+                await stopEgress(egress.egressId);
+              } catch (stopErr) {
+                await auditHtgRecording(supabase, null, egress.egressId, 'ghost_egress_junction_failed', {
+                  reason: 'participant_joined_race_stop_failed',
+                  user_id: userId,
+                  error: String(stopErr),
+                });
+                throw stopErr;
+              }
+            } else if (insertError) {
+              // Junction INSERT failed for other reason — explicit stop.
+              try {
+                await stopEgress(egress.egressId);
+              } catch (stopErr) {
+                await auditHtgRecording(supabase, null, egress.egressId, 'ghost_egress_junction_failed', {
+                  reason: 'participant_joined_insert_error',
+                  user_id: userId,
+                  insert_error: insertError.message,
+                  stop_error: String(stopErr),
+                });
+                throw stopErr;
+              }
+              throw insertError;
+            } else {
+              // Success path
+              await auditHtgRecording(supabase, null, egress.egressId, 'late_joiner_egress_started', {
+                user_id: userId,
+              });
+            }
+
+            // Delete pending row only after both startEgress + junction INSERT (or recovery)
+            await supabase
+              .from('htg_meeting_pending_egresses' as any)
+              .delete()
+              .eq('client_request_id', clientRequestId);
+          } catch (e) {
+            if (!startSucceeded) {
+              // startEgress failed — safe to delete pending (no LiveKit egress exists)
+              await supabase
+                .from('htg_meeting_pending_egresses' as any)
+                .delete()
+                .eq('client_request_id', clientRequestId);
+            }
+            // If startSucceeded but junction failed, pending stays — Section 10 reaper
+            // handles cleanup after 30min TTL.
+            console.error('[webhook/htg participant_joined] track egress failed:', identity, e);
+          }
+
+          return NextResponse.json({ ok: true });
+        }
+      }
+
+      // ── HTG 4: participant_left → stopEgress + fail-closed ────────
+      if (event.event === 'participant_left' && event.room && event.participant) {
+        const roomName = event.room.name;
+
+        if (roomName.startsWith(HTG_MEETING_ROOM_PREFIX)) {
+          const identity = event.participant.identity;
+
+          if (identity.startsWith('__obs__')) {
+            return NextResponse.json({ ok: true });
+          }
+
+          const firstColon = identity.indexOf(':');
+          const userId = firstColon > 0 ? identity.slice(0, firstColon) : identity;
+          if (!UUID_RE.test(userId)) {
+            return NextResponse.json({ ok: true });
+          }
+
+          const supabase = createSupabaseServiceRole();
+
+          const { data: session } = await supabase
+            .from('htg_meeting_sessions' as any)
+            .select('id')
+            .eq('room_name', roomName)
+            .maybeSingle();
+
+          const sess = session as { id?: string } | null;
+          if (!sess?.id) {
+            return NextResponse.json({ ok: true });
+          }
+
+          // Find active track egress for this user (not yet ended_at)
+          const { data: activeEgress } = await supabase
+            .from('htg_meeting_egresses' as any)
+            .select('id, egress_id')
+            .eq('meeting_session_id', sess.id)
+            .eq('participant_user_id', userId)
+            .eq('egress_kind', 'track')
+            .is('ended_at', null)
+            .maybeSingle();
+
+          const ae = activeEgress as { id?: string; egress_id?: string } | null;
+          if (!ae?.id || !ae?.egress_id) {
+            return NextResponse.json({ ok: true });
+          }
+
+          // stopEgress first — only mark ended_at on success.
+          // Fail-closed: if stop throws, keep ended_at NULL + record stop_error.
+          // Section 7 reaper retries later.
+          try {
+            await stopEgress(ae.egress_id);
+            await supabase
+              .from('htg_meeting_egresses' as any)
+              .update({
+                ended_at: new Date().toISOString(),
+                stop_error: null,
+              })
+              .eq('id', ae.id)
+              .is('ended_at', null);
+          } catch (e) {
+            const errMsg = e instanceof Error ? e.message : String(e);
+            await supabase
+              .from('htg_meeting_egresses' as any)
+              .update({ stop_error: errMsg })
+              .eq('id', ae.id)
+              .is('ended_at', null);
+            await auditHtgRecording(supabase, null, ae.egress_id, 'egress_stop_failed', {
+              reason: 'participant_left',
+              error: errMsg,
+            });
+          }
+
+          return NextResponse.json({ ok: true });
+        }
+      }
+    }
+    // ============================================================
+    // END HTG Meetings handlers — fall through to live_sessions below
+    // ============================================================
 
     // ── 1. egress_ended → live_sessions URL update (all 3 phases) ─────────
     if (event.event === 'egress_ended' && event.egressInfo) {

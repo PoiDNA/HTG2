@@ -91,7 +91,7 @@ export const MEETING_AUDIT_ACTIONS = [
 
   // Upload pipeline
   'upload_started', 'upload_ready', 'upload_failed',
-  'upload_resurrect_after_late_ended',
+  'upload_resurrect_after_late_ended', 'upload_race_lost',  // v9 C3 (Section 8 race vs Section 9)
 
   // Access grants
   'access_granted', 'access_revoked', 'access_restored', 'access_playback',

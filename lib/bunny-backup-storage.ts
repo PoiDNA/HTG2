@@ -101,7 +101,7 @@ export async function deleteBackupFile(path: string): Promise<boolean> {
  *   "Łukasz+test@example.com" → "_ukasz_test@example.com"
  *   "Jan Kowalski"            → "jan_kowalski"
  */
-function sanitizeForPath(input: string): string {
+export function sanitizeForPath(input: string): string {
   return input
     .toLowerCase()
     .replace(/[^a-z0-9.\-_@]/g, '_')
@@ -139,4 +139,43 @@ export function buildRecordingStoragePath(params: {
   const ext = sanitizeForPath(params.extension || 'mp4');
 
   return `recordings/${date}/${email}/${phase}-${sessionType}-${shortId}.${ext}`;
+}
+
+/**
+ * Build the Bunny Storage path for an HTG Meeting recording.
+ *
+ * Format:
+ *   composite: meetings/{YYYY-MM-DD}/{meeting_slug}/composite-{rec_short_id}.{ext}
+ *   track:     meetings/{YYYY-MM-DD}/{meeting_slug}/tracks/{user_hash16}-{rec_short_id}.{ext}
+ *
+ * Privacy: track filenames use a SHA-256 hash of (user_id + MEETING_PATH_SALT)
+ * truncated to 16 hex chars — admin browsing storage cannot correlate filenames
+ * back to user_ids without the salt. Caller passes the precomputed hash via
+ * `userHash` (use `hashUserIdForPath()` from meeting-constants).
+ *
+ * For composite recordings, `userHash` should be null. For tracks, falls back
+ * to 'unknown' if hash missing (defensive — should never happen if caller uses
+ * the helper correctly).
+ *
+ * After session DELETE (ON DELETE SET NULL), `meeting_id` may be NULL — caller
+ * should pass `'orphaned-meeting'` as `meetingSlug` in that case.
+ */
+export function buildMeetingStoragePath(params: {
+  sessionDate: string | null;    // htg_meeting_recordings_v2.session_date
+  meetingSlug: string | null;     // htg_meetings.name (sanitized)
+  recordingKind: 'composite' | 'track';
+  userHash?: string | null;       // SHA-256(user_id + salt).slice(0,16) — required for track
+  recordingId: string;            // htg_meeting_recordings_v2.id (UUID)
+  extension: string;              // file extension (typically 'mp4' for composite, 'ogg' for track)
+}): string {
+  const date = params.sessionDate ?? 'unknown-date';
+  const slug = sanitizeForPath(params.meetingSlug ?? 'unknown-meeting');
+  const shortId = params.recordingId.slice(0, 8);
+  const ext = sanitizeForPath(params.extension || 'mp4');
+
+  if (params.recordingKind === 'composite') {
+    return `meetings/${date}/${slug}/composite-${shortId}.${ext}`;
+  }
+  const userHash = params.userHash ?? 'unknown';
+  return `meetings/${date}/${slug}/tracks/${userHash}-${shortId}.${ext}`;
 }

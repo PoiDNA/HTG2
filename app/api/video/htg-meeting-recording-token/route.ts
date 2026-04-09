@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { signHtg2StorageUrl } from '@/lib/bunny';
 import { auditHtgRecording } from '@/lib/live/meeting-constants';
+
+const TokenRequestSchema = z.object({
+  recordingId: z.string().uuid('recordingId must be a valid UUID'),
+  deviceId: z.string().min(8).max(128, 'deviceId must be 8-128 chars'),
+});
 
 /**
  * POST /api/video/htg-meeting-recording-token
@@ -31,10 +37,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { recordingId, deviceId } = await request.json();
-    if (!recordingId || !deviceId) {
-      return NextResponse.json({ error: 'recordingId and deviceId required' }, { status: 400 });
+    const rawBody = await request.json().catch(() => null);
+    const parsed = TokenRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', issues: parsed.error.issues },
+        { status: 400 },
+      );
     }
+    const { recordingId, deviceId } = parsed.data;
 
     const db = createSupabaseServiceRole();
 

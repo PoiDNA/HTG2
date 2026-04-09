@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
-import { Play } from 'lucide-react';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { Play, Pause, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 
 interface SpeakingEvent {
   user_id: string;
@@ -47,6 +47,18 @@ function formatTime(s: number): string {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+// Stable per-browser device_id for single-device concurrency limit
+function getDeviceId(): string {
+  if (typeof window === 'undefined') return 'ssr';
+  const KEY = 'htg_meeting_device_id';
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(KEY, id);
+  }
+  return id;
 }
 
 function MeetingTimeline({
@@ -139,65 +151,155 @@ function MeetingTimeline({
   );
 }
 
+/**
+ * MeetingPlayerClient — HTG Meeting composite recording playback.
+ *
+ * PR #7 rewrite: fetches signed URL from /api/video/htg-meeting-recording-token
+ * (instead of the old Bunny Stream embed iframe — the new pipeline serves
+ * audio-only composite MP4 from Bunny Storage via Pull Zone).
+ *
+ * Error states:
+ *  - null recordingId     → recording not ready yet
+ *  - token fetch failed   → display server message (allowed: false)
+ *  - 409 Conflict         → "playing on another device"
+ *  - 503 Service Unavail  → "CDN not configured" (fail-closed)
+ */
 export default function MeetingPlayerClient({
-  bunnyVideoId,
-  bunnyLibraryId,
+  recordingId,
   durationSeconds,
   speakingEvents,
 }: {
-  bunnyVideoId: string | null;
-  bunnyLibraryId: string | null;
+  recordingId: string | null;
   durationSeconds: number;
   speakingEvents: SpeakingEvent[];
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState<{ title: string; message: string } | null>(null);
+  const [tokenLoading, setTokenLoading] = useState(false);
 
   const tracks = buildTracks(speakingEvents, durationSeconds);
 
+  // Fetch playback token on mount (once recordingId is known)
+  useEffect(() => {
+    if (!recordingId) return;
+    let cancelled = false;
+
+    (async () => {
+      setTokenLoading(true);
+      setTokenError(null);
+      try {
+        const res = await fetch('/api/video/htg-meeting-recording-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recordingId, deviceId: getDeviceId() }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.allowed && data.url) {
+          setMediaUrl(data.url);
+        } else {
+          setTokenError({
+            title: data.title ?? 'Nagranie niedostępne',
+            message: data.message ?? 'Spróbuj ponownie za chwilę.',
+          });
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setTokenError({
+          title: 'Błąd połączenia',
+          message: e instanceof Error ? e.message : 'Nie udało się pobrać nagrania.',
+        });
+      } finally {
+        if (!cancelled) setTokenLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [recordingId]);
+
   const handleSeek = useCallback((t: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = t;
+    if (audioRef.current) {
+      audioRef.current.currentTime = t;
       setCurrentTime(t);
     }
   }, []);
 
   const togglePlay = () => {
-    if (!videoRef.current) return;
+    if (!audioRef.current) return;
     if (isPlaying) {
-      videoRef.current.pause();
+      audioRef.current.pause();
     } else {
-      videoRef.current.play();
+      audioRef.current.play();
     }
   };
 
-  // Bunny embed URL
-  const embedUrl = bunnyVideoId && bunnyLibraryId
-    ? `https://iframe.mediadelivery.net/embed/${bunnyLibraryId}/${bunnyVideoId}?autoplay=false&responsive=true`
-    : null;
+  const toggleMute = () => {
+    if (!audioRef.current) return;
+    audioRef.current.muted = !muted;
+    setMuted(!muted);
+  };
 
   return (
     <div className="space-y-4">
-      {/* Video player */}
-      <div className="relative bg-black rounded-xl overflow-hidden aspect-video">
-        {embedUrl ? (
-          <iframe
-            src={embedUrl}
-            className="w-full h-full"
-            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-htg-surface/50 flex items-center justify-center mx-auto mb-3">
-                <Play className="w-8 h-8 text-htg-fg-muted/40" />
-              </div>
-              <p className="text-htg-fg-muted/60 text-sm">Nagranie jeszcze niedostępne</p>
+      {/* Player */}
+      <div className="relative bg-htg-card border border-htg-card-border rounded-xl p-6">
+        {tokenLoading && (
+          <div className="text-center py-8">
+            <p className="text-sm text-htg-fg-muted">Ładowanie nagrania...</p>
+          </div>
+        )}
+
+        {tokenError && (
+          <div className="flex items-start gap-3 py-4">
+            <AlertCircle className="w-5 h-5 text-htg-warm shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-semibold text-htg-fg">{tokenError.title}</h3>
+              <p className="text-sm text-htg-fg-muted mt-1">{tokenError.message}</p>
             </div>
           </div>
+        )}
+
+        {!recordingId && !tokenLoading && !tokenError && (
+          <div className="text-center py-8">
+            <p className="text-sm text-htg-fg-muted">Nagranie jeszcze niedostępne.</p>
+          </div>
+        )}
+
+        {mediaUrl && (
+          <>
+            <audio
+              ref={audioRef}
+              src={mediaUrl}
+              onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
+              preload="metadata"
+            />
+            <div className="flex items-center gap-4">
+              <button
+                onClick={togglePlay}
+                className="w-12 h-12 rounded-full bg-htg-warm text-htg-bg flex items-center justify-center hover:bg-htg-warm/90 transition-colors"
+                aria-label={isPlaying ? 'Pauza' : 'Odtwórz'}
+              >
+                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+              </button>
+              <div className="flex-1 text-sm text-htg-fg-muted">
+                {formatTime(currentTime)} / {formatTime(durationSeconds)}
+              </div>
+              <button
+                onClick={toggleMute}
+                className="w-10 h-10 rounded-full text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface/50 flex items-center justify-center transition-colors"
+                aria-label={muted ? 'Włącz dźwięk' : 'Wycisz'}
+              >
+                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </button>
+            </div>
+          </>
         )}
       </div>
 

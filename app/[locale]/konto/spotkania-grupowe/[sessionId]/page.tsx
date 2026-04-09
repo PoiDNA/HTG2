@@ -27,18 +27,27 @@ export default async function MeetingRecordingPage({
 
   if (!participation) redirect(`/${locale}/konto/spotkania-grupowe`);
 
-  // Fetch session + recording
+  // Fetch session + related meeting name
   const { data: session } = await supabase
     .from('htg_meeting_sessions')
     .select(`
       id, started_at, ended_at,
-      htg_meetings ( name, type ),
-      htg_meeting_recordings ( bunny_video_id, bunny_library_id, duration_seconds )
+      htg_meetings ( name, type )
     `)
     .eq('id', sessionId)
     .single();
 
   if (!session) redirect(`/${locale}/konto/spotkania-grupowe`);
+
+  // PR #7: fetch composite recording from recordings_v2. Status must be 'ready'
+  // for playback (access check + URL token comes from htg-meeting-recording-token).
+  const { data: recording } = await supabase
+    .from('htg_meeting_recordings_v2' as never)
+    .select('id, duration_seconds, status')
+    .eq('meeting_session_id', sessionId)
+    .eq('recording_kind', 'composite')
+    .eq('status', 'ready')
+    .maybeSingle();
 
   // Fetch speaking events for timeline
   const { data: events } = await supabase
@@ -47,7 +56,7 @@ export default async function MeetingRecordingPage({
     .eq('session_id', sessionId)
     .order('started_offset_seconds');
 
-  const rec = (session as any).htg_meeting_recordings?.[0];
+  const rec = recording as { id?: string; duration_seconds?: number | null } | null;
 
   return (
     <div>
@@ -61,7 +70,7 @@ export default async function MeetingRecordingPage({
 
       <div className="mb-6">
         <h2 className="text-2xl font-serif font-bold text-htg-fg">
-          {(session as any).htg_meetings?.name}
+          {(session as { htg_meetings?: { name?: string } }).htg_meetings?.name}
         </h2>
         {session.started_at && (
           <p className="text-htg-fg-muted mt-1">
@@ -73,8 +82,7 @@ export default async function MeetingRecordingPage({
       </div>
 
       <MeetingPlayerClient
-        bunnyVideoId={rec?.bunny_video_id ?? null}
-        bunnyLibraryId={rec?.bunny_library_id ?? null}
+        recordingId={rec?.id ?? null}
         durationSeconds={rec?.duration_seconds ?? 0}
         speakingEvents={events ?? []}
       />

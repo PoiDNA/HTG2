@@ -4,6 +4,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { startRoomCompositeEgress, startParticipantEgress, listRoomParticipants } from '@/lib/live/livekit';
 import { acquireRecordingLock, releaseRecordingLock } from '@/lib/live/recording-lock';
 import { startAllAnalyticsAudioTrackEgresses } from '@/lib/live/analytics-egress';
+import { CURRENT_CONSENT_TEMPLATE_GENERATION } from '@/lib/consent/template';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 
@@ -114,6 +115,13 @@ export async function POST(request: NextRequest) {
         ip_address: ip,
         user_agent: ua,
         granted: true,
+        // template_generation: monotonicznie rosnący identyfikator generacji
+        // szablonu zgody. Jeśli zmieniasz consentTexts powyżej, MUSISZ bumpnąć
+        // CURRENT_CONSENT_TEMPLATE_GENERATION w lib/consent/template.ts — test
+        // w lib/__tests__/consent-text-scope.test.ts pilnuje tego invariantu.
+        // Używane przez check_processing_export_consent (mig 060) jako gate
+        // (wymagane >= PRE_1). Patrz: docs/processing-service-plan.md §3.1.
+        template_generation: CURRENT_CONSENT_TEMPLATE_GENERATION,
       });
     }
 

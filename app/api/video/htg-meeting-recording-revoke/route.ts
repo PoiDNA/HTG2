@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { auditHtgRecording } from '@/lib/live/meeting-constants';
+
+const RevokeRequestSchema = z.object({
+  recordingId: z.string().uuid('recordingId must be a valid UUID'),
+  reason: z.string().max(500, 'reason too long').optional(),
+});
 
 /**
  * POST /api/video/htg-meeting-recording-revoke
@@ -31,10 +37,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { recordingId, reason } = await request.json();
-    if (!recordingId) {
-      return NextResponse.json({ error: 'recordingId required' }, { status: 400 });
+    const rawBody = await request.json().catch(() => null);
+    const parsed = RevokeRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', issues: parsed.error.issues },
+        { status: 400 },
+      );
     }
+    const { recordingId, reason } = parsed.data;
 
     const db = createSupabaseServiceRole();
 

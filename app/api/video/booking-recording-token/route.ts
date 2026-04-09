@@ -5,6 +5,7 @@ import { signBunnyUrl, signPrivateCdnUrl, signHtg2StorageUrl } from '@/lib/bunny
 import { isAdminEmail } from '@/lib/roles';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { resolveStaffPlaybackScope, isSessionTypeInScope } from '@/lib/admin/require-playback-actor';
+import { checkRateLimit, logRateLimitAction } from '@/lib/rate-limit/check';
 
 /**
  * POST /api/video/booking-recording-token
@@ -16,6 +17,19 @@ import { resolveStaffPlaybackScope, isSessionTypeInScope } from '@/lib/admin/req
  *   - mediaKind: 'audio' | 'video' — type of medium
  *   - deliveryType: 'hls' | 'direct' — transport mechanism
  *   - mimeType: string | null — MIME type for direct files (null for HLS)
+ *
+ * Rate limit: 60 requests / 60 min per user (slot-reservation semantics).
+ *   HARD INVARIANT: rate check + log MUST run immediately after `getUser()`
+ *   returns a user, BEFORE body parsing, `profiles.is_blocked` query, or any
+ *   other DB work. The only early return allowed before the rate check is
+ *   401 Unauthorized (no user → no userId to log against). All other early
+ *   returns (400 body validation, `allowed: false` responses) happen AFTER
+ *   the slot is allocated — this is the anti-enumeration invariant from the
+ *   slot-reservation pattern in lib/rate-limit/check.ts.
+ *
+ *   Limit is pinned to `user.id` (session subject), NOT `effectiveUserId`
+ *   (impersonation target). Admin impersonating a client does not burn the
+ *   client's slot.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +39,17 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Rate limit — slot-reservation BEFORE any work. Includes body parsing
+    // and `profiles.is_blocked` lookup. See JSDoc above for invariant.
+    const rateLimited = await checkRateLimit(user.id, 'booking_recording_token');
+    if (rateLimited) {
+      return NextResponse.json(
+        { error: 'Zbyt wiele żądań. Spróbuj za chwilę.' },
+        { status: 429 },
+      );
+    }
+    await logRateLimitAction(user.id, 'booking_recording_token');
 
     const { recordingId, deviceId } = await request.json();
     if (!recordingId || !deviceId) {

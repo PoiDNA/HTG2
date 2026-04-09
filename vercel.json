@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/analyze-client",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/htg-meeting-orphan-reaper",
+      "schedule": "23 * * * *"
     }
   ]
 }

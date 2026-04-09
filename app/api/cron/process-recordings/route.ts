@@ -6,8 +6,16 @@ import {
   getBackupStorageZone,
   uploadBackupFile,
   buildRecordingStoragePath,
+  buildMeetingStoragePath,
 } from '@/lib/bunny-backup-storage';
 import { deleteFile as deleteBunnyFile } from '@/lib/bunny-storage';
+import { stopEgress } from '@/lib/live/livekit';
+import {
+  CONSENT_VERSION_KEY,
+  auditHtgRecording,
+  hashUserIdForPath,
+} from '@/lib/live/meeting-constants';
+import { readSiteSettingString } from '@/lib/site-settings';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -58,6 +66,19 @@ export async function POST(request: NextRequest) {
   try {
     await section7StuckEgressCleanup(db, stats);
   } catch (e) { console.error('[cron:recordings] Section 7 error:', e); stats.errors++; }
+
+  // ── HTG Meetings sections (PR #6, plan v9) ─────────────────────────
+  try {
+    await section7HtgStuckCleanup(db, stats);
+  } catch (e) { console.error('[cron:recordings] Section 7-HTG error:', e); stats.errors++; }
+
+  try {
+    await section8HtgUploadWorker(db, stats);
+  } catch (e) { console.error('[cron:recordings] Section 8 error:', e); stats.errors++; }
+
+  try {
+    await section9HtgStuckUploadReaper(db, stats);
+  } catch (e) { console.error('[cron:recordings] Section 9 error:', e); stats.errors++; }
 
   console.log(
     `[cron:recordings] uploaded=${stats.uploaded} checked=${stats.checked} expired=${stats.expired} ` +
@@ -362,6 +383,408 @@ async function section7StuckEgressCleanup(db: DB, stats: Record<string, number>)
     console.warn(`[cron:recordings] Section 7: stuck egress record ${rec.id} marked failed`);
     stats.errors++; // Visible in stats for monitoring
   }
+}
+
+// ============================================================
+// HTG MEETINGS sections (PR #6, plan v9)
+// ============================================================
+// Section 7-HTG: stuck egress cleanup for HTG meeting recordings.
+// Marks recordings_v2 rows as 'failed' when their parent session ended >2h ago
+// and duration_seconds is still NULL (egress_ended webhook never arrived).
+// Also retries stopEgress for junction rows with stop_error set.
+//
+// v9 H6: Section 7 zombie handler uses session.ended_at FROM the join, no
+// second SELECT roundtrip.
+async function section7HtgStuckCleanup(db: DB, stats: Record<string, number>) {
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+
+  // Part A: stuck recordings_v2 (queued + duration NULL + parent session ended >2h)
+  const { data: stuck } = await db
+    .from('htg_meeting_recordings_v2' as any)
+    .select(`
+      id, egress_id, meeting_session_id,
+      session:htg_meeting_sessions!inner(id, status, ended_at)
+    `)
+    .eq('status', 'queued')
+    .is('duration_seconds', null)
+    .eq('session.status', 'ended')
+    .lt('session.ended_at', twoHoursAgo)
+    .limit(10);
+
+  for (const rec of (stuck ?? []) as any[]) {
+    await db.from('htg_meeting_recordings_v2' as any).update({
+      status: 'failed',
+      last_error: 'egress_ended_never_received',
+      updated_at: new Date().toISOString(),
+    }).eq('id', rec.id);
+    await auditHtgRecording(db, rec.id, rec.egress_id, 'upload_failed', {
+      reason: 'stuck_egress_cleanup',
+      auto: true,
+    });
+    stats.errors = (stats.errors ?? 0) + 1;
+  }
+
+  // Part B: zombie egresses with stop_error set (control/end stopEgress failed)
+  // Retry stopEgress; on success clear stop_error + ended_at; on 4h+ failure
+  // force_abandoned. v9 H6: use session.ended_at from JOIN, no re-query.
+  const { data: zombies } = await db
+    .from('htg_meeting_egresses' as any)
+    .select('id, egress_id, session:htg_meeting_sessions!inner(id, status, ended_at)')
+    .is('ended_at', null)
+    .not('stop_error', 'is', null)
+    .eq('session.status', 'ended')
+    .lt('session.ended_at', twoHoursAgo)
+    .limit(10);
+
+  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+  for (const z of (zombies ?? []) as any[]) {
+    try {
+      await stopEgress(z.egress_id);
+      await db.from('htg_meeting_egresses' as any).update({
+        ended_at: new Date().toISOString(),
+        stop_error: null,
+      }).eq('id', z.id);
+      await auditHtgRecording(db, null, z.egress_id, 'egress_stopped', {
+        reason: 'retry_after_stop_error',
+      });
+    } catch (e) {
+      // v9 H6: read ended_at directly from joined session, no second query
+      const sessionEndedAt = z.session?.ended_at as string | undefined;
+      if (sessionEndedAt && sessionEndedAt < fourHoursAgo) {
+        await db.from('htg_meeting_egresses' as any).update({
+          ended_at: new Date().toISOString(),
+        }).eq('id', z.id);
+        await auditHtgRecording(db, null, z.egress_id, 'egress_force_abandoned', {
+          error: String(e),
+        });
+      }
+    }
+  }
+}
+
+// Section 8: HTG Meetings upload worker.
+// Picks queued recordings_v2 rows, atomic claim → status='uploading',
+// downloads from R2, uploads to Bunny Storage, marks ready.
+//
+// v9 C3: every terminal status update (.update({status: ...})) uses
+// .eq('status', 'uploading') guard + select('id').maybeSingle() to detect
+// race lost (Section 9 reset to queued + another worker claimed).
+// 0 rows returned → upload_race_lost audit, skip side-effects (no double
+// audit, no double grantMeetingAccess, no double stats bump).
+//
+// v9 C3 covers: ignored / ready / failed / retry queued — all 4 paths.
+async function section8HtgUploadWorker(db: DB, stats: Record<string, number>) {
+  if (!isBackupStorageConfigured()) {
+    // v8: alert via admin_audit_log if there are queued records waiting
+    const { count: queuedCount } = await db
+      .from('htg_meeting_recordings_v2' as any)
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'queued');
+
+    if ((queuedCount ?? 0) > 0) {
+      await db.from('admin_audit_log').insert({
+        actor_id: SYSTEM_ACTOR,
+        action: 'htg_backup_misconfigured',
+        details: {
+          queued_count: queuedCount,
+          reason: 'BUNNY_BACKUP_STORAGE_* env vars missing — HTG meetings queue stuck',
+        },
+      });
+    }
+    console.warn('[cron:recordings] Section 8: Bunny Storage not configured, skipping HTG meetings');
+    return;
+  }
+
+  const { data: candidates } = await db
+    .from('htg_meeting_recordings_v2' as any)
+    .select(`
+      id, egress_id, meeting_session_id, meeting_id, recording_kind,
+      participant_user_id, source_url, duration_seconds, min_duration_seconds,
+      session_date, retry_count, max_retries
+    `)
+    .eq('status', 'queued')
+    .not('duration_seconds', 'is', null)
+    .order('created_at', { ascending: true })
+    .limit(5);
+
+  if (!candidates?.length) return;
+
+  for (const rec of candidates as any[]) {
+    // Atomic claim: status='queued' → 'uploading' (single statement)
+    const { data: claimed } = await db
+      .from('htg_meeting_recordings_v2' as any)
+      .update({ status: 'uploading', updated_at: new Date().toISOString() })
+      .eq('id', rec.id)
+      .eq('status', 'queued')
+      .select('id')
+      .maybeSingle();
+
+    if (!claimed) continue;  // Lost race
+
+    try {
+      // v9 C3: short-fragment guard with status='uploading' guard
+      if (rec.duration_seconds < (rec.min_duration_seconds ?? 30)) {
+        const { data: ignoredRow } = await db
+          .from('htg_meeting_recordings_v2' as any)
+          .update({
+            status: 'ignored',
+            last_error: `Too short: ${rec.duration_seconds}s`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', rec.id)
+          .eq('status', 'uploading')
+          .select('id')
+          .maybeSingle();
+        if (!ignoredRow) {
+          console.warn('[cron:section8] upload_race_lost on ignored flip', rec.id);
+          await auditHtgRecording(db, rec.id, rec.egress_id, 'upload_race_lost', { phase: 'ignored' });
+          continue;
+        }
+        await auditHtgRecording(db, rec.id, rec.egress_id, 'recording_ignored', {
+          duration: rec.duration_seconds,
+        });
+        stats.ignored = (stats.ignored ?? 0) + 1;
+        continue;
+      }
+
+      if (!rec.source_url) throw new Error('source_url missing');
+
+      // Resolve meeting slug. v8: meeting_id may be NULL after ON DELETE SET NULL.
+      let meetingSlug: string;
+      if (rec.meeting_id) {
+        const { data: meeting } = await db
+          .from('htg_meetings' as any).select('name').eq('id', rec.meeting_id).maybeSingle();
+        meetingSlug = (meeting as { name?: string } | null)?.name
+          ?? `meeting-${(rec.meeting_id as string).slice(0, 8)}`;
+      } else {
+        meetingSlug = 'orphaned-meeting';
+      }
+
+      // v6: privacy-safe path via SHA-256 hash + salt (NOT raw slice)
+      const userHash = rec.participant_user_id
+        ? hashUserIdForPath(rec.participant_user_id)
+        : null;
+      const storagePath = buildMeetingStoragePath({
+        sessionDate: rec.session_date,
+        meetingSlug,
+        recordingKind: rec.recording_kind,
+        userHash,
+        recordingId: rec.id,
+        extension: 'mp4',
+      });
+
+      // Download from R2 (mirror Live Sessions Section 1)
+      const presignedUrl = generateR2PresignedUrl(rec.source_url, 86400);
+      const r2Res = await fetch(presignedUrl);
+      if (!r2Res.ok) throw new Error(`R2 fetch failed: ${r2Res.status}`);
+      const buffer = await r2Res.arrayBuffer();
+
+      // Upload to Bunny Storage (idempotent — same path)
+      await uploadBackupFile(storagePath, Buffer.from(buffer));
+
+      // v9 C3: status guard on ready flip
+      const { data: readyRow } = await db
+        .from('htg_meeting_recordings_v2' as any)
+        .update({
+          status: 'ready',
+          backup_storage_path: storagePath,
+          backup_storage_zone: getBackupStorageZone(),
+          expires_at: null,  // keep forever
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', rec.id)
+        .eq('status', 'uploading')
+        .select('id')
+        .maybeSingle();
+
+      if (!readyRow) {
+        // Worker lost race — skip ALL side-effects (no double audit, no double
+        // grantMeetingAccess, no double stats).
+        console.warn('[cron:section8] upload_race_lost on ready flip', rec.id);
+        await auditHtgRecording(db, rec.id, rec.egress_id, 'upload_race_lost', { phase: 'ready' });
+        continue;
+      }
+
+      await auditHtgRecording(db, rec.id, rec.egress_id, 'upload_ready', { path: storagePath });
+
+      // Grant access for composite (tracks stay admin-only by RLS)
+      if (rec.recording_kind === 'composite') {
+        await grantMeetingAccess(db, rec.id, rec.meeting_session_id);
+      }
+
+      // DO NOT deleteR2Object — keep everything policy
+      stats.uploaded = (stats.uploaded ?? 0) + 1;
+    } catch (e) {
+      const err = e instanceof Error ? e.message : String(e);
+      const newRetry = (rec.retry_count ?? 0) + 1;
+      const maxRetries = rec.max_retries ?? 3;
+
+      if (newRetry >= maxRetries) {
+        // v9 C3: status guard on failed flip
+        const { data: failedRow } = await db
+          .from('htg_meeting_recordings_v2' as any)
+          .update({
+            status: 'failed',
+            last_error: err,
+            retry_count: newRetry,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', rec.id)
+          .eq('status', 'uploading')
+          .select('id')
+          .maybeSingle();
+        if (!failedRow) {
+          console.warn('[cron:section8] upload_race_lost on failed flip', rec.id);
+          await auditHtgRecording(db, rec.id, rec.egress_id, 'upload_race_lost', { phase: 'failed' });
+          continue;
+        }
+        await auditHtgRecording(db, rec.id, rec.egress_id, 'upload_failed', { error: err, retry: newRetry });
+      } else {
+        // v9 C3: status guard on retry queued flip
+        const { data: retryRow } = await db
+          .from('htg_meeting_recordings_v2' as any)
+          .update({
+            status: 'queued',  // retry
+            last_error: err,
+            retry_count: newRetry,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', rec.id)
+          .eq('status', 'uploading')
+          .select('id')
+          .maybeSingle();
+        if (!retryRow) {
+          console.warn('[cron:section8] upload_race_lost on retry flip', rec.id);
+          await auditHtgRecording(db, rec.id, rec.egress_id, 'upload_race_lost', { phase: 'retry' });
+          continue;
+        }
+      }
+      stats.errors = (stats.errors ?? 0) + 1;
+    }
+  }
+}
+
+// Section 9: stuck uploading reaper. Catches records where Section 8 crashed
+// mid-upload and never flipped status to ready/failed/queued.
+// Resets to 'queued' for retry, or marks failed if max_retries reached.
+async function section9HtgStuckUploadReaper(db: DB, stats: Record<string, number>) {
+  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+
+  const { data: stuck } = await db
+    .from('htg_meeting_recordings_v2' as any)
+    .select('id, egress_id, retry_count, max_retries')
+    .eq('status', 'uploading')
+    .lt('updated_at', thirtyMinAgo)
+    .limit(10);
+
+  for (const rec of (stuck ?? []) as any[]) {
+    const newRetry = (rec.retry_count ?? 0) + 1;
+    if (newRetry >= (rec.max_retries ?? 3)) {
+      await db.from('htg_meeting_recordings_v2' as any).update({
+        status: 'failed',
+        last_error: 'upload_stuck_max_retries',
+        retry_count: newRetry,
+        updated_at: new Date().toISOString(),
+      }).eq('id', rec.id);
+      await auditHtgRecording(db, rec.id, rec.egress_id, 'upload_failed', {
+        reason: 'stuck_reaper',
+        retry: newRetry,
+      });
+    } else {
+      await db.from('htg_meeting_recordings_v2' as any).update({
+        status: 'queued',
+        retry_count: newRetry,
+        last_error: 'upload_stuck_reset',
+        updated_at: new Date().toISOString(),
+      }).eq('id', rec.id);
+    }
+    stats.errors = (stats.errors ?? 0) + 1;
+  }
+}
+
+// Helper: grantMeetingAccess — grant composite recording access to moderator + joined
+// participants who have valid consent (with version match). Skips already-revoked rows.
+async function grantMeetingAccess(db: DB, recordingId: string, meetingSessionId: string) {
+  const currentVersion = await readSiteSettingString(db, CONSENT_VERSION_KEY);
+
+  const { data: session } = await db
+    .from('htg_meeting_sessions' as any)
+    .select('moderator_id')
+    .eq('id', meetingSessionId)
+    .maybeSingle();
+
+  const sess = session as { moderator_id?: string } | null;
+
+  // Inner helper: skip already-revoked, otherwise upsert
+  async function safeGrant(userId: string, reason: 'moderator' | 'participant'): Promise<boolean> {
+    const { data: existing } = await db
+      .from('htg_meeting_recording_access' as any)
+      .select('id, revoked_at')
+      .eq('recording_id', recordingId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if ((existing as { revoked_at?: string | null } | null)?.revoked_at) {
+      await auditHtgRecording(db, recordingId, null, 'access_grant_skipped_revoked', { user_id: userId });
+      return false;
+    }
+
+    await db.from('htg_meeting_recording_access' as any).upsert({
+      recording_id: recordingId,
+      user_id: userId,
+      granted_reason: reason,
+    }, { onConflict: 'recording_id,user_id' });
+    return true;
+  }
+
+  let moderatorGranted = false;
+  if (sess?.moderator_id) {
+    const { data: modParticipant } = await db
+      .from('htg_meeting_participants' as any)
+      .select('recording_consent_at, recording_consent_version')
+      .eq('session_id', meetingSessionId)
+      .eq('user_id', sess.moderator_id)
+      .maybeSingle();
+
+    const mp = modParticipant as { recording_consent_at?: string | null; recording_consent_version?: string | null } | null;
+    const modHasValidConsent = !!mp?.recording_consent_at && mp?.recording_consent_version === currentVersion;
+
+    if (modHasValidConsent) {
+      moderatorGranted = await safeGrant(sess.moderator_id, 'moderator');
+    } else {
+      await auditHtgRecording(db, recordingId, null, 'consent_missing_at_grant', {
+        user_id: sess.moderator_id,
+        reason: 'moderator',
+        consent_version_mismatch: mp?.recording_consent_version !== currentVersion,
+      });
+    }
+  }
+
+  // Grant joined participants with valid consent (version match)
+  const { data: allParticipants } = await db
+    .from('htg_meeting_participants' as any)
+    .select('user_id, recording_consent_version')
+    .eq('session_id', meetingSessionId)
+    .eq('status', 'joined')
+    .not('recording_consent_at', 'is', null)
+    .eq('recording_consent_version', currentVersion);
+
+  // Off-by-one fix: filter moderator from list before counting
+  const participantsExcludingModerator = ((allParticipants ?? []) as Array<{ user_id: string }>).filter(
+    p => p.user_id !== sess?.moderator_id
+  );
+
+  let grantedCount = 0;
+  for (const p of participantsExcludingModerator) {
+    const granted = await safeGrant(p.user_id, 'participant');
+    if (granted) grantedCount++;
+  }
+
+  await auditHtgRecording(db, recordingId, null, 'access_granted', {
+    count: grantedCount + (moderatorGranted ? 1 : 0),
+    moderator_granted: moderatorGranted,
+    consent_version: currentVersion,
+  });
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import type { RateLimitAction, RateLimitActionConfig } from './types';
 
@@ -47,11 +48,20 @@ export async function checkRateLimit(
         userId,
         error: error.message,
       });
+      Sentry.captureMessage('[rate-limit] check failed', {
+        level: 'error',
+        tags: { source: 'rate-limit', kind: 'check_failed', action },
+        extra: { userId, error: error.message },
+      });
       return false; // fail-open
     }
     return (count ?? 0) >= max;
   } catch (err) {
     console.error('[rate-limit] check threw', { action, userId, err });
+    Sentry.captureException(err, {
+      tags: { source: 'rate-limit', kind: 'check_threw', action },
+      extra: { userId },
+    });
     return false; // fail-open (e.g. missing table, RLS, network)
   }
 }
@@ -81,8 +91,17 @@ export async function logRateLimitAction(
         userId,
         error: error.message,
       });
+      Sentry.captureMessage('[rate-limit] log insert failed', {
+        level: 'error',
+        tags: { source: 'rate-limit', kind: 'log_insert_failed', action },
+        extra: { userId, error: error.message },
+      });
     }
   } catch (err) {
     console.error('[rate-limit] log threw', { action, userId, err });
+    Sentry.captureException(err, {
+      tags: { source: 'rate-limit', kind: 'log_threw', action },
+      extra: { userId },
+    });
   }
 }

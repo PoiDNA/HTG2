@@ -39,6 +39,7 @@ const statusLabel: Record<AssignResult['status'], string> = {
   scope_violation: 'Brak uprawnień',
   unauthorized: 'Brak uprawnień',
   invalid_recording: 'Nagranie niedostępne',
+  rate_limited: 'Zbyt wiele żądań',
   error: 'Błąd',
 };
 
@@ -64,6 +65,11 @@ export default function AssignRecordingModal({ recordingId, onClose, onFinalChan
     setLoadingParticipants(true);
     try {
       const res = await fetch(`/api/recordings/participants?id=${encodeURIComponent(recordingId)}`);
+      if (res.status === 429) {
+        setParticipants([]);
+        setMessage({ text: 'Zbyt wiele żądań — poczekaj chwilę.', kind: 'error' });
+        return;
+      }
       if (!res.ok) {
         setParticipants([]);
         setMessage({ text: 'Nie udało się pobrać listy uczestników', kind: 'error' });
@@ -114,6 +120,10 @@ export default function AssignRecordingModal({ recordingId, onClose, onFinalChan
           const results = Array.isArray(data) ? data : [];
           setSuggestions(results);
           setShowSuggestions(results.length > 0);
+        } else if (res.status === 429) {
+          setSuggestions([]);
+          setShowSuggestions(false);
+          setMessage({ text: 'Zbyt wiele zapytań wyszukiwania.', kind: 'error' });
         } else {
           setSuggestions([]);
           setShowSuggestions(false);
@@ -175,6 +185,9 @@ export default function AssignRecordingModal({ recordingId, onClose, onFinalChan
         case 'invalid_recording':
           setMessage({ text: 'Nagranie nie jest dostępne do przydzielenia', kind: 'error' });
           break;
+        case 'rate_limited':
+          setMessage({ text: 'Zbyt wiele żądań — spróbuj za chwilę.', kind: 'error' });
+          break;
         case 'error':
           setMessage({ text: `Błąd: ${result.error}`, kind: 'error' });
           break;
@@ -203,6 +216,14 @@ export default function AssignRecordingModal({ recordingId, onClose, onFinalChan
       }
       if (status === 'invalid_recording') {
         setMessage({ text: 'Nagranie nie jest dostępne do przydzielenia', kind: 'error' });
+        return;
+      }
+      if (status === 'rate_limited') {
+        setMessage({ text: 'Zbyt wiele żądań — spróbuj za chwilę.', kind: 'error' });
+        return;
+      }
+      if (status === 'too_many_emails') {
+        setMessage({ text: 'Maksymalnie 20 adresów jednocześnie.', kind: 'error' });
         return;
       }
 
@@ -240,6 +261,10 @@ export default function AssignRecordingModal({ recordingId, onClose, onFinalChan
       }
       if (result.status === 'invalid_recording') {
         setMessage({ text: 'Nagranie niedostępne', kind: 'error' });
+        return;
+      }
+      if (result.status === 'rate_limited') {
+        setMessage({ text: 'Zbyt wiele żądań — spróbuj za chwilę.', kind: 'error' });
         return;
       }
       setMessage({ text: `Usunięto dostęp: ${label}`, kind: 'success' });

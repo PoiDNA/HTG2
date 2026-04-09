@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { resolveStaffPlaybackScope, isSessionTypeInScope } from '@/lib/admin/require-playback-actor';
+import { checkRateLimit, logRateLimitAction } from '@/lib/rate-limit/check';
 
 /**
  * GET /api/recordings/participants?id=<recordingId>
@@ -11,6 +12,12 @@ import { resolveStaffPlaybackScope, isSessionTypeInScope } from '@/lib/admin/req
  *
  * Auth: admin, practitioner, lub assistant w scope.
  * Walidacja: tylko recording_phase='sesja' AND status='ready'.
+ *
+ * Rate limit: 60 requests / 60 min per user (slot-reservation semantics).
+ * HARD INVARIANT: rate check + log MUST run before the recording fetch,
+ * before the `if (!recordingId)` 400 short-circuit, and before the
+ * `isSessionTypeInScope` check. Otherwise an assistant can enumerate
+ * random UUIDs by catching 404/403 without burning slots.
  */
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServer();
@@ -20,6 +27,17 @@ export async function GET(request: NextRequest) {
   const db = createSupabaseServiceRole();
   const scope = await resolveStaffPlaybackScope(user, db);
   if (!scope) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+  const rateLimited = await checkRateLimit(user.id, 'recordings_participants');
+  if (rateLimited) {
+    return NextResponse.json(
+      { error: 'Zbyt wiele żądań. Spróbuj za chwilę.' },
+      { status: 429 },
+    );
+  }
+  // Slot-reservation: log immediately. Every 4xx response below still burns
+  // a slot — that's the anti-enumeration point.
+  await logRateLimitAction(user.id, 'recordings_participants');
 
   const recordingId = request.nextUrl.searchParams.get('id')?.trim() || '';
   if (!recordingId) return NextResponse.json({ error: 'id required' }, { status: 400 });

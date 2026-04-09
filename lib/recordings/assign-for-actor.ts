@@ -17,6 +17,15 @@ import {
   isSessionTypeInScope,
   type PlaybackScope,
 } from '@/lib/admin/require-playback-actor';
+import { checkRateLimit, logRateLimitAction } from '@/lib/rate-limit/check';
+
+/**
+ * Max emails per bulk assign call — DoS protection against
+ * `bulkAssignRecordingForActor(id, [10000 emails])` which would fire
+ * 3 + 4 × emails.length DB queries. Current preset has 8 emails, 20 is
+ * a generous ceiling with room to grow.
+ */
+const MAX_BULK_EMAILS = 20;
 
 export type AssignResult =
   | { status: 'added'; displayName?: string }
@@ -26,6 +35,7 @@ export type AssignResult =
   | { status: 'scope_violation' }
   | { status: 'unauthorized' }
   | { status: 'invalid_recording' }
+  | { status: 'rate_limited' }
   | { status: 'error'; error: string };
 
 export type PerEmailResult = AssignResult & { email: string };
@@ -176,6 +186,14 @@ export async function assignRecordingForActor(
   const actor = await getActor();
   if (!actor) return { status: 'unauthorized' };
 
+  // Slot-reservation: log after successful check, BEFORE any DB work.
+  // Every authorized attempt burns one slot — even `scope_violation`,
+  // `invalid_recording`, `user_not_found`, `already_had` (all incur
+  // DB cost via getValidatedRecording + profile lookup).
+  const rateLimited = await checkRateLimit(actor.userId, 'recordings_assign_single');
+  if (rateLimited) return { status: 'rate_limited' };
+  await logRateLimitAction(actor.userId, 'recordings_assign_single');
+
   const db = createSupabaseServiceRole();
   const recording = await getValidatedRecording(recordingId, actor.scope, db);
   if ('error' in recording) return recording.error;
@@ -186,9 +204,22 @@ export async function assignRecordingForActor(
 export async function bulkAssignRecordingForActor(
   recordingId: string,
   emails: string[],
-): Promise<{ results: PerEmailResult[]; status?: 'unauthorized' | 'scope_violation' | 'invalid_recording' }> {
+): Promise<{ results: PerEmailResult[]; status?: 'unauthorized' | 'scope_violation' | 'invalid_recording' | 'too_many_emails' | 'rate_limited' }> {
   const actor = await getActor();
   if (!actor) return { results: [], status: 'unauthorized' };
+
+  // Hardcap BEFORE rate check — absurdly large inputs fail cheap without
+  // burning a slot. 20 is generous (preset has 8).
+  if (emails.length > MAX_BULK_EMAILS) {
+    return { results: [], status: 'too_many_emails' };
+  }
+
+  // Slot-reservation: one slot per bulk call, regardless of per-email
+  // outcomes. Even if every email comes back `already_had` or
+  // `user_not_found`, the call burns a slot.
+  const rateLimited = await checkRateLimit(actor.userId, 'recordings_assign_bulk');
+  if (rateLimited) return { results: [], status: 'rate_limited' };
+  await logRateLimitAction(actor.userId, 'recordings_assign_bulk');
 
   const db = createSupabaseServiceRole();
   const recording = await getValidatedRecording(recordingId, actor.scope, db);
@@ -213,9 +244,15 @@ export async function bulkAssignRecordingForActor(
 export async function removeRecordingAccessForActor(
   recordingId: string,
   targetUserId: string,
-): Promise<{ error?: string; status?: 'unauthorized' | 'scope_violation' | 'invalid_recording' }> {
+): Promise<{ error?: string; status?: 'unauthorized' | 'scope_violation' | 'invalid_recording' | 'rate_limited' }> {
   const actor = await getActor();
   if (!actor) return { status: 'unauthorized' };
+
+  // Slot-reservation: burns a slot even when the recording is invalid
+  // or the target doesn't exist.
+  const rateLimited = await checkRateLimit(actor.userId, 'recordings_remove_access');
+  if (rateLimited) return { status: 'rate_limited' };
+  await logRateLimitAction(actor.userId, 'recordings_remove_access');
 
   const db = createSupabaseServiceRole();
   const recording = await getValidatedRecording(recordingId, actor.scope, db);

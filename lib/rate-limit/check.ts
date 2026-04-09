@@ -13,6 +13,11 @@ export const RATE_LIMIT_CONFIG: Record<RateLimitAction, RateLimitActionConfig> =
   recordings_assign_single: { max: 30,  windowMinutes: 60 },
   recordings_assign_bulk:   { max: 10,  windowMinutes: 60 },
   recordings_remove_access: { max: 30,  windowMinutes: 60 },
+  // Token endpoint: heavy (5-9 DB calls + URL signing + active_streams upsert).
+  // Normal user fetches 1-5 per day; admin QA ~10. 60/h is a generous ceiling
+  // that caps mass signed-URL minting (the biggest residual DoS surface from
+  // PR #267 — flagged as follow-up #13 in binary-leaping-eagle.md).
+  booking_recording_token:  { max: 60,  windowMinutes: 60 },
 };
 
 /**

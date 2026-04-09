@@ -772,7 +772,128 @@ Kanał `'portal'` w istniejącym Communication Hub. Klient pisze krótkie wiadom
 | */5 * * * * | /api/cron/prepare-sessions | Tworzenie live_sessions + expire slotów |
 | 0 8 * * * | /api/cron/session-reminders | Email D-1 reminder |
 | * * * * * | /api/cron/process-messages | Async email processing (body, attachments, AI) |
+| */5 * * * * | /api/cron/analyze-client | Pipeline analityki klienta — Whisper + Claude |
 
 ---
 
-*Ostatnia aktualizacja: 2026-03-30*
+## Analityka klienta — pipeline insights
+
+Stack: per-participant audio track egressy z LiveKit (każda z 3 faz osobno),
+transkrypcja przez OpenAI Whisper, ekstrakcja insights przez Anthropic Claude
+Sonnet 4.6, persystencja w `session_client_insights`. Cały pipeline za feature
+flagiem `CLIENT_ANALYTICS_ENABLED` (default off).
+
+### Tabele
+
+- **`analytics_track_egresses`** (migracja 051) — znormalizowana tabela
+  per-participant track egress per faza. Klucze: `live_session_id, phase,
+  participant_identity, track_sid`. RLS: service_role only.
+- **`session_client_insights`** (migracja 051) — jeden wiersz per
+  `live_session_id`. Pola JSONB: `transcript`, `problems`, `emotional_states`,
+  `life_events`, `goals`, `breakthroughs`, plus `journey_summary` i `summary`
+  (TEXT). Status enum: `processing | ready | failed`. RLS: service_role only.
+- **`session_client_insights_audit`** (migracja 054) — audit log każdego
+  staff access do insights/transcript. Schemat mirror'uje
+  `client_recording_audit` (050). Actions: `viewed_list, viewed_transcript,
+  viewed_insights, downloaded_pdf`. Best-effort insert via
+  `lib/audit/insights-audit.ts`.
+- **`live_sessions`** dodane kolumny race-guard: `analytics_wstep_claimed_at`,
+  `analytics_podsumowanie_claimed_at` (atomic claim flag dla cron + consent
+  retroactive start).
+
+### Pipeline runtime
+
+1. **Start sesji** (`/api/live/admit` lub `/api/live/phase`):
+   - Kompozytowy egress fazy (legacy session_publications) +
+   - `startAllAnalyticsAudioTrackEgresses(roomName, phase, sessionId)` —
+     osobne audio track egressy per uczestnik z `kind === AUDIO`
+   - Race-guard: `analytics_*_claimed_at` UPDATE WHERE IS NULL
+
+2. **Webhook** (`/api/live/webhook`):
+   - Nowa gałąź: gdy egress kończy się i pasuje do `analytics_track_egresses`
+     UPDATE `file_url` (URL R2 z prefiksem bucket'a stripped przez
+     `extractR2ObjectKey()` z `lib/r2-presigned.ts`).
+
+3. **Cron `/api/cron/analyze-client` (co 5 min)**:
+   - `find_next_analytics_candidate()` RPC — wybiera sesję z grace period 2h
+   - `claim_analytics_session()` RPC — atomic INSERT/UPDATE w
+     `session_client_insights` (`status='processing'`)
+   - `runClientAnalysis(db, sessionId)`:
+     1. Download wszystkich `file_url` z R2 (signed URL via R2 client)
+     2. `transcribeAudio()` — Whisper API z language='pl', verbose_json
+     3. `identifySpeakers()` — Supabase lookup praktyk + companion
+     4. `mergePhaseToSegments()` — pure func merging chronological per phase
+     5. `analyzeSessionJourney()` — Claude API z system prompt + transcript
+     6. UPDATE `session_client_insights` z transkryptem + ekstraktami,
+        `status='ready'`
+
+### Subprocessors (RODO)
+
+- **OpenAI** (Whisper-1) — transkrypcja audio. DPA wymagana przed enable.
+- **Anthropic** (Claude Sonnet 4.6) — ekstrakcja insights z tekstu. DPA
+  wymagana. Tekst nie jest used for training (Claude API ToS).
+
+Tekst zgody klienta (`session_recording_capture`) explicite wymienia obu
+podprocesorów + 3 fazy + RODO art. 9 — patrz `app/api/live/consent/route.ts`.
+
+### Admin viewer
+
+Endpointy:
+- `GET /api/admin/insights/[bookingId]` — JSON z transkryptem (allowlist:
+  `canViewClientRecordings` = admin + Natalia). Audit `viewed_transcript`.
+- `GET /api/admin/insights/[bookingId]/pdf` — PDF dump (pdfkit, server-side).
+  Audit `downloaded_pdf`.
+
+UI: akordeon w `/pl/konto/admin/nagrania-klientow` per wiersz nagrania,
+widoczny tylko gdy `session_client_insights.status='ready'` (bulk-fetched
+flag w server component).
+
+### Agent API — stub (do wdrożenia)
+
+**Status: zaplanowane, nie zaimplementowane.** Ten paragraf opisuje docelową
+architekturę dostępu agentów AI do historii klienta (cross-session insights),
+żeby kolejne PR-y miały spójny punkt odniesienia.
+
+**Use case**: agent AI (np. preparation agent przed sesją Natalii) odpytuje
+o historię klienta — wszystkie poprzednie `session_client_insights` z
+ekstraktami problemów, celów i przełomów, posortowane chronologicznie.
+
+**Proponowane endpointy** (planowane):
+
+- `GET /api/admin/insights/by-user/[userId]` — wszystkie insights klienta
+  z join przez `bookings.user_id` + `session_client_insights.booking_id`.
+  Zwraca listę { booking_id, session_date, summary, problems, goals,
+  breakthroughs }. Bez transkryptu (oszczędność payloadu — transkrypt
+  pobierać per-session przez istniejący endpoint).
+- `GET /api/admin/insights/by-user/[userId]/timeline` — chronologiczna oś
+  problemów i celów (aggregation na poziomie SQL — RPC z window functions).
+- `POST /api/admin/insights/search` — semantic search po journey_summary +
+  problems[].quote (wymaga pgvector — feature na później).
+
+**Autoryzacja**: ten sam allowlist co viewer (`canViewClientRecordings`).
+Każdy odczyt audytowany jako `viewed_insights` z details `{ scope: 'by_user',
+target_user_id: ... }`.
+
+**Format dla agenta**: zwracana struktura ma być flat JSON łatwy do wstrzyknięcia
+w prompt (bez nested objects głębiej niż 1 poziom). Proposal: każdy insights
+record renderowany jako sekcja Markdown z headerem `## Sesja [data]`, listy
+bullet point dla problemów/celów/przełomów, osobny paragraf dla
+journey_summary.
+
+**Rate limiting / cost guard**: agent może poprosić maksymalnie o 20 ostatnich
+sesji per użytkownik per request, żeby uniknąć eksplozji tokenów. Starsze
+trzeba paginować.
+
+**Cache invalidation**: insights są immutable po `status='ready'` (poza
+manual reanalysis przez admin). Agent może cache'ować response na poziomie
+sesji bez ryzyka stale data — invalidation tylko gdy nowy `session_client_insights`
+record dla użytkownika lub re-run analizy.
+
+**Decyzja: implementacja po pierwszym konkretnym agent use case**. Schemat
+DB i tabele już gotowe (booking_id → user_id join działa). Endpoint to ~50
+linii kodu + audit log. Zostawić jako follow-up żeby uniknąć przedwczesnej
+abstrakcji.
+
+---
+
+*Ostatnia aktualizacja: 2026-04-09*

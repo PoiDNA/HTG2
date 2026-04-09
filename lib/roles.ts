@@ -28,3 +28,23 @@ export function isStaffEmail(email: string): boolean {
 export function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase());
 }
+
+/**
+ * Allowlist for the admin client-recordings panel and the related transcript
+ * viewer / PDF export endpoints. Admin always has access; Natalia (the lead
+ * practitioner) is the only staff member added here because she needs to read
+ * client transcripts and AI-extracted insights to provide therapy support.
+ *
+ * Other staff members (Agata, Justyna, Przemek) are deliberately NOT included
+ * — they are practitioners who run their own sessions but do not need
+ * cross-client access to transcripts (RODO data minimization principle).
+ *
+ * If you need to add another viewer in the future, append their email here.
+ * Every read of `session_client_insights` is audited via
+ * lib/audit/insights-audit.ts so changes to this allowlist are observable.
+ */
+export const CLIENT_RECORDINGS_VIEWERS = ['htg@htg.cyou', 'natalia@htg.cyou'];
+
+export function canViewClientRecordings(email: string): boolean {
+  return CLIENT_RECORDINGS_VIEWERS.includes(email.toLowerCase());
+}

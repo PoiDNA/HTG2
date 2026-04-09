@@ -1,8 +1,9 @@
+import { Fragment } from 'react';
 import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { isAdminEmail } from '@/lib/roles';
+import { canViewClientRecordings } from '@/lib/roles';
 import { redirect } from 'next/navigation';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
@@ -11,6 +12,7 @@ import AuditPageView from './AuditPageView';
 import RecordingActions from './RecordingActions';
 import ImportRecording from './ImportRecording';
 import ScanBunnyButton from './ScanBunnyButton';
+import TranscriptAccordion from './TranscriptAccordion';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -57,7 +59,7 @@ export default async function AdminRecordingsPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) {
+  if (!user || !canViewClientRecordings(user.email ?? '')) {
     redirect(`/${locale}/konto`);
   }
 
@@ -73,7 +75,7 @@ export default async function AdminRecordingsPage({
   let query = db
     .from('booking_recordings')
     .select(`
-      id, title, session_type, session_date, status, duration_seconds,
+      id, booking_id, title, session_type, session_date, status, duration_seconds,
       source, import_confidence, legal_hold, metadata, recording_phase, backup_status, backup_storage_path,
       booking_recording_access(user_id, revoked_at)
     `, { count: 'exact' })
@@ -112,6 +114,26 @@ export default async function AdminRecordingsPage({
       .in('id', [...allUserIds]);
     for (const p of profiles ?? []) {
       profileMap.set(p.id, { display_name: p.display_name, email: p.email });
+    }
+  }
+
+  // Bulk-fetch which bookings have ready insights, so we can render the
+  // "Pokaż transkrypcję" toggle only for rows that have something to show.
+  // One query per page (not per row) — keyed by booking_id.
+  const allBookingIds = new Set<string>();
+  for (const rec of allData ?? []) {
+    const bid = (rec as Record<string, unknown>).booking_id as string | null;
+    if (bid) allBookingIds.add(bid);
+  }
+  const insightsReadyBookingIds = new Set<string>();
+  if (allBookingIds.size > 0) {
+    const { data: insightsRows } = await db
+      .from('session_client_insights')
+      .select('booking_id')
+      .in('booking_id', [...allBookingIds])
+      .eq('status', 'ready');
+    for (const row of insightsRows ?? []) {
+      if (row.booking_id) insightsReadyBookingIds.add(row.booking_id);
     }
   }
 
@@ -231,9 +253,12 @@ export default async function AdminRecordingsPage({
               const isNonSesja = phase !== 'sesja';
               const backupStatus = (rec as Record<string, unknown>).backup_status as string | null;
               const backupStoragePath = (rec as Record<string, unknown>).backup_storage_path as string | null;
+              const recBookingId = (rec as Record<string, unknown>).booking_id as string | null;
+              const hasInsights = recBookingId ? insightsReadyBookingIds.has(recBookingId) : false;
 
               return (
-                <tr key={rec.id} className="border-b border-htg-card-border/50 hover:bg-htg-surface/50 transition-colors group">
+                <Fragment key={rec.id}>
+                <tr className="border-b border-htg-card-border/50 hover:bg-htg-surface/50 transition-colors group">
                   {/* Email z nagrania */}
                   <td className="py-3 pr-4">
                     <span className="text-htg-fg text-xs">
@@ -320,6 +345,14 @@ export default async function AdminRecordingsPage({
                     />
                   </td>
                 </tr>
+                {hasInsights && recBookingId && (
+                  <tr className="border-b border-htg-card-border/50">
+                    <td colSpan={6} className="px-2 pb-3">
+                      <TranscriptAccordion bookingId={recBookingId} hasInsights={hasInsights} />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
 

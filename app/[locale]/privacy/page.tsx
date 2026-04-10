@@ -38,7 +38,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
       <h1 className="text-3xl md:text-4xl font-serif font-bold text-htg-fg mb-2">
         Polityka Prywatności
       </h1>
-      <p className="text-htg-fg-muted text-sm mb-8">Hacking The Game (HTG) · Wersja 1.0</p>
+      <p className="text-htg-fg-muted text-sm mb-8">PILOT Prosta Spółka Akcyjna · Wersja 1.0</p>
 
       <div className="space-y-2">
         <Section id="administrator" title="1. Administrator danych">
@@ -46,7 +46,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
             <p className="font-semibold text-htg-fg">Pilot PSA</p>
             <p className="text-sm text-htg-fg-muted mt-1">ul. RONDO ONZ 1, 00-124 Warszawa</p>
             <p className="text-sm text-htg-fg-muted">NIP 525-308-51-01 · REGON 544401249</p>
-            <p className="text-sm text-htg-fg-muted mt-1">E-mail: <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a></p>
+            <p className="text-sm text-htg-fg-muted mt-1">E-mail: <a href="mailto:mail@pilot.place" className="text-htg-sage hover:underline">mail@pilot.place</a></p>
           </div>
         </Section>
 
@@ -151,7 +151,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
               </tbody>
             </table>
           </div>
-          <P>30 dni przed usunięciem nagrania otrzymasz powiadomienie e-mailem. Możesz poprosić o wcześniejsze usunięcie nagrania, pisząc na htg@htg.cyou.</P>
+          <P>30 dni przed usunięciem nagrania otrzymasz powiadomienie e-mailem. Możesz poprosić o wcześniejsze usunięcie nagrania, pisząc na mail@pilot.place.</P>
           <P>W przypadku usunięcia konta nagrania są kasowane, z wyjątkiem danych niezbędnych do celów księgowych lub ochrony roszczeń. Korespondencja jest przechowywana przez okres obowiązywania umowy i przedawnienia roszczeń.</P>
         </Section>
 
@@ -193,7 +193,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
         <div className="mt-10 bg-htg-surface rounded-xl p-6 text-center">
           <p className="text-sm text-htg-fg-muted mb-1">Kontakt w sprawie danych osobowych:</p>
           <p className="font-semibold text-htg-fg">
-            <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>
+            <a href="mailto:mail@pilot.place" className="text-htg-sage hover:underline">mail@pilot.place</a>
           </p>
           <p className="text-xs text-htg-fg-muted mt-2">Pilot PSA · ul. RONDO ONZ 1, 00-124 Warszawa</p>
         </div>

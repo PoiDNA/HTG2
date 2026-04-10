@@ -26,12 +26,6 @@ const REQUIRED_CONSENTS = [
     text: 'Zgoda na przetwarzanie danych dotyczących przekonań, zdrowia i życia osobistego ujawnianych w trakcie sesji rozwoju osobistego (art. 9 ust. 2 lit. a RODO).',
     description: 'Dotyczy danych osobistych poruszanych podczas sesji. Możesz wycofać tę zgodę w dowolnym momencie w profilu — może to jednak uniemożliwić realizację kolejnych sesji.',
   },
-  {
-    type: 'recording_publication',
-    label: 'Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu',
-    text: 'Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu. Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania. Zgoda stanowi warunek zawarcia umowy.',
-    description: 'Warunek realizacji usługi — nie podlega wycofaniu. Zachowujesz prawo do wskazania fragmentów do usunięcia przed publikacją.',
-  },
 ] as const;
 
 export default function ConsentGatePage() {

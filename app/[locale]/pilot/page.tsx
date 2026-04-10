@@ -16,9 +16,31 @@ export function generateStaticParams() {
 }
 
 export const metadata: Metadata = {
-  title: { absolute: "PILOT — Bezpieczne platformy edukacyjne i rozwojowe" },
+  title: { absolute: "PILOT PSA — Bezpieczne platformy edukacyjne i rozwojowe" },
   description:
-    "Cyberbezpieczeństwo i administracja serwisów edukacyjnych. PILOT Prosta Spółka Akcyjna.",
+    "PILOT Prosta Spółka Akcyjna — cyberbezpieczeństwo i administracja serwisów edukacyjnych. KRS 0001233166, NIP 5253085101. Warszawa.",
+  keywords: [
+    "PILOT PSA",
+    "Pilot Prosta Spółka Akcyjna",
+    "Pilot spółka",
+    "pilot.place",
+    "cyberbezpieczeństwo",
+    "serwisy edukacyjne",
+    "platformy edukacyjne",
+    "ochrona danych RODO",
+  ],
+  alternates: {
+    canonical: "https://pilot.place",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "PILOT PSA",
+    title: "PILOT PSA — Bezpieczne platformy edukacyjne i rozwojowe",
+    description:
+      "PILOT Prosta Spółka Akcyjna — cyberbezpieczeństwo i administracja serwisów edukacyjnych.",
+    url: "https://pilot.place",
+    locale: "pl_PL",
+  },
 };
 
 const SERVICES = [
@@ -56,8 +78,47 @@ export default async function PilotPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "PILOT Prosta Spółka Akcyjna",
+    alternateName: ["PILOT PSA", "Pilot spółka"],
+    url: "https://pilot.place",
+    email: "mail@pilot.place",
+    address: [
+      {
+        "@type": "PostalAddress",
+        streetAddress: "Rondo ONZ 1",
+        postalCode: "00-124",
+        addressLocality: "Warszawa",
+        addressCountry: "PL",
+      },
+      {
+        "@type": "PostalAddress",
+        streetAddress: "ul. Opolska 110",
+        postalCode: "31-323",
+        addressLocality: "Kraków",
+        addressCountry: "PL",
+      },
+    ],
+    taxID: "5253085101",
+    legalName: "PILOT Prosta Spółka Akcyjna",
+    description:
+      "Firma technologiczna specjalizująca się w cyberbezpieczeństwie i administracji serwisów edukacyjnych.",
+    knowsAbout: [
+      "cyberbezpieczeństwo",
+      "platformy edukacyjne",
+      "ochrona danych",
+      "infrastruktura IT",
+    ],
+  };
+
   return (
     <div className="font-serif">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* ── Hero ──────────────────────────────────────────────── */}
       <header className="relative overflow-hidden bg-stone-900">
         {/* Subtle texture overlay */}

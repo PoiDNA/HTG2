@@ -38,7 +38,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
       <h1 className="text-3xl md:text-4xl font-serif font-bold text-htg-fg mb-2">
         Polityka Prywatności
       </h1>
-      <p className="text-htg-fg-muted text-sm mb-8">Hacking The Game (HTG) · Wersja 1.0</p>
+      <p className="text-htg-fg-muted text-sm mb-8">PILOT Prosta Spółka Akcyjna · Wersja 1.0</p>
 
       <div className="space-y-2">
         <Section id="administrator" title="1. Administrator danych">

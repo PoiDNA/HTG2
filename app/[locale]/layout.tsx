@@ -10,7 +10,7 @@ import { getMessages } from "next-intl/server";
 import { locales, routing } from "@/i18n-config";
 import { Toaster } from "sonner";
 import { cookies, headers } from "next/headers";
-import { isAnyPortal } from "@/lib/portal";
+import { isAnyPortal, isPilotSite } from "@/lib/portal";
 import { getDesignVariant, canSwitchVariant } from "@/lib/design-variant";
 import { DesignVariantProvider } from "@/lib/design-variant-context";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -29,6 +29,26 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  // Pilot site — separate metadata, no HTG branding
+  const headersList = await headers();
+  if (isPilotSite(headersList.get('host'))) {
+    return {
+      title: { absolute: 'PILOT — Bezpieczne platformy edukacyjne i rozwojowe' },
+      description: 'Cyberbezpieczeństwo i administracja serwisów edukacyjnych. PILOT Prosta Spółka Akcyjna.',
+      metadataBase: new URL('https://pilot.place'),
+      robots: { index: true, follow: true },
+      openGraph: {
+        type: 'website',
+        siteName: 'PILOT PSA',
+        title: 'PILOT — Bezpieczne platformy edukacyjne i rozwojowe',
+        description: 'Cyberbezpieczeństwo i administracja serwisów edukacyjnych',
+        url: 'https://pilot.place',
+        locale: 'pl_PL',
+      },
+    };
+  }
+
   const t = await getTranslations({ locale, namespace: 'Metadata' });
 
   const languages: Record<string, string> = {
@@ -86,6 +106,23 @@ export default async function LocaleLayout({
 
   const headersList = await headers();
   const isNagrania = isAnyPortal(headersList.get('host'));
+
+  // Pilot site — minimal shell, no HTG branding/theme
+  if (isPilotSite(headersList.get('host'))) {
+    return (
+      <html lang={locale}>
+        <head />
+        <body className="bg-white text-stone-800 antialiased min-h-screen">
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-teal-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold">
+            Przejdź do treści
+          </a>
+          <NextIntlClientProvider messages={messages} locale={locale}>
+            {children}
+          </NextIntlClientProvider>
+        </body>
+      </html>
+    );
+  }
 
   // Design variant (cookie-based, admin-only switching)
   const cookieStore = await cookies();

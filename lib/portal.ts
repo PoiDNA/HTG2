@@ -48,3 +48,13 @@ export function isAnyPortalClient(): boolean {
   if (typeof window === 'undefined') return false;
   return isAnyPortal(window.location.hostname);
 }
+
+// ─── Pilot site (public corporate page, not a konto portal) ──
+
+export function isPilotSite(host: string | null): boolean {
+  if (!host) return false;
+  const h = host.split(':')[0];
+  return h === 'pilot.place' || h === 'www.pilot.place' || h === 'pilot.localhost';
+}
+
+export const PILOT_HOME = '/pilot';

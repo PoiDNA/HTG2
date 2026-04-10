@@ -2,12 +2,12 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { routing, locales } from './i18n-config';
-import { isNagraniaPortal, NAGRANIA_HOME, isSesjaPortal, SESJA_HOME, isAnyPortal, getPortalHome } from './lib/portal';
+import { isNagraniaPortal, NAGRANIA_HOME, isSesjaPortal, SESJA_HOME, isAnyPortal, getPortalHome, isPilotSite, PILOT_HOME } from './lib/portal';
 
 const intlMiddleware = createMiddleware(routing);
 
 // Paths that don't require authentication
-const PUBLIC_PATHS = ['/login', '/privacy', '/terms', '/auth', '/host', '/host-v2', '/host-v3', '/host-v4'];
+const PUBLIC_PATHS = ['/login', '/privacy', '/terms', '/auth', '/host', '/host-v2', '/host-v3', '/host-v4', '/pilot'];
 
 function isPublicPath(pathname: string): boolean {
   // Strip locale prefix
@@ -126,6 +126,20 @@ export async function middleware(request: NextRequest) {
     }
 
     return response;
+  }
+
+  // ─── Pilot site route restriction ─────────────────────────────
+  const isPilot = isPilotSite(host);
+  if (isPilot) {
+    const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
+    const PILOT_ALLOWED = ['/pilot', '/privacy', '/terms'];
+    const isPilotAllowed = PILOT_ALLOWED.some(p => withoutLocale === p || withoutLocale.startsWith(`${p}/`));
+    if (!isPilotAllowed || withoutLocale === '/') {
+      const locale = getLocaleFromPath(pathname) || routing.defaultLocale;
+      const url = request.nextUrl.clone();
+      url.pathname = `/${locale}${PILOT_HOME}`;
+      return NextResponse.redirect(url);
+    }
   }
 
   // ─── Portal Route Restriction ─────────────────────────────────

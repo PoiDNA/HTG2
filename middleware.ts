@@ -218,7 +218,7 @@ export async function middleware(request: NextRequest) {
   const isAdminPath = withoutLocale.startsWith('/konto/admin') || withoutLocale.startsWith('/prowadzacy');
 
   if (isKontoPath && !isZgodyPath && !isAdminPath && !isPortal) {
-    const REQUIRED = ['terms_v3', 'privacy_v3', 'sensitive_data', 'recording_publication'];
+    const REQUIRED = ['terms_v3', 'privacy_v3', 'sensitive_data'];
     const { data: consents } = await supabase
       .from('consent_records')
       .select('consent_type')

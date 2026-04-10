@@ -21,6 +21,16 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  async rewrites() {
+    return [
+      {
+        source: '/favicon.ico',
+        has: [{ type: 'header', key: 'host', value: '(pilot\\.place|www\\.pilot\\.place|pilot\\.localhost.*)' }],
+        destination: '/pilot-favicon.png',
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

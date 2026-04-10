@@ -42,7 +42,7 @@ function isSesjaAllowed(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
-  const host = request.headers.get('host');
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
   const isNagrania = isNagraniaPortal(host);
   const isSesja = isSesjaPortal(host);
   const isPortal = isNagrania || isSesja;

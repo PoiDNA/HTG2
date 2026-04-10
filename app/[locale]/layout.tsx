@@ -111,7 +111,10 @@ export default async function LocaleLayout({
   if (isPilotSite(headersList.get('host'))) {
     return (
       <html lang={locale}>
-        <head />
+        <head>
+          <link rel="icon" href="/pilot-favicon.png" type="image/png" />
+          <link rel="apple-touch-icon" href="/pilot-favicon.png" />
+        </head>
         <body className="bg-white text-stone-800 antialiased min-h-screen">
           <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-teal-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold">
             Przejdź do treści

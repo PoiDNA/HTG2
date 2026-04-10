@@ -43,10 +43,13 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
       <div className="space-y-2">
         <Section id="administrator" title="1. Administrator danych">
           <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-4">
-            <p className="font-semibold text-htg-fg">Pilot PSA</p>
+            <p className="font-semibold text-htg-fg">
+              <a href="https://pilot.place" target="_blank" rel="noopener noreferrer" className="text-htg-sage hover:underline">Pilot PSA</a>
+            </p>
             <p className="text-sm text-htg-fg-muted mt-1">ul. RONDO ONZ 1, 00-124 Warszawa</p>
             <p className="text-sm text-htg-fg-muted">NIP 525-308-51-01 · REGON 544401249</p>
             <p className="text-sm text-htg-fg-muted mt-1">E-mail: <a href="mailto:mail@pilot.place" className="text-htg-sage hover:underline">mail@pilot.place</a></p>
+            <p className="text-sm text-htg-fg-muted mt-1">Strona: <a href="https://pilot.place" target="_blank" rel="noopener noreferrer" className="text-htg-sage hover:underline">pilot.place</a></p>
           </div>
         </Section>
 
@@ -195,7 +198,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
           <p className="font-semibold text-htg-fg">
             <a href="mailto:mail@pilot.place" className="text-htg-sage hover:underline">mail@pilot.place</a>
           </p>
-          <p className="text-xs text-htg-fg-muted mt-2">Pilot PSA · ul. RONDO ONZ 1, 00-124 Warszawa</p>
+          <p className="text-xs text-htg-fg-muted mt-2"><a href="https://pilot.place" target="_blank" rel="noopener noreferrer" className="text-htg-sage hover:underline">pilot.place</a> · Pilot PSA · ul. RONDO ONZ 1, 00-124 Warszawa</p>
         </div>
       </div>
     </div>

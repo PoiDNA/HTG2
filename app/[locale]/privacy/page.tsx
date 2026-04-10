@@ -1,14 +1,39 @@
-import { setRequestLocale, getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
+import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'Legal' });
-  return { title: t('privacy_title') };
+  if (locale === 'en') {
+    return {
+      title: { absolute: 'Privacy Policy | PILOT PSA' },
+      description: 'Privacy policy of PILOT Prosta Spółka Akcyjna — how we collect, use and protect your personal data.',
+      alternates: {
+        canonical: 'https://pilot.place/en/privacy',
+        languages: {
+          pl: 'https://pilot.place/pl/privacy',
+          en: 'https://pilot.place/en/privacy',
+          'x-default': 'https://pilot.place/pl/privacy',
+        },
+      },
+    };
+  }
+  return {
+    title: { absolute: 'Polityka Prywatności | PILOT PSA' },
+    description: 'Polityka prywatności PILOT Prosta Spółka Akcyjna — jak zbieramy, wykorzystujemy i chronimy Twoje dane osobowe.',
+    alternates: {
+      canonical: 'https://pilot.place/pl/privacy',
+      languages: {
+        pl: 'https://pilot.place/pl/privacy',
+        en: 'https://pilot.place/en/privacy',
+        'x-default': 'https://pilot.place/pl/privacy',
+      },
+    },
+  };
 }
 
 /* ── Shared components ── */
@@ -32,6 +57,181 @@ function UL({ children }: { children: React.ReactNode }) {
 export default async function PrivacyPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  const isEn = locale === 'en';
+
+  if (isEn) {
+    return (
+      <div className="mx-auto max-w-3xl px-6 py-16">
+        <h1 className="text-3xl md:text-4xl font-serif font-bold text-htg-fg mb-2">
+          Privacy Policy
+        </h1>
+        <p className="text-htg-fg-muted text-sm mb-8">PILOT Prosta Spółka Akcyjna · Version 1.0</p>
+
+        <div className="space-y-2">
+          <Section id="controller" title="1. Data Controller">
+            <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-4">
+              <p className="font-semibold text-htg-fg">
+                <a href="https://pilot.place" target="_blank" rel="noopener noreferrer" className="text-htg-sage hover:underline">Pilot PSA</a>
+              </p>
+              <p className="text-sm text-htg-fg-muted mt-1">ul. RONDO ONZ 1, 00-124 Warsaw, Poland</p>
+              <p className="text-sm text-htg-fg-muted">VAT: PL5253085101 · REGON: 544401249</p>
+              <p className="text-sm text-htg-fg-muted mt-1">E-mail: <a href="mailto:mail@pilot.place" className="text-htg-sage hover:underline">mail@pilot.place</a></p>
+              <p className="text-sm text-htg-fg-muted mt-1">Website: <a href="https://pilot.place" target="_blank" rel="noopener noreferrer" className="text-htg-sage hover:underline">pilot.place</a></p>
+            </div>
+          </Section>
+
+          <Section id="data" title="2. What data we collect">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-htg-card-border rounded-lg overflow-hidden">
+                <thead>
+                  <tr className="bg-htg-surface">
+                    <th className="text-left p-3 font-medium text-htg-fg border-b border-htg-card-border">Category</th>
+                    <th className="text-left p-3 font-medium text-htg-fg border-b border-htg-card-border">Examples</th>
+                    <th className="text-left p-3 font-medium text-htg-fg border-b border-htg-card-border">Source</th>
+                  </tr>
+                </thead>
+                <tbody className="text-htg-fg">
+                  <tr className="border-b border-htg-card-border">
+                    <td className="p-3">Identification data</td>
+                    <td className="p-3 text-htg-fg-muted">name, surname, address</td>
+                    <td className="p-3 text-htg-fg-muted">booking form</td>
+                  </tr>
+                  <tr className="border-b border-htg-card-border">
+                    <td className="p-3">Contact data</td>
+                    <td className="p-3 text-htg-fg-muted">e-mail, phone</td>
+                    <td className="p-3 text-htg-fg-muted">form / correspondence</td>
+                  </tr>
+                  <tr className="border-b border-htg-card-border">
+                    <td className="p-3">Billing data</td>
+                    <td className="p-3 text-htg-fg-muted">VAT no., company address, account no.</td>
+                    <td className="p-3 text-htg-fg-muted">invoice / payment processor</td>
+                  </tr>
+                  <tr className="border-b border-htg-card-border">
+                    <td className="p-3">Technical data</td>
+                    <td className="p-3 text-htg-fg-muted">IP address, cookies, logs</td>
+                    <td className="p-3 text-htg-fg-muted">browser</td>
+                  </tr>
+                  <tr className="border-b border-htg-card-border">
+                    <td className="p-3">Session recording</td>
+                    <td className="p-3 text-htg-fg-muted">video and audio</td>
+                    <td className="p-3 text-htg-fg-muted">HTG Session</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3">Marketing data*</td>
+                    <td className="p-3 text-htg-fg-muted">newsletter preferences</td>
+                    <td className="p-3 text-htg-fg-muted">consent</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-htg-fg-muted mt-2">* Collected only after explicit consent.</p>
+          </Section>
+
+          <Section id="purposes" title="3. Purposes and legal bases">
+            <UL>
+              <li><strong>Performance of the HTG Session contract</strong> — Art. 6(1)(b) GDPR</li>
+              <li><strong>Sensitive data</strong> (beliefs, health) — Art. 9(2)(a) GDPR (explicit consent)</li>
+              <li><strong>Recording and publication of sessions</strong> (image, voice) — consent given at booking, which is a condition of the contract</li>
+              <li><strong>Accounting obligations</strong> — Art. 6(1)(c) GDPR</li>
+              <li><strong>Protection of legal claims</strong> (legitimate interest) — Art. 6(1)(f) GDPR</li>
+              <li><strong>Marketing</strong> — Art. 6(1)(a) GDPR (only with consent)</li>
+            </UL>
+          </Section>
+
+          <Section id="recipients" title="4. Recipients of data">
+            <P>Your data may be shared with the following parties:</P>
+            <UL>
+              <li><strong>Vercel</strong> — application hosting</li>
+              <li><strong>Cloudflare</strong> — DNS, CDN, DDoS protection</li>
+              <li><strong>Supabase</strong> — database and authentication</li>
+              <li><strong>Stripe</strong> — payment processing</li>
+              <li><strong>Bunny.net</strong> — recording storage and streaming</li>
+              <li><strong>Resend</strong> — transactional email delivery</li>
+              <li><strong>Legal and accounting firms</strong> — legal and financial services</li>
+            </UL>
+            <P>Some of our providers (Vercel, Cloudflare, Stripe) may process data outside the European Economic Area, based on standard contractual clauses or an EU adequacy decision.</P>
+          </Section>
+
+          <Section id="retention" title="5. Retention periods">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-htg-card-border rounded-lg overflow-hidden">
+                <thead>
+                  <tr className="bg-htg-surface">
+                    <th className="text-left p-3 font-medium text-htg-fg border-b border-htg-card-border">Data type</th>
+                    <th className="text-left p-3 font-medium text-htg-fg border-b border-htg-card-border">Period</th>
+                  </tr>
+                </thead>
+                <tbody className="text-htg-fg">
+                  <tr className="border-b border-htg-card-border">
+                    <td className="p-3">Billing data</td>
+                    <td className="p-3 text-htg-fg-muted">5 years from end of tax year</td>
+                  </tr>
+                  <tr className="border-b border-htg-card-border">
+                    <td className="p-3">Session recordings</td>
+                    <td className="p-3 text-htg-fg-muted">Max. 24 months from session, then permanently deleted</td>
+                  </tr>
+                  <tr className="border-b border-htg-card-border">
+                    <td className="p-3">Account data</td>
+                    <td className="p-3 text-htg-fg-muted">Until account deletion by user</td>
+                  </tr>
+                  <tr>
+                    <td className="p-3">Marketing data</td>
+                    <td className="p-3 text-htg-fg-muted">Until consent is withdrawn</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <P>You will receive an e-mail notification 30 days before a recording is deleted. You may request earlier deletion by writing to mail@pilot.place.</P>
+            <P>Upon account deletion, recordings are erased, except for data required for accounting or legal claims. Correspondence is retained for the duration of the contract and the applicable limitation period.</P>
+          </Section>
+
+          <Section id="rights" title="6. Your rights">
+            <P>Under the GDPR, you have the following rights:</P>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {[
+                'Right of access',
+                'Right to rectification',
+                'Right to erasure',
+                'Right to restriction of processing',
+                'Right to object',
+                'Right to data portability',
+              ].map((right) => (
+                <div key={right} className="flex items-center gap-2 text-sm text-htg-fg bg-htg-surface rounded-lg px-4 py-3">
+                  <span className="text-htg-sage">✓</span>
+                  {right}
+                </div>
+              ))}
+            </div>
+            <P>You may withdraw consent to the processing of sensitive data at any time in your client panel.</P>
+            <P>You have the right to lodge a complaint with the <strong>President of the Personal Data Protection Office</strong> (UODO, Poland).</P>
+          </Section>
+
+          <Section id="cookies" title="7. Cookies">
+            <P>We use technical cookies (authentication, language and theme preferences), analytical, and marketing cookies. A consent banner is shown on your first visit — you can adjust your preferences at any time.</P>
+            <P>Providing data is voluntary, but necessary to book an HTG Session. Data will not be used for automated decision-making or profiling.</P>
+          </Section>
+
+          <Section id="monitoring" title="8. Session monitoring">
+            <P>To keep your recordings safe and out of unauthorised hands, the system monitors:</P>
+            <UL>
+              <li>Number of active authentication sessions — limit of 3 devices per account</li>
+              <li>Number of simultaneous playbacks — limit of 1 device per account</li>
+            </UL>
+          </Section>
+
+          {/* ── Contact ── */}
+          <div className="mt-10 bg-htg-surface rounded-xl p-6 text-center">
+            <p className="text-sm text-htg-fg-muted mb-1">Personal data enquiries:</p>
+            <p className="font-semibold text-htg-fg">
+              <a href="mailto:mail@pilot.place" className="text-htg-sage hover:underline">mail@pilot.place</a>
+            </p>
+            <p className="text-xs text-htg-fg-muted mt-2"><a href="https://pilot.place" target="_blank" rel="noopener noreferrer" className="text-htg-sage hover:underline">pilot.place</a> · Pilot PSA · ul. RONDO ONZ 1, 00-124 Warsaw</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">

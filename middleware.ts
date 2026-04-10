@@ -47,6 +47,13 @@ export async function middleware(request: NextRequest) {
   const isSesja = isSesjaPortal(host);
   const isPortal = isNagrania || isSesja;
 
+  // Pilot site — serve custom favicon before static asset skip
+  if (pathname === '/favicon.ico' && isPilotSite(host)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/pilot-favicon.png';
+    return NextResponse.rewrite(url);
+  }
+
   // Skip static assets
   if (pathname.includes('/_next/') || pathname.includes('/favicon.ico') || pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico)$/)) {
     return NextResponse.next();

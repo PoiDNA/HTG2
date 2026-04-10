@@ -31,10 +31,6 @@
     {
       "path": "/api/cron/htg-meeting-orphan-reaper",
       "schedule": "23 * * * *"
-    },
-    {
-      "path": "/api/cron/processing-maintenance",
-      "schedule": "*/5 * * * *"
     }
   ]
 }

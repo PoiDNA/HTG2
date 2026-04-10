@@ -25,7 +25,7 @@ function getLocaleFromPath(pathname: string): string {
 }
 
 // Paths allowed on the nagrania.htg.cyou portal (without locale prefix)
-const NAGRANIA_ALLOWED = ['/login', '/auth', '/konto/nagrania-sesji', '/konto/zgody', '/privacy', '/terms'];
+const NAGRANIA_ALLOWED = ['/login', '/auth', '/konto/nagrania-sesji', '/privacy', '/terms'];
 
 function isNagraniaAllowed(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
@@ -33,7 +33,7 @@ function isNagraniaAllowed(pathname: string): boolean {
 }
 
 // Paths allowed on the sesja.htg.cyou portal (without locale prefix)
-const SESJA_ALLOWED = ['/login', '/auth', '/konto/zgody', '/konto/sesja-panel', '/live', '/privacy', '/terms'];
+const SESJA_ALLOWED = ['/login', '/auth', '/konto/sesja-panel', '/live', '/privacy', '/terms'];
 
 function isSesjaAllowed(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
@@ -217,7 +217,7 @@ export async function middleware(request: NextRequest) {
   const isZgodyPath = withoutLocale.startsWith('/konto/zgody');
   const isAdminPath = withoutLocale.startsWith('/konto/admin') || withoutLocale.startsWith('/prowadzacy');
 
-  if (isKontoPath && !isZgodyPath && !isAdminPath) {
+  if (isKontoPath && !isZgodyPath && !isAdminPath && !isPortal) {
     const REQUIRED = ['terms_v3', 'privacy_v3', 'sensitive_data', 'recording_publication'];
     const { data: consents } = await supabase
       .from('consent_records')

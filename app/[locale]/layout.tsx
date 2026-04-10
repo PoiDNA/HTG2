@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
   // Pilot site — separate metadata, no HTG branding
   const headersList = await headers();
-  if (isPilotSite(headersList.get('host'))) {
+  if (isPilotSite(headersList.get('x-forwarded-host') || headersList.get('host'))) {
     return {
       title: { absolute: 'PILOT — Bezpieczne platformy edukacyjne i rozwojowe' },
       description: 'Cyberbezpieczeństwo i administracja serwisów edukacyjnych. PILOT Prosta Spółka Akcyjna.',
@@ -105,10 +105,11 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   const headersList = await headers();
-  const isNagrania = isAnyPortal(headersList.get('host'));
+  const effectiveHost = headersList.get('x-forwarded-host') || headersList.get('host');
+  const isNagrania = isAnyPortal(effectiveHost);
 
   // Pilot site — minimal shell, no HTG branding/theme
-  if (isPilotSite(headersList.get('host'))) {
+  if (isPilotSite(effectiveHost)) {
     return (
       <html lang={locale}>
         <head>

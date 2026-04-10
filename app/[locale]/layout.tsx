@@ -33,18 +33,21 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   // Pilot site — separate metadata, no HTG branding
   const headersList = await headers();
   if (isPilotSite(headersList.get('x-forwarded-host') || headersList.get('host'))) {
+    const isPilotEn = locale === 'en';
     return {
-      title: { absolute: 'PILOT — Bezpieczne platformy edukacyjne i rozwojowe' },
-      description: 'Cyberbezpieczeństwo i administracja serwisów edukacyjnych. PILOT Prosta Spółka Akcyjna.',
+      title: { absolute: isPilotEn ? 'PILOT — Educational and personal development platforms' : 'PILOT — Platformy edukacyjne i rozwojowe' },
+      description: isPilotEn
+        ? 'Online platforms for learning and personal growth — built and operated with care. PILOT PSA, Warsaw.'
+        : 'Platformy internetowe dla uczenia się i rozwoju osobistego. PILOT Prosta Spółka Akcyjna, Warszawa.',
       metadataBase: new URL('https://pilot.place'),
       robots: { index: true, follow: true },
       openGraph: {
         type: 'website',
-        siteName: 'PILOT PSA',
-        title: 'PILOT — Bezpieczne platformy edukacyjne i rozwojowe',
-        description: 'Cyberbezpieczeństwo i administracja serwisów edukacyjnych',
+        siteName: 'PILOT',
+        title: isPilotEn ? 'PILOT — Educational and personal development platforms' : 'PILOT — Platformy edukacyjne i rozwojowe',
+        description: isPilotEn ? 'Online platforms for learning and personal growth' : 'Platformy edukacyjne i rozwojowe osobistego',
         url: 'https://pilot.place',
-        locale: 'pl_PL',
+        locale: isPilotEn ? 'en_US' : 'pl_PL',
       },
     };
   }

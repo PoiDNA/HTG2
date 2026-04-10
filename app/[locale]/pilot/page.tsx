@@ -46,27 +46,27 @@ export const metadata: Metadata = {
 const SERVICES = [
   {
     icon: BookOpen,
-    title: "Serwisy edukacyjne i rozwojowe",
+    title: "Platformy edukacyjne i rozwojowe",
     description:
-      "Projektujemy, budujemy i administrujemy platformy internetowe wspierające procesy edukacyjne i rozwój kompetencji. Dbamy o niezawodność, wydajność i bezpieczeństwo każdego serwisu.",
+      "Budujemy i prowadzimy serwisy internetowe dla ludzi, którzy chcą się rozwijać — kursy, społeczności, przestrzenie do nauki. Zależy nam na tym, żeby działały bez zakłóceń i by użytkownicy czuli się w nich bezpiecznie.",
   },
   {
     icon: Shield,
-    title: "Cyberbezpieczeństwo",
+    title: "Ochrona danych i bezpieczeństwo",
     description:
-      "Rdzeń naszych kompetencji. Minimalizacja powierzchni ataku, segmentacja środowisk, oceny bezpieczeństwa i wsparcie przy wdrożeniach zgodnych z przepisami o ochronie danych.",
+      "Zadbamy o to, żeby dane Twoich uczestników nie wpadły w niepowołane ręce. Bez żargonu, bez kompromisów — po prostu solidna ochrona tego, co najważniejsze.",
   },
   {
     icon: Server,
-    title: "Infrastruktura i przetwarzanie danych",
+    title: "Stabilna infrastruktura",
     description:
-      "Sieci dostarczania treści (CDN), hosting i zarządzanie danymi. Systemy projektowane z myślą o wydajności i ochronie prywatności.",
+      "Twój serwis powinien działać wtedy, gdy potrzebują go Twoi uczestnicy — nie tylko w godzinach biurowych. Zajmujemy się tym, żebyś Ty mógł skupić się na treści i ludziach.",
   },
   {
     icon: FlaskConical,
-    title: "Badania i rozwój",
+    title: "Badania i nowe rozwiązania",
     description:
-      "Prace badawczo-rozwojowe nad rozwiązaniami na styku edukacji, technologii i bezpieczeństwa cyfrowego.",
+      "Szukamy odpowiedzi na pytania, które edukacja dopiero zaczyna zadawać — jak łączyć technologię z rozwojem człowieka w sposób, który naprawdę służy.",
   },
 ] as const;
 
@@ -131,7 +131,7 @@ export default async function PilotPage({
           </h1>
           <div className="mx-auto mt-6 h-px w-24 bg-gradient-to-r from-transparent via-amber-600/50 to-transparent" />
           <p className="mt-8 font-sans text-lg font-light tracking-wide text-stone-300 sm:text-xl">
-            Bezpieczne platformy edukacyjne i rozwojowe
+            Przestrzeń do nauki i&nbsp;wzrostu — chroniona z&nbsp;troską
           </p>
           <a
             href="mailto:mail@pilot.place"
@@ -156,19 +156,17 @@ export default async function PilotPage({
             </div>
             <div className="mt-10 space-y-6 font-serif text-lg leading-[1.8] text-stone-600 max-w-prose mx-auto text-center">
               <p>
-                PILOT Prosta Spółka Akcyjna to firma technologiczna łącząca
-                kompetencje z zakresu cyberbezpieczeństwa z budową
-                i&nbsp;administracją serwisów internetowych w&nbsp;branży edukacyjnej
-                i&nbsp;rozwojowej.
+                Tworzymy miejsca w&nbsp;sieci, w&nbsp;których ludzie uczą się, rozwijają
+                i&nbsp;odkrywają swój potencjał. Dbamy o&nbsp;to, żeby każda taka przestrzeń
+                była nie tylko funkcjonalna, ale przede wszystkim bezpieczna
+                dla tych, którzy jej ufają.
               </p>
               <p className="text-stone-800 font-medium italic">
-                Bezpieczeństwo przetwarzanych danych stanowi fundament
-                każdego naszego projektu.
+                Twoje dane są Twoje — i&nbsp;traktujemy to poważnie.
               </p>
               <p>
-                Spółka została zarejestrowana w&nbsp;2026 roku i&nbsp;działa jako prosta
-                spółka akcyjna (PSA). Działamy z&nbsp;dwóch lokalizacji&nbsp;— siedziby
-                w&nbsp;Warszawie przy Rondzie ONZ oraz oddziału w&nbsp;Krakowie.
+                PILOT PSA działa z&nbsp;Warszawy i&nbsp;Krakowa.
+                Założona w&nbsp;2026 roku, zarejestrowana jako prosta spółka akcyjna (PSA).
               </p>
             </div>
           </div>
@@ -227,15 +225,16 @@ export default async function PilotPage({
             </div>
             <div className="mx-auto mt-10 max-w-prose text-center">
               <p className="font-serif text-lg leading-[1.8] text-stone-600">
-                Projektujemy procesy i&nbsp;systemy z&nbsp;uwzględnieniem wymogów RODO oraz
-                standardów branżowych. Stosujemy zasadę minimalizacji danych,
-                kontrolę dostępu i&nbsp;monitorowanie infrastruktury.
+                Wierzymy, że zaufanie buduje się w&nbsp;szczegółach.
+                Zbieramy tylko to, co niezbędne, nigdy nie dzielimy się danymi
+                bez powodu i&nbsp;działamy zgodnie z&nbsp;RODO — nie dlatego, że musimy,
+                ale dlatego, że szanujemy ludzi, którzy nam ufają.
               </p>
               <div className="mx-auto mt-10 flex flex-wrap justify-center gap-6 font-sans text-xs tracking-[0.2em] text-stone-400 uppercase">
                 <span className="border border-stone-200 px-4 py-2">RODO</span>
-                <span className="border border-stone-200 px-4 py-2">Minimalizacja danych</span>
-                <span className="border border-stone-200 px-4 py-2">Kontrola dostępu</span>
-                <span className="border border-stone-200 px-4 py-2">Monitoring</span>
+                <span className="border border-stone-200 px-4 py-2">Tylko to, co potrzebne</span>
+                <span className="border border-stone-200 px-4 py-2">Bezpieczeństwo dostępu</span>
+                <span className="border border-stone-200 px-4 py-2">Pełna kontrola</span>
               </div>
             </div>
           </div>

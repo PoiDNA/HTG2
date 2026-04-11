@@ -243,8 +243,8 @@ function AccordionMonth({
             className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 overflow-hidden pointer-events-none"
             aria-hidden="true"
             style={{
-              maskImage: 'linear-gradient(to right, transparent, black 30%)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent, black 30%)',
+              maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.02) 10%, rgba(0,0,0,0.08) 20%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.85) 75%, black 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.02) 10%, rgba(0,0,0,0.08) 20%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.85) 75%, black 100%)',
             }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

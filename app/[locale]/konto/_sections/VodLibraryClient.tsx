@@ -241,7 +241,7 @@ function AccordionMonth({
       >
         {backgroundImage && (
           <div
-            className={`hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 ${isExpanded ? 'dark:opacity-40' : 'dark:opacity-20'} dark:group-hover:opacity-40 transition-opacity duration-300 pointer-events-none`}
+            className={`hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 ${isExpanded ? 'scale-105 dark:opacity-40' : 'dark:opacity-20'} group-hover:scale-105 dark:group-hover:opacity-40 transition-[opacity,transform] duration-300 pointer-events-none`}
             aria-hidden="true"
             style={{
               backgroundImage: `url(${backgroundImage})`,

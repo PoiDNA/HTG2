@@ -270,17 +270,16 @@ function AccordionMonth({
       >
         <div className="overflow-hidden">
           <div
-            className="relative p-4 pt-0 border-t border-htg-card-border"
+            className={`relative p-4 pt-0 border-t border-htg-card-border ${
+              backgroundImage && isExpanded ? 'bg-cover bg-center' : ''
+            }`}
+            style={backgroundImage && isExpanded ? {
+              backgroundImage: `url(${backgroundImage})`,
+            } : undefined}
           >
-            {/* Background image — light mode only */}
+            {/* White overlay for light mode readability (hides bg in dark) */}
             {backgroundImage && isExpanded && (
-              <div
-                className="absolute inset-0 bg-cover bg-center dark:hidden"
-                style={{ backgroundImage: `url(${backgroundImage})` }}
-              >
-                {/* Light overlay so text stays readable */}
-                <div className="absolute inset-0 bg-white/40" />
-              </div>
+              <div className="absolute inset-0 bg-white/40 dark:bg-htg-card/95 pointer-events-none" />
             )}
             <div className={`relative ${backgroundImage && isExpanded ? '[&_.session-card]:bg-white/80 [&_.session-card]:dark:bg-htg-surface/30 [&_.session-card]:backdrop-blur-sm' : ''}`}>
               {children}

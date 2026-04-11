@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
-import { locales } from "@/i18n-config";
 import {
   BookOpen,
   Shield,
@@ -11,8 +10,11 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+const PILOT_LOCALES = ["pl", "en", "de", "pt"] as const;
+type PilotLocale = typeof PILOT_LOCALES[number];
+
 export function generateStaticParams() {
-  return locales.map((locale) => ({ locale }));
+  return PILOT_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({
@@ -22,70 +24,40 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
 
-  if (locale === "en") {
-    return {
-      title: { absolute: "PILOT PSA — Secure platforms for learning and growth" },
-      description:
-        "PILOT PSA builds and operates online platforms for people on a path of learning and personal development — protected with care. Warsaw, Poland.",
-      keywords: [
-        "PILOT PSA",
-        "PILOT Prosta Spółka Akcyjna",
-        "education platform security",
-        "secure e-learning",
-        "data protection GDPR",
-        "personal development platform",
-        "pilot.place",
-      ],
-      alternates: {
-        canonical: "https://pilot.place/en/pilot",
-        languages: {
-          "pl": "https://pilot.place/pl/pilot",
-          "en": "https://pilot.place/en/pilot",
-          "x-default": "https://pilot.place",
-        },
-      },
-      openGraph: {
-        type: "website",
-        siteName: "PILOT PSA",
-        title: "PILOT PSA — Secure platforms for learning and growth",
-        description:
-          "We build and operate online platforms for people who are growing — protected with care.",
-        url: "https://pilot.place/en/pilot",
-        locale: "en_US",
-      },
-    };
-  }
+  const titles: Record<string, string> = {
+    pl: "PILOT — Platformy edukacyjne i rozwojowe",
+    en: "PILOT — Educational and personal development platforms",
+    de: "PILOT — Bildungs- und Entwicklungsplattformen",
+    pt: "PILOT — Plataformas educativas e de desenvolvimento pessoal",
+  };
+  const descriptions: Record<string, string> = {
+    pl: "PILOT Prosta Spółka Akcyjna — platformy internetowe dla ludzi, którzy chcą się rozwijać. Warszawa, Polska.",
+    en: "PILOT PSA builds and operates online platforms for people on a path of learning and personal growth — protected with care. Warsaw, Poland.",
+    de: "PILOT PSA baut und betreibt Online-Plattformen für Menschen auf dem Weg des Lernens und persönlichen Wachstums — mit Sorgfalt geschützt. Warschau, Polen.",
+    pt: "A PILOT PSA desenvolve e opera plataformas online para pessoas em caminho de aprendizagem e crescimento pessoal — protegidas com cuidado. Varsóvia, Polónia.",
+  };
 
   return {
-    title: { absolute: "PILOT PSA — Bezpieczne platformy edukacyjne i rozwojowe" },
-    description:
-      "PILOT Prosta Spółka Akcyjna — cyberbezpieczeństwo i administracja serwisów edukacyjnych. KRS 0001233166, NIP 5253085101. Warszawa.",
-    keywords: [
-      "PILOT PSA",
-      "Pilot Prosta Spółka Akcyjna",
-      "Pilot spółka",
-      "pilot.place",
-      "cyberbezpieczeństwo",
-      "serwisy edukacyjne",
-      "platformy edukacyjne",
-      "ochrona danych RODO",
-    ],
+    title: { absolute: titles[locale] ?? titles.pl },
+    description: descriptions[locale] ?? descriptions.pl,
+    metadataBase: new URL("https://pilot.place"),
+    robots: { index: true, follow: true },
     alternates: {
-      canonical: "https://pilot.place",
+      canonical: `https://pilot.place/${locale}/pilot`,
       languages: {
-        "pl": "https://pilot.place/pl/pilot",
-        "en": "https://pilot.place/en/pilot",
+        pl: "https://pilot.place/pl/pilot",
+        en: "https://pilot.place/en/pilot",
+        de: "https://pilot.place/de/pilot",
+        pt: "https://pilot.place/pt/pilot",
         "x-default": "https://pilot.place",
       },
     },
     openGraph: {
       type: "website",
-      siteName: "PILOT PSA",
-      title: "PILOT PSA — Bezpieczne platformy edukacyjne i rozwojowe",
-      description:
-        "PILOT Prosta Spółka Akcyjna — cyberbezpieczeństwo i administracja serwisów edukacyjnych.",
-      url: "https://pilot.place",
-      locale: "pl_PL",
+      siteName: "PILOT",
+      title: titles[locale] ?? titles.pl,
+      description: descriptions[locale] ?? descriptions.pl,
+      url: `https://pilot.place/${locale}/pilot`,
     },
   };
 }
@@ -93,21 +65,20 @@ export async function generateMetadata({
 // ── Content ────────────────────────────────────────────────────
 
 const PL = {
-  tagline: "Przestrzeń do nauki i\u00a0wzrostu — chroniona z\u00a0troską",
+  tagline: "Przestrzeń do osobistego wzrostu — chroniona z\u00a0troską",
   contact_cta: "Kontakt",
   about_heading: "O nas",
   about_p1:
     "Tworzymy miejsca w\u00a0sieci, w\u00a0których ludzie uczą się, rozwijają i\u00a0odkrywają swój potencjał. Dbamy o\u00a0to, żeby każda taka przestrzeń była nie tylko funkcjonalna, ale przede wszystkim bezpieczna dla tych, którzy jej ufają.",
   about_italic: "Twoje dane są Twoje — i\u00a0traktujemy to poważnie.",
-  about_p2:
-    "PILOT PSA działa z\u00a0Warszawy i\u00a0Krakowa. Założona w\u00a02026 roku, zarejestrowana jako prosta spółka akcyjna (PSA).",
+  about_p2: "PILOT PSA działa z\u00a0Warszawy i\u00a0Krakowa.",
   services_heading: "Zakres działalności",
   services: [
     {
       icon: BookOpen,
       title: "Platformy edukacyjne i rozwojowe",
       description:
-        "Budujemy i prowadzimy serwisy internetowe dla ludzi, którzy chcą się rozwijać — kursy, społeczności, przestrzenie do nauki. Zależy nam na tym, żeby działały bez zakłóceń i by użytkownicy czuli się w nich bezpiecznie.",
+        "Budujemy i prowadzimy serwisy internetowe dla ludzi, którzy chcą się rozwijać — kursy, społeczności, relacje. Zależy nam na tym, żeby działały bez zakłóceń i by użytkownicy czuli się w nich bezpiecznie.",
     },
     {
       icon: Shield,
@@ -125,7 +96,7 @@ const PL = {
       icon: FlaskConical,
       title: "Badania i nowe rozwiązania",
       description:
-        "Szukamy odpowiedzi na pytania, które edukacja dopiero zaczyna zadawać — jak łączyć technologię z rozwojem człowieka w sposób, który naprawdę służy.",
+        "Odpowiadamy na pytania, które mainstream dopiero zaczyna zadawać — jak łączyć technologię z rozwojem człowieka w sposób, który naprawdę jest potencjałem do głębszego rozumienia.",
     },
   ],
   security_heading: "Bezpieczeństwo",
@@ -138,7 +109,6 @@ const PL = {
   registry_heading: "Dane rejestrowe",
   registry: [
     ["Firma", "PILOT Prosta Spółka Akcyjna"],
-    ["Forma prawna", "Prosta Spółka Akcyjna (PSA)"],
     ["KRS", "0001233166"],
     ["NIP", "5253085101"],
     ["REGON", "544401249"],
@@ -148,21 +118,20 @@ const PL = {
 };
 
 const EN = {
-  tagline: "A space for learning and growth — protected with care",
+  tagline: "A space for personal growth — protected with care",
   contact_cta: "Contact",
   about_heading: "About us",
   about_p1:
-    "We create online spaces where people learn, grow, and discover their potential. We care deeply that every such space is not only reliable, but above all safe for those who trust it.",
+    "We create online spaces where people learn, grow, and discover their potential. We care that every such space is not only reliable, but above all safe for those who trust it.",
   about_italic: "Your data is yours — and we take that seriously.",
-  about_p2:
-    "PILOT PSA operates from Warsaw and Kraków, Poland. Founded in 2026, registered as a simplified joint-stock company (PSA).",
+  about_p2: "PILOT PSA operates from Warsaw and Kraków, Poland.",
   services_heading: "What we do",
   services: [
     {
       icon: BookOpen,
       title: "Educational & growth platforms",
       description:
-        "We build and run online services for people on a path of learning — courses, communities, spaces for growth. We make sure they work without interruption and that users feel safe inside them.",
+        "We build and run online services for people on a path of growth — courses, communities, relationships. We make sure they work without interruption and that users feel safe inside them.",
     },
     {
       icon: Shield,
@@ -180,7 +149,7 @@ const EN = {
       icon: FlaskConical,
       title: "Research & new solutions",
       description:
-        "We look for answers to questions education is only beginning to ask — how to connect technology with human growth in a way that truly serves.",
+        "We answer questions the mainstream is only beginning to ask — how to connect technology with human growth in a way that is truly a gateway to deeper understanding.",
     },
   ],
   security_heading: "Privacy & trust",
@@ -193,13 +162,127 @@ const EN = {
   registry_heading: "Company details",
   registry: [
     ["Company", "PILOT Prosta Spółka Akcyjna"],
-    ["Legal form", "Simplified Joint-Stock Company (PSA)"],
     ["KRS", "0001233166"],
     ["Tax ID (NIP)", "5253085101"],
     ["REGON", "544401249"],
     ["Share capital", "PLN\u00a0100\u00a0000.00"],
   ],
   privacy_link: "Privacy policy",
+};
+
+const DE = {
+  tagline: "Ein Raum für persönliches Wachstum — mit Sorgfalt geschützt",
+  contact_cta: "Kontakt",
+  about_heading: "Über uns",
+  about_p1:
+    "Wir schaffen Online-Räume, in denen Menschen lernen, wachsen und ihr Potenzial entfalten. Uns liegt daran, dass jeder solche Raum nicht nur zuverlässig, sondern vor allem sicher für jene ist, die ihm vertrauen.",
+  about_italic: "Deine Daten gehören dir — und das nehmen wir ernst.",
+  about_p2: "PILOT PSA ist in Warschau und Krakau tätig.",
+  services_heading: "Was wir tun",
+  services: [
+    {
+      icon: BookOpen,
+      title: "Bildungs- & Wachstumsplattformen",
+      description:
+        "Wir bauen und betreiben Online-Dienste für Menschen auf dem Weg des Wachstums — Kurse, Gemeinschaften, Beziehungen. Wir sorgen dafür, dass sie ohne Unterbrechung laufen und Nutzer sich darin sicher fühlen.",
+    },
+    {
+      icon: Shield,
+      title: "Datenschutz & Sicherheit",
+      description:
+        "Wir stellen sicher, dass die Daten deiner Teilnehmer dort bleiben, wo sie hingehören. Kein Fachjargon, keine Abkürzungen — solider Schutz für das, was am wichtigsten ist.",
+    },
+    {
+      icon: Server,
+      title: "Zuverlässige Infrastruktur",
+      description:
+        "Deine Plattform sollte verfügbar sein, wenn deine Teilnehmer sie brauchen — nicht nur während der Bürozeiten. Wir kümmern uns darum, damit du dich auf Inhalte und Menschen konzentrieren kannst.",
+    },
+    {
+      icon: FlaskConical,
+      title: "Forschung & neue Lösungen",
+      description:
+        "Wir beantworten Fragen, die der Mainstream erst zu stellen beginnt — wie Technologie mit menschlichem Wachstum so verbunden werden kann, dass sie wirklich ein Tor zu tieferem Verstehen öffnet.",
+    },
+  ],
+  security_heading: "Datenschutz & Vertrauen",
+  security_text:
+    "Wir glauben, dass Vertrauen in den Details aufgebaut wird. Wir erfassen nur das Notwendige, teilen Daten nie ohne Grund und handeln gemäß der DSGVO — nicht weil wir müssen, sondern weil wir die Menschen respektieren, die uns vertrauen.",
+  security_tags: ["DSGVO", "Minimale Daten", "Zugangskontrolle", "Volle Transparenz"],
+  contact_heading: "Kontakt",
+  office_label: "Hauptsitz",
+  branch_label: "Niederlassung",
+  registry_heading: "Unternehmensdaten",
+  registry: [
+    ["Firma", "PILOT Prosta Spółka Akcyjna"],
+    ["KRS", "0001233166"],
+    ["Steuer-ID (NIP)", "5253085101"],
+    ["REGON", "544401249"],
+    ["Grundkapital", "100\u00a0000,00 PLN"],
+  ],
+  privacy_link: "Datenschutzerklärung",
+};
+
+const PT = {
+  tagline: "Um espaço para crescimento pessoal — protegido com cuidado",
+  contact_cta: "Contacto",
+  about_heading: "Sobre nós",
+  about_p1:
+    "Criamos espaços online onde as pessoas aprendem, crescem e descobrem o seu potencial. Cuidamos para que cada espaço seja não só funcional, mas sobretudo seguro para quem nele confia.",
+  about_italic: "Os seus dados são seus — e levamos isso a sério.",
+  about_p2: "A PILOT PSA opera a partir de Varsóvia e Cracóvia, Polónia.",
+  services_heading: "O que fazemos",
+  services: [
+    {
+      icon: BookOpen,
+      title: "Plataformas educativas e de crescimento",
+      description:
+        "Construímos e operamos serviços online para pessoas em caminho de crescimento — cursos, comunidades, relações. Garantimos que funcionem sem interrupções e que os utilizadores se sintam seguros.",
+    },
+    {
+      icon: Shield,
+      title: "Proteção de dados & segurança",
+      description:
+        "Garantimos que os dados dos seus participantes ficam onde pertencem. Sem jargão, sem atalhos — apenas proteção sólida para o que mais importa.",
+    },
+    {
+      icon: Server,
+      title: "Infraestrutura fiável",
+      description:
+        "A sua plataforma deve estar disponível quando os seus participantes precisarem — não só durante o horário comercial. Tratamos disso para que se possa concentrar no conteúdo e nas pessoas.",
+    },
+    {
+      icon: FlaskConical,
+      title: "Investigação & novas soluções",
+      description:
+        "Respondemos às questões que o mainstream está apenas a começar a formular — como conectar tecnologia com o crescimento humano de uma forma que abra verdadeiramente portas a uma compreensão mais profunda.",
+    },
+  ],
+  security_heading: "Privacidade & confiança",
+  security_text:
+    "Acreditamos que a confiança se constrói nos detalhes. Recolhemos apenas o necessário, nunca partilhamos dados sem razão e operamos em conformidade com o RGPD — não porque somos obrigados, mas porque respeitamos as pessoas que nos confiam.",
+  security_tags: ["RGPD", "Dados mínimos", "Controlo de acesso", "Transparência total"],
+  contact_heading: "Contacto",
+  office_label: "Sede",
+  branch_label: "Filial",
+  registry_heading: "Dados da empresa",
+  registry: [
+    ["Empresa", "PILOT Prosta Spółka Akcyjna"],
+    ["KRS", "0001233166"],
+    ["NIF (NIP)", "5253085101"],
+    ["REGON", "544401249"],
+    ["Capital social", "100\u00a0000,00 PLN"],
+  ],
+  privacy_link: "Política de privacidade",
+};
+
+const CONTENT: Record<PilotLocale, typeof PL> = { pl: PL, en: EN, de: DE, pt: PT };
+
+const PRIVACY_PATH: Record<PilotLocale, string> = {
+  pl: "/pl/privacy",
+  en: "/en/privacy",
+  de: "/pl/privacy",
+  pt: "/pl/privacy",
 };
 
 export default async function PilotPage({
@@ -210,7 +293,10 @@ export default async function PilotPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const t = locale === "en" ? EN : PL;
+  const lang = (PILOT_LOCALES as readonly string[]).includes(locale)
+    ? (locale as PilotLocale)
+    : "pl";
+  const t = CONTENT[lang];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -237,14 +323,7 @@ export default async function PilotPage({
     ],
     taxID: "5253085101",
     legalName: "PILOT Prosta Spółka Akcyjna",
-    description:
-      locale === "en"
-        ? "Technology company specialising in security and administration of educational platforms."
-        : "Firma technologiczna specjalizująca się w cyberbezpieczeństwie i administracji serwisów edukacyjnych.",
-    knowsAbout:
-      locale === "en"
-        ? ["cybersecurity", "educational platforms", "data protection", "IT infrastructure"]
-        : ["cyberbezpieczeństwo", "platformy edukacyjne", "ochrona danych", "infrastruktura IT"],
+    description: t.about_p1,
   };
 
   return (
@@ -268,19 +347,18 @@ export default async function PilotPage({
           </p>
           {/* Language switcher */}
           <div className="mt-6 flex items-center justify-center gap-3 font-sans text-xs tracking-[0.15em] text-stone-500 uppercase">
-            <a
-              href="/pl/pilot"
-              className={`transition-colors hover:text-stone-300 ${locale === "pl" ? "text-amber-400/80" : ""}`}
-            >
-              PL
-            </a>
-            <span className="text-stone-700">|</span>
-            <a
-              href="/en/pilot"
-              className={`transition-colors hover:text-stone-300 ${locale === "en" ? "text-amber-400/80" : ""}`}
-            >
-              EN
-            </a>
+            {PILOT_LOCALES.map((l, i) => (
+              <>
+                {i > 0 && <span key={`sep-${l}`} className="text-stone-700">|</span>}
+                <a
+                  key={l}
+                  href={`/${l}/pilot`}
+                  className={`transition-colors hover:text-stone-300 ${lang === l ? "text-amber-400/80" : ""}`}
+                >
+                  {l.toUpperCase()}
+                </a>
+              </>
+            ))}
           </div>
           <a
             href="mailto:mail@pilot.place"
@@ -428,7 +506,7 @@ export default async function PilotPage({
                 &copy; {new Date().getFullYear()} PILOT PSA
               </p>
               <a
-                href={locale === "en" ? "/en/privacy" : "/pl/privacy"}
+                href={PRIVACY_PATH[lang]}
                 className="font-sans text-xs text-stone-600 underline underline-offset-2 transition-colors hover:text-stone-400"
               >
                 {t.privacy_link}

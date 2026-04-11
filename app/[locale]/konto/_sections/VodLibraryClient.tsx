@@ -18,6 +18,11 @@ type Props = {
 };
 
 export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail, listenedSessionIds, bookmarkedSessionIds }: Props) {
+  // DEBUG: log cover image data
+  useEffect(() => {
+    console.log('[VOD-DEBUG] sections coverImageUrl:', sections.map(s => ({ title: s.title, monthLabel: s.monthLabel, coverImageUrl: s.coverImageUrl })));
+    console.log('[VOD-DEBUG] dark class on html:', document.documentElement.classList.contains('dark'));
+  }, [sections]);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);

@@ -7,10 +7,16 @@ import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer
 import FontSizeToggle from '@/components/FontSizeToggle';
 import ThemeToggle from '@/components/ThemeToggle';
 
-/** Month background images for expanded accordion (light mode only). Key = monthLabel e.g. "2026-02" */
+/** Month background images for expanded accordion (light mode only).
+ *  Lookup: monthLabel first (e.g. "2026-02"), then section title as fallback. */
 const MONTH_BACKGROUNDS: Record<string, string> = {
   '2026-02': 'https://htg2-cdn.b-cdn.net/images/images-month/HTG2-1.png',
+  'Sesje Luty 2026': 'https://htg2-cdn.b-cdn.net/images/images-month/HTG2-1.png',
 };
+
+function getMonthBackground(monthLabel: string, title: string): string | undefined {
+  return MONTH_BACKGROUNDS[monthLabel] || MONTH_BACKGROUNDS[title];
+}
 
 type Props = {
   sections: MonthSection[];
@@ -149,7 +155,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
             bookmarkedCount={section.sessions.filter(s => bookmarked.has(s.id)).length}
             isExpanded={expandedKey === section.monthLabel}
             onToggle={() => toggleSection(section.monthLabel)}
-            backgroundImage={MONTH_BACKGROUNDS[section.monthLabel]}
+            backgroundImage={getMonthBackground(section.monthLabel, section.title)}
           >
             {section.sessions.length === 0 ? (
               <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center text-htg-fg-muted">

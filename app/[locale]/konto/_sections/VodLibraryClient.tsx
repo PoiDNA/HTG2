@@ -248,7 +248,7 @@ function AccordionMonth({
               src={backgroundImage}
               alt=""
               loading="lazy"
-              className={`absolute right-0 h-full w-auto
+              className={`w-full h-full object-cover object-right
                 transition-transform duration-[1500ms] ease-out origin-right
                 group-hover:scale-[1.2]
                 motion-reduce:transition-none motion-reduce:group-hover:scale-100

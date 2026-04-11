@@ -137,6 +137,13 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
         </div>
       </div>
 
+      {/* DEBUG: show coverImageUrl values */}
+      <div className="bg-yellow-100 text-yellow-900 text-xs p-2 rounded mb-2">
+        {sections.map(s => (
+          <div key={s.monthLabel}>{s.title}: coverImageUrl={s.coverImageUrl ?? 'NULL'}</div>
+        ))}
+      </div>
+
       {sections.map((section) => {
         const visible = filterSessions(section.sessions);
         if (filter !== 'all' && visible.length === 0 && section.sessions.length > 0) return null;

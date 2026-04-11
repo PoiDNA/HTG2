@@ -13,13 +13,13 @@
   /* Accessible warm for text on cream — passes WCAG AA 4.5:1 */
   --color-htg-warm-text: #8B6B14;
 
-  /* Semantic tokens (light-mode defaults) */
-  --color-htg-bg: #FDF5F0;
-  --color-htg-fg: #3A2A30;
-  --color-htg-fg-muted: rgba(58, 42, 48, 0.6);
+  /* Semantic tokens (light-mode defaults — cool blue-gray) */
+  --color-htg-bg: #F4F6FB;
+  --color-htg-fg: #1E293B;
+  --color-htg-fg-muted: rgba(30, 41, 59, 0.55);
   --color-htg-card: #FFFFFF;
-  --color-htg-card-border: rgba(155, 74, 92, 0.08);
-  --color-htg-surface: rgba(155, 74, 92, 0.04);
+  --color-htg-card-border: rgba(71, 85, 105, 0.10);
+  --color-htg-surface: rgba(71, 85, 105, 0.04);
 
   --font-serif: Georgia, "Playfair Display", serif;
   --font-sans: "DM Sans", system-ui, sans-serif;

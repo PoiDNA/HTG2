@@ -146,7 +146,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                       aria-hidden="true"
                       style={{
                         backgroundImage: `url(${month.coverImageUrl})`,
-                        backgroundSize: 'auto 100%',
+                        backgroundSize: 'contain',
                         backgroundPosition: 'right center',
                         backgroundRepeat: 'no-repeat',
                         maskImage: 'linear-gradient(to right, transparent, black 30%)',

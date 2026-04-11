@@ -11,12 +11,12 @@ type ColorVars = Record<string, string>;
 
 const VARIANT_LIGHT: Record<DesignVariant, ColorVars> = {
   v1: {
-    '--color-htg-bg': '#FDF5F0',
-    '--color-htg-fg': '#3A2A30',
-    '--color-htg-fg-muted': 'rgba(58,42,48,0.6)',
+    '--color-htg-bg': '#F4F6FB',
+    '--color-htg-fg': '#1E293B',
+    '--color-htg-fg-muted': 'rgba(30,41,59,0.55)',
     '--color-htg-card': '#FFFFFF',
-    '--color-htg-card-border': 'rgba(155,74,92,0.08)',
-    '--color-htg-surface': 'rgba(155,74,92,0.04)',
+    '--color-htg-card-border': 'rgba(71,85,105,0.10)',
+    '--color-htg-surface': 'rgba(71,85,105,0.04)',
   },
   v2: {
     '--color-htg-bg': '#F4F6FB',

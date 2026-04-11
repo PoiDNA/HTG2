@@ -172,7 +172,7 @@ export default async function LocaleLayout({
                 v3:{bg:'#0C0A09',fg:'#E7E5E4',fm:'rgba(231,229,228,0.50)',c:'#1C1917',cb:'#292524',s:'#171412'}
               };
               var lightPalettes={
-                v1:{bg:'#FDF5F0',fg:'#3A2A30',fm:'rgba(58,42,48,0.6)',c:'#FFFFFF',cb:'rgba(155,74,92,0.08)',s:'rgba(155,74,92,0.04)'},
+                v1:{bg:'#F4F6FB',fg:'#1E293B',fm:'rgba(30,41,59,0.55)',c:'#FFFFFF',cb:'rgba(71,85,105,0.10)',s:'rgba(71,85,105,0.04)'},
                 v2:{bg:'#F4F6FB',fg:'#1E293B',fm:'rgba(30,41,59,0.55)',c:'#FFFFFF',cb:'rgba(71,85,105,0.10)',s:'rgba(71,85,105,0.04)'},
                 v3:{bg:'#FAFAF9',fg:'#292524',fm:'rgba(41,37,36,0.50)',c:'#FFFFFF',cb:'rgba(41,37,36,0.06)',s:'rgba(41,37,36,0.03)'}
               };

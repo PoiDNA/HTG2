@@ -245,7 +245,7 @@ function AccordionMonth({
             aria-hidden="true"
             style={{
               backgroundImage: `url(${backgroundImage})`,
-              backgroundSize: 'contain',
+              backgroundSize: 'auto 100%',
               backgroundPosition: 'right center',
               backgroundRepeat: 'no-repeat',
               maskImage: 'linear-gradient(to right, transparent, black 30%)',

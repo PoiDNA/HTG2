@@ -163,16 +163,26 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                       loading="lazy"
                       className={`w-full h-full object-cover object-right transition-[filter,opacity] duration-700 ease-out ${
                         expandedKey === month.monthLabel
-                          ? 'brightness-[0.7] dark:brightness-100 dark:opacity-40'
-                          : 'group-hover:brightness-[0.7] dark:group-hover:brightness-100 dark:opacity-20 dark:group-hover:opacity-55'
+                          ? 'dark:opacity-40'
+                          : 'dark:opacity-20 dark:group-hover:opacity-55'
                       }`}
                     />
+                    {/* Right-side darken gradient — light mode only */}
+                    <div className="absolute inset-0 dark:hidden" style={{
+                      background: 'linear-gradient(to left, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.08) 15%, transparent 35%)',
+                    }} />
                   </div>
                 )}
                 <div className="relative z-10 flex items-center gap-3">
-                  <h3 className="text-lg font-medium text-htg-fg drop-shadow-[0_0_8px_rgba(255,255,255,0.9)] dark:drop-shadow-[0_0_8px_rgba(0,0,0,0.9)]">{month.title}</h3>
-                  <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface dark:bg-white/[0.08] px-2 py-0.5 rounded-full">
-                    {month.sessions.length}
+                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg border transition-colors duration-300 ${
+                    expandedKey === month.monthLabel
+                      ? 'bg-white/90 border-htg-sage/40 dark:bg-white/10 dark:border-white/20'
+                      : 'bg-white/70 border-white/60 group-hover:bg-white/90 group-hover:border-htg-sage/30 dark:bg-white/5 dark:border-white/10 dark:group-hover:bg-white/10 dark:group-hover:border-white/20'
+                  }`}>
+                    <h3 className="text-lg font-medium text-htg-fg">{month.title}</h3>
+                    <span className="text-sm text-htg-fg-muted font-normal">
+                      {month.sessions.length}
+                    </span>
                   </span>
                 </div>
                 <ChevronDown className={`relative z-10 w-5 h-5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-transform duration-200 ${

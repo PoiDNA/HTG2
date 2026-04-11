@@ -272,13 +272,13 @@ function AccordionMonth({
             </span>
           </span>
           {listenedCount > 0 && (
-            <span className="text-xs text-htg-sage font-normal flex items-center gap-1">
+            <span className="text-xs text-htg-sage font-semibold flex items-center gap-1 bg-white/80 dark:bg-white/10 px-1.5 py-0.5 rounded-md">
               <CheckCircle2 className="w-3.5 h-3.5" />
               {listenedCount}/{sessionsCount}
             </span>
           )}
           {bookmarkedCount > 0 && (
-            <span className="text-xs text-amber-400 font-normal flex items-center gap-1">
+            <span className="text-xs text-amber-500 font-semibold flex items-center gap-1 bg-white/80 dark:bg-white/10 px-1.5 py-0.5 rounded-md">
               <Bookmark className="w-3.5 h-3.5 fill-current" />
               {bookmarkedCount}
             </span>

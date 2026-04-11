@@ -54,17 +54,6 @@ body.hide-footer footer {
   display: none;
 }
 
-/* Cover image zoom on hover — clipped to container */
-.cover-zoom {
-  background-size: auto 100%;
-  clip-path: inset(0);
-  transition: background-size 1500ms ease-out, opacity 1500ms ease-out;
-}
-.group:hover .cover-zoom,
-.cover-zoom.is-expanded {
-  background-size: auto 120%;
-}
-
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -135,8 +135,8 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
           return (
             <div key={month.monthLabel} className={`bg-htg-card border-2 rounded-xl overflow-hidden transition-colors duration-300 ${
               expandedKey === month.monthLabel
-                ? 'border-[#996B7A]/50'
-                : 'border-htg-card-border hover:border-[#996B7A]/30'
+                ? 'border-htg-sage/50'
+                : 'border-htg-card-border hover:border-htg-sage/30'
             }`}>
               {/* Header */}
               <button
@@ -157,10 +157,10 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                       src={month.coverImageUrl}
                       alt=""
                       loading="lazy"
-                      className={`w-full h-full object-cover object-right transition-opacity duration-700 ease-out ${
+                      className={`w-full h-full object-cover object-right transition-[filter,opacity] duration-700 ease-out ${
                         expandedKey === month.monthLabel
-                          ? 'opacity-70 dark:opacity-40'
-                          : 'group-hover:opacity-70 dark:opacity-20 dark:group-hover:opacity-55'
+                          ? 'brightness-[0.7] dark:brightness-100 dark:opacity-40'
+                          : 'group-hover:brightness-[0.7] dark:group-hover:brightness-100 dark:opacity-20 dark:group-hover:opacity-55'
                       }`}
                     />
                   </div>

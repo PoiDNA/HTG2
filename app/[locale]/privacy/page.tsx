@@ -1,38 +1,32 @@
 import type { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
-import { locales } from '@/i18n-config';
+
+const PRIVACY_LOCALES = ['pl', 'en', 'de', 'pt'] as const;
 
 export function generateStaticParams() {
-  return locales.map((locale) => ({ locale }));
+  return PRIVACY_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  if (locale === 'en') {
+  const hreflang = {
+    pl: 'https://pilot.place/pl/privacy',
+    en: 'https://pilot.place/en/privacy',
+    de: 'https://pilot.place/de/privacy',
+    pt: 'https://pilot.place/pt/privacy',
+    'x-default': 'https://pilot.place/pl/privacy',
+  };
+  if (locale === 'en' || locale === 'de' || locale === 'pt') {
     return {
       title: { absolute: 'Privacy Policy | PILOT PSA' },
       description: 'Privacy policy of PILOT Prosta Spółka Akcyjna — how we collect, use and protect your personal data.',
-      alternates: {
-        canonical: 'https://pilot.place/en/privacy',
-        languages: {
-          pl: 'https://pilot.place/pl/privacy',
-          en: 'https://pilot.place/en/privacy',
-          'x-default': 'https://pilot.place/pl/privacy',
-        },
-      },
+      alternates: { canonical: `https://pilot.place/${locale}/privacy`, languages: hreflang },
     };
   }
   return {
     title: { absolute: 'Polityka Prywatności | PILOT PSA' },
     description: 'Polityka prywatności PILOT Prosta Spółka Akcyjna — jak zbieramy, wykorzystujemy i chronimy Twoje dane osobowe.',
-    alternates: {
-      canonical: 'https://pilot.place/pl/privacy',
-      languages: {
-        pl: 'https://pilot.place/pl/privacy',
-        en: 'https://pilot.place/en/privacy',
-        'x-default': 'https://pilot.place/pl/privacy',
-      },
-    },
+    alternates: { canonical: 'https://pilot.place/pl/privacy', languages: hreflang },
   };
 }
 
@@ -56,9 +50,11 @@ function UL({ children }: { children: React.ReactNode }) {
 
 export default async function PrivacyPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  setRequestLocale(locale);
+  // setRequestLocale only for locales known to next-intl
+  if (locale === 'pl' || locale === 'en') setRequestLocale(locale);
 
-  const isEn = locale === 'en';
+  // DE and PT fall back to English version
+  const isEn = locale === 'en' || locale === 'de' || locale === 'pt';
 
   if (isEn) {
     return (

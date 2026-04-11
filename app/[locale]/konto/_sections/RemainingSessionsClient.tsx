@@ -145,7 +145,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                     aria-hidden="true"
                     style={{
                       backgroundImage: `url(${month.coverImageUrl})`,
-                      backgroundSize: 'contain',
+                      backgroundSize: 'auto 100%',
                       backgroundPosition: 'right center',
                       backgroundRepeat: 'no-repeat',
                       maskImage: 'linear-gradient(to right, transparent, black 30%)',
@@ -177,7 +177,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                       />
                     ))}
                     {/* Buy button — inside expanded content */}
-                    <div className="flex justify-center pt-2">
+                    <div className="flex justify-start pt-2">
                       {monthCheaper ? (
                         <button
                           onClick={() => toggleMonth(month)}

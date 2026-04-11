@@ -145,7 +145,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
               >
                 {month.coverImageUrl && (
                   <div
-                    className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none"
+                    className="absolute inset-0 overflow-hidden pointer-events-none"
                     aria-hidden="true"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -165,14 +165,14 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                     }} />
                   </div>
                 )}
-                <div className="relative z-10 flex items-center gap-3">
-                  <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg border transition-colors duration-300 ${
+                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-3">
+                  <span className={`inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg border transition-colors duration-300 ${
                     expandedKey === month.monthLabel
                       ? 'bg-white/90 border-htg-sage/40 dark:bg-white/10 dark:border-white/20'
                       : 'bg-white/70 border-white/60 group-hover:bg-white/90 group-hover:border-htg-sage/30 dark:bg-white/5 dark:border-white/10 dark:group-hover:bg-white/10 dark:group-hover:border-white/20'
                   }`}>
-                    <h3 className="text-lg font-medium text-htg-fg">{month.title}</h3>
-                    <span className="text-sm text-htg-fg-muted font-normal">
+                    <h3 className="text-sm sm:text-lg font-medium text-htg-fg">{month.title}</h3>
+                    <span className="text-xs sm:text-sm text-htg-fg-muted font-normal">
                       {month.sessions.length}
                     </span>
                   </span>

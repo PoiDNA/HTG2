@@ -281,8 +281,8 @@ const CONTENT: Record<PilotLocale, typeof PL> = { pl: PL, en: EN, de: DE, pt: PT
 const PRIVACY_PATH: Record<PilotLocale, string> = {
   pl: "/pl/privacy",
   en: "/en/privacy",
-  de: "/pl/privacy",
-  pt: "/pl/privacy",
+  de: "/de/privacy",
+  pt: "/pt/privacy",
 };
 
 export default async function PilotPage({
@@ -291,7 +291,8 @@ export default async function PilotPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  setRequestLocale(locale);
+  // setRequestLocale only for locales known to next-intl (pl/en); de/pt are pilot-only
+  if (locale === 'pl' || locale === 'en') setRequestLocale(locale);
 
   const lang = (PILOT_LOCALES as readonly string[]).includes(locale)
     ? (locale as PilotLocale)

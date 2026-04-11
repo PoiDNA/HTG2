@@ -138,15 +138,19 @@ export async function middleware(request: NextRequest) {
   // ─── Pilot site route restriction ─────────────────────────────
   const isPilot = isPilotSite(host);
   if (isPilot) {
+    const PILOT_LOCALES = ['pl', 'en', 'de', 'pt'];
     const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
     const PILOT_ALLOWED = ['/pilot', '/privacy', '/terms'];
     const isPilotAllowed = PILOT_ALLOWED.some(p => withoutLocale === p || withoutLocale.startsWith(`${p}/`));
     if (!isPilotAllowed || withoutLocale === '/') {
-      const locale = getLocaleFromPath(pathname) || routing.defaultLocale;
+      const rawLocale = getLocaleFromPath(pathname);
+      const locale = PILOT_LOCALES.includes(rawLocale) ? rawLocale : routing.defaultLocale;
       const url = request.nextUrl.clone();
       url.pathname = `/${locale}${PILOT_HOME}`;
       return NextResponse.redirect(url);
     }
+    // Bypass next-intl middleware — pilot.place supports its own locale list (pl/en/de/pt)
+    return NextResponse.next();
   }
 
   // ─── Portal Route Restriction ─────────────────────────────────

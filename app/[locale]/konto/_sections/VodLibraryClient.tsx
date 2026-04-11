@@ -7,17 +7,6 @@ import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer
 import FontSizeToggle from '@/components/FontSizeToggle';
 import ThemeToggle from '@/components/ThemeToggle';
 
-/** Month background images for expanded accordion (light mode only).
- *  Lookup: monthLabel first (e.g. "2026-02"), then section title as fallback. */
-const MONTH_BACKGROUNDS: Record<string, string> = {
-  '2026-02': 'https://htg2-cdn.b-cdn.net/images/images-month/HTG2-1.png',
-  'Sesje Luty 2026': 'https://htg2-cdn.b-cdn.net/images/images-month/HTG2-1.png',
-};
-
-function getMonthBackground(monthLabel: string, title: string): string | undefined {
-  return MONTH_BACKGROUNDS[monthLabel] || MONTH_BACKGROUNDS[title];
-}
-
 type Props = {
   sections: MonthSection[];
   singleSessions: VodSession[];
@@ -155,7 +144,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
             bookmarkedCount={section.sessions.filter(s => bookmarked.has(s.id)).length}
             isExpanded={expandedKey === section.monthLabel}
             onToggle={() => toggleSection(section.monthLabel)}
-            backgroundImage={getMonthBackground(section.monthLabel, section.title)}
+            backgroundImage={section.coverImageUrl || undefined}
           >
             {section.sessions.length === 0 ? (
               <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center text-htg-fg-muted">
@@ -243,8 +232,22 @@ function AccordionMonth({
     <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left"
+        className="w-full flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
       >
+        {backgroundImage && (
+          <div
+            className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:hidden pointer-events-none"
+            aria-hidden="true"
+            style={{
+              backgroundImage: `url(${backgroundImage})`,
+              backgroundSize: 'auto 100%',
+              backgroundPosition: 'right center',
+              backgroundRepeat: 'no-repeat',
+              maskImage: 'linear-gradient(to right, transparent, black 30%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent, black 30%)',
+            }}
+          />
+        )}
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-medium text-htg-fg">{title}</h3>
           <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface px-2 py-0.5 rounded-full">
@@ -275,21 +278,8 @@ function AccordionMonth({
         }`}
       >
         <div className="overflow-hidden">
-          <div
-            className={`relative p-4 pt-0 border-t border-htg-card-border ${
-              backgroundImage && isExpanded ? 'bg-cover bg-center' : ''
-            }`}
-            style={backgroundImage && isExpanded ? {
-              backgroundImage: `url(${backgroundImage})`,
-            } : undefined}
-          >
-            {/* White overlay for light mode readability (hides bg in dark) */}
-            {backgroundImage && isExpanded && (
-              <div className="absolute inset-0 bg-white/40 dark:bg-htg-card/95 pointer-events-none" />
-            )}
-            <div className={`relative ${backgroundImage && isExpanded ? '[&_.session-card]:bg-white/80 [&_.session-card]:dark:bg-htg-surface/30 [&_.session-card]:backdrop-blur-sm' : ''}`}>
-              {children}
-            </div>
+          <div className="p-4 pt-0 border-t border-htg-card-border">
+            {children}
           </div>
         </div>
       </div>
@@ -361,8 +351,8 @@ function SessionCard({
   return (
     <div className={`session-card border rounded-lg overflow-hidden transition-colors ${
       isListened
-        ? 'border-htg-sage/30 bg-htg-sage/5'
-        : 'border-htg-card-border bg-htg-surface/30'
+        ? 'border-htg-sage/30 bg-htg-sage/5 hover:bg-htg-sage/10 hover:border-htg-sage/50'
+        : 'border-htg-card-border bg-htg-surface/30 hover:bg-htg-surface/60 hover:border-htg-fg-muted/30'
     }`}>
       <div className="p-4 space-y-3">
         {/* Top row: Play icon (+ toggles) left, action buttons right */}

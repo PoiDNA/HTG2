@@ -12,6 +12,7 @@ export type VodSession = {
 export type MonthSection = {
   title: string;
   monthLabel: string;
+  coverImageUrl: string | null;
   sessions: VodSession[];
 };
 
@@ -54,7 +55,7 @@ export async function buildVodLibrary(
     const { data } = await supabase
       .from('monthly_sets')
       .select(`
-        id, title, month_label,
+        id, title, month_label, cover_image_url,
         set_sessions (
           sort_order,
           session:session_templates (
@@ -77,7 +78,7 @@ export async function buildVodLibrary(
     const { data } = await supabase
       .from('monthly_sets')
       .select(`
-        id, title, month_label,
+        id, title, month_label, cover_image_url,
         set_sessions (
           sort_order,
           session:session_templates (
@@ -124,6 +125,7 @@ export async function buildVodLibrary(
       sections.push({
         title: set.title,
         monthLabel: set.month_label,
+        coverImageUrl: set.cover_image_url || null,
         sessions: unique.map(s => ({
           id: s.id,
           title: s.title,
@@ -145,7 +147,7 @@ export async function buildVodLibrary(
   const missingCurrentOrPast = allEntitledMonths.filter(m => !coveredMonths.has(m) && m <= currentMonth);
 
   for (const sm of missingCurrentOrPast) {
-    sections.push({ title: formatSesjeMonthPl(sm), monthLabel: sm, sessions: [] });
+    sections.push({ title: formatSesjeMonthPl(sm), monthLabel: sm, coverImageUrl: null, sessions: [] });
   }
 
   // Sort sections descending by monthLabel

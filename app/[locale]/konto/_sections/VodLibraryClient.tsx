@@ -7,6 +7,11 @@ import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer
 import FontSizeToggle from '@/components/FontSizeToggle';
 import ThemeToggle from '@/components/ThemeToggle';
 
+/** Month background images for expanded accordion (light mode only). Key = monthLabel e.g. "2026-02" */
+const MONTH_BACKGROUNDS: Record<string, string> = {
+  '2026-02': 'https://htg2-cdn.b-cdn.net/images/month-bg/2026-02-lotus.webp',
+};
+
 type Props = {
   sections: MonthSection[];
   singleSessions: VodSession[];
@@ -144,6 +149,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
             bookmarkedCount={section.sessions.filter(s => bookmarked.has(s.id)).length}
             isExpanded={expandedKey === section.monthLabel}
             onToggle={() => toggleSection(section.monthLabel)}
+            backgroundImage={MONTH_BACKGROUNDS[section.monthLabel]}
           >
             {section.sessions.length === 0 ? (
               <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center text-htg-fg-muted">
@@ -215,6 +221,7 @@ function AccordionMonth({
   bookmarkedCount,
   isExpanded,
   onToggle,
+  backgroundImage,
   children
 }: {
   title: string;
@@ -223,6 +230,7 @@ function AccordionMonth({
   bookmarkedCount: number;
   isExpanded: boolean;
   onToggle: () => void;
+  backgroundImage?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -261,8 +269,22 @@ function AccordionMonth({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="p-4 pt-0 border-t border-htg-card-border">
-            {children}
+          <div
+            className="relative p-4 pt-0 border-t border-htg-card-border"
+          >
+            {/* Background image — light mode only */}
+            {backgroundImage && isExpanded && (
+              <div
+                className="absolute inset-0 bg-cover bg-center dark:hidden"
+                style={{ backgroundImage: `url(${backgroundImage})` }}
+              >
+                {/* Light overlay so text stays readable */}
+                <div className="absolute inset-0 bg-white/40" />
+              </div>
+            )}
+            <div className={`relative ${backgroundImage && isExpanded ? '[&_.session-card]:bg-white/80 [&_.session-card]:dark:bg-htg-surface/30 [&_.session-card]:backdrop-blur-sm' : ''}`}>
+              {children}
+            </div>
           </div>
         </div>
       </div>
@@ -332,7 +354,7 @@ function SessionCard({
   const canExpand = sentences.length > 1 && (session.description?.length ?? 0) > 100;
 
   return (
-    <div className={`border rounded-lg overflow-hidden transition-colors ${
+    <div className={`session-card border rounded-lg overflow-hidden transition-colors ${
       isListened
         ? 'border-htg-sage/30 bg-htg-sage/5'
         : 'border-htg-card-border bg-htg-surface/30'

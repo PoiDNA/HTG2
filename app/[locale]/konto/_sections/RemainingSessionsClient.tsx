@@ -148,10 +148,12 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                     className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none"
                     aria-hidden="true"
                     style={{
-                      maskImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 100\' preserveAspectRatio=\'none\'><defs><filter id=\'b\'><feGaussianBlur stdDeviation=\'12\'/></filter></defs><path filter=\'url(%23b)\' d=\'M0 100h1000V0H250c0 0-20 15-40 25s-30 5-50 15-25 20-45 25-30 0-50 10-20 15-40 20-25 0-25 5z\' fill=\'white\'/></svg>')}")`,
-                      WebkitMaskImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 100\' preserveAspectRatio=\'none\'><defs><filter id=\'b\'><feGaussianBlur stdDeviation=\'12\'/></filter></defs><path filter=\'url(%23b)\' d=\'M0 100h1000V0H250c0 0-20 15-40 25s-30 5-50 15-25 20-45 25-30 0-50 10-20 15-40 20-25 0-25 5z\' fill=\'white\'/></svg>')}")`,
+                      maskImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 100\' preserveAspectRatio=\'none\'><defs><filter id=\'b\'><feGaussianBlur stdDeviation=\'12\'/></filter></defs><path filter=\'url(%23b)\' d=\'M0 100h1000V0H250c0 0-20 15-40 25s-30 5-50 15-25 20-45 25-30 0-50 10-20 15-40 20-25 0-25 5z\' fill=\'white\'/></svg>')}"), linear-gradient(to right, black 90%, transparent 100%)`,
+                      WebkitMaskImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 100\' preserveAspectRatio=\'none\'><defs><filter id=\'b\'><feGaussianBlur stdDeviation=\'12\'/></filter></defs><path filter=\'url(%23b)\' d=\'M0 100h1000V0H250c0 0-20 15-40 25s-30 5-50 15-25 20-45 25-30 0-50 10-20 15-40 20-25 0-25 5z\' fill=\'white\'/></svg>')}"), linear-gradient(to right, black 90%, transparent 100%)`,
                       maskSize: '100% 100%',
                       WebkitMaskSize: '100% 100%',
+                      maskComposite: 'intersect',
+                      WebkitMaskComposite: 'source-in',
                     }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -168,7 +170,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                   </div>
                 )}
                 <div className="relative z-10 flex items-center gap-3">
-                  <h3 className="text-lg font-medium text-htg-fg">{month.title}</h3>
+                  <h3 className="text-lg font-medium text-htg-fg drop-shadow-[0_0_8px_rgba(255,255,255,0.9)] dark:drop-shadow-[0_0_8px_rgba(0,0,0,0.9)]">{month.title}</h3>
                   <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface dark:bg-white/[0.08] px-2 py-0.5 rounded-full">
                     {month.sessions.length}
                   </span>

@@ -237,11 +237,11 @@ function AccordionMonth({
     <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
+        className="group w-full flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
       >
         {backgroundImage && (
           <div
-            className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:opacity-20 pointer-events-none"
+            className={`hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 ${isExpanded ? 'dark:opacity-40' : 'dark:opacity-20'} dark:group-hover:opacity-40 transition-opacity duration-300 pointer-events-none`}
             aria-hidden="true"
             style={{
               backgroundImage: `url(${backgroundImage})`,
@@ -272,7 +272,7 @@ function AccordionMonth({
           )}
         </div>
         <ChevronDown
-          className={`relative z-10 w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
+          className={`relative z-10 w-5 h-5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-transform duration-200 ${
             isExpanded ? 'rotate-180' : ''
           }`}
         />

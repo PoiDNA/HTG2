@@ -18,11 +18,6 @@ type Props = {
 };
 
 export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail, listenedSessionIds, bookmarkedSessionIds }: Props) {
-  // DEBUG: log cover image data
-  useEffect(() => {
-    console.log('[VOD-DEBUG] sections coverImageUrl:', sections.map(s => ({ title: s.title, monthLabel: s.monthLabel, coverImageUrl: s.coverImageUrl })));
-    console.log('[VOD-DEBUG] dark class on html:', document.documentElement.classList.contains('dark'));
-  }, [sections]);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
@@ -241,16 +236,28 @@ function AccordionMonth({
       >
         {backgroundImage && (
           <div
-            className={`cover-zoom hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 ${isExpanded ? 'is-expanded dark:opacity-40' : 'dark:opacity-20'} dark:group-hover:opacity-40 pointer-events-none`}
+            className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 overflow-hidden pointer-events-none"
             aria-hidden="true"
             style={{
-              backgroundImage: `url(${backgroundImage})`,
-              backgroundPosition: 'right center',
-              backgroundRepeat: 'no-repeat',
               maskImage: 'linear-gradient(to right, transparent, black 30%)',
               WebkitMaskImage: 'linear-gradient(to right, transparent, black 30%)',
             }}
-          />
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={backgroundImage}
+              alt=""
+              loading="lazy"
+              className={`absolute right-0 h-full w-auto
+                transition-transform duration-[1500ms] ease-out origin-right
+                group-hover:scale-[1.2]
+                motion-reduce:transition-none motion-reduce:group-hover:scale-100
+                ${isExpanded
+                  ? 'scale-[1.2] dark:scale-100 dark:opacity-40'
+                  : 'dark:opacity-20 dark:group-hover:opacity-40 dark:group-hover:scale-100'}
+              `}
+            />
+          </div>
         )}
         <div className="relative z-10 flex items-center gap-3">
           <h3 className="text-lg font-medium text-htg-fg">{title}</h3>

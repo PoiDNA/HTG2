@@ -141,16 +141,28 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
               >
                 {month.coverImageUrl && (
                   <div
-                    className={`cover-zoom hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 ${expandedKey === month.monthLabel ? 'is-expanded dark:opacity-40' : 'dark:opacity-20'} dark:group-hover:opacity-40 pointer-events-none`}
+                    className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 overflow-hidden pointer-events-none"
                     aria-hidden="true"
                     style={{
-                      backgroundImage: `url(${month.coverImageUrl})`,
-                      backgroundPosition: 'right center',
-                      backgroundRepeat: 'no-repeat',
                       maskImage: 'linear-gradient(to right, transparent, black 30%)',
                       WebkitMaskImage: 'linear-gradient(to right, transparent, black 30%)',
                     }}
-                  />
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={month.coverImageUrl}
+                      alt=""
+                      loading="lazy"
+                      className={`absolute right-0 h-full w-auto
+                        transition-transform duration-[1500ms] ease-out origin-right
+                        group-hover:scale-[1.2]
+                        motion-reduce:transition-none motion-reduce:group-hover:scale-100
+                        ${expandedKey === month.monthLabel
+                          ? 'scale-[1.2] dark:scale-100 dark:opacity-40'
+                          : 'dark:opacity-20 dark:group-hover:opacity-40 dark:group-hover:scale-100'}
+                      `}
+                    />
+                  </div>
                 )}
                 <div className="relative z-10 flex items-center gap-3">
                   <h3 className="text-lg font-medium text-htg-fg">{month.title}</h3>

@@ -242,14 +242,6 @@ function AccordionMonth({
           <div
             className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none"
             aria-hidden="true"
-            style={{
-              maskImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 100\' preserveAspectRatio=\'none\'><defs><filter id=\'b\'><feGaussianBlur stdDeviation=\'12\'/></filter></defs><path filter=\'url(%23b)\' d=\'M0 100h1000V0H250c0 0-20 15-40 25s-30 5-50 15-25 20-45 25-30 0-50 10-20 15-40 20-25 0-25 5z\' fill=\'white\'/></svg>')}"), linear-gradient(to right, black 90%, transparent 100%)`,
-              WebkitMaskImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 100\' preserveAspectRatio=\'none\'><defs><filter id=\'b\'><feGaussianBlur stdDeviation=\'12\'/></filter></defs><path filter=\'url(%23b)\' d=\'M0 100h1000V0H250c0 0-20 15-40 25s-30 5-50 15-25 20-45 25-30 0-50 10-20 15-40 20-25 0-25 5z\' fill=\'white\'/></svg>')}"), linear-gradient(to right, black 90%, transparent 100%)`,
-              maskSize: '100% 100%',
-              WebkitMaskSize: '100% 100%',
-              maskComposite: 'intersect',
-              WebkitMaskComposite: 'source-in',
-            }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -264,7 +256,7 @@ function AccordionMonth({
             />
             {/* Right-side darken gradient — light mode only */}
             <div className="absolute inset-0 dark:hidden" style={{
-              background: 'linear-gradient(to left, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.08) 15%, transparent 35%)',
+              background: 'linear-gradient(to left, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.12) 10%, rgba(0,0,0,0.04) 20%, transparent 35%)',
             }} />
           </div>
         )}

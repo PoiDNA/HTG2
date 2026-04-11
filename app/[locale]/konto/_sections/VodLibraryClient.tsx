@@ -231,8 +231,8 @@ function AccordionMonth({
   return (
     <div className={`bg-htg-card border-2 rounded-xl overflow-hidden transition-colors duration-300 ${
       isExpanded
-        ? 'border-htg-sage/50'
-        : 'border-htg-card-border hover:border-htg-sage/30'
+        ? 'border-[#996B7A]/50'
+        : 'border-htg-card-border hover:border-[#996B7A]/30'
     }`}>
       <button
         onClick={onToggle}
@@ -254,8 +254,8 @@ function AccordionMonth({
               loading="lazy"
               className={`w-full h-full object-cover object-right transition-opacity duration-700 ease-out ${
                 isExpanded
-                  ? 'dark:opacity-40'
-                  : 'dark:opacity-20 dark:group-hover:opacity-40'
+                  ? 'opacity-70 dark:opacity-40'
+                  : 'group-hover:opacity-70 dark:opacity-20 dark:group-hover:opacity-55'
               }`}
             />
           </div>

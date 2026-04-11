@@ -141,7 +141,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
               >
                 {month.coverImageUrl && (
                   <div
-                    className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:hidden pointer-events-none"
+                    className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:opacity-20 pointer-events-none"
                     aria-hidden="true"
                     style={{
                       backgroundImage: `url(${month.coverImageUrl})`,
@@ -153,13 +153,13 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                     }}
                   />
                 )}
-                <div className="flex items-center gap-3">
+                <div className="relative z-10 flex items-center gap-3">
                   <h3 className="text-lg font-medium text-htg-fg">{month.title}</h3>
-                  <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface px-2 py-0.5 rounded-full">
+                  <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface dark:bg-white/[0.08] px-2 py-0.5 rounded-full">
                     {month.sessions.length}
                   </span>
                 </div>
-                <ChevronDown className={`w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
+                <ChevronDown className={`relative z-10 w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
                     expandedKey === month.monthLabel ? 'rotate-180' : ''
                   }`} />
               </button>

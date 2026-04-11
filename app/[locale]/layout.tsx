@@ -103,16 +103,16 @@ export default async function LocaleLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  if (!hasLocale(routing.locales, locale)) notFound();
-  setRequestLocale(locale);
-  const messages = await getMessages();
 
   const headersList = await headers();
   const effectiveHost = headersList.get('x-forwarded-host') || headersList.get('host');
-  const isNagrania = isAnyPortal(effectiveHost);
 
-  // Pilot site — minimal shell, no HTG branding/theme
+  // Pilot site — allow de/pt locales before next-intl notFound() guard
   if (isPilotSite(effectiveHost)) {
+    const PILOT_LOCALES = ['pl', 'en', 'de', 'pt'];
+    if (!PILOT_LOCALES.includes(locale)) notFound();
+    if (locale === 'pl' || locale === 'en') setRequestLocale(locale);
+    const messages = locale === 'pl' || locale === 'en' ? await getMessages() : {};
     return (
       <html lang={locale}>
         <head>
@@ -130,6 +130,12 @@ export default async function LocaleLayout({
       </html>
     );
   }
+
+  // Standard HTG site — validate next-intl locale
+  if (!hasLocale(routing.locales, locale)) notFound();
+  setRequestLocale(locale);
+  const messages = await getMessages();
+  const isNagrania = isAnyPortal(effectiveHost);
 
   // Design variant (cookie-based, admin-only switching)
   const cookieStore = await cookies();

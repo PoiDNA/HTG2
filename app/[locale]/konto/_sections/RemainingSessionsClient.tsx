@@ -145,11 +145,13 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
               >
                 {month.coverImageUrl && (
                   <div
-                    className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 overflow-hidden pointer-events-none"
+                    className="hidden sm:block absolute inset-0 overflow-hidden pointer-events-none"
                     aria-hidden="true"
                     style={{
-                      maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.02) 10%, rgba(0,0,0,0.08) 20%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.85) 75%, black 100%)',
-                      WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.02) 10%, rgba(0,0,0,0.08) 20%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.85) 75%, black 100%)',
+                      maskImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 100\' preserveAspectRatio=\'none\'><defs><filter id=\'b\'><feGaussianBlur stdDeviation=\'12\'/></filter></defs><path filter=\'url(%23b)\' d=\'M0 100h1000V0H250c0 0-20 15-40 25s-30 5-50 15-25 20-45 25-30 0-50 10-20 15-40 20-25 0-25 5z\' fill=\'white\'/></svg>')}")`,
+                      WebkitMaskImage: `url("data:image/svg+xml,${encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1000 100\' preserveAspectRatio=\'none\'><defs><filter id=\'b\'><feGaussianBlur stdDeviation=\'12\'/></filter></defs><path filter=\'url(%23b)\' d=\'M0 100h1000V0H250c0 0-20 15-40 25s-30 5-50 15-25 20-45 25-30 0-50 10-20 15-40 20-25 0-25 5z\' fill=\'white\'/></svg>')}")`,
+                      maskSize: '100% 100%',
+                      WebkitMaskSize: '100% 100%',
                     }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}

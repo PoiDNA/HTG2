@@ -141,7 +141,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
               >
                 {month.coverImageUrl && (
                   <div
-                    className="cover-zoom hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:opacity-20 pointer-events-none"
+                    className={`cover-zoom hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 ${expandedKey === month.monthLabel ? 'is-expanded dark:opacity-40' : 'dark:opacity-20'} dark:group-hover:opacity-40 pointer-events-none`}
                     aria-hidden="true"
                     style={{
                       backgroundImage: `url(${month.coverImageUrl})`,

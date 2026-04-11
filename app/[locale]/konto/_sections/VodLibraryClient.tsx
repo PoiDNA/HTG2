@@ -241,17 +241,23 @@ function AccordionMonth({
       >
         {backgroundImage && (
           <div
-            className={`hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 ${isExpanded ? 'scale-110 dark:opacity-40' : 'dark:opacity-20'} group-hover:scale-110 dark:group-hover:opacity-40 transition-[opacity,scale] duration-[1500ms] ease-out pointer-events-none`}
+            className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 overflow-hidden pointer-events-none"
             aria-hidden="true"
             style={{
-              backgroundImage: `url(${backgroundImage})`,
-              backgroundSize: 'auto 100%',
-              backgroundPosition: 'right center',
-              backgroundRepeat: 'no-repeat',
               maskImage: 'linear-gradient(to right, transparent, black 30%)',
               WebkitMaskImage: 'linear-gradient(to right, transparent, black 30%)',
             }}
-          />
+          >
+            <div
+              className={`w-full h-full ${isExpanded ? 'scale-110 dark:opacity-40' : 'dark:opacity-20'} group-hover:scale-110 dark:group-hover:opacity-40 transition-[opacity,scale] duration-[1500ms] ease-out`}
+              style={{
+                backgroundImage: `url(${backgroundImage})`,
+                backgroundSize: 'auto 100%',
+                backgroundPosition: 'right center',
+                backgroundRepeat: 'no-repeat',
+              }}
+            />
+          </div>
         )}
         <div className="relative z-10 flex items-center gap-3">
           <h3 className="text-lg font-medium text-htg-fg">{title}</h3>

@@ -159,32 +159,9 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                     {month.sessions.length}
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
-                  {monthCheaper ? (
-                    <span
-                      role="button"
-                      onClick={(e) => { e.stopPropagation(); toggleMonth(month); }}
-                      className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors relative z-10 ${
-                        isMonthInCart
-                          ? 'bg-htg-sage text-white'
-                          : 'bg-htg-sage/10 text-htg-sage hover:bg-htg-sage/20'
-                      }`}
-                    >
-                      {isMonthInCart ? (
-                        <span className="flex items-center gap-1"><Check className="w-3.5 h-3.5" /> W koszyku</span>
-                      ) : (
-                        `Dodaj miesiąc · ${prices.monthlyAmount / 100} PLN`
-                      )}
-                    </span>
-                  ) : (
-                    <span className="shrink-0 text-xs text-htg-fg-muted">
-                      taniej pojedynczo
-                    </span>
-                  )}
-                  <ChevronDown className={`w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
+                <ChevronDown className={`w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
                     expandedKey === month.monthLabel ? 'rotate-180' : ''
                   }`} />
-                </div>
               </button>
 
               {/* Sessions list */}
@@ -199,6 +176,29 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                         session={session}
                       />
                     ))}
+                    {/* Buy button — inside expanded content */}
+                    <div className="flex justify-center pt-2">
+                      {monthCheaper ? (
+                        <button
+                          onClick={() => toggleMonth(month)}
+                          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            isMonthInCart
+                              ? 'bg-htg-sage text-white'
+                              : 'bg-htg-sage/10 text-htg-sage hover:bg-htg-sage/20 border border-htg-sage/30'
+                          }`}
+                        >
+                          {isMonthInCart ? (
+                            <span className="flex items-center gap-1.5"><Check className="w-4 h-4" /> W koszyku</span>
+                          ) : (
+                            `Dodaj miesiąc · ${prices.monthlyAmount / 100} PLN`
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-htg-fg-muted">
+                          taniej pojedynczo
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

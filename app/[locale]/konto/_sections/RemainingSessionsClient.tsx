@@ -135,57 +135,57 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
           return (
             <div key={month.monthLabel} className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
               {/* Header */}
-              <div className="flex items-center">
-                <button
-                  onClick={() => toggleSection(month.monthLabel)}
-                  className="flex-1 flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
-                >
-                  {month.coverImageUrl && (
-                    <div
-                      className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:hidden pointer-events-none"
-                      aria-hidden="true"
-                      style={{
-                        backgroundImage: `url(${month.coverImageUrl})`,
-                        backgroundSize: 'contain',
-                        backgroundPosition: 'right center',
-                        backgroundRepeat: 'no-repeat',
-                        maskImage: 'linear-gradient(to right, transparent, black 30%)',
-                        WebkitMaskImage: 'linear-gradient(to right, transparent, black 30%)',
-                      }}
-                    />
-                  )}
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-medium text-htg-fg">{month.title}</h3>
-                    <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface px-2 py-0.5 rounded-full">
-                      {month.sessions.length}
+              <button
+                onClick={() => toggleSection(month.monthLabel)}
+                className="w-full flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
+              >
+                {month.coverImageUrl && (
+                  <div
+                    className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:hidden pointer-events-none"
+                    aria-hidden="true"
+                    style={{
+                      backgroundImage: `url(${month.coverImageUrl})`,
+                      backgroundSize: 'contain',
+                      backgroundPosition: 'right center',
+                      backgroundRepeat: 'no-repeat',
+                      maskImage: 'linear-gradient(to right, transparent, black 30%)',
+                      WebkitMaskImage: 'linear-gradient(to right, transparent, black 30%)',
+                    }}
+                  />
+                )}
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-medium text-htg-fg">{month.title}</h3>
+                  <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface px-2 py-0.5 rounded-full">
+                    {month.sessions.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {monthCheaper ? (
+                    <span
+                      role="button"
+                      onClick={(e) => { e.stopPropagation(); toggleMonth(month); }}
+                      className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors relative z-10 ${
+                        isMonthInCart
+                          ? 'bg-htg-sage text-white'
+                          : 'bg-htg-sage/10 text-htg-sage hover:bg-htg-sage/20'
+                      }`}
+                    >
+                      {isMonthInCart ? (
+                        <span className="flex items-center gap-1"><Check className="w-3.5 h-3.5" /> W koszyku</span>
+                      ) : (
+                        `Dodaj miesiąc · ${prices.monthlyAmount / 100} PLN`
+                      )}
                     </span>
-                  </div>
+                  ) : (
+                    <span className="shrink-0 text-xs text-htg-fg-muted">
+                      taniej pojedynczo
+                    </span>
+                  )}
                   <ChevronDown className={`w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
                     expandedKey === month.monthLabel ? 'rotate-180' : ''
                   }`} />
-                </button>
-
-                {monthCheaper ? (
-                  <button
-                    onClick={() => toggleMonth(month)}
-                    className={`shrink-0 mr-4 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      isMonthInCart
-                        ? 'bg-htg-sage text-white'
-                        : 'bg-htg-sage/10 text-htg-sage hover:bg-htg-sage/20'
-                    }`}
-                  >
-                    {isMonthInCart ? (
-                      <span className="flex items-center gap-1"><Check className="w-3.5 h-3.5" /> W koszyku</span>
-                    ) : (
-                      `Dodaj miesiąc · ${prices.monthlyAmount / 100} PLN`
-                    )}
-                  </button>
-                ) : (
-                  <span className="shrink-0 mr-4 text-xs text-htg-fg-muted">
-                    taniej pojedynczo
-                  </span>
-                )}
-              </div>
+                </div>
+              </button>
 
               {/* Sessions list */}
               <div className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${

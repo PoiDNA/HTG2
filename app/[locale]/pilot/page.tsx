@@ -93,21 +93,21 @@ export async function generateMetadata({
 // ── Content ────────────────────────────────────────────────────
 
 const PL = {
-  tagline: "Przestrzeń do nauki i\u00a0wzrostu — chroniona z\u00a0troską",
+  tagline: "Przestrzeń do osobistego wzrostu — chroniona z\u00a0troską",
   contact_cta: "Kontakt",
   about_heading: "O nas",
   about_p1:
     "Tworzymy miejsca w\u00a0sieci, w\u00a0których ludzie uczą się, rozwijają i\u00a0odkrywają swój potencjał. Dbamy o\u00a0to, żeby każda taka przestrzeń była nie tylko funkcjonalna, ale przede wszystkim bezpieczna dla tych, którzy jej ufają.",
   about_italic: "Twoje dane są Twoje — i\u00a0traktujemy to poważnie.",
   about_p2:
-    "PILOT PSA działa z\u00a0Warszawy i\u00a0Krakowa. Założona w\u00a02026 roku, zarejestrowana jako prosta spółka akcyjna (PSA).",
+    "PILOT PSA działa z\u00a0Warszawy i\u00a0Krakowa.",
   services_heading: "Zakres działalności",
   services: [
     {
       icon: BookOpen,
       title: "Platformy edukacyjne i rozwojowe",
       description:
-        "Budujemy i prowadzimy serwisy internetowe dla ludzi, którzy chcą się rozwijać — kursy, społeczności, przestrzenie do nauki. Zależy nam na tym, żeby działały bez zakłóceń i by użytkownicy czuli się w nich bezpiecznie.",
+        "Budujemy i prowadzimy serwisy internetowe dla ludzi, którzy chcą się rozwijać — kursy, społeczności, relacje. Zależy nam na tym, żeby działały bez zakłóceń i by użytkownicy czuli się w nich bezpiecznie.",
     },
     {
       icon: Shield,
@@ -125,7 +125,7 @@ const PL = {
       icon: FlaskConical,
       title: "Badania i nowe rozwiązania",
       description:
-        "Szukamy odpowiedzi na pytania, które edukacja dopiero zaczyna zadawać — jak łączyć technologię z rozwojem człowieka w sposób, który naprawdę służy.",
+        "Odpowiadamy na pytania, które mainstream dopiero zaczyna zadawać — jak łączyć technologię z rozwojem człowieka w sposób, który naprawdę jest potencjałem do głębszego rozumienia.",
     },
   ],
   security_heading: "Bezpieczeństwo",
@@ -138,7 +138,6 @@ const PL = {
   registry_heading: "Dane rejestrowe",
   registry: [
     ["Firma", "PILOT Prosta Spółka Akcyjna"],
-    ["Forma prawna", "Prosta Spółka Akcyjna (PSA)"],
     ["KRS", "0001233166"],
     ["NIP", "5253085101"],
     ["REGON", "544401249"],
@@ -148,21 +147,21 @@ const PL = {
 };
 
 const EN = {
-  tagline: "A space for learning and growth — protected with care",
+  tagline: "A space for personal growth — protected with care",
   contact_cta: "Contact",
   about_heading: "About us",
   about_p1:
     "We create online spaces where people learn, grow, and discover their potential. We care deeply that every such space is not only reliable, but above all safe for those who trust it.",
   about_italic: "Your data is yours — and we take that seriously.",
   about_p2:
-    "PILOT PSA operates from Warsaw and Kraków, Poland. Founded in 2026, registered as a simplified joint-stock company (PSA).",
+    "PILOT PSA operates from Warsaw and Kraków, Poland.",
   services_heading: "What we do",
   services: [
     {
       icon: BookOpen,
       title: "Educational & growth platforms",
       description:
-        "We build and run online services for people on a path of learning — courses, communities, spaces for growth. We make sure they work without interruption and that users feel safe inside them.",
+        "We build and run online services for people on a path of growth — courses, communities, relationships. We make sure they work without interruption and that users feel safe inside them.",
     },
     {
       icon: Shield,
@@ -180,7 +179,7 @@ const EN = {
       icon: FlaskConical,
       title: "Research & new solutions",
       description:
-        "We look for answers to questions education is only beginning to ask — how to connect technology with human growth in a way that truly serves.",
+        "We answer questions the mainstream is only beginning to ask — how to connect technology with human growth in a way that is truly a gateway to deeper understanding.",
     },
   ],
   security_heading: "Privacy & trust",
@@ -193,7 +192,6 @@ const EN = {
   registry_heading: "Company details",
   registry: [
     ["Company", "PILOT Prosta Spółka Akcyjna"],
-    ["Legal form", "Simplified Joint-Stock Company (PSA)"],
     ["KRS", "0001233166"],
     ["Tax ID (NIP)", "5253085101"],
     ["REGON", "544401249"],

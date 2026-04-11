@@ -272,7 +272,7 @@ function AccordionMonth({
           )}
         </div>
         <ChevronDown
-          className={`relative z-10 w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
+          className={`relative z-10 w-5 h-5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-transform duration-200 ${
             isExpanded ? 'rotate-180' : ''
           }`}
         />

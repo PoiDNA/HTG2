@@ -38,6 +38,7 @@ export default async function RemainingSessionsSection({ locale }: { locale: str
           id: set.id,
           title: set.title,
           monthLabel: set.month_label!,
+          coverImageUrl: set.cover_image_url || null,
           sessions: remainingSessions.map(s => ({
             id: s.id,
             title: s.title,

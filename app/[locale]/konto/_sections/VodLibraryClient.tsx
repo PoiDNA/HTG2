@@ -9,7 +9,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 
 /** Month background images for expanded accordion (light mode only). Key = monthLabel e.g. "2026-02" */
 const MONTH_BACKGROUNDS: Record<string, string> = {
-  '2026-02': 'https://htg2-cdn.b-cdn.net/images/month-bg/2026-02-lotus.webp',
+  '2026-02': 'https://htg2-cdn.b-cdn.net/images/images-month/HTG2-1.png',
 };
 
 type Props = {

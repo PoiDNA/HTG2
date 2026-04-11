@@ -254,8 +254,8 @@ function AccordionMonth({
               loading="lazy"
               className={`w-full h-full object-cover object-right transition-[filter,opacity] duration-700 ease-out ${
                 isExpanded
-                  ? 'brightness-[0.55] dark:brightness-100 dark:opacity-40'
-                  : 'group-hover:brightness-[0.55] dark:group-hover:brightness-100 dark:opacity-20 dark:group-hover:opacity-55'
+                  ? 'brightness-[0.7] dark:brightness-100 dark:opacity-40'
+                  : 'group-hover:brightness-[0.7] dark:group-hover:brightness-100 dark:opacity-20 dark:group-hover:opacity-55'
               }`}
             />
           </div>

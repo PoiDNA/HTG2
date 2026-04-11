@@ -17,6 +17,7 @@ interface MonthInfo {
   id: string;
   title: string;
   monthLabel: string;
+  coverImageUrl: string | null;
   sessions: SessionInfo[];
   totalSessionsInSet: number;
 }
@@ -137,8 +138,22 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
               <div className="flex items-center">
                 <button
                   onClick={() => toggleSection(month.monthLabel)}
-                  className="flex-1 flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left"
+                  className="flex-1 flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
                 >
+                  {month.coverImageUrl && (
+                    <div
+                      className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:hidden pointer-events-none"
+                      aria-hidden="true"
+                      style={{
+                        backgroundImage: `url(${month.coverImageUrl})`,
+                        backgroundSize: 'auto 100%',
+                        backgroundPosition: 'right center',
+                        backgroundRepeat: 'no-repeat',
+                        maskImage: 'linear-gradient(to right, transparent, black 30%)',
+                        WebkitMaskImage: 'linear-gradient(to right, transparent, black 30%)',
+                      }}
+                    />
+                  )}
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-medium text-htg-fg">{month.title}</h3>
                     <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface px-2 py-0.5 rounded-full">
@@ -251,7 +266,7 @@ function ShopSessionCard({
   const canExpand = sentences.length > 1 && (session.description?.length ?? 0) > 100;
 
   return (
-    <div className="border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30">
+    <div className="border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30 hover:bg-htg-surface/60 hover:border-htg-fg-muted/30 transition-colors">
       <div className="p-4 space-y-3">
         {/* Top row: Play icon + toggles */}
         <div className="flex items-center gap-2">

@@ -133,7 +133,11 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
           const monthCheaper = prices.monthlyAmount < remainingCost;
 
           return (
-            <div key={month.monthLabel} className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
+            <div key={month.monthLabel} className={`bg-htg-card border-2 rounded-xl overflow-hidden transition-colors duration-300 ${
+              expandedKey === month.monthLabel
+                ? 'border-htg-sage/50'
+                : 'border-htg-card-border hover:border-htg-sage/30'
+            }`}>
               {/* Header */}
               <button
                 onClick={() => toggleSection(month.monthLabel)}
@@ -153,14 +157,11 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                       src={month.coverImageUrl}
                       alt=""
                       loading="lazy"
-                      className={`w-full h-full object-cover object-right
-                        transition-transform duration-[1500ms] ease-out origin-right
-                        group-hover:scale-[1.2]
-                        motion-reduce:transition-none motion-reduce:group-hover:scale-100
-                        ${expandedKey === month.monthLabel
-                          ? 'scale-[1.2] dark:scale-100 dark:opacity-40'
-                          : 'dark:opacity-20 dark:group-hover:opacity-40 dark:group-hover:scale-100'}
-                      `}
+                      className={`w-full h-full object-cover object-right transition-opacity duration-700 ease-out ${
+                        expandedKey === month.monthLabel
+                          ? 'dark:opacity-40'
+                          : 'dark:opacity-20 dark:group-hover:opacity-40'
+                      }`}
                     />
                   </div>
                 )}

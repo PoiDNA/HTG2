@@ -229,7 +229,11 @@ function AccordionMonth({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
+    <div className={`bg-htg-card border-2 rounded-xl overflow-hidden transition-colors duration-300 ${
+      isExpanded
+        ? 'border-htg-sage/50'
+        : 'border-htg-card-border hover:border-htg-sage/30'
+    }`}>
       <button
         onClick={onToggle}
         className="group w-full flex items-center justify-between p-4 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
@@ -248,14 +252,11 @@ function AccordionMonth({
               src={backgroundImage}
               alt=""
               loading="lazy"
-              className={`w-full h-full object-cover object-right
-                transition-transform duration-[1500ms] ease-out origin-right
-                group-hover:scale-[1.2]
-                motion-reduce:transition-none motion-reduce:group-hover:scale-100
-                ${isExpanded
-                  ? 'scale-[1.2] dark:scale-100 dark:opacity-40'
-                  : 'dark:opacity-20 dark:group-hover:opacity-40 dark:group-hover:scale-100'}
-              `}
+              className={`w-full h-full object-cover object-right transition-opacity duration-700 ease-out ${
+                isExpanded
+                  ? 'dark:opacity-40'
+                  : 'dark:opacity-20 dark:group-hover:opacity-40'
+              }`}
             />
           </div>
         )}

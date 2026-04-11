@@ -116,7 +116,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
               filter === 'all'
                 ? 'bg-htg-sage text-white border-htg-sage'
-                : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
+                : 'border-htg-card-border dark:border-white/20 text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
             }`}
           >
             Wszystkie
@@ -128,7 +128,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
               className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 filter === p.key
                   ? p.activeClass
-                  : 'border-htg-card-border text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
+                  : 'border-htg-card-border dark:border-white/20 text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
               }`}
             >
               {p.icon}{p.label}
@@ -241,7 +241,7 @@ function AccordionMonth({
       >
         {backgroundImage && (
           <div
-            className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:hidden pointer-events-none"
+            className="hidden sm:block absolute inset-y-0 right-0 sm:w-1/3 md:w-1/2 dark:opacity-20 pointer-events-none"
             aria-hidden="true"
             style={{
               backgroundImage: `url(${backgroundImage})`,
@@ -253,9 +253,9 @@ function AccordionMonth({
             }}
           />
         )}
-        <div className="flex items-center gap-3">
+        <div className="relative z-10 flex items-center gap-3">
           <h3 className="text-lg font-medium text-htg-fg">{title}</h3>
-          <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface px-2 py-0.5 rounded-full">
+          <span className="text-sm text-htg-fg-muted font-normal bg-htg-surface dark:bg-white/[0.08] px-2 py-0.5 rounded-full">
             {sessionsCount}
           </span>
           {listenedCount > 0 && (
@@ -272,7 +272,7 @@ function AccordionMonth({
           )}
         </div>
         <ChevronDown
-          className={`w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
+          className={`relative z-10 w-5 h-5 text-htg-fg-muted transition-transform duration-200 ${
             isExpanded ? 'rotate-180' : ''
           }`}
         />

@@ -194,7 +194,7 @@ export default function HeroHostV2() {
                   touchAction: 'manipulation',
                 }}
                 tabIndex={0}
-                aria-label="Kliknij postać"
+                aria-label="Interactive character"
               />
             </div>
           </div>

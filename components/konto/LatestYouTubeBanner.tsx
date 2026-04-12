@@ -76,7 +76,7 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
             <button
               onClick={handleDismiss}
               className="shrink-0 p-1 text-htg-fg-muted hover:text-htg-fg transition-colors"
-              aria-label="Zamknij"
+              aria-label="Close"
             >
               <X className="w-4 h-4" />
             </button>

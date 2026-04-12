@@ -130,7 +130,7 @@ export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorP
             onClick={decreaseFontSize}
             disabled={fontSizeIdx === 0}
             className="p-1.5 rounded-md bg-htg-surface hover:bg-htg-card-border text-htg-fg-muted disabled:opacity-30 transition-colors"
-            title="Zmniejsz tekst"
+            title={t('shrink_text')}
           >
             <Type className="w-3 h-3" />
           </button>

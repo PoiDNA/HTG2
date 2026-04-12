@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface ReportModalProps {
   targetType: 'post' | 'comment';
@@ -10,6 +11,7 @@ interface ReportModalProps {
 }
 
 export function ReportModal({ targetType, targetId, onClose }: ReportModalProps) {
+  const t = useTranslations('Community');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export function ReportModal({ targetType, targetId, onClose }: ReportModalProps)
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Powód zgłoszenia (opcjonalnie)..."
+                placeholder={t('report_reason')}
                 rows={3}
                 className="w-full px-4 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage/50 resize-none"
               />

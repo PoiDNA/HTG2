@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { UserMinus, UserPlus, Users, Mail, Send, ChevronDown, ChevronUp, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 import { formatDate } from '@/lib/format';
@@ -32,6 +32,7 @@ function getSupabase() {
 
 export default function FavoritesList({ userDisplayName }: { userDisplayName?: string }) {
   const locale = useLocale();
+  const t = useTranslations('Account');
   const [favorites, setFavorites] = useState<UserInfo[]>([]);
   const [followers, setFollowers] = useState<UserInfo[]>([]);
   const [searchEmail, setSearchEmail] = useState('');
@@ -156,7 +157,7 @@ export default function FavoritesList({ userDisplayName }: { userDisplayName?: s
               value={searchEmail}
               onChange={(e) => setSearchEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-              placeholder="Wpisz adres e-mail użytkownika..."
+              placeholder={t('friend_email_placeholder')}
               className="w-full pl-10 pr-4 py-3 bg-htg-surface border border-htg-card-border rounded-lg text-htg-fg placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-sage/50"
             />
           </div>
@@ -196,7 +197,7 @@ export default function FavoritesList({ userDisplayName }: { userDisplayName?: s
                   <button
                     onClick={() => handleRemove(fav.id)}
                     className="text-red-400 hover:text-red-300 transition-colors p-2"
-                    title="Usuń ze znajomych"
+                    title={t('remove_friend')}
                   >
                     <UserMinus className="w-4 h-4" />
                   </button>
@@ -233,7 +234,7 @@ export default function FavoritesList({ userDisplayName }: { userDisplayName?: s
                         loadData();
                       }}
                       className="text-htg-sage hover:text-htg-sage-dark transition-colors p-2"
-                      title="Dodaj do znajomych"
+                      title={t('add_friend')}
                     >
                       <UserPlus className="w-4 h-4" />
                     </button>
@@ -270,7 +271,7 @@ export default function FavoritesList({ userDisplayName }: { userDisplayName?: s
               value={inviterName}
               onChange={e => setInviterName(e.target.value)}
               maxLength={50}
-              placeholder="Twoje imię..."
+              placeholder={t('your_name_placeholder')}
               className="w-full px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-lg text-htg-fg placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-warm/50"
             />
           </div>
@@ -293,7 +294,7 @@ export default function FavoritesList({ userDisplayName }: { userDisplayName?: s
               onChange={e => setPersonalMessage(e.target.value)}
               maxLength={250}
               rows={2}
-              placeholder="Np. Cześć! Polecam Ci te sesje, naprawdę warto..."
+              placeholder={t('invite_message_placeholder')}
               className="w-full px-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-lg text-htg-fg placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-warm/50 resize-none"
             />
             <p className="text-xs text-htg-fg-muted/50 mt-1 text-right">{personalMessage.length}/250</p>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, X, BarChart3 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { Attachment } from '@/lib/community/types';
 
 interface PollCreatorProps {
@@ -14,6 +15,7 @@ interface PollCreatorProps {
  * Creates a poll attachment to include in a post.
  */
 export function PollCreator({ onPollCreated, onCancel }: PollCreatorProps) {
+  const t = useTranslations('Community');
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
 
@@ -64,7 +66,7 @@ export function PollCreator({ onPollCreated, onCancel }: PollCreatorProps) {
         type="text"
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
-        placeholder="Zadaj pytanie..."
+        placeholder={t('poll_question_placeholder')}
         className="w-full px-3 py-2 mb-3 bg-htg-card border border-htg-card-border rounded-lg text-sm text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/50"
       />
 

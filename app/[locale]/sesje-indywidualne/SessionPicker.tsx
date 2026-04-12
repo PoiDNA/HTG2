@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 import { PRODUCT_SLUGS, SESSION_CONFIG } from '@/lib/booking/constants';
 import { formatPrice, getIntlLocale } from '@/lib/format';
@@ -59,6 +59,7 @@ function getLocalizedMonths(locale: string): string[] {
 
 export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProps) {
   const locale = useLocale();
+  const ti = useTranslations('Individual');
   // 'solo' | 'asysta' | 'para' | null
   const [selectedGroup, setSelectedGroup] = useState<'solo' | 'asysta' | 'para' | null>(null);
   // slug of chosen assistant session (sesja-natalia-agata or sesja-natalia-justyna)
@@ -364,8 +365,8 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
               </div>
             )}
             <User className={`w-8 h-8 mb-3 ${selectedGroup === 'solo' ? 'text-htg-sage' : 'text-htg-fg-muted'}`} />
-            <h3 className="font-serif font-semibold text-htg-fg mb-1">{soloSession.name}</h3>
-            <p className="text-xs text-htg-fg-muted mb-4">Natalia HTG</p>
+            <h3 className="font-serif font-semibold text-htg-fg mb-1">{ti('session_solo_name')}</h3>
+            <p className="text-xs text-htg-fg-muted mb-4">{ti('session_solo_subtitle')}</p>
             <p className="text-2xl font-bold text-htg-fg">
               {formatPrice(soloSession.amount, soloSession.currency, locale)}
             </p>
@@ -389,8 +390,8 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
               </div>
             )}
             <Users className={`w-8 h-8 mb-3 ${selectedGroup === 'asysta' ? 'text-htg-sage' : 'text-htg-fg-muted'}`} />
-            <h3 className="font-serif font-semibold text-htg-fg mb-1">Sesja z Asystą</h3>
-            <p className="text-xs text-htg-fg-muted mb-4">Natalia HTG + asystentka</p>
+            <h3 className="font-serif font-semibold text-htg-fg mb-1">{ti('session_with_interpreter_name')}</h3>
+            <p className="text-xs text-htg-fg-muted mb-4">{ti('session_with_interpreter_subtitle')}</p>
             <p className="text-2xl font-bold text-htg-fg">
               {formatPrice(assistantPrice, assistantSessions[0]?.currency || 'pln', locale)}
             </p>
@@ -402,7 +403,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 className="mt-4 pt-4 border-t border-htg-card-border space-y-2"
                 onClick={e => e.stopPropagation()}
               >
-                <p className="text-xs font-medium text-htg-fg-muted mb-2">Wybierz asystentkę:</p>
+                <p className="text-xs font-medium text-htg-fg-muted mb-2">{locale === 'pl' ? ti('choose_assistant') : ti('session_with_interpreter_subtitle')}</p>
                 <div className="flex gap-2">
                   {assistantSessions.map(a => {
                     const assistantName = a.sessionType === 'natalia_agata' ? 'Agata' : 'Justyna';
@@ -442,8 +443,8 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             </div>
           )}
           <Heart className={`w-8 h-8 mb-3 ${selectedGroup === 'para' ? 'text-rose-400' : 'text-htg-fg-muted'}`} />
-          <h3 className="font-serif font-semibold text-htg-fg mb-1">Sesja dla par</h3>
-          <p className="text-xs text-htg-fg-muted mb-4">Natalia HTG · 2 osoby · 120 min</p>
+          <h3 className="font-serif font-semibold text-htg-fg mb-1">{ti('session_pair_name')}</h3>
+          <p className="text-xs text-htg-fg-muted mb-4">{ti('session_pair_subtitle')} · 120 min</p>
           <p className="text-2xl font-bold text-htg-fg">
             {formatPrice(paraSession.amount, paraSession.currency, locale)}
           </p>
@@ -848,13 +849,13 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Przetwarzanie...
+                  {ti('processing')}
                 </span>
               ) : (
                 <>
-                  {paymentMethod === 'transfer' && `Zarezerwuj sesję — ${totalAmount} ${currencyCode}`}
+                  {paymentMethod === 'transfer' && `${ti('book_transfer')} — ${totalAmount} ${currencyCode}`}
                   {paymentMethod === 'stripe' && paymentMode === 'full' && `${labels.buy} — ${totalAmount} ${currencyCode}`}
-                  {paymentMethod === 'stripe' && paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount} ${currencyCode}`}
+                  {paymentMethod === 'stripe' && paymentMode === 'installments' && `${ti('pay_installment', { n: 1 })} — ${installmentAmount} ${currencyCode}`}
                 </>
               )}
             </button>

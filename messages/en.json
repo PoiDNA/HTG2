@@ -223,7 +223,10 @@
     "interpreter_name": "Melania",
     "session_pair_name": "Couples session",
     "session_pair_subtitle": "Natalia HTG + interpreter",
-    "interpreter_note": "Sessions include consecutive interpretation by {name}"
+    "interpreter_note": "Sessions include consecutive interpretation by {name}",
+    "processing": "Processing...",
+    "book_transfer": "Book session",
+    "pay_installment": "Pay installment {n}"
   },
   "Legal": {
     "privacy_title": "Privacy Policy",

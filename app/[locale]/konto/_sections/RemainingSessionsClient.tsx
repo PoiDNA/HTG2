@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Check, ChevronDown, Clock, X, ShoppingCart, Loader2, Play } from 'lucide-react';
 import FontSizeToggle from '@/components/FontSizeToggle';
@@ -41,6 +42,7 @@ function splitSentences(text: string): string[] {
 }
 
 export default function RemainingSessionsClient({ months, prices }: Props) {
+  const locale = useLocale();
   const router = useRouter();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [selectedMonths, setSelectedMonths] = useState<Record<string, boolean>>({});
@@ -88,6 +90,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
       const body: Record<string, any> = {
         priceId: prices.monthlyPriceId,
         mode: 'payment',
+        locale,
         quantity: monthLabels.length,
         metadata: {
           type: 'monthly',

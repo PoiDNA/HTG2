@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { SESSION_CONFIG, PRODUCT_SLUGS } from '@/lib/booking/constants';
+import { SESSION_CONFIG, PRODUCT_SLUGS, LOCALE_CURRENCY } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
 // Allowed return paths for checkout success/cancel
 const ALLOWED_RETURN_PATHS = ['/konto', '/sesje', '/sesje-indywidualne'];
+
+// Valid locales for URL construction
+const VALID_LOCALES = ['pl', 'en', 'de', 'pt'];
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,11 +28,16 @@ export async function POST(request: NextRequest) {
       metadata = {},
       amountOverride,
       addOns = [],
+      locale: requestLocale,
     } = body;
 
     const db = createSupabaseServiceRole();
     const origin = request.headers.get('origin') || 'https://htgcyou.com';
     const returnPath = ALLOWED_RETURN_PATHS.includes(metadata.return_path) ? metadata.return_path : '/konto';
+
+    // Determine locale and currency
+    const locale = VALID_LOCALES.includes(requestLocale) ? requestLocale : 'pl';
+    const currency = LOCALE_CURRENCY[locale] || 'pln';
 
     // ── Translate bulk session/month purchases to pending_checkout ──────────
     const sessionIds: string[] = metadata.sessionIds ? JSON.parse(metadata.sessionIds) : [];
@@ -55,14 +63,12 @@ export async function POST(request: NextRequest) {
       let canonicalMonths: { monthly_set_id: string; month_label: string }[] = [];
 
       if (sessionIds.length > 0) {
-        // Validate sessions exist and are published
         const { data: validSessions } = await db.from('session_templates')
           .select('id').in('id', [...new Set(sessionIds)]);
         canonicalSessions = (validSessions || []).map(s => s.id);
       }
 
       if (monthLabels.length > 0) {
-        // Resolve monthLabels → monthly_set_id
         const { data: validSets } = await db.from('monthly_sets')
           .select('id, month_label').in('month_label', [...new Set(monthLabels)])
           .eq('is_published', true);
@@ -75,7 +81,6 @@ export async function POST(request: NextRequest) {
       // ── Filter out already-owned ──
       const now = new Date().toISOString();
 
-      // Direct session entitlements
       if (canonicalSessions.length > 0) {
         const { data: ownedDirect } = await db.from('entitlements')
           .select('session_id').eq('user_id', user.id).eq('type', 'session')
@@ -83,7 +88,6 @@ export async function POST(request: NextRequest) {
           .in('session_id', canonicalSessions);
         const ownedDirectSet = new Set((ownedDirect || []).map(e => e.session_id));
 
-        // Sessions owned via monthly/yearly entitlements
         const { data: ownedMonthEnts } = await db.from('entitlements')
           .select('monthly_set_id').eq('user_id', user.id)
           .in('type', ['monthly', 'yearly']).eq('is_active', true).gt('valid_until', now)
@@ -120,16 +124,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Posiadasz już wszystkie wybrane pozycje' }, { status: 400 });
       }
 
-      // ── Fetch prices ──
+      // ── Fetch prices (filtered by currency) ──
       const { data: sessionProduct } = await db.from('products').select('id')
         .eq('slug', PRODUCT_SLUGS.SINGLE_SESSION).single();
       const { data: monthlyProduct } = await db.from('products').select('id')
         .eq('slug', PRODUCT_SLUGS.MONTHLY).single();
 
       const { data: sessionPrice } = await db.from('prices').select('stripe_price_id, amount')
-        .eq('product_id', sessionProduct?.id || '').eq('is_active', true).single();
+        .eq('product_id', sessionProduct?.id || '').eq('is_active', true)
+        .eq('currency', currency).single();
       const { data: monthlyPrice } = await db.from('prices').select('stripe_price_id, amount')
-        .eq('product_id', monthlyProduct?.id || '').eq('is_active', true).single();
+        .eq('product_id', monthlyProduct?.id || '').eq('is_active', true)
+        .eq('currency', currency).single();
 
       // ── Determine purchase type ──
       const purchaseType = canonicalSessions.length > 0 && canonicalMonths.length > 0
@@ -144,7 +150,7 @@ export async function POST(request: NextRequest) {
         items: { sessions: canonicalSessions, months: canonicalMonths },
         purchase_type: purchaseType,
         total_amount: totalAmount,
-        currency: 'pln',
+        currency,
       }).select('id').single();
 
       checkoutId = pendingCheckout?.id || null;
@@ -163,6 +169,21 @@ export async function POST(request: NextRequest) {
 
     if (!priceId && !amountOverride && !finalLineItems) {
       return NextResponse.json({ error: 'priceId or amountOverride required' }, { status: 400 });
+    }
+
+    // ── Anti-tampering: validate priceId matches expected currency ──
+    if (priceId && !finalLineItems) {
+      const { data: priceRecord } = await db.from('prices')
+        .select('currency, product_id')
+        .eq('stripe_price_id', priceId)
+        .eq('is_active', true)
+        .single();
+
+      if (priceRecord && priceRecord.currency !== currency) {
+        return NextResponse.json({
+          error: 'Currency mismatch — price does not match locale currency',
+        }, { status: 400 });
+      }
     }
 
     // Get or create Stripe customer
@@ -187,23 +208,30 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id);
     }
 
-    // Build line items (use finalLineItems from bulk path, or construct from priceId)
+    // Build line items
     let lineItems: any[];
 
     if (finalLineItems) {
       lineItems = finalLineItems;
     } else if (amountOverride && amountOverride > 0) {
-      const sessionName = SESSION_CONFIG[metadata.session_type as SessionType]?.label || metadata.session_type || 'Sesja indywidualna HTG';
+      const sessionLabel = SESSION_CONFIG[metadata.session_type as SessionType]?.label || metadata.session_type || 'Sesja indywidualna HTG';
+
+      // Locale-aware product name for Stripe invoice
+      const sessionName = locale === 'pl' ? sessionLabel
+        : locale === 'de' ? (SESSION_CONFIG[metadata.session_type as SessionType]?.labelShort || sessionLabel)
+        : locale === 'pt' ? (SESSION_CONFIG[metadata.session_type as SessionType]?.labelShort || sessionLabel)
+        : (SESSION_CONFIG[metadata.session_type as SessionType]?.labelShort || sessionLabel);
 
       const productName = metadata.payment_mode === 'installments'
-        ? `Rata ${metadata.installment_number || 1}/3 — ${sessionName}`
+        ? locale === 'pl' ? `Rata ${metadata.installment_number || 1}/3 — ${sessionName}`
+          : `Installment ${metadata.installment_number || 1}/3 — ${sessionName}`
         : metadata.payment_mode === 'custom'
-          ? `Dopłata — ${sessionName}`
+          ? locale === 'pl' ? `Dopłata — ${sessionName}` : `Additional payment — ${sessionName}`
           : sessionName;
 
       lineItems = [{
         price_data: {
-          currency: 'pln',
+          currency,
           unit_amount: Math.round(amountOverride),
           product_data: { name: productName },
         },
@@ -224,8 +252,8 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       line_items: lineItems,
       mode,
-      success_url: `${origin}/pl${returnPath}?checkout=success`,
-      cancel_url: `${origin}/pl${returnPath}?checkout=cancelled`,
+      success_url: `${origin}/${locale}${returnPath}?checkout=success`,
+      cancel_url: `${origin}/${locale}${returnPath}?checkout=cancelled`,
       metadata: {
         supabase_user_id: user.id,
         ...(checkoutId ? { checkout_id: checkoutId } : {}),
@@ -244,6 +272,7 @@ export async function POST(request: NextRequest) {
         pre_session_source_booking_id: metadata.pre_session_source_booking_id || '',
         gift_for_email: metadata.gift_for_email || '',
         gift_message: metadata.gift_message || '',
+        locale,
       },
     };
 
@@ -275,7 +304,7 @@ export async function POST(request: NextRequest) {
 
     const session = await getStripe().checkout.sessions.create(sessionParams);
 
-    // Update pending_checkout with Stripe session ID (informational)
+    // Update pending_checkout with Stripe session ID
     if (checkoutId) {
       await db.from('pending_checkouts')
         .update({ stripe_checkout_session_id: session.id })

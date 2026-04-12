@@ -281,14 +281,12 @@ export default async function IndividualSessionsPage({
                         priceId={upsell.priceId}
                         pricePln={upsell.pricePln}
                         sourceBookingId={booking.id}
-                        locale={locale}
                       />
                     )}
                     {booking.payment_status === 'installments' && (
                       <CustomPaymentCard
                         sessionType={booking.session_type}
                         slotId={booking.slot?.id}
-                        locale={locale}
                       />
                     )}
                     {booking.session_type === 'natalia_para' && (

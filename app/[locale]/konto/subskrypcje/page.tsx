@@ -118,7 +118,7 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-htg-fg">
                     {ent.monthly_set?.title 
-                      || (ent.scope_month ? formatSesjeMonthPl(ent.scope_month) : null) 
+                      || (ent.scope_month ? formatMonth(ent.scope_month, locale) : null) 
                       || ent.product?.name 
                       || typeLabel(ent, locale)}
                   </p>
@@ -228,7 +228,7 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-htg-fg">
                       {ent.monthly_set?.title 
-                        || (ent.scope_month ? formatSesjeMonthPl(ent.scope_month) : null) 
+                        || (ent.scope_month ? formatMonth(ent.scope_month, locale) : null) 
                         || ent.product?.name 
                         || typeLabel(ent, locale)}
                     </p>

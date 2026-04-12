@@ -106,7 +106,7 @@ export default function TranslatorPanel() {
       <div>
         <h1 className="font-serif text-2xl font-bold text-htg-fg">{t('title')}</h1>
         <p className="text-htg-fg-muted mt-1">
-          {t('subtitle', { locale: translatorLocale?.toUpperCase() })}
+          {t('subtitle', { locale: translatorLocale?.toUpperCase() ?? '' })}
         </p>
       </div>
 

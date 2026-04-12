@@ -21,6 +21,7 @@ export function useUserRole(): UserRoleInfo {
     role: null,
     isAdmin: false,
     isStaff: false,
+    isTranslator: false,
     isLoggedIn: false,
     loading: true,
   });

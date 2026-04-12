@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import type { TipTapContent, TipTapNode } from './types';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
@@ -14,8 +13,8 @@ const LOCALE_NAMES: Record<string, string> = {
 // ─── TipTap JSON ↔ Text extraction ─────────────────────────────
 
 interface TextSegment {
-  path: number[];  // path to parent node in the tree
-  index: number;   // index of the text node within parent's content
+  path: number[];
+  index: number;
   text: string;
 }
 
@@ -29,16 +28,10 @@ function extractTextSegments(content: TipTapContent): TextSegment[] {
   function walk(nodes: TipTapNode[], path: number[]) {
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
-
-      // Skip mention nodes — their label should not be translated
       if (node.type === 'mention') continue;
-
-      // Collect text leaves
       if (node.type === 'text' && node.text) {
         segments.push({ path: [...path], index: i, text: node.text });
       }
-
-      // Recurse into children
       if (node.content) {
         walk(node.content, [...path, i]);
       }
@@ -64,14 +57,12 @@ function applyTranslatedTexts(
     const translatedText = translations[i];
     if (!translatedText) continue;
 
-    // Navigate to the parent node via path
     let current: TipTapNode[] = clone.content;
     for (const idx of seg.path) {
       if (!current[idx]?.content) break;
       current = current[idx].content!;
     }
 
-    // Replace text at the index
     if (current[seg.index] && current[seg.index].type === 'text') {
       current[seg.index].text = translatedText;
     }
@@ -81,7 +72,7 @@ function applyTranslatedTexts(
 }
 
 /**
- * Extract plain text from TipTap content (for content_text search field).
+ * Extract plain text from TipTap content.
  */
 function extractPlainText(content: TipTapContent): string {
   const texts: string[] = [];
@@ -98,7 +89,7 @@ function extractPlainText(content: TipTapContent): string {
   return texts.join(' ').trim();
 }
 
-// ─── Claude API Translation ─────────────────────────────────────
+// ─── Claude API Translation (using fetch, no SDK dependency) ────
 
 async function translateTexts(
   texts: string[],
@@ -107,16 +98,27 @@ async function translateTexts(
 ): Promise<string[]> {
   if (texts.length === 0) return [];
 
-  const client = new Anthropic();
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY not set — skipping translation');
+    return texts;
+  }
 
   const numberedTexts = texts.map((t, i) => `[${i}] ${t}`).join('\n');
 
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4096,
-    messages: [{
-      role: 'user',
-      content: `Translate the following text segments from ${LOCALE_NAMES[sourceLocale] || sourceLocale} to ${LOCALE_NAMES[targetLocale] || targetLocale}.
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: `Translate the following text segments from ${LOCALE_NAMES[sourceLocale] || sourceLocale} to ${LOCALE_NAMES[targetLocale] || targetLocale}.
 
 Rules:
 - Keep the same numbered format [N] in the output
@@ -129,12 +131,17 @@ Input:
 ${numberedTexts}
 
 Output (same format, translated):`,
-    }],
+      }],
+    }),
   });
 
-  // Parse the numbered response
-  const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
-  const lines = responseText.split('\n').filter(l => l.trim());
+  if (!response.ok) {
+    throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.content?.[0]?.type === 'text' ? data.content[0].text : '';
+  const lines = responseText.split('\n').filter((l: string) => l.trim());
   const result: string[] = new Array(texts.length).fill('');
 
   for (const line of lines) {
@@ -147,7 +154,6 @@ Output (same format, translated):`,
     }
   }
 
-  // Fill in any missing translations with originals
   for (let i = 0; i < result.length; i++) {
     if (!result[i]) result[i] = texts[i];
   }
@@ -164,7 +170,6 @@ Output (same format, translated):`,
 export async function translatePost(postId: string, sourceLocale: string): Promise<void> {
   const db = createSupabaseServiceRole();
 
-  // Fetch the post
   const { data: post } = await db.from('community_posts')
     .select('content, content_text')
     .eq('id', postId)
@@ -177,30 +182,26 @@ export async function translatePost(postId: string, sourceLocale: string): Promi
 
   if (segments.length === 0) return;
 
-  const targetLocales = ALL_LOCALES.filter(l => l !== sourceLocale);
+  const targetLocales = ALL_LOCALES.filter((l) => l !== sourceLocale);
 
   for (const targetLocale of targetLocales) {
     try {
-      // Mark as translating
       await db.from('community_post_translations').upsert({
         post_id: postId,
         locale: targetLocale,
-        content: content, // placeholder
+        content: content,
         status: 'translating',
       }, { onConflict: 'post_id,locale' });
 
-      // Translate text segments
       const translatedTexts = await translateTexts(
         segments.map(s => s.text),
         sourceLocale,
         targetLocale
       );
 
-      // Apply translations to TipTap structure
       const translatedContent = applyTranslatedTexts(content, segments, translatedTexts);
       const translatedPlainText = extractPlainText(translatedContent);
 
-      // Save translation
       await db.from('community_post_translations').upsert({
         post_id: postId,
         locale: targetLocale,
@@ -212,12 +213,14 @@ export async function translatePost(postId: string, sourceLocale: string): Promi
 
     } catch (error) {
       console.error(`Failed to translate post ${postId} to ${targetLocale}:`, error);
-      await db.from('community_post_translations').upsert({
-        post_id: postId,
-        locale: targetLocale,
-        content: content,
-        status: 'failed',
-      }, { onConflict: 'post_id,locale' }).catch(() => {});
+      try {
+        await db.from('community_post_translations').upsert({
+          post_id: postId,
+          locale: targetLocale,
+          content: content,
+          status: 'failed',
+        }, { onConflict: 'post_id,locale' });
+      } catch { /* ignore nested error */ }
     }
   }
 
@@ -245,7 +248,7 @@ export async function translateComment(commentId: string, sourceLocale: string):
 
   if (segments.length === 0) return;
 
-  const targetLocales = ALL_LOCALES.filter(l => l !== sourceLocale);
+  const targetLocales = ALL_LOCALES.filter((l) => l !== sourceLocale);
 
   for (const targetLocale of targetLocales) {
     try {
@@ -276,12 +279,14 @@ export async function translateComment(commentId: string, sourceLocale: string):
 
     } catch (error) {
       console.error(`Failed to translate comment ${commentId} to ${targetLocale}:`, error);
-      await db.from('community_comment_translations').upsert({
-        comment_id: commentId,
-        locale: targetLocale,
-        content: content,
-        status: 'failed',
-      }, { onConflict: 'comment_id,locale' }).catch(() => {});
+      try {
+        await db.from('community_comment_translations').upsert({
+          comment_id: commentId,
+          locale: targetLocale,
+          content: content,
+          status: 'failed',
+        }, { onConflict: 'comment_id,locale' });
+      } catch { /* ignore nested error */ }
     }
   }
 }

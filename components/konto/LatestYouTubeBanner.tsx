@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { Headphones, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface LatestYouTubeBannerProps {
@@ -60,8 +60,9 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
         href={`https://www.youtube.com/watch?v=${youtubeId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="shrink-0 px-3 py-1.5 bg-htg-sage text-white rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors whitespace-nowrap hidden sm:inline-block"
+        className="shrink-0 px-3 py-1.5 bg-htg-sage text-white rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors whitespace-nowrap hidden sm:inline-flex sm:items-center sm:gap-1.5"
       >
+        <Headphones className="w-4 h-4" />
         {t('watch')}
       </a>
 

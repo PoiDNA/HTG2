@@ -1,6 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { PRODUCT_SLUGS } from '@/lib/booking/constants';
+import { PRODUCT_SLUGS, LOCALE_CURRENCY } from '@/lib/booking/constants';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { SessionPicker } from './SessionPicker';
 
@@ -43,15 +43,17 @@ export default async function IndividualSessionsPage({ params }: { params: Promi
 
   const sessions = await getIndividualSessions();
 
-  // Transform for client component
+  // Transform for client component — pick price matching locale currency
+  const currency = LOCALE_CURRENCY[locale] || 'pln';
   const sessionOptions = sessions.map((s: any) => {
-    const price = s.prices?.[0];
+    const prices = s.prices || [];
+    const price = prices.find((p: any) => p.currency === currency) || prices[0];
     return {
       slug: s.slug,
       name: s.name,
       description: s.description,
       amount: price?.amount || 0,
-      currency: price?.currency || 'pln',
+      currency: price?.currency || currency,
       priceId: price?.stripe_price_id || '',
       sessionType: s.metadata?.session_type || '',
     };

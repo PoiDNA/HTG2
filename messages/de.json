@@ -700,5 +700,9 @@
     "notif_new_post": "hat einen neuen Beitrag veröffentlicht",
     "notif_group_invite": "hat Sie in eine Gruppe eingeladen",
     "meta_description": "Treten Sie der HTG-Community bei. Diskutieren Sie, teilen Sie Erfahrungen und wachsen Sie gemeinsam mit anderen."
+  },
+  "YouTubeBanner": {
+    "new_video": "Neue Aufnahme",
+    "watch": "Ansehen"
   }
 }

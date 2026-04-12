@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Video, Calendar, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 
@@ -24,6 +24,7 @@ interface Props {
 export function PreSessionBooking({ eligibilityId, staffMember, settings, slots, locale }: Props) {
   const router = useRouter();
   const intlLocale = useLocale();
+  const t = useTranslations('Booking');
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState('');
@@ -90,7 +91,7 @@ export function PreSessionBooking({ eligibilityId, staffMember, settings, slots,
           <h3 className="font-semibold text-htg-fg">
             Spotkanie wstępne z {staffMember.name}
           </h3>
-          <p className="text-xs text-htg-fg-muted">15 minut online przed Twoją sesją</p>
+          <p className="text-xs text-htg-fg-muted">{t('pre_session_desc')}</p>
         </div>
       </div>
 
@@ -108,12 +109,12 @@ export function PreSessionBooking({ eligibilityId, staffMember, settings, slots,
           <div className="text-center py-8">
             <Calendar className="w-10 h-10 text-htg-fg-muted mx-auto mb-3 opacity-30" />
             <p className="text-htg-fg-muted text-sm">
-              Brak dostępnych terminów — asystentka wkrótce doda nowe
+              {t('no_pre_session_slots')}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm font-medium text-htg-fg">Wybierz termin:</p>
+            <p className="text-sm font-medium text-htg-fg">{t('choose_date')}:</p>
 
             {dates.map(date => (
               <div key={date}>
@@ -144,7 +145,7 @@ export function PreSessionBooking({ eligibilityId, staffMember, settings, slots,
 
         {/* Booking info */}
         <div className="text-xs text-htg-fg-muted bg-htg-surface rounded-lg px-4 py-3">
-          ℹ️ Spotkania wstępne są bezpłatne. Po rezerwacji termin jest ostateczny — nie można go przełożyć ani odwołać.
+          {t('pre_session_free_note')}
         </div>
 
         {error && (

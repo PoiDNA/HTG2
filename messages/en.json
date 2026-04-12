@@ -293,7 +293,14 @@
     "hide_all_dates": "Hide dates",
     "want_acceleration": "I want acceleration",
     "notify_earlier_slot": "Notify me when an earlier slot opens",
-    "two_people": "2 people"
+    "two_people": "2 people",
+    "min_amount_error": "Enter an amount of at least 1",
+    "payment_error": "Payment error",
+    "connection_error": "Connection error",
+    "pay_installment_title": "Pay installment / top-up",
+    "pay_custom_desc": "Pay any amount towards your session:",
+    "payment_amount_label": "Payment amount",
+    "pay_btn": "Pay"
   },
   "Legal": {
     "privacy_title": "Privacy Policy",
@@ -454,7 +461,9 @@
     "pub_archive": "Archive",
     "pub_add": "Add session",
     "logout": "Log out",
-    "translator_panel": "Translator Panel"
+    "translator_panel": "Translator Panel",
+    "community": "Community",
+    "session_recordings": "Session recordings"
   },
   "Booking": {
     "title": "Private sessions",
@@ -526,6 +535,10 @@
     "pre_session_desc": "A short 15-minute online meeting with an assistant before your session",
     "pre_session_booked": "Meeting with {name} — booked ✓",
     "pre_session_link_info": "The meeting link will appear on this page before the scheduled time. The meeting cannot be rescheduled — contact us directly if you have questions.",
+    "no_pre_session_slots": "No available slots — the assistant will add new ones soon",
+    "choose_date": "Choose a date",
+    "pre_session_free_note": "Pre-session meetings are free. Once booked, the time is final — it cannot be rescheduled or cancelled.",
+    "buy_pre_session": "Buy",
     "countdown": {
       "8plus": {
         "0": "A longer road lies ahead — and that's a beautiful thing. Each day brings you closer.",
@@ -796,7 +809,9 @@
     "show_original": "Show original",
     "show_translation": "Show translation",
     "translating": "Translating...",
-    "post_language": "Post language"
+    "post_language": "Post language",
+    "message_subject_placeholder": "Subject of your message",
+    "search_placeholder": "Search posts..."
   },
   "YouTubeBanner": {
     "new_video": "New session on YT",

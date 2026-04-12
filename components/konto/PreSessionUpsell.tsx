@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Video, Loader2 } from 'lucide-react';
 
 interface Props {
@@ -15,7 +15,7 @@ interface Props {
 export function PreSessionUpsell({ staffId, staffName, priceId, pricePln, sourceBookingId }: Props) {
   const [loading, setLoading] = useState(false);
   const locale = useLocale();
-
+  const t = useTranslations('Booking');
   async function handleBuy() {
     setLoading(true);
     try {
@@ -48,9 +48,9 @@ export function PreSessionUpsell({ staffId, staffName, priceId, pricePln, source
         <Video className="w-4 h-4 text-purple-400 shrink-0" />
         <div className="min-w-0">
           <p className="text-sm font-medium text-htg-fg">
-            Spotkanie wstępne z {staffName}
+            {t('pre_session_booked', { name: staffName })}
           </p>
-          <p className="text-xs text-htg-fg-muted">15 min online przed sesją</p>
+          <p className="text-xs text-htg-fg-muted">{t('pre_session_desc')}</p>
         </div>
       </div>
       <button
@@ -60,7 +60,7 @@ export function PreSessionUpsell({ staffId, staffName, priceId, pricePln, source
       >
         {loading
           ? <Loader2 className="w-4 h-4 animate-spin" />
-          : `Kup — ${pricePln} PLN`}
+          : `${t('buy_pre_session')} — ${pricePln} PLN`}
       </button>
     </div>
   );

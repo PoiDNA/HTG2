@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Mail, Send, ChevronLeft, PenSquare, Lock, Clock, CheckCircle2, Inbox } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/format';
 
@@ -71,6 +71,7 @@ function AutoLinkText({ text }: { text: string }) {
 
 export default function PortalMessages() {
   const locale = useLocale();
+  const tc = useTranslations('Community');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -219,7 +220,7 @@ export default function PortalMessages() {
               value={newSubject}
               onChange={e => setNewSubject(e.target.value)}
               maxLength={100}
-              placeholder="Temat Twojej wiadomości"
+              placeholder={tc('message_subject_placeholder')}
               className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage"
             />
             <p className="text-xs text-htg-fg-muted mt-1">{newSubject.length}/100</p>
@@ -231,7 +232,7 @@ export default function PortalMessages() {
               onChange={e => setNewBody(e.target.value)}
               maxLength={2000}
               rows={6}
-              placeholder="Napisz krótką wiadomość do zespołu HTG..."
+              placeholder={tc('write_something')}
               className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
             />
             <p className="text-xs text-htg-fg-muted mt-1">{newBody.length}/2000</p>
@@ -331,7 +332,7 @@ export default function PortalMessages() {
               value={replyText}
               onChange={e => setReplyText(e.target.value)}
               maxLength={2000}
-              placeholder="Napisz odpowiedź..."
+              placeholder={tc('write_comment')}
               rows={2}
               className="flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-1 focus:ring-htg-sage resize-none"
             />

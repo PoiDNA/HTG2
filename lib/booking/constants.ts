@@ -66,6 +66,14 @@ export const SESSION_CONFIG: Record<SessionType, {
     requiredStaff: [],  // only the specific assistant — set at slot level
     color: 'bg-purple-600',
   },
+  natalia_interpreter: {
+    label: 'Session with interpreter',
+    labelShort: 'Natalia + interpreter',
+    durationMinutes: 120,
+    pricePln: 0,  // EN/DE/PT have their own prices in EUR/USD
+    requiredStaff: ['natalia'],
+    color: 'bg-htg-warm',
+  },
 };
 
 /** Locale → ISO 4217 currency code */
@@ -86,7 +94,7 @@ export const PRODUCT_SLUGS = {
   SESSION_PARA:        'sesja-natalia-para',
 } as const;
 
-export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_przemek', 'natalia_para', 'natalia_asysta'];
+export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_przemek', 'natalia_para', 'natalia_asysta', 'natalia_interpreter'];
 export const PRE_SESSION_DURATION = 15;
 
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {

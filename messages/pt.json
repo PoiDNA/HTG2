@@ -215,7 +215,15 @@
     "transfer_account": "Número da conta",
     "transfer_reference": "Referência da transferência",
     "transfer_download": "Descarregar PDF",
-    "transfer_print": "Imprimir"
+    "transfer_print": "Imprimir",
+    "session_solo_name": "Sessão 1:1 com Natalia",
+    "session_solo_subtitle": "Natalia HTG",
+    "session_with_interpreter_name": "Sessão com Natalia e intérprete",
+    "session_with_interpreter_subtitle": "Natalia + intérprete (interpretação consecutiva)",
+    "interpreter_name": "Edyta",
+    "session_pair_name": "Sessão para casais",
+    "session_pair_subtitle": "Natalia HTG + intérprete",
+    "interpreter_note": "As sessões incluem interpretação consecutiva por {name}"
   },
   "Legal": {
     "privacy_title": "Política de Privacidade",

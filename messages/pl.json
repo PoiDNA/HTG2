@@ -215,7 +215,15 @@
     "transfer_account": "Numer konta",
     "transfer_reference": "Tytuł przelewu",
     "transfer_download": "Pobierz PDF",
-    "transfer_print": "Drukuj"
+    "transfer_print": "Drukuj",
+    "session_solo_name": "Sesja 1:1 z Natalią",
+    "session_solo_subtitle": "Natalia HTG",
+    "session_with_interpreter_name": "Sesja z Asystą",
+    "session_with_interpreter_subtitle": "Natalia HTG + asystentka",
+    "choose_assistant": "Wybierz asystentkę:",
+    "session_pair_name": "Sesja dla par",
+    "session_pair_subtitle": "Natalia HTG",
+    "interpreter_note": ""
   },
   "Legal": {
     "privacy_title": "Polityka prywatności",

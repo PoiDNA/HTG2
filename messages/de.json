@@ -215,7 +215,15 @@
     "transfer_account": "Kontonummer",
     "transfer_reference": "Verwendungszweck",
     "transfer_download": "PDF herunterladen",
-    "transfer_print": "Drucken"
+    "transfer_print": "Drucken",
+    "session_solo_name": "1:1 Sitzung mit Natalia",
+    "session_solo_subtitle": "Natalia HTG",
+    "session_with_interpreter_name": "Sitzung mit Natalia & Dolmetscherin",
+    "session_with_interpreter_subtitle": "Natalia + Dolmetscherin (Konsekutivdolmetschen)",
+    "interpreter_name": "Bernadetta",
+    "session_pair_name": "Paarsitzung",
+    "session_pair_subtitle": "Natalia HTG + Dolmetscherin",
+    "interpreter_note": "Sitzungen beinhalten Konsekutivdolmetschen durch {name}"
   },
   "Legal": {
     "privacy_title": "Datenschutzerklärung",

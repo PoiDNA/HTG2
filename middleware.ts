@@ -240,7 +240,7 @@ export async function middleware(request: NextRequest) {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
   const isKontoPath = withoutLocale.startsWith('/konto');
   const isZgodyPath = withoutLocale.startsWith('/konto/zgody');
-  const isAdminPath = withoutLocale.startsWith('/konto/admin') || withoutLocale.startsWith('/prowadzacy');
+  const isAdminPath = withoutLocale.startsWith('/konto/admin') || withoutLocale.startsWith('/prowadzacy') || withoutLocale.startsWith('/konto/tlumacz');
 
   if (isKontoPath && !isZgodyPath && !isAdminPath && !isPortal) {
     const REQUIRED = ['terms_v3', 'privacy_v3', 'sensitive_data'];

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { isAdminEmail, isStaffEmail } from '@/lib/roles';
+import { isAdminEmail, isStaffEmail, isTranslatorEmail } from '@/lib/roles';
 import type { User } from '@supabase/supabase-js';
 
 export type UserRoleInfo = {
@@ -10,6 +10,7 @@ export type UserRoleInfo = {
   role: string | null;
   isAdmin: boolean;
   isStaff: boolean;
+  isTranslator: boolean;
   isLoggedIn: boolean;
   loading: boolean;
 };
@@ -32,7 +33,7 @@ export function useUserRole(): UserRoleInfo {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
-          setInfo({ user: null, role: null, isAdmin: false, isStaff: false, isLoggedIn: false, loading: false });
+          setInfo({ user: null, role: null, isAdmin: false, isStaff: false, isTranslator: false, isLoggedIn: false, loading: false });
           return;
         }
 
@@ -52,18 +53,20 @@ export function useUserRole(): UserRoleInfo {
         const email = user.email ?? '';
         const admin = role === 'admin' || isAdminEmail(email);
         const staff = admin || role === 'moderator' || isStaffEmail(email);
+        const translator = role === 'translator' || isTranslatorEmail(email);
 
         setInfo({
           user,
           role,
           isAdmin: admin,
           isStaff: staff,
+          isTranslator: translator,
           isLoggedIn: true,
           loading: false,
         });
       } catch {
         // Network error or unexpected failure — treat as logged out
-        setInfo({ user: null, role: null, isAdmin: false, isStaff: false, isLoggedIn: false, loading: false });
+        setInfo({ user: null, role: null, isAdmin: false, isStaff: false, isTranslator: false, isLoggedIn: false, loading: false });
       }
     }
 

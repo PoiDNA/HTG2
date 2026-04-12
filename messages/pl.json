@@ -375,7 +375,8 @@
     "pub_my_sessions": "Moje sesje",
     "pub_archive": "Archiwum",
     "pub_add": "Dodaj sesję",
-    "logout": "Wyloguj"
+    "logout": "Wyloguj",
+    "translator_panel": "Panel tłumacza"
   },
   "Booking": {
     "title": "Sesje prywatne",
@@ -639,6 +640,27 @@
     "action_shorten": "Do skrócenia",
     "action_keep": "Zachowaj",
     "legend": "Legenda"
+  },
+  "Translator": {
+    "title": "Panel tłumacza",
+    "subtitle": "Zgłaszaj błędy tłumaczeniowe dla wersji {locale}.",
+    "report_title": "Zgłoś błąd tłumaczeniowy",
+    "page_url": "URL strony z błędem",
+    "current_text": "Aktualny tekst (z błędem)",
+    "current_text_placeholder": "Wklej aktualny tekst, który jest niepoprawny...",
+    "suggested_fix": "Proponowana poprawka",
+    "suggested_fix_placeholder": "Jak powinien brzmieć poprawny tekst...",
+    "notes": "Dodatkowe uwagi (opcjonalnie)",
+    "notes_placeholder": "Kontekst, wyjaśnienie, itp...",
+    "submit": "Wyślij zgłoszenie",
+    "submitting": "Wysyłanie...",
+    "success": "Zgłoszenie wysłane!",
+    "my_issues": "Moje zgłoszenia",
+    "no_issues": "Nie masz jeszcze żadnych zgłoszeń.",
+    "loading": "Ładowanie...",
+    "not_authorized": "Brak dostępu. Ta strona jest dostępna tylko dla tłumaczy.",
+    "current": "Aktualny",
+    "fix": "Poprawka"
   },
   "Community": {
     "title": "Społeczność",

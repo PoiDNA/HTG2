@@ -24,11 +24,12 @@ import {
   Eye,
   MessagesSquare,
   Mail,
+  Globe2,
 } from 'lucide-react';
 
 export default function UserPanelNav() {
   const t = useTranslations('PanelNav');
-  const { user, isAdmin, isStaff, isLoggedIn, loading } = useUserRole();
+  const { user, isAdmin, isStaff, isTranslator, isLoggedIn, loading } = useUserRole();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -106,6 +107,16 @@ export default function UserPanelNav() {
                     <DropdownLink href="/prowadzacy" icon={LayoutDashboard} label={t('staff_panel')} onClick={() => setOpen(false)} />
                     <DropdownLink href="/prowadzacy/grafik" icon={Calendar} label={t('staff_schedule')} onClick={() => setOpen(false)} />
                     <DropdownLink href="/prowadzacy/sesje" icon={Presentation} label={t('staff_sessions')} onClick={() => setOpen(false)} />
+                  </div>
+                </>
+              )}
+
+              {/* Translator section */}
+              {isTranslator && (
+                <>
+                  <div className="border-t border-htg-card-border my-1" />
+                  <div className="py-1">
+                    <DropdownLink href="/konto/tlumacz" icon={Globe2} label={t('translator_panel')} onClick={() => setOpen(false)} />
                   </div>
                 </>
               )}

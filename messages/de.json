@@ -640,6 +640,27 @@
     "action_keep": "Beibehalten",
     "legend": "Legende"
   },
+  "Translator": {
+    "title": "Übersetzer-Panel",
+    "subtitle": "Melden Sie Übersetzungsfehler für die {locale}-Version.",
+    "report_title": "Übersetzungsfehler melden",
+    "page_url": "URL der Seite mit dem Fehler",
+    "current_text": "Aktueller Text (mit Fehler)",
+    "current_text_placeholder": "Fügen Sie den aktuellen fehlerhaften Text ein...",
+    "suggested_fix": "Vorgeschlagene Korrektur",
+    "suggested_fix_placeholder": "Wie der Text lauten sollte...",
+    "notes": "Zusätzliche Anmerkungen (optional)",
+    "notes_placeholder": "Kontext, Erklärung usw...",
+    "submit": "Meldung absenden",
+    "submitting": "Wird gesendet...",
+    "success": "Meldung gesendet!",
+    "my_issues": "Meine Meldungen",
+    "no_issues": "Sie haben noch keine Meldungen.",
+    "loading": "Wird geladen...",
+    "not_authorized": "Zugriff verweigert. Diese Seite ist nur für Übersetzer verfügbar.",
+    "current": "Aktuell",
+    "fix": "Korrektur"
+  },
   "Community": {
     "title": "Community",
     "my_groups": "Meine Gruppen",

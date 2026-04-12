@@ -1,7 +1,15 @@
 export const ADMIN_EMAILS = ['htg@htg.cyou'];
 export const STAFF_EMAILS = ['natalia@htg.cyou', 'agata@htg.cyou', 'justyna@htg.cyou', 'przemek@htg.cyou'];
+export const TRANSLATOR_EMAILS = ['melania@htg.cyou', 'bernadetta@htg.cyou', 'edytap@htg.cyou'];
 
-export type UserRole = 'user' | 'moderator' | 'admin';
+export type UserRole = 'user' | 'moderator' | 'admin' | 'publikacja' | 'translator';
+
+/** Translator email → assigned locale */
+export const TRANSLATOR_LOCALE: Record<string, string> = {
+  'melania@htg.cyou': 'en',
+  'bernadetta@htg.cyou': 'de',
+  'edytap@htg.cyou': 'pt',
+};
 
 /**
  * Determine the expected profile role based on email.
@@ -11,6 +19,7 @@ export function getRoleForEmail(email: string): UserRole | null {
   const lower = email.toLowerCase();
   if (ADMIN_EMAILS.includes(lower)) return 'admin';
   if (STAFF_EMAILS.includes(lower)) return 'moderator';
+  if (TRANSLATOR_EMAILS.includes(lower)) return 'translator';
   return null;
 }
 
@@ -27,6 +36,13 @@ export function isStaffEmail(email: string): boolean {
  */
 export function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
+/**
+ * Check if the user is a translator.
+ */
+export function isTranslatorEmail(email: string): boolean {
+  return TRANSLATOR_EMAILS.includes(email.toLowerCase());
 }
 
 /**

@@ -1,7 +1,7 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { Star, Check } from 'lucide-react';
-import { PRODUCT_SLUGS } from '@/lib/booking/constants';
+import { PRODUCT_SLUGS, LOCALE_CURRENCY } from '@/lib/booking/constants';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { CheckoutButton } from '@/components/CheckoutButton';
 
@@ -36,7 +36,7 @@ interface PriceInfo {
   mode: 'payment' | 'subscription';
 }
 
-async function getPriceByProductSlug(slug: string): Promise<PriceInfo | null> {
+async function getPriceByProductSlug(slug: string, currency: string = 'pln'): Promise<PriceInfo | null> {
   const supabase = await createSupabaseServer();
 
   const { data: product } = await supabase
@@ -53,6 +53,7 @@ async function getPriceByProductSlug(slug: string): Promise<PriceInfo | null> {
     .select('stripe_price_id, amount, interval')
     .eq('product_id', product.id)
     .eq('is_active', true)
+    .eq('currency', currency)
     .single();
 
   if (!price) return null;
@@ -74,11 +75,12 @@ export default async function SubscriptionsPage({ params }: { params: Promise<{ 
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Subscriptions' });
 
-  // Fetch prices from DB (falls back to placeholder if no data yet)
+  // Fetch prices from DB filtered by locale currency
+  const currency = LOCALE_CURRENCY[locale] || 'pln';
   const [singlePrice, monthlyPrice, yearlyPrice] = await Promise.all([
-    getPriceByProductSlug(PRODUCT_SLUGS.SINGLE_SESSION),
-    getPriceByProductSlug(PRODUCT_SLUGS.MONTHLY),
-    getPriceByProductSlug(PRODUCT_SLUGS.YEARLY),
+    getPriceByProductSlug(PRODUCT_SLUGS.SINGLE_SESSION, currency),
+    getPriceByProductSlug(PRODUCT_SLUGS.MONTHLY, currency),
+    getPriceByProductSlug(PRODUCT_SLUGS.YEARLY, currency),
   ]);
 
   const features = {

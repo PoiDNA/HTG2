@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 import { PRODUCT_SLUGS, SESSION_CONFIG } from '@/lib/booking/constants';
+import { formatPrice, getIntlLocale } from '@/lib/format';
 import { User, Users, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Zap, Heart, Gift, Upload, X, Banknote } from 'lucide-react';
 import BankTransferCard from '@/components/booking/BankTransferCard';
 
@@ -40,10 +42,23 @@ interface SessionPickerProps {
   };
 }
 
-const DAYS_PL = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
-const MONTHS_PL = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+function getLocalizedDays(locale: string): string[] {
+  const intlLocale = getIntlLocale(locale);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(2024, 0, i); // Jan 2024 starts on Monday (0=Sun in JS)
+    return d.toLocaleDateString(intlLocale, { weekday: 'short' });
+  });
+}
+
+function getLocalizedMonths(locale: string): string[] {
+  const intlLocale = getIntlLocale(locale);
+  return Array.from({ length: 12 }, (_, i) =>
+    new Date(2024, i, 1).toLocaleDateString(intlLocale, { month: 'long' })
+  );
+}
 
 export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProps) {
+  const locale = useLocale();
   // 'solo' | 'asysta' | 'para' | null
   const [selectedGroup, setSelectedGroup] = useState<'solo' | 'asysta' | 'para' | null>(null);
   // slug of chosen assistant session (sesja-natalia-agata or sesja-natalia-justyna)
@@ -180,7 +195,8 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr + 'T00:00:00');
-    return `${DAYS_PL[d.getDay()]} ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    const days = getLocalizedDays(locale);
+    return `${days[d.getDay()]} ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
   }
 
   function dateKey(year: number, month: number, day: number) {
@@ -188,6 +204,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
   }
 
   const totalAmount = selectedSession ? selectedSession.amount / 100 : 0;
+  const currencyCode = (selectedSession?.currency || 'pln').toUpperCase();
   const isWithAssistant = selectedSession?.sessionType === 'natalia_agata' || selectedSession?.sessionType === 'natalia_justyna';
   const isPara = selectedSession?.sessionType === 'natalia_para';
   const installmentsCount = isWithAssistant || isPara ? 4 : 3;
@@ -282,6 +299,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
         body: JSON.stringify({
           priceId: selectedSession.priceId,
           mode: 'payment',
+          locale,
           ...(paymentMode !== 'full' && { amountOverride: payAmount * 100 }),
           metadata: {
             type: 'individual',
@@ -349,7 +367,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             <h3 className="font-serif font-semibold text-htg-fg mb-1">{soloSession.name}</h3>
             <p className="text-xs text-htg-fg-muted mb-4">Natalia HTG</p>
             <p className="text-2xl font-bold text-htg-fg">
-              {(soloSession.amount / 100).toLocaleString('pl-PL')} <span className="text-sm font-normal text-htg-fg-muted">PLN</span>
+              {formatPrice(soloSession.amount, soloSession.currency, locale)}
             </p>
             <p className="text-xs text-htg-fg-muted">{labels.per_session}</p>
           </button>
@@ -374,7 +392,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             <h3 className="font-serif font-semibold text-htg-fg mb-1">Sesja z Asystą</h3>
             <p className="text-xs text-htg-fg-muted mb-4">Natalia HTG + asystentka</p>
             <p className="text-2xl font-bold text-htg-fg">
-              {(assistantPrice / 100).toLocaleString('pl-PL')} <span className="text-sm font-normal text-htg-fg-muted">PLN</span>
+              {formatPrice(assistantPrice, assistantSessions[0]?.currency || 'pln', locale)}
             </p>
             <p className="text-xs text-htg-fg-muted mb-4">{labels.per_session}</p>
 
@@ -427,7 +445,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
           <h3 className="font-serif font-semibold text-htg-fg mb-1">Sesja dla par</h3>
           <p className="text-xs text-htg-fg-muted mb-4">Natalia HTG · 2 osoby · 120 min</p>
           <p className="text-2xl font-bold text-htg-fg">
-            {(paraSession.amount / 100).toLocaleString('pl-PL')} <span className="text-sm font-normal text-htg-fg-muted">PLN</span>
+            {formatPrice(paraSession.amount, paraSession.currency, locale)}
           </p>
           <p className="text-xs text-htg-fg-muted">{labels.per_session}</p>
         </button>
@@ -529,7 +547,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                         <ChevronLeft className="w-5 h-5 text-htg-fg-muted" />
                       </button>
                       <h3 className="font-serif font-bold text-htg-fg">
-                        {MONTHS_PL[calendarMonth.month]} {calendarMonth.year}
+                        {getLocalizedMonths(locale)[calendarMonth.month]} {calendarMonth.year}
                       </h3>
                       <button
                         onClick={() => setCalendarMonth(prev => {
@@ -543,7 +561,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 mb-2">
-                      {DAYS_PL.map(d => (
+                      {getLocalizedDays(locale).map(d => (
                         <div key={d} className="text-center text-xs font-medium text-htg-fg-muted py-1">{d}</div>
                       ))}
                     </div>
@@ -634,7 +652,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 }`}
               >
                 <p className="font-medium text-htg-fg text-sm">Pełna płatność</p>
-                <p className="text-htg-sage font-bold text-lg mt-1">{totalAmount} PLN</p>
+                <p className="text-htg-sage font-bold text-lg mt-1">{totalAmount} {currencyCode}</p>
                 <p className="text-htg-fg-muted text-xs">jednorazowo</p>
               </button>
               <button
@@ -646,7 +664,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 }`}
               >
                 <p className="font-medium text-htg-fg text-sm">{installmentsCount} raty miesięczne</p>
-                <p className="text-htg-sage font-bold text-lg mt-1">{installmentsCount} × {installmentAmount} PLN</p>
+                <p className="text-htg-sage font-bold text-lg mt-1">{installmentsCount} × {installmentAmount} {currencyCode}</p>
                 <p className="text-htg-fg-muted text-xs">pierwsza rata teraz</p>
               </button>
             </div>
@@ -656,12 +674,12 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 {Array.from({ length: installmentsCount }, (_, i) => (
                   <div key={i} className="flex justify-between">
                     <span>Rata {i + 1} {i === 0 ? '(teraz)' : `(za ${i * 30} dni)`}</span>
-                    <span className={i === 0 ? 'font-bold text-htg-fg' : ''}>{installmentAmount} PLN</span>
+                    <span className={i === 0 ? 'font-bold text-htg-fg' : ''}>{installmentAmount} {currencyCode}</span>
                   </div>
                 ))}
                 <div className="flex justify-between pt-2 border-t border-htg-card-border font-medium text-htg-fg">
                   <span>Łącznie</span>
-                  <span>{installmentsCount * installmentAmount} PLN</span>
+                  <span>{installmentsCount * installmentAmount} {currencyCode}</span>
                 </div>
               </div>
             )}
@@ -834,9 +852,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 </span>
               ) : (
                 <>
-                  {paymentMethod === 'transfer' && `Zarezerwuj sesję — ${totalAmount} PLN`}
-                  {paymentMethod === 'stripe' && paymentMode === 'full' && `${labels.buy} — ${totalAmount} PLN`}
-                  {paymentMethod === 'stripe' && paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount} PLN`}
+                  {paymentMethod === 'transfer' && `Zarezerwuj sesję — ${totalAmount} ${currencyCode}`}
+                  {paymentMethod === 'stripe' && paymentMode === 'full' && `${labels.buy} — ${totalAmount} ${currencyCode}`}
+                  {paymentMethod === 'stripe' && paymentMode === 'installments' && `Zapłać 1. ratę — ${installmentAmount} ${currencyCode}`}
                 </>
               )}
             </button>

@@ -3,7 +3,8 @@ import { locales, Link } from '@/i18n-config';
 import { CreditCard, PlusCircle, CalendarDays, Infinity, Zap } from 'lucide-react';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { PRODUCT_SLUGS, formatSesjeMonthPl } from '@/lib/booking/constants';
+import { PRODUCT_SLUGS } from '@/lib/booking/constants';
+import { formatDate as fmtDate, formatPrice as fmtPrice, getIntlLocale } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,16 +32,19 @@ type Product = {
   prices: { amount: number; currency: string }[];
 };
 
-function formatMonth(scope: string): string {
+function formatMonth(scope: string, locale: string): string {
   const [y, m] = scope.split('-');
-  const names = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
-  return `${names[parseInt(m, 10) - 1] || m} ${y}`;
+  const monthName = new Date(Number(y), parseInt(m, 10) - 1).toLocaleDateString(getIntlLocale(locale), { month: 'long' });
+  return `${monthName} ${y}`;
 }
 
-function typeLabel(ent: Entitlement): string {
-  if (ent.type === 'yearly') return 'Pakiet Roczny';
-  if (ent.type === 'monthly') return `Pakiet Miesięczny${ent.scope_month ? ` — ${formatMonth(ent.scope_month)}` : ''}`;
-  return 'Sesja pojedyncza';
+function typeLabel(ent: Entitlement, locale: string): string {
+  if (ent.type === 'yearly') return locale === 'pl' ? 'Pakiet Roczny' : locale === 'de' ? 'Jahrespaket' : locale === 'pt' ? 'Pacote Anual' : 'Yearly Package';
+  if (ent.type === 'monthly') {
+    const monthSuffix = ent.scope_month ? ` — ${formatMonth(ent.scope_month, locale)}` : '';
+    return (locale === 'pl' ? 'Pakiet Miesięczny' : locale === 'de' ? 'Monatspaket' : locale === 'pt' ? 'Pacote Mensal' : 'Monthly Package') + monthSuffix;
+  }
+  return locale === 'pl' ? 'Sesja pojedyncza' : locale === 'de' ? 'Einzelsitzung' : locale === 'pt' ? 'Sessão individual' : 'Single Session';
 }
 
 function typeIcon(type: string) {
@@ -50,17 +54,11 @@ function typeIcon(type: string) {
 }
 
 function formatDate(iso: string, locale: string) {
-  return new Date(iso).toLocaleDateString(locale === 'pl' ? 'pl-PL' : 'en-US', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
+  return fmtDate(iso, locale);
 }
 
-function formatPrice(amount: number, currency: string) {
-  return new Intl.NumberFormat('pl-PL', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-    minimumFractionDigits: 0,
-  }).format(amount / 100);
+function formatPrice(amount: number, currency: string, locale: string) {
+  return fmtPrice(amount, currency, locale);
 }
 
 export default async function MyActivationsPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -120,9 +118,9 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-htg-fg">
                     {ent.monthly_set?.title 
-                      || (ent.scope_month ? formatSesjeMonthPl(ent.scope_month) : null) 
+                      || (ent.scope_month ? formatMonth(ent.scope_month, locale) : null) 
                       || ent.product?.name 
-                      || typeLabel(ent)}
+                      || typeLabel(ent, locale)}
                   </p>
                   <p className="text-xs text-htg-fg-muted mt-0.5">
                     Ważne do: {formatDate(ent.valid_until, locale)}
@@ -162,6 +160,7 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
               {formatPrice(
                 packages.find(p => p.slug === PRODUCT_SLUGS.SINGLE_SESSION)!.prices[0].amount,
                 packages.find(p => p.slug === PRODUCT_SLUGS.SINGLE_SESSION)!.prices[0].currency,
+                locale,
               )}
             </p>
           )}
@@ -182,7 +181,7 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
               <p className="text-xs text-htg-fg-muted mt-1">{pkg.description || 'Miesięczny dostęp do sesji'}</p>
               {pkg.prices?.[0] && (
                 <p className="text-sm font-medium text-htg-indigo mt-3">
-                  {formatPrice(pkg.prices[0].amount, pkg.prices[0].currency)} / mies.
+                  {formatPrice(pkg.prices[0].amount, pkg.prices[0].currency, locale)} / mies.
                 </p>
               )}
             </Link>
@@ -207,7 +206,7 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
               <p className="text-xs text-htg-fg-muted mt-1">{pkg.description || 'Roczny dostęp do sesji'}</p>
               {pkg.prices?.[0] && (
                 <p className="text-sm font-medium text-htg-sage mt-3">
-                  {formatPrice(pkg.prices[0].amount, pkg.prices[0].currency)} / rok
+                  {formatPrice(pkg.prices[0].amount, pkg.prices[0].currency, locale)} / rok
                 </p>
               )}
             </Link>
@@ -229,9 +228,9 @@ export default async function MyActivationsPage({ params }: { params: Promise<{ 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-htg-fg">
                       {ent.monthly_set?.title 
-                        || (ent.scope_month ? formatSesjeMonthPl(ent.scope_month) : null) 
+                        || (ent.scope_month ? formatMonth(ent.scope_month, locale) : null) 
                         || ent.product?.name 
-                        || typeLabel(ent)}
+                        || typeLabel(ent, locale)}
                     </p>
                     <p className="text-xs text-htg-fg-muted">Wygasło: {formatDate(ent.valid_until, locale)}</p>
                   </div>

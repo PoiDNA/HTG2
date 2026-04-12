@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { Video, Calendar, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { formatDate } from '@/lib/format';
 
 interface Slot {
   id: string;
@@ -21,6 +23,7 @@ interface Props {
 
 export function PreSessionBooking({ eligibilityId, staffMember, settings, slots, locale }: Props) {
   const router = useRouter();
+  const intlLocale = useLocale();
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState('');
@@ -67,7 +70,7 @@ export function PreSessionBooking({ eligibilityId, staffMember, settings, slots,
         <p className="text-htg-fg-muted text-sm mt-2">
           {selectedSlot && (
             <>
-              {new Date(selectedSlot.slot_date).toLocaleDateString('pl-PL', {
+              {formatDate(selectedSlot.slot_date, intlLocale, {
                 weekday: 'long', day: 'numeric', month: 'long',
               })}{' '}
               o {selectedSlot.start_time.slice(0, 5)}–{selectedSlot.end_time.slice(0, 5)}
@@ -115,7 +118,7 @@ export function PreSessionBooking({ eligibilityId, staffMember, settings, slots,
             {dates.map(date => (
               <div key={date}>
                 <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wide mb-2">
-                  {new Date(date).toLocaleDateString('pl-PL', {
+                  {formatDate(date, intlLocale, {
                     weekday: 'long', day: 'numeric', month: 'long',
                   })}
                 </p>
@@ -159,7 +162,7 @@ export function PreSessionBooking({ eligibilityId, staffMember, settings, slots,
           >
             {booking
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Rezerwuję…</>
-              : <>Zarezerwuj {selectedSlot.start_time.slice(0, 5)} — {new Date(selectedSlot.slot_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' })}</>}
+              : <>Zarezerwuj {selectedSlot.start_time.slice(0, 5)} — {formatDate(selectedSlot.slot_date, intlLocale, { day: 'numeric', month: 'long' })}</>}
           </button>
         )}
       </div>

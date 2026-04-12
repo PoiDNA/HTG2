@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useLocale } from 'next-intl';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { KeyRound, Plus, Trash2, Loader2, Smartphone } from 'lucide-react';
+import { formatDateTime } from '@/lib/format';
 
 interface PasskeyCredential {
   id: string;
@@ -33,6 +35,7 @@ interface PasskeySectionProps {
 }
 
 export function PasskeySection({ labels }: PasskeySectionProps) {
+  const locale = useLocale();
   const [passkeys, setPasskeys] = useState<PasskeyCredential[]>([]);
   const [supported, setSupported] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -117,15 +120,9 @@ export function PasskeySection({ labels }: PasskeySectionProps) {
     }
   }
 
-  function formatDate(dateStr: string | null) {
+  function fmtDate(dateStr: string | null) {
     if (!dateStr) return labels.never;
-    return new Date(dateStr).toLocaleDateString('pl', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatDateTime(dateStr, locale);
   }
 
   return (
@@ -161,8 +158,8 @@ export function PasskeySection({ labels }: PasskeySectionProps) {
                     {pk.friendly_name || `Klucz ${pk.credential_id.slice(0, 8)}...`}
                   </p>
                   <p className="text-xs text-htg-fg-muted">
-                    {labels.added}: {formatDate(pk.created_at)}
-                    {pk.last_used_at && ` · ${labels.lastUsed}: ${formatDate(pk.last_used_at)}`}
+                    {labels.added}: {fmtDate(pk.created_at)}
+                    {pk.last_used_at && ` · ${labels.lastUsed}: ${fmtDate(pk.last_used_at)}`}
                   </p>
                 </div>
               </div>

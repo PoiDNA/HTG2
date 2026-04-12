@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useLocale } from 'next-intl';
 import { Mail, Send, ChevronLeft, PenSquare, Lock, Clock, CheckCircle2, Inbox } from 'lucide-react';
+import { formatDate, formatDateTime } from '@/lib/format';
 
 interface Conversation {
   id: string;
@@ -26,7 +28,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: typeof Inbox; classNa
   closed: { label: 'Zamknięte', icon: Lock, className: 'text-htg-fg-muted bg-htg-surface' },
 };
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, locale: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'teraz';
@@ -35,7 +37,7 @@ function timeAgo(dateStr: string): string {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d`;
-  return new Date(dateStr).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+  return formatDate(dateStr, locale, { day: 'numeric', month: 'short' });
 }
 
 // Simple auto-linkify: detect URLs and render as clickable links
@@ -68,6 +70,7 @@ function AutoLinkText({ text }: { text: string }) {
 }
 
 export default function PortalMessages() {
+  const locale = useLocale();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -296,7 +299,7 @@ export default function PortalMessages() {
                       {msg.direction === 'inbound' ? 'Ty' : 'Zespół HTG'}
                     </span>
                     <span className="text-[10px] text-htg-fg-muted">
-                      {new Date(msg.created_at).toLocaleString('pl-PL', {
+                      {formatDateTime(msg.created_at, locale, {
                         hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short',
                       })}
                     </span>
@@ -391,7 +394,7 @@ export default function PortalMessages() {
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-xs text-htg-fg-muted">{timeAgo(conv.last_message_at)}</span>
+                    <span className="text-xs text-htg-fg-muted">{timeAgo(conv.last_message_at, locale)}</span>
                     {statusCfg && (
                       <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${statusCfg.className}`}>
                         {statusCfg.label}

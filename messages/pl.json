@@ -215,7 +215,15 @@
     "transfer_account": "Numer konta",
     "transfer_reference": "Tytuł przelewu",
     "transfer_download": "Pobierz PDF",
-    "transfer_print": "Drukuj"
+    "transfer_print": "Drukuj",
+    "session_solo_name": "Sesja 1:1 z Natalią",
+    "session_solo_subtitle": "Natalia HTG",
+    "session_with_interpreter_name": "Sesja z Asystą",
+    "session_with_interpreter_subtitle": "Natalia HTG + asystentka",
+    "choose_assistant": "Wybierz asystentkę:",
+    "session_pair_name": "Sesja dla par",
+    "session_pair_subtitle": "Natalia HTG",
+    "interpreter_note": ""
   },
   "Legal": {
     "privacy_title": "Polityka prywatności",
@@ -375,7 +383,8 @@
     "pub_my_sessions": "Moje sesje",
     "pub_archive": "Archiwum",
     "pub_add": "Dodaj sesję",
-    "logout": "Wyloguj"
+    "logout": "Wyloguj",
+    "translator_panel": "Panel tłumacza"
   },
   "Booking": {
     "title": "Sesje prywatne",
@@ -640,6 +649,27 @@
     "action_keep": "Zachowaj",
     "legend": "Legenda"
   },
+  "Translator": {
+    "title": "Panel tłumacza",
+    "subtitle": "Zgłaszaj błędy tłumaczeniowe dla wersji {locale}.",
+    "report_title": "Zgłoś błąd tłumaczeniowy",
+    "page_url": "URL strony z błędem",
+    "current_text": "Aktualny tekst (z błędem)",
+    "current_text_placeholder": "Wklej aktualny tekst, który jest niepoprawny...",
+    "suggested_fix": "Proponowana poprawka",
+    "suggested_fix_placeholder": "Jak powinien brzmieć poprawny tekst...",
+    "notes": "Dodatkowe uwagi (opcjonalnie)",
+    "notes_placeholder": "Kontekst, wyjaśnienie, itp...",
+    "submit": "Wyślij zgłoszenie",
+    "submitting": "Wysyłanie...",
+    "success": "Zgłoszenie wysłane!",
+    "my_issues": "Moje zgłoszenia",
+    "no_issues": "Nie masz jeszcze żadnych zgłoszeń.",
+    "loading": "Ładowanie...",
+    "not_authorized": "Brak dostępu. Ta strona jest dostępna tylko dla tłumaczy.",
+    "current": "Aktualny",
+    "fix": "Poprawka"
+  },
   "Community": {
     "title": "Społeczność",
     "my_groups": "Moje grupy",
@@ -670,6 +700,11 @@
     "notif_mention": "wspomniał(a) o Tobie",
     "notif_new_post": "dodał(a) nowy post",
     "notif_group_invite": "zaprosił(a) Cię do grupy",
-    "meta_description": "Dołącz do społeczności HTG. Dyskutuj, dziel się doświadczeniami i rozwijaj się z innymi."
+    "meta_description": "Dołącz do społeczności HTG. Dyskutuj, dziel się doświadczeniami i rozwijaj się z innymi.",
+    "auto_translated": "przetłumaczono automatycznie",
+    "show_original": "Pokaż oryginał",
+    "show_translation": "Pokaż tłumaczenie",
+    "translating": "Tłumaczenie...",
+    "post_language": "Język posta"
   }
 }

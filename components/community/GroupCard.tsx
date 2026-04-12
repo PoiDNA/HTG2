@@ -1,7 +1,9 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import { Users, MessageSquare, Lock, Globe, Shield } from 'lucide-react';
 import { Link } from '@/i18n-config';
+import { formatDate as formatDateIntl } from '@/lib/format';
 import type { GroupWithMeta } from '@/lib/community/types';
 
 interface GroupCardProps {
@@ -9,6 +11,7 @@ interface GroupCardProps {
 }
 
 export function GroupCard({ group }: GroupCardProps) {
+  const locale = useLocale();
   const visibilityIcon = {
     public: <Globe className="w-3.5 h-3.5" />,
     private: <Lock className="w-3.5 h-3.5" />,
@@ -57,7 +60,7 @@ export function GroupCard({ group }: GroupCardProps) {
             {group.last_post_at && (
               <span className="flex items-center gap-1">
                 <MessageSquare className="w-3.5 h-3.5" />
-                {formatLastActivity(group.last_post_at)}
+                {formatLastActivity(group.last_post_at, locale)}
               </span>
             )}
           </div>
@@ -80,12 +83,12 @@ export function GroupCard({ group }: GroupCardProps) {
   );
 }
 
-function formatLastActivity(dateStr: string): string {
+function formatLastActivity(dateStr: string, locale: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const hrs = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
   if (hrs < 1) return 'aktywna teraz';
   if (hrs < 24) return `${hrs}h temu`;
   if (days < 7) return `${days}d temu`;
-  return new Date(dateStr).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+  return formatDateIntl(dateStr, locale, { day: 'numeric', month: 'short' });
 }

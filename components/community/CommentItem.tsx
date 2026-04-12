@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale } from 'next-intl';
 import { MoreHorizontal, Trash2, Flag, Clock, Reply } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
 import { ReportModal } from './ReportModal';
 import { PostEditor } from './PostEditor';
+import { formatDate as formatDateIntl } from '@/lib/format';
 import type { CommentWithAuthor, TipTapContent, Attachment } from '@/lib/community/types';
 
 interface CommentItemProps {
@@ -23,6 +25,7 @@ export function CommentItem({ comment, currentUserId, canModerate, groupId, dept
   const [showReport, setShowReport] = useState(false);
   const [showReply, setShowReply] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  const locale = useLocale();
 
   if (isDeleted) return null;
 
@@ -45,7 +48,7 @@ export function CommentItem({ comment, currentUserId, canModerate, groupId, dept
     }
   };
 
-  const timeAgo = formatTimeAgo(comment.created_at);
+  const timeAgo = formatTimeAgo(comment.created_at, locale);
 
   return (
     <div className={depth > 0 ? 'ml-6 border-l-2 border-htg-card-border pl-3' : ''}>
@@ -185,7 +188,7 @@ function renderNode(node: { type: string; text?: string; content?: unknown[]; at
   return '';
 }
 
-function formatTimeAgo(dateStr: string): string {
+function formatTimeAgo(dateStr: string, locale: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const min = Math.floor(diff / 60000);
   const hrs = Math.floor(diff / 3600000);
@@ -194,5 +197,5 @@ function formatTimeAgo(dateStr: string): string {
   if (min < 60) return `${min}m`;
   if (hrs < 24) return `${hrs}h`;
   if (days < 7) return `${days}d`;
-  return new Date(dateStr).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+  return formatDateIntl(dateStr, locale, { day: 'numeric', month: 'short' });
 }

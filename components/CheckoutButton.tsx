@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from '@/i18n-config';
 
 interface CheckoutButtonProps {
@@ -20,6 +21,7 @@ export function CheckoutButton({
   loginUrl = '/login',
 }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
+  const locale = useLocale();
   const router = useRouter();
 
   async function handleClick() {
@@ -28,7 +30,7 @@ export function CheckoutButton({
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, mode }),
+        body: JSON.stringify({ priceId, mode, locale }),
       });
 
       const data = await res.json();

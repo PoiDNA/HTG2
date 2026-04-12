@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { CreditCard, ChevronDown } from 'lucide-react';
 
@@ -13,11 +14,11 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
 interface Props {
   sessionType: string;
   slotId?: string;
-  locale: string;
 }
 
-export function CustomPaymentCard({ sessionType, slotId, locale }: Props) {
+export function CustomPaymentCard({ sessionType, slotId }: Props) {
   const [open, setOpen] = useState(false);
+  const locale = useLocale();
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,6 +38,7 @@ export function CustomPaymentCard({ sessionType, slotId, locale }: Props) {
         body: JSON.stringify({
           amountOverride: amountNum * 100, // PLN → grosz
           mode: 'payment',
+          locale,
           metadata: {
             payment_mode: 'custom',
             session_type: sessionType,

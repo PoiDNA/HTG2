@@ -215,7 +215,15 @@
     "transfer_account": "Account number",
     "transfer_reference": "Transfer reference",
     "transfer_download": "Download PDF",
-    "transfer_print": "Print"
+    "transfer_print": "Print",
+    "session_solo_name": "1:1 Session with Natalia",
+    "session_solo_subtitle": "Natalia HTG",
+    "session_with_interpreter_name": "Session with Natalia & interpreter",
+    "session_with_interpreter_subtitle": "Natalia + interpreter (consecutive interpretation)",
+    "interpreter_name": "Melania",
+    "session_pair_name": "Couples session",
+    "session_pair_subtitle": "Natalia HTG + interpreter",
+    "interpreter_note": "Sessions include consecutive interpretation by {name}"
   },
   "Legal": {
     "privacy_title": "Privacy Policy",
@@ -375,7 +383,8 @@
     "pub_my_sessions": "My sessions",
     "pub_archive": "Archive",
     "pub_add": "Add session",
-    "logout": "Log out"
+    "logout": "Log out",
+    "translator_panel": "Translator Panel"
   },
   "Booking": {
     "title": "Private sessions",
@@ -640,6 +649,27 @@
     "action_keep": "Keep",
     "legend": "Legend"
   },
+  "Translator": {
+    "title": "Translator Panel",
+    "subtitle": "Report translation errors for the {locale} version.",
+    "report_title": "Report a translation error",
+    "page_url": "Page URL with the error",
+    "current_text": "Current text (with error)",
+    "current_text_placeholder": "Paste the current incorrect text...",
+    "suggested_fix": "Suggested correction",
+    "suggested_fix_placeholder": "How the text should read...",
+    "notes": "Additional notes (optional)",
+    "notes_placeholder": "Context, explanation, etc...",
+    "submit": "Submit report",
+    "submitting": "Submitting...",
+    "success": "Report submitted!",
+    "my_issues": "My reports",
+    "no_issues": "You don't have any reports yet.",
+    "loading": "Loading...",
+    "not_authorized": "Access denied. This page is available to translators only.",
+    "current": "Current",
+    "fix": "Correction"
+  },
   "Community": {
     "title": "Community",
     "my_groups": "My Groups",
@@ -670,6 +700,11 @@
     "notif_mention": "mentioned you",
     "notif_new_post": "added a new post",
     "notif_group_invite": "invited you to a group",
-    "meta_description": "Join the HTG community. Discuss, share experiences, and grow with others."
+    "meta_description": "Join the HTG community. Discuss, share experiences, and grow with others.",
+    "auto_translated": "auto-translated",
+    "show_original": "Show original",
+    "show_translation": "Show translation",
+    "translating": "Translating...",
+    "post_language": "Post language"
   }
 }

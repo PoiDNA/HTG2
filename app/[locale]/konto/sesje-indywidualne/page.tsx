@@ -246,125 +246,131 @@ export default async function IndividualSessionsPage({
         </div>
       )}
 
-      {/* Active bookings with inline reschedule calendar */}
+      {/* Two-column layout: bookings left, acceleration right */}
       {activeBookings.length > 0 && (
-        <ActiveBookingsSection locale={locale}>
-          <div className="grid grid-cols-1 gap-4">
-            {activeBookings.map((booking) => {
-              const upsell = preSessionUpsellMap[booking.session_type];
-              const slot = booking.slot;
-              const showCountdown = booking.status === 'confirmed'
-                && slot
-                && getHoursUntil(slot) > 24;
-              const countdown = showCountdown
-                ? getSessionCountdown(booking.id, slot.slot_date, todayYmd)
-                : null;
-              const cdParts = countdown ? formatCountdownParts(countdown.months, countdown.days, normalizedLocale) : null;
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start">
+          {/* Left column: bookings */}
+          <ActiveBookingsSection locale={locale}>
+            <div className="grid grid-cols-1 gap-4">
+              {activeBookings.map((booking) => {
+                const upsell = preSessionUpsellMap[booking.session_type];
+                const slot = booking.slot;
+                const showCountdown = booking.status === 'confirmed'
+                  && slot
+                  && getHoursUntil(slot) > 24;
+                const countdown = showCountdown
+                  ? getSessionCountdown(booking.id, slot.slot_date, todayYmd)
+                  : null;
+                const cdParts = countdown ? formatCountdownParts(countdown.months, countdown.days, normalizedLocale) : null;
 
-              return (
-                <div key={booking.id}>
-                  <BookingCard
-                    booking={booking}
-                    locale={locale}
-                    hasEarlierSlots={booking.status === 'confirmed'}
-                    countdownPhrase={countdown ? t(countdown.phraseKey) : null}
-                    countdownMonths={cdParts?.monthsLine ?? null}
-                    countdownDays={cdParts?.daysLine ?? null}
-                    countdownSuffix={cdParts?.suffix ?? null}
-                  />
-                  {upsell && (
-                    <PreSessionUpsell
-                      staffId={upsell.staffId}
-                      staffName={upsell.staffName}
-                      priceId={upsell.priceId}
-                      pricePln={upsell.pricePln}
-                      sourceBookingId={booking.id}
+                return (
+                  <div key={booking.id}>
+                    <BookingCard
+                      booking={booking}
                       locale={locale}
+                      hasEarlierSlots={booking.status === 'confirmed'}
+                      countdownPhrase={countdown ? t(countdown.phraseKey) : null}
+                      countdownMonths={cdParts?.monthsLine ?? null}
+                      countdownDays={cdParts?.daysLine ?? null}
+                      countdownSuffix={cdParts?.suffix ?? null}
                     />
-                  )}
-                  {booking.payment_status === 'installments' && (
-                    <CustomPaymentCard
-                      sessionType={booking.session_type}
-                      slotId={booking.slot?.id}
-                      locale={locale}
-                    />
-                  )}
-                  {booking.session_type === 'natalia_para' && (
-                    <CompanionInvite
-                      bookingId={booking.id}
-                      existingCompanion={companionMap[booking.id] ?? null}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </ActiveBookingsSection>
-      )}
-
-      {/* Sessions where user is a partner (companion) */}
-      {partnerBookings.length > 0 && (
-        <div>
-          <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4 flex items-center gap-2">
-            <span>💑</span> Sesje partnerskie
-          </h3>
-          <div className="space-y-3">
-            {partnerBookings.map((b: any) => {
-              const slot = b.booking_slots;
-              const date = slot
-                ? new Date(slot.slot_date + 'T' + slot.start_time).toLocaleString('pl-PL', {
-                    weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit',
-                  })
-                : 'Termin nieznany';
-              return (
-                <div key={b.id} className="bg-htg-card border border-rose-500/20 rounded-xl p-4 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-htg-fg text-sm">Sesja dla par — Natalia</p>
-                    <p className="text-xs text-htg-fg-muted mt-0.5 capitalize">{date}</p>
+                    {upsell && (
+                      <PreSessionUpsell
+                        staffId={upsell.staffId}
+                        staffName={upsell.staffName}
+                        priceId={upsell.priceId}
+                        pricePln={upsell.pricePln}
+                        sourceBookingId={booking.id}
+                        locale={locale}
+                      />
+                    )}
+                    {booking.payment_status === 'installments' && (
+                      <CustomPaymentCard
+                        sessionType={booking.session_type}
+                        slotId={booking.slot?.id}
+                        locale={locale}
+                      />
+                    )}
+                    {booking.session_type === 'natalia_para' && (
+                      <CompanionInvite
+                        bookingId={booking.id}
+                        existingCompanion={companionMap[booking.id] ?? null}
+                      />
+                    )}
                   </div>
-                  {b.live_session_id && (
-                    <a
-                      href={`/${locale}/live/${b.live_session_id}`}
-                      className="px-4 py-2 rounded-lg bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage/80 transition-colors"
-                    >
-                      Dołącz
-                    </a>
-                  )}
+                );
+              })}
+            </div>
+          </ActiveBookingsSection>
+
+          {/* Right column: acceleration + partner sessions */}
+          <div className="md:w-72 space-y-6">
+            {/* Acceleration queue */}
+            {accelerationEntries.length > 0 && (
+              <div>
+                <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('acceleration_title')}</h3>
+                <div className="space-y-3">
+                  {accelerationEntries.map((entry) => (
+                    <AccelerationRequest
+                      key={entry.id}
+                      sessionType={entry.session_type}
+                      bookingId={entry.booking_id ?? undefined}
+                      existingEntry={entry}
+                      locale={locale}
+                    />
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              </div>
+            )}
 
-      {/* Acceleration queue */}
-      {accelerationEntries.length > 0 && (
-        <div>
-          <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('acceleration_title')}</h3>
-          <div className="space-y-3">
-            {accelerationEntries.map((entry) => (
-              <AccelerationRequest
-                key={entry.id}
-                sessionType={entry.session_type}
-                bookingId={entry.booking_id ?? undefined}
-                existingEntry={entry}
-                locale={locale}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+            {/* Acceleration request for users without one */}
+            {accelerationEntries.length === 0 && (
+              <div>
+                <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('acceleration_title')}</h3>
+                <AccelerationRequest
+                  sessionType={activeBookings[0].session_type}
+                  bookingId={activeBookings[0].id}
+                  locale={locale}
+                />
+              </div>
+            )}
 
-{/* Acceleration request for users without one */}
-      {activeBookings.length > 0 && accelerationEntries.length === 0 && (
-        <div>
-          <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('acceleration_title')}</h3>
-          <AccelerationRequest
-            sessionType={activeBookings[0].session_type}
-            bookingId={activeBookings[0].id}
-            locale={locale}
-          />
+            {/* Partner sessions */}
+            {partnerBookings.length > 0 && (
+              <div>
+                <h3 className="text-sm font-serif font-semibold text-htg-fg mb-3 flex items-center gap-2">
+                  <span>💑</span> Sesje partnerskie
+                </h3>
+                <div className="space-y-3">
+                  {partnerBookings.map((b: any) => {
+                    const slot = b.booking_slots;
+                    const date = slot
+                      ? new Date(slot.slot_date + 'T' + slot.start_time).toLocaleString('pl-PL', {
+                          weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit',
+                        })
+                      : 'Termin nieznany';
+                    return (
+                      <div key={b.id} className="bg-htg-card border border-rose-500/20 rounded-xl p-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-htg-fg text-xs">Sesja dla par — Natalia</p>
+                          <p className="text-[10px] text-htg-fg-muted mt-0.5 capitalize">{date}</p>
+                        </div>
+                        {b.live_session_id && (
+                          <a
+                            href={`/${locale}/live/${b.live_session_id}`}
+                            className="px-3 py-1.5 rounded-lg bg-htg-sage text-white text-xs font-medium hover:bg-htg-sage/80 transition-colors"
+                          >
+                            Dołącz
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

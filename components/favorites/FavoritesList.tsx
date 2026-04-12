@@ -172,71 +172,74 @@ export default function FavoritesList({ userDisplayName }: { userDisplayName?: s
         )}
       </div>
 
-      {/* Lista znajomych */}
-      <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-        <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-htg-sage" />
-          Lista znajomych
-        </h2>
-        {favorites.length === 0 ? (
-          <p className="text-htg-fg-muted text-sm">Bez znajomych</p>
-        ) : (
-          <div className="space-y-3">
-            {favorites.map(fav => (
-              <div key={fav.id} className="flex items-center justify-between p-3 bg-htg-surface rounded-lg">
-                <div>
-                  <p className="text-htg-fg font-medium">{fav.display_name || fav.email?.split('@')[0]}</p>
-                  <p className="text-htg-fg-muted text-xs">{fav.email}</p>
-                </div>
-                <button
-                  onClick={() => handleRemove(fav.id)}
-                  className="text-red-400 hover:text-red-300 transition-colors p-2"
-                  title="Usuń ze znajomych"
-                >
-                  <UserMinus className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Zaproszenia (followers) */}
-      <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-        <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
-          <UserPlus className="w-5 h-5 text-htg-indigo" />
-          Zaproszenia
-        </h2>
-        {followers.length === 0 ? (
-          <p className="text-htg-fg-muted text-sm">Bez zaproszeń</p>
-        ) : (
-          <div className="space-y-3">
-            {followers.map(f => (
-              <div key={f.id} className="flex items-center justify-between p-3 bg-htg-surface rounded-lg">
-                <div>
-                  <p className="text-htg-fg font-medium">{f.display_name || f.email?.split('@')[0]}</p>
-                  <p className="text-htg-fg-muted text-xs">{f.email}</p>
-                </div>
-                {!favorites.find(fv => fv.id === f.id) && (
+      {/* Lista znajomych + Zaproszenia — two columns on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Lista znajomych */}
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
+          <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5 text-htg-sage" />
+            Lista znajomych
+          </h2>
+          {favorites.length === 0 ? (
+            <p className="text-htg-fg-muted text-sm">Bez znajomych</p>
+          ) : (
+            <div className="space-y-3">
+              {favorites.map(fav => (
+                <div key={fav.id} className="flex items-center justify-between p-3 bg-htg-surface rounded-lg">
+                  <div>
+                    <p className="text-htg-fg font-medium">{fav.display_name || fav.email?.split('@')[0]}</p>
+                    <p className="text-htg-fg-muted text-xs">{fav.email}</p>
+                  </div>
                   <button
-                    onClick={async () => {
-                      await fetch('/api/favorites/add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: f.email }),
-                      });
-                      loadData();
-                    }}
-                    className="text-htg-sage hover:text-htg-sage-dark transition-colors p-2"
-                    title="Dodaj do znajomych"
+                    onClick={() => handleRemove(fav.id)}
+                    className="text-red-400 hover:text-red-300 transition-colors p-2"
+                    title="Usuń ze znajomych"
                   >
-                    <UserPlus className="w-4 h-4" />
+                    <UserMinus className="w-4 h-4" />
                   </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Zaproszenia (followers) */}
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
+          <h2 className="font-serif font-bold text-lg text-htg-fg mb-4 flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-htg-indigo" />
+            Zaproszenia
+          </h2>
+          {followers.length === 0 ? (
+            <p className="text-htg-fg-muted text-sm">Bez zaproszeń</p>
+          ) : (
+            <div className="space-y-3">
+              {followers.map(f => (
+                <div key={f.id} className="flex items-center justify-between p-3 bg-htg-surface rounded-lg">
+                  <div>
+                    <p className="text-htg-fg font-medium">{f.display_name || f.email?.split('@')[0]}</p>
+                    <p className="text-htg-fg-muted text-xs">{f.email}</p>
+                  </div>
+                  {!favorites.find(fv => fv.id === f.id) && (
+                    <button
+                      onClick={async () => {
+                        await fetch('/api/favorites/add', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: f.email }),
+                        });
+                        loadData();
+                      }}
+                      className="text-htg-sage hover:text-htg-sage-dark transition-colors p-2"
+                      title="Dodaj do znajomych"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Zaproś do HTG */}

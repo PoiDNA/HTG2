@@ -560,7 +560,7 @@ function SessionCard({
       </div>
 
       {isPlaying && (
-        <div ref={playerRef} className="border-t border-htg-card-border bg-black">
+        <div ref={playerRef} className="border-t border-htg-card-border">
           <SessionReviewPlayer
             playbackId={session.id}
             idFieldName="sessionId"

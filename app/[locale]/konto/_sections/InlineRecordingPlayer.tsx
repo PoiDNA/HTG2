@@ -8,8 +8,8 @@ import { ReactNode } from 'react';
 const SessionReviewPlayer = dynamic(() => import('@/components/session-review/SessionReviewPlayer'), {
   ssr: false,
   loading: () => (
-    <div className="w-full aspect-square md:aspect-video bg-black rounded-xl flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
+    <div className="w-full aspect-square md:aspect-video bg-htg-card rounded-xl flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-htg-fg-muted animate-spin" />
     </div>
   ),
 });

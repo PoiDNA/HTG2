@@ -65,9 +65,39 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
       return;
     }
 
-    // Pierwsze otwarcie (null→key) — normalna animacja CSS
+    // Pierwsze otwarcie (null��key) — normalna animacja CSS
     setExpandedDescId(null);
     setExpandedKey(key);
+  };
+
+  const toggleDesc = (sessionId: string, buttonEl: HTMLElement | null) => {
+    if (expandedDescId === sessionId) {
+      // Zamykanie — bez scroll correction
+      setExpandedDescId(null);
+      return;
+    }
+
+    if (expandedDescId !== null && buttonEl) {
+      // Zmiana opisu (S1→S2) — flushSync + scroll correction
+      const before = buttonEl.getBoundingClientRect().top;
+
+      containerRef.current?.setAttribute('data-accordion-instant', '');
+
+      flushSync(() => {
+        setExpandedDescId(sessionId);
+      });
+
+      const after = buttonEl.getBoundingClientRect().top;
+      window.scrollBy({ top: after - before });
+
+      requestAnimationFrame(() => {
+        containerRef.current?.removeAttribute('data-accordion-instant');
+      });
+      return;
+    }
+
+    // Pierwsze rozwinięcie opisu
+    setExpandedDescId(sessionId);
   };
 
   const togglePlay = (sessionId: string) => {
@@ -198,7 +228,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                     isBookmarked={bookmarked.has(session.id)}
                     onToggleBookmark={() => toggleBookmark(session.id)}
                     isDescExpanded={expandedDescId === session.id}
-                    onToggleDesc={() => setExpandedDescId(prev => prev === session.id ? null : session.id)}
+                    onToggleDesc={(el) => toggleDesc(session.id, el)}
                     userId={userId}
                     userEmail={userEmail}
                   />
@@ -231,7 +261,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                 isBookmarked={bookmarked.has(session.id)}
                 onToggleBookmark={() => toggleBookmark(session.id)}
                 isDescExpanded={expandedDescId === session.id}
-                onToggleDesc={() => setExpandedDescId(prev => prev === session.id ? null : session.id)}
+                onToggleDesc={(el) => toggleDesc(session.id, el)}
                 userId={userId}
                 userEmail={userEmail}
               />
@@ -383,7 +413,7 @@ function SessionCard({
   isBookmarked: boolean;
   onToggleBookmark: () => void;
   isDescExpanded: boolean;
-  onToggleDesc: () => void;
+  onToggleDesc: (el: HTMLElement | null) => void;
   userId: string;
   userEmail: string;
 }) {
@@ -518,7 +548,7 @@ function SessionCard({
               )}
               {canExpand && (
                 <button
-                  onClick={onToggleDesc}
+                  onClick={(e) => onToggleDesc(e.currentTarget)}
                   className="text-htg-sage hover:underline mt-1 font-medium"
                 >
                   {isDescExpanded ? 'Zwiń' : 'Rozwiń'}

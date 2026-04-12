@@ -87,7 +87,34 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
     setExpandedKey(key);
   };
 
-  // ── Cart helpers ──────────────────────────────────────────────
+  const toggleDesc = (sessionId: string, buttonEl: HTMLElement | null) => {
+    if (expandedDescId === sessionId) {
+      setExpandedDescId(null);
+      return;
+    }
+
+    if (expandedDescId !== null && buttonEl) {
+      const before = buttonEl.getBoundingClientRect().top;
+
+      containerRef.current?.setAttribute('data-accordion-instant', '');
+
+      flushSync(() => {
+        setExpandedDescId(sessionId);
+      });
+
+      const after = buttonEl.getBoundingClientRect().top;
+      window.scrollBy({ top: after - before });
+
+      requestAnimationFrame(() => {
+        containerRef.current?.removeAttribute('data-accordion-instant');
+      });
+      return;
+    }
+
+    setExpandedDescId(sessionId);
+  };
+
+  // ── Cart helpers ─────────────────────���────────────────────────
 
   const toggleMonth = (month: MonthInfo) => {
     setSelectedMonths(prev => {
@@ -232,7 +259,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                         key={session.id}
                         session={session}
                         isDescExpanded={expandedDescId === session.id}
-                        onToggleDesc={() => setExpandedDescId(prev => prev === session.id ? null : session.id)}
+                        onToggleDesc={(el) => toggleDesc(session.id, el)}
                       />
                     ))}
                     {/* Buy button — inside expanded content */}
@@ -304,7 +331,7 @@ function ShopSessionCard({
 }: {
   session: SessionInfo;
   isDescExpanded: boolean;
-  onToggleDesc: () => void;
+  onToggleDesc: (el: HTMLElement | null) => void;
 }) {
   const [sentenceIndex, setSentenceIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -381,7 +408,7 @@ function ShopSessionCard({
               )}
               {canExpand && (
                 <button
-                  onClick={onToggleDesc}
+                  onClick={(e) => onToggleDesc(e.currentTarget)}
                   className="text-htg-sage hover:underline mt-1 font-medium"
                 >
                   {isDescExpanded ? 'Zwiń' : 'Rozwiń'}

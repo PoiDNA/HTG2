@@ -700,6 +700,11 @@
     "notif_mention": "wspomniał(a) o Tobie",
     "notif_new_post": "dodał(a) nowy post",
     "notif_group_invite": "zaprosił(a) Cię do grupy",
-    "meta_description": "Dołącz do społeczności HTG. Dyskutuj, dziel się doświadczeniami i rozwijaj się z innymi."
+    "meta_description": "Dołącz do społeczności HTG. Dyskutuj, dziel się doświadczeniami i rozwijaj się z innymi.",
+    "auto_translated": "przetłumaczono automatycznie",
+    "show_original": "Pokaż oryginał",
+    "show_translation": "Pokaż tłumaczenie",
+    "translating": "Tłumaczenie...",
+    "post_language": "Język posta"
   }
 }

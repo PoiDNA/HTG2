@@ -68,6 +68,14 @@ export const SESSION_CONFIG: Record<SessionType, {
   },
 };
 
+/** Locale → ISO 4217 currency code */
+export const LOCALE_CURRENCY: Record<string, string> = {
+  pl: 'pln',
+  en: 'usd',
+  de: 'eur',
+  pt: 'eur',
+};
+
 export const PRODUCT_SLUGS = {
   YEARLY:              'pakiet-roczny',
   MONTHLY:             'pakiet-miesieczny',

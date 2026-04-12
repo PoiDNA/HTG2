@@ -299,6 +299,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
         body: JSON.stringify({
           priceId: selectedSession.priceId,
           mode: 'payment',
+          locale,
           ...(paymentMode !== 'full' && { amountOverride: payAmount * 100 }),
           metadata: {
             type: 'individual',

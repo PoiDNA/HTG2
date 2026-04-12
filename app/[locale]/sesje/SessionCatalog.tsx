@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import {
   X, Play, ShoppingCart, Check, ChevronDown, Calendar, Search,
@@ -93,6 +94,8 @@ export default function SessionCatalog({
   allYearlyMonths?: MonthSetInfo[];
   purchasedYearlyMonths?: string[];
 }) {
+  const locale = useLocale();
+
   // View mode
   const [view, setView] = useState<'sessions' | 'months' | 'yearly'>('sessions');
 
@@ -384,7 +387,7 @@ export default function SessionCatalog({
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, locale }),
       });
       const data = await res.json();
       if (res.status === 401) { router.push('/login'); return; }

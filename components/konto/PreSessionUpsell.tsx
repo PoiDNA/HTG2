@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale } from 'next-intl';
 import { Video, Loader2 } from 'lucide-react';
 
 interface Props {
@@ -9,11 +10,11 @@ interface Props {
   priceId: string;
   pricePln: number;   // display price in PLN (e.g. 100)
   sourceBookingId: string;
-  locale: string;
 }
 
-export function PreSessionUpsell({ staffId, staffName, priceId, pricePln, sourceBookingId, locale }: Props) {
+export function PreSessionUpsell({ staffId, staffName, priceId, pricePln, sourceBookingId }: Props) {
   const [loading, setLoading] = useState(false);
+  const locale = useLocale();
 
   async function handleBuy() {
     setLoading(true);
@@ -24,6 +25,7 @@ export function PreSessionUpsell({ staffId, staffName, priceId, pricePln, source
         body: JSON.stringify({
           priceId,
           mode: 'payment',
+          locale,
           metadata: {
             type: 'pre_session',
             pre_session_staff_id: staffId,

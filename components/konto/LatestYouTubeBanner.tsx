@@ -62,7 +62,7 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
             </a>
           </div>
 
-          <div className="flex items-center gap-2 mt-1 sm:mt-0">
+          <div className="flex items-center gap-2 mt-1 sm:mt-0 self-end sm:self-auto">
             <a
               href={ytUrl}
               target="_blank"

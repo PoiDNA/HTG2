@@ -239,8 +239,8 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                       ? 'bg-white/90 border-htg-sage/40 dark:bg-white/10 dark:border-white/20'
                       : 'bg-white/70 border-white/60 group-hover:bg-white/90 group-hover:border-htg-sage/30 dark:bg-white/5 dark:border-white/10 dark:group-hover:bg-white/10 dark:group-hover:border-white/20'
                   }`}>
-                    <h3 className="text-sm sm:text-lg font-medium text-htg-fg">{month.title}</h3>
-                    <span className="text-xs sm:text-sm text-htg-fg-muted font-normal">
+                    <h3 className="text-base sm:text-xl font-medium text-htg-fg">{month.title.replace(/^Sesje\s+/i, '')}</h3>
+                    <span className="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full bg-htg-fg/10 text-xs sm:text-sm text-htg-fg font-bold">
                       {month.sessions.length}
                     </span>
                   </span>

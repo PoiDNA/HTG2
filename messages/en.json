@@ -375,7 +375,8 @@
     "pub_my_sessions": "My sessions",
     "pub_archive": "Archive",
     "pub_add": "Add session",
-    "logout": "Log out"
+    "logout": "Log out",
+    "translator_panel": "Translator Panel"
   },
   "Booking": {
     "title": "Private sessions",
@@ -639,6 +640,27 @@
     "action_shorten": "Shorten",
     "action_keep": "Keep",
     "legend": "Legend"
+  },
+  "Translator": {
+    "title": "Translator Panel",
+    "subtitle": "Report translation errors for the {locale} version.",
+    "report_title": "Report a translation error",
+    "page_url": "Page URL with the error",
+    "current_text": "Current text (with error)",
+    "current_text_placeholder": "Paste the current incorrect text...",
+    "suggested_fix": "Suggested correction",
+    "suggested_fix_placeholder": "How the text should read...",
+    "notes": "Additional notes (optional)",
+    "notes_placeholder": "Context, explanation, etc...",
+    "submit": "Submit report",
+    "submitting": "Submitting...",
+    "success": "Report submitted!",
+    "my_issues": "My reports",
+    "no_issues": "You don't have any reports yet.",
+    "loading": "Loading...",
+    "not_authorized": "Access denied. This page is available to translators only.",
+    "current": "Current",
+    "fix": "Correction"
   },
   "Community": {
     "title": "Community",

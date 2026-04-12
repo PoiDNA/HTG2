@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Plus, X, Maximize2, Minimize2, Type } from 'lucide-react';
 
 interface TopicsEditorProps {
@@ -34,6 +35,7 @@ const FONT_SIZES = ['text-sm', 'text-base', 'text-lg', 'text-xl'] as const;
 const FONT_SIZE_LABELS = ['A', 'A+', 'A++', 'A+++'];
 
 export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorProps) {
+  const t = useTranslations('Booking');
   const [items, setItems] = useState<string[]>(() => parseTopics(initialTopics));
   const [fontSizeIdx, setFontSizeIdx] = useState(1); // default: text-base
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -120,7 +122,7 @@ export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorP
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-htg-fg-muted">
-          Zagadnienia na sesję
+          {t('topics_label')}
         </span>
         <div className="flex items-center gap-1.5">
           {/* Font size controls */}
@@ -139,7 +141,7 @@ export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorP
             onClick={increaseFontSize}
             disabled={fontSizeIdx === FONT_SIZES.length - 1}
             className="p-1.5 rounded-md bg-htg-surface hover:bg-htg-card-border text-htg-fg-muted disabled:opacity-30 transition-colors"
-            title="Powiększ tekst"
+            title={t('enlarge_text')}
           >
             <Type className="w-4 h-4" />
           </button>
@@ -150,7 +152,7 @@ export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorP
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-1.5 rounded-md bg-htg-surface hover:bg-htg-card-border text-htg-fg-muted transition-colors"
-            title={isFullscreen ? 'Zamknij (ESC)' : 'Pełny ekran'}
+            title={isFullscreen ? t('close_esc') : t('fullscreen')}
           >
             {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
@@ -171,7 +173,7 @@ export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorP
               onChange={e => updateItem(index, e.target.value)}
               rows={isFullscreen ? 3 : 2}
               maxLength={300}
-              placeholder={index === 0 ? 'Opisz temat, nad którym chcesz pracować...' : 'Następny temat...'}
+              placeholder={index === 0 ? t('topics_placeholder') : t('next_topic')}
               className={`flex-1 px-3 py-2 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg ${fontSize} resize-none focus:outline-none focus:ring-1 focus:ring-htg-sage/50 placeholder:text-htg-fg-muted/40 transition-all`}
             />
             {/* Remove button */}
@@ -179,7 +181,7 @@ export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorP
               <button
                 onClick={() => removeItem(index)}
                 className="shrink-0 mt-2 p-1 rounded-md text-htg-fg-muted/40 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                title="Usuń punkt"
+                title={t('remove_topic')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -196,13 +198,13 @@ export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorP
             className="flex items-center gap-1.5 text-xs text-htg-sage hover:text-htg-sage-dark font-medium transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
-            Dodaj punkt ({items.length}/8)
+            {t('add_topic', { count: items.length })}
           </button>
         ) : (
-          <span className="text-xs text-htg-fg-muted">Maksymalnie 8 punktów</span>
+          <span className="text-xs text-htg-fg-muted">{t('max_topics')}</span>
         )}
         <span className="text-xs text-htg-fg-muted">
-          {saving ? 'Zapisywanie...' : saved ? '✓ Zapisano' : ''}
+          {saving ? t('saving') : saved ? t('saved') : ''}
         </span>
       </div>
     </div>
@@ -218,12 +220,12 @@ export default function TopicsEditor({ bookingId, initialTopics }: TopicsEditorP
         >
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-serif font-semibold text-htg-fg">Zagadnienia na sesję</h2>
+              <h2 className="text-xl font-serif font-semibold text-htg-fg">{t('topics_label')}</h2>
               <button
                 onClick={() => setIsFullscreen(false)}
                 className="px-4 py-2 rounded-lg bg-htg-surface text-htg-fg text-sm font-medium hover:bg-htg-card-border transition-colors"
               >
-                Zamknij (ESC)
+                {t('close_esc')}
               </button>
             </div>
             {content}

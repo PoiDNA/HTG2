@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import BookingCalendar from './BookingCalendar';
 import { ALL_SESSION_TYPES } from '@/lib/booking/constants';
 
@@ -27,6 +28,7 @@ export default function ActiveBookingsSection({
   locale,
   children,
 }: ActiveBookingsSectionProps) {
+  const t = useTranslations('Booking');
   const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null);
 
   const toggleReschedule = useCallback((bookingId: string) => {
@@ -42,9 +44,9 @@ export default function ActiveBookingsSection({
         <div className="bg-htg-surface/50 border border-htg-card-border rounded-xl p-4 mt-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-lg font-serif font-semibold text-htg-fg">Zmień termin</h3>
+              <h3 className="text-lg font-serif font-semibold text-htg-fg">{t('reschedule')}</h3>
               <p className="text-xs text-htg-warm mt-1">
-                ⚠ Zmiana terminu poniżej 48h przed sesją uzależniona jest od przejęcia terminu przez inną osobę.
+                ⚠ {t('reschedule_confirm_message')}
               </p>
             </div>
             <button

@@ -82,7 +82,6 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
   const [isGift, setIsGift] = useState(false);
   const [giftEmail, setGiftEmail] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
-  const [recordingConsent, setRecordingConsent] = useState(false);
   const [clientEmail, setClientEmail] = useState('');
   const router = useRouter();
 
@@ -214,8 +213,6 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
 
   async function handleCheckout() {
     if (!selectedSession || payAmount <= 0) return;
-    if (!recordingConsent) return;
-
     // Bank transfer flow
     if (paymentMethod === 'transfer' && paymentMode === 'full') {
       if (!proofFile) return;
@@ -227,15 +224,6 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (!currentUser) { router.push('/login' as any); return; }
 
-        // Record consent
-        try {
-          await supabase.from('consent_records').insert({
-            user_id: currentUser.id,
-            consent_type: 'recording_publication',
-            granted: true,
-            consent_text: 'Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu. Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.',
-          });
-        } catch { /* Non-blocking */ }
 
         // Upload proof to Supabase Storage
         const ext = proofFile.name.split('.').pop() || 'bin';
@@ -279,21 +267,6 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
     if (!selectedSession.priceId) return;
     setLoading(true);
     try {
-      // Record recording/publication consent
-      const { createSupabaseBrowser } = await import('@/lib/supabase/client');
-      const supabase = createSupabaseBrowser();
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (currentUser) {
-        try {
-          await supabase.from('consent_records').insert({
-            user_id: currentUser.id,
-            consent_type: 'recording_publication',
-            granted: true,
-            consent_text: 'Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu. Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.',
-          });
-        } catch { /* Non-blocking */ }
-      }
-
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -818,28 +791,12 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             )}
           </div>
 
-          {/* Recording & publication consent */}
-          <label className="flex items-start gap-3 cursor-pointer bg-htg-surface border border-htg-card-border rounded-lg p-4">
-            <input
-              type="checkbox"
-              checked={recordingConsent}
-              onChange={(e) => setRecordingConsent(e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded border-htg-card-border text-htg-sage focus:ring-htg-sage shrink-0 accent-htg-sage"
-            />
-            <span className="text-sm text-htg-fg leading-relaxed">
-              {ti('recording_consent')}
-              <span className="text-xs text-htg-fg-muted block mt-1">
-                {ti('consent_required_note')}{' '}
-                <a href="/terms#nagrania" target="_blank" rel="noopener" className="text-htg-indigo hover:underline">{ti('terms_link_text')}</a> (pkt 6 i 8).
-              </span>
-            </span>
-          </label>
 
           {/* Buy button */}
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration) || (paymentMethod === 'stripe' && !selectedSession?.priceId) || (paymentMethod === 'transfer' && (!proofFile || !selectedSlotId)) || (isGift && !giftEmail.trim()) || !recordingConsent}
+              disabled={loading || (!selectedSlotId && !wantAcceleration) || (paymentMethod === 'stripe' && !selectedSession?.priceId) || (paymentMethod === 'transfer' && (!proofFile || !selectedSlotId)) || (isGift && !giftEmail.trim())}
               className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -872,9 +829,6 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             )}
             {paymentMethod === 'transfer' && !proofFile && (
               <p className="text-xs text-htg-warm text-center mt-2">Załącz potwierdzenie przelewu</p>
-            )}
-            {!recordingConsent && (selectedSession?.priceId || paymentMethod === 'transfer') && (
-              <p className="text-xs text-htg-warm text-center mt-2">Potwierdź zgodę na nagrywanie i publikację sesji</p>
             )}
             <p className="text-xs text-htg-fg-muted text-center mt-3">{labels.cancel_policy}</p>
           </div>

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLocale } from 'next-intl';
 import { UserMinus, UserPlus, Users, Mail, Send, ChevronDown, ChevronUp, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
+import { formatDate } from '@/lib/format';
 
 interface UserInfo {
   id: string;
@@ -29,6 +31,7 @@ function getSupabase() {
 }
 
 export default function FavoritesList({ userDisplayName }: { userDisplayName?: string }) {
+  const locale = useLocale();
   const [favorites, setFavorites] = useState<UserInfo[]>([]);
   const [followers, setFollowers] = useState<UserInfo[]>([]);
   const [searchEmail, setSearchEmail] = useState('');
@@ -354,7 +357,7 @@ export default function FavoritesList({ userDisplayName }: { userDisplayName?: s
                   <div className="min-w-0 flex-1">
                     <p className="text-htg-fg text-sm truncate">{inv.email}</p>
                     <p className="text-htg-fg-muted text-xs">
-                      {new Date(inv.sent_at).toLocaleDateString('pl-PL')}
+                      {formatDate(inv.sent_at, locale)}
                     </p>
                   </div>
                   {inv.status === 'registered' && (

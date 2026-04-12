@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useLocale } from 'next-intl';
 import { Bell } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { useNotificationCount, useNotifications } from '@/lib/community/hooks/useNotifications';
 import { useRouter } from 'next/navigation';
+import { formatDate as formatDateIntl } from '@/lib/format';
 import type { NotificationWithActor } from '@/lib/community/types';
 
 interface NotificationBellProps {
@@ -18,6 +20,7 @@ export function NotificationBell({ userId, alwaysShow = false }: NotificationBel
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const locale = useLocale();
 
   const handleOpen = useCallback(() => {
     if (!open) {
@@ -119,7 +122,7 @@ export function NotificationBell({ userId, alwaysShow = false }: NotificationBel
                       </p>
                     )}
                     <p className="text-xs text-htg-fg-muted mt-0.5">
-                      {formatTimeAgo(n.created_at)}
+                      {formatTimeAgo(n.created_at, locale)}
                     </p>
                   </div>
                   {!n.is_read && (
@@ -151,7 +154,7 @@ function getNotificationText(n: NotificationWithActor): string {
   }
 }
 
-function formatTimeAgo(dateStr: string): string {
+function formatTimeAgo(dateStr: string, locale: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const min = Math.floor(diff / 60000);
   const hrs = Math.floor(diff / 3600000);
@@ -160,5 +163,5 @@ function formatTimeAgo(dateStr: string): string {
   if (min < 60) return `${min} min temu`;
   if (hrs < 24) return `${hrs}h temu`;
   if (days < 7) return `${days}d temu`;
-  return new Date(dateStr).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+  return formatDateIntl(dateStr, locale, { day: 'numeric', month: 'short' });
 }

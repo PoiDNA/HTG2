@@ -49,7 +49,7 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
           />
         </a>
 
-        <div className="flex flex-1 items-center gap-3 p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-4">
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-htg-sage mb-0.5">{t('new_video')}</p>
             <a
@@ -62,23 +62,25 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
             </a>
           </div>
 
-          <a
-            href={ytUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 px-3 py-1.5 bg-htg-sage text-white rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
-          >
-            <Headphones className="w-4 h-4" />
-            {t('watch')}
-          </a>
+          <div className="flex items-center gap-2 mt-1 sm:mt-0">
+            <a
+              href={ytUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 px-3 py-1.5 bg-htg-sage text-white rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
+            >
+              <Headphones className="w-4 h-4" />
+              {t('watch')}
+            </a>
 
-          <button
-            onClick={handleDismiss}
-            className="shrink-0 p-1 text-htg-fg-muted hover:text-htg-fg transition-colors"
-            aria-label="Zamknij"
-          >
-            <X className="w-4 h-4" />
-          </button>
+            <button
+              onClick={handleDismiss}
+              className="shrink-0 p-1 text-htg-fg-muted hover:text-htg-fg transition-colors"
+              aria-label="Zamknij"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

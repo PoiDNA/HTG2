@@ -30,7 +30,7 @@ export default function NagraniaHeader({ userEmail, locale }: NagraniaHeaderProp
         <button
           onClick={handleLogout}
           className="p-2 rounded-lg text-htg-fg-muted hover:text-red-500 hover:bg-htg-surface transition-colors"
-          title="Wyloguj"
+          title="Log out"
         >
           <LogOut className="w-5 h-5" />
         </button>

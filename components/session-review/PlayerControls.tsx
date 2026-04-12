@@ -264,7 +264,7 @@ export default function PlayerControls({
     <LazyMotion features={domAnimation}>
       <div
         role="group"
-        aria-label="Odtwarzacz nagrania"
+        aria-label="Recording player"
         className="absolute inset-0 pointer-events-none"
         onKeyDown={handleKeyDown}
       >

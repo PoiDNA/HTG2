@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Bell } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { useNotificationCount, useNotifications } from '@/lib/community/hooks/useNotifications';
@@ -21,6 +21,7 @@ export function NotificationBell({ userId, alwaysShow = false }: NotificationBel
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const locale = useLocale();
+  const t = useTranslations('Community');
 
   const handleOpen = useCallback(() => {
     if (!open) {
@@ -61,7 +62,7 @@ export function NotificationBell({ userId, alwaysShow = false }: NotificationBel
       <button
         onClick={handleOpen}
         className="relative p-2 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
-        title="Powiadomienia"
+        title={t('notifications')}
       >
         <Bell className="w-5 h-5" />
         {count > 0 && (

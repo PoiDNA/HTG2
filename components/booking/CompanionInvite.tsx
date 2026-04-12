@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Heart, Copy, Check, X, Loader2, Mail } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface CompanionInviteProps {
   bookingId: string;
@@ -13,6 +14,7 @@ interface CompanionInviteProps {
 }
 
 export default function CompanionInvite({ bookingId, existingCompanion }: CompanionInviteProps) {
+  const t = useTranslations('Booking');
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(existingCompanion?.email ?? '');
   const [loading, setLoading] = useState(false);
@@ -84,7 +86,7 @@ export default function CompanionInvite({ bookingId, existingCompanion }: Compan
             onClick={handleRemove}
             disabled={removing}
             className="shrink-0 p-1 rounded-full hover:bg-red-500/15 text-htg-fg-muted hover:text-red-400 transition-colors"
-            title="Usuń zaproszenie"
+            title={t('remove_invite')}
           >
             {removing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
           </button>
@@ -151,7 +153,7 @@ export default function CompanionInvite({ bookingId, existingCompanion }: Compan
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="Email partnera (musi mieć konto HTG)"
+                placeholder={t('companion_email_placeholder')}
                 onKeyDown={e => e.key === 'Enter' && handleSendInvite()}
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-htg-surface border border-htg-card-border
                   text-sm text-htg-fg placeholder:text-htg-fg-muted/40 focus:outline-none focus:border-rose-500/40"

@@ -25,6 +25,7 @@ export default function SiteNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const tPanel = useTranslations('PanelNav');
+  const tNav = useTranslations('Nav');
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoggedIn, isAdmin, isStaff, loading } = useUserRole();
@@ -58,7 +59,7 @@ export default function SiteNav() {
   const isCommunityActive = pathname.startsWith('/spolecznosc');
 
   return (
-    <nav aria-label="Nawigacja główna">
+    <nav aria-label={tNav('menu')}>
       {/* Desktop */}
       <div className="hidden md:flex items-center gap-2">
         <LocaleSwitcher />
@@ -163,9 +164,9 @@ export default function SiteNav() {
             )}
 
             {/* Main nav */}
-            <MobileLink href="/konto" label="Nagrania" pathname={pathname} onClick={() => setMobileOpen(false)} />
-            <MobileLink href="/konto/sesje-indywidualne" label="Spotkania" pathname={pathname} onClick={() => setMobileOpen(false)} />
-            <MobileLink href="/spolecznosc" label="Społeczność" pathname={pathname} onClick={() => setMobileOpen(false)} />
+            <MobileLink href="/konto" label={tNav('recordings')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+            <MobileLink href="/konto/sesje-indywidualne" label={tNav('individual')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+            <MobileLink href="/spolecznosc" label={tNav('community')} pathname={pathname} onClick={() => setMobileOpen(false)} />
 
             {/* Menu items */}
             {isLoggedIn && (

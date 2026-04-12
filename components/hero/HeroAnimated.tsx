@@ -195,7 +195,7 @@ export default function HeroAnimated() {
                   pointerEvents: ctaLatched ? 'none' : 'auto',
                 }}
                 tabIndex={ctaLatched ? -1 : 0}
-                aria-label="Uderz w maskę, by odsłonić autentyczną postać"
+                aria-label="Reveal the authentic self"
               />
             </div>
           </div>

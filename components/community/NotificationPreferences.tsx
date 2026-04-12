@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Bell, Mail, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 interface Preferences {
@@ -21,6 +22,7 @@ const defaults: Preferences = {
 };
 
 export function NotificationPreferences() {
+  const t = useTranslations('Community');
   const [prefs, setPrefs] = useState<Preferences>(defaults);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -99,7 +101,7 @@ export function NotificationPreferences() {
           {prefs.push_enabled && (
             <>
               <Toggle
-                label="Nowe komentarze"
+                label={t('notif_new_comments')}
                 checked={prefs.push_comments}
                 onChange={(v) => updatePref('push_comments', v)}
               />
@@ -109,7 +111,7 @@ export function NotificationPreferences() {
                 onChange={(v) => updatePref('push_mentions', v)}
               />
               <Toggle
-                label="Reakcje"
+                label={t('notif_reactions')}
                 checked={prefs.push_reactions}
                 onChange={(v) => updatePref('push_reactions', v)}
               />

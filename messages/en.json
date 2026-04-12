@@ -22,7 +22,8 @@
     "menu": "Menu",
     "staff": "Staff Panel",
     "switch_locale": "Switch language to {locale}",
-    "skip_to_content": "Skip to content"
+    "skip_to_content": "Skip to content",
+    "close_menu": "Close menu"
   },
   "Footer": {
     "privacy": "Privacy Policy",
@@ -214,7 +215,20 @@
     "history": "History",
     "expired_at": "Expired: {date}",
     "per_month": "mo.",
-    "per_year": "year"
+    "per_year": "year",
+    "cancel": "Cancel",
+    "profile_name_placeholder": "John Smith",
+    "consent_privacy": "Privacy Policy acceptance (GDPR)",
+    "consent_terms": "Terms of Service acceptance",
+    "consent_recording": "Session recording and publication",
+    "consent_recording_note": "Contract requirement — cannot be revoked. You may indicate segments for removal within 7 days of recording publication.",
+    "consent_locked": "Contract requirement",
+    "consent_active": "Active",
+    "friend_email_placeholder": "Enter user's email address...",
+    "remove_friend": "Remove friend",
+    "add_friend": "Add friend",
+    "your_name_placeholder": "Your name...",
+    "invite_message_placeholder": "E.g. Hi! I recommend these sessions..."
   },
   "Player": {
     "concurrent_title": "Playing on another device",
@@ -223,7 +237,8 @@
     "loading": "Loading...",
     "load_error_title": "Failed to load",
     "load_error": "Failed to load the recording. Please try again.",
-    "error": "Failed to load recording."
+    "error": "Failed to load recording.",
+    "close": "Close player"
   },
   "Individual": {
     "title": "Individual Sessions",
@@ -539,6 +554,9 @@
     "choose_date": "Choose a date",
     "pre_session_free_note": "Pre-session meetings are free. Once booked, the time is final — it cannot be rescheduled or cancelled.",
     "buy_pre_session": "Buy",
+    "remove_invite": "Remove invitation",
+    "companion_email_placeholder": "Partner's email (must have an HTG account)",
+    "shrink_text": "Shrink text",
     "countdown": {
       "8plus": {
         "0": "A longer road lies ahead — and that's a beautiful thing. Each day brings you closer.",
@@ -811,7 +829,11 @@
     "translating": "Translating...",
     "post_language": "Post language",
     "message_subject_placeholder": "Subject of your message",
-    "search_placeholder": "Search posts..."
+    "search_placeholder": "Search posts...",
+    "poll_question_placeholder": "Ask a question...",
+    "add_photo": "Add photo",
+    "notif_new_comments": "New comments",
+    "notif_reactions": "Reactions"
   },
   "YouTubeBanner": {
     "new_video": "New session on YT",

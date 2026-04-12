@@ -98,13 +98,13 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
 
   return (
     <div className="space-y-4">
-      {/* Header row: title left, filter pills right */}
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-        <div className="flex items-center gap-2">
+      {/* Header: title + filter pills */}
+      <div className="mb-2">
+        <div className="flex items-center gap-2 mb-2">
           <Film className="w-5 h-5 text-htg-sage" />
           <h2 className="text-lg font-serif font-semibold text-htg-fg">Twoja Biblioteka</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-htg-fg-muted">Pokaż:</span>
           <button
             onClick={() => setFilter('all')}

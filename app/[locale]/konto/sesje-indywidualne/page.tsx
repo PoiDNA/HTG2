@@ -7,7 +7,6 @@ import type { Booking, AccelerationEntry } from '@/lib/booking/types';
 import { PRODUCT_SLUGS } from '@/lib/booking/constants';
 import BookingCard from '@/components/booking/BookingCard';
 import ActiveBookingsSection from '@/components/booking/ActiveBookingsSection';
-import AccelerationRequest from '@/components/booking/AccelerationRequest';
 import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
 import { CustomPaymentCard } from '@/components/konto/CustomPaymentCard';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
@@ -144,6 +143,12 @@ export default async function IndividualSessionsPage({
 
   const accelerationEntries: AccelerationEntry[] = (accelData ?? []) as AccelerationEntry[];
 
+  // Map acceleration entries by booking_id for inline rendering inside BookingCard
+  const accelByBooking: Record<string, AccelerationEntry> = {};
+  for (const entry of accelerationEntries) {
+    if (entry.booking_id) accelByBooking[entry.booking_id] = entry;
+  }
+
   // Filter to future-active bookings only
   const activeBookings = bookings.filter(b => {
     const isActiveStatus = b.status === 'pending_confirmation' || b.status === 'confirmed';
@@ -273,6 +278,7 @@ export default async function IndividualSessionsPage({
                       countdownMonths={cdParts?.monthsLine ?? null}
                       countdownDays={cdParts?.daysLine ?? null}
                       countdownSuffix={cdParts?.suffix ?? null}
+                      accelerationEntry={accelByBooking[booking.id] ?? null}
                     />
                     {upsell && (
                       <PreSessionUpsell
@@ -303,40 +309,9 @@ export default async function IndividualSessionsPage({
             </div>
           </ActiveBookingsSection>
 
-          {/* Right column: acceleration + partner sessions */}
-          <div className="md:w-72 space-y-6">
-            {/* Acceleration queue */}
-            {accelerationEntries.length > 0 && (
-              <div>
-                <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('acceleration_title')}</h3>
-                <div className="space-y-3">
-                  {accelerationEntries.map((entry) => (
-                    <AccelerationRequest
-                      key={entry.id}
-                      sessionType={entry.session_type}
-                      bookingId={entry.booking_id ?? undefined}
-                      existingEntry={entry}
-                      locale={locale}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Acceleration request for users without one */}
-            {accelerationEntries.length === 0 && (
-              <div>
-                <h3 className="text-lg font-serif font-semibold text-htg-fg mb-4">{t('acceleration_title')}</h3>
-                <AccelerationRequest
-                  sessionType={activeBookings[0].session_type}
-                  bookingId={activeBookings[0].id}
-                  locale={locale}
-                />
-              </div>
-            )}
-
-            {/* Partner sessions */}
-            {partnerBookings.length > 0 && (
+          {/* Right column: partner sessions */}
+          {partnerBookings.length > 0 && (
+            <div className="md:w-72 space-y-6">
               <div>
                 <h3 className="text-sm font-serif font-semibold text-htg-fg mb-3 flex items-center gap-2">
                   <span>💑</span> Sesje partnerskie
@@ -369,8 +344,8 @@ export default async function IndividualSessionsPage({
                   })}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 

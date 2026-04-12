@@ -32,50 +32,54 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
 
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden mb-6">
-      <a
-        href={ytUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block w-full aspect-video relative group"
-      >
-        <img
-          src={thumbnailUrl}
-          alt={title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
-      </a>
-
-      <div className="flex items-center gap-3 p-4">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-htg-sage mb-0.5">{t('new_video')}</p>
-          <a
-            href={ytUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-htg-fg hover:text-htg-sage transition-colors line-clamp-2"
-          >
-            {title}
-          </a>
-        </div>
-
+      {/* Mobile: column — thumbnail full-width on top */}
+      {/* Desktop: row — thumbnail left (fills card height), text right */}
+      <div className="flex flex-col sm:flex-row">
         <a
           href={ytUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 px-3 py-1.5 bg-htg-sage text-white rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
+          className="block w-full sm:w-64 md:w-80 aspect-video sm:aspect-auto sm:shrink-0 relative group"
         >
-          <Headphones className="w-4 h-4" />
-          {t('watch')}
+          <img
+            src={thumbnailUrl}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
         </a>
 
-        <button
-          onClick={handleDismiss}
-          className="shrink-0 p-1 text-htg-fg-muted hover:text-htg-fg transition-colors"
-          aria-label="Zamknij"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex flex-1 items-center gap-3 p-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-htg-sage mb-0.5">{t('new_video')}</p>
+            <a
+              href={ytUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-htg-fg hover:text-htg-sage transition-colors"
+            >
+              {title}
+            </a>
+          </div>
+
+          <a
+            href={ytUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 px-3 py-1.5 bg-htg-sage text-white rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
+          >
+            <Headphones className="w-4 h-4" />
+            {t('watch')}
+          </a>
+
+          <button
+            onClick={handleDismiss}
+            className="shrink-0 p-1 text-htg-fg-muted hover:text-htg-fg transition-colors"
+            aria-label="Zamknij"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

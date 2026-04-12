@@ -207,9 +207,15 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
   const currencyCode = (selectedSession?.currency || 'pln').toUpperCase();
   const isWithAssistant = selectedSession?.sessionType === 'natalia_agata' || selectedSession?.sessionType === 'natalia_justyna';
   const isPara = selectedSession?.sessionType === 'natalia_para';
-  const installmentsCount = isWithAssistant || isPara ? 4 : 3;
-  const installmentAmount = 400;
-  const payAmount = paymentMode === 'full' ? totalAmount : installmentAmount;
+  // Split into 3 installments with integer amounts, largest last
+  const installmentsCount = 3;
+  const baseInstallment = Math.floor(totalAmount / installmentsCount);
+  const remainder = totalAmount - baseInstallment * installmentsCount;
+  // First (installmentsCount - 1) installments are baseInstallment, last one gets the remainder
+  const getInstallmentAmount = (index: number) =>
+    index < installmentsCount - 1 ? baseInstallment : baseInstallment + remainder;
+  const firstInstallmentAmount = getInstallmentAmount(0);
+  const payAmount = paymentMode === 'full' ? totalAmount : firstInstallmentAmount;
 
   async function handleCheckout() {
     if (!selectedSession || payAmount <= 0) return;
@@ -638,7 +644,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 }`}
               >
                 <p className="font-medium text-htg-fg text-sm">{ti('installments_title', { count: installmentsCount })}</p>
-                <p className="text-htg-sage font-bold text-lg mt-1">{installmentsCount} × {installmentAmount} {currencyCode}</p>
+                <p className="text-htg-sage font-bold text-lg mt-1">{installmentsCount} × ~{baseInstallment} {currencyCode}</p>
                 <p className="text-htg-fg-muted text-xs">{ti('first_installment_now')}</p>
               </button>
             </div>
@@ -648,12 +654,12 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 {Array.from({ length: installmentsCount }, (_, i) => (
                   <div key={i} className="flex justify-between">
                     <span>{ti('installment_label', { n: i + 1 })} {i === 0 ? ti('installment_now') : ti('installment_later', { days: i * 30 })}</span>
-                    <span className={i === 0 ? 'font-bold text-htg-fg' : ''}>{installmentAmount} {currencyCode}</span>
+                    <span className={i === 0 ? 'font-bold text-htg-fg' : ''}>{getInstallmentAmount(i)} {currencyCode}</span>
                   </div>
                 ))}
                 <div className="flex justify-between pt-2 border-t border-htg-card-border font-medium text-htg-fg">
                   <span>{ti('total')}</span>
-                  <span>{installmentsCount * installmentAmount} {currencyCode}</span>
+                  <span>{totalAmount} {currencyCode}</span>
                 </div>
               </div>
             )}
@@ -811,7 +817,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 <>
                   {paymentMethod === 'transfer' && `${ti('book_transfer')} — ${totalAmount} ${currencyCode}`}
                   {paymentMethod === 'stripe' && paymentMode === 'full' && `${labels.buy} — ${totalAmount} ${currencyCode}`}
-                  {paymentMethod === 'stripe' && paymentMode === 'installments' && `${ti('pay_installment', { n: 1 })} — ${installmentAmount} ${currencyCode}`}
+                  {paymentMethod === 'stripe' && paymentMode === 'installments' && `${ti('pay_installment', { n: 1 })} — ${firstInstallmentAmount} ${currencyCode}`}
                 </>
               )}
             </button>

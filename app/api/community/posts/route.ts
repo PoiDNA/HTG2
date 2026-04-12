@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { requireCommunityAuth, requireGroupAccess } from '@/lib/community/auth';
 import { checkCommunityRateLimit, logCommunityAction } from '@/lib/community/rate-limit';
 import { createMentionNotifications } from '@/lib/community/notifications';
+import { translatePost } from '@/lib/community/translate';
 import type { TipTapContent } from '@/lib/community/types';
 
 /**
@@ -15,6 +17,7 @@ export async function GET(req: NextRequest) {
   const groupId = req.nextUrl.searchParams.get('group_id');
   const cursor = req.nextUrl.searchParams.get('cursor');
   const search = req.nextUrl.searchParams.get('search');
+  const locale = req.nextUrl.searchParams.get('locale') || 'pl';
   const limit = Math.min(parseInt(req.nextUrl.searchParams.get('limit') || '20'), 50);
 
   if (!groupId) {
@@ -71,8 +74,21 @@ export async function GET(req: NextRequest) {
     : { data: [] };
   const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
 
-  // Check which posts the current user has reacted to
+  // Fetch translations for the requested locale
   const postIds = items.map(p => p.id);
+  let translationMap = new Map<string, { content: any; content_text: string | null; status: string }>();
+  if (locale !== 'pl' && postIds.length > 0) {
+    const { data: translations } = await supabase
+      .from('community_post_translations')
+      .select('post_id, content, content_text, status')
+      .eq('locale', locale)
+      .in('post_id', postIds);
+    if (translations) {
+      translationMap = new Map(translations.map(t => [t.post_id, t]));
+    }
+  }
+
+  // Check which posts the current user has reacted to
   const { data: userReactions } = postIds.length > 0
     ? await supabase
         .from('community_reactions')
@@ -90,11 +106,24 @@ export async function GET(req: NextRequest) {
     : null;
 
   const result = {
-    items: items.map(post => ({
-      ...post,
-      author: post.user_id ? profileMap.get(post.user_id) ?? null : null,
-      user_has_reacted: reactedPostIds.has(post.id),
-    })),
+    items: items.map(post => {
+      const translation = translationMap.get(post.id);
+      const isTranslated = translation?.status === 'done';
+      const isTranslating = translation?.status === 'translating' || translation?.status === 'pending';
+      return {
+        ...post,
+        // If translation is available and locale differs from source, use translated content
+        ...(isTranslated && post.source_locale !== locale ? {
+          content: translation!.content,
+          content_text: translation!.content_text ?? post.content_text,
+        } : {}),
+        author: post.user_id ? profileMap.get(post.user_id) ?? null : null,
+        user_has_reacted: reactedPostIds.has(post.id),
+        is_translated: isTranslated && post.source_locale !== locale,
+        is_translating: isTranslating,
+        source_locale: post.source_locale,
+      };
+    }),
     next_cursor: nextCursor,
     has_more: hasMore,
   };
@@ -110,7 +139,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { group_id, content, attachments } = body;
+  const { group_id, content, attachments, source_locale } = body;
 
   if (!group_id || !content) {
     return NextResponse.json({ error: 'group_id and content are required' }, { status: 400 });
@@ -140,6 +169,7 @@ export async function POST(req: NextRequest) {
       content,
       content_text: contentText,
       attachments: attachments ?? [],
+      source_locale: source_locale || null,
     })
     .select()
     .single();
@@ -171,6 +201,17 @@ export async function POST(req: NextRequest) {
       targetType: 'post',
       targetId: post.id,
       groupId: group_id,
+    });
+  }
+
+  // Trigger background translation to all other locales
+  if (source_locale) {
+    after(async () => {
+      try {
+        await translatePost(post.id, source_locale);
+      } catch (err) {
+        console.error('Background translation failed for post', post.id, err);
+      }
     });
   }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -20,6 +21,7 @@ interface PostEditorProps {
 }
 
 export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: PostEditorProps) {
+  const t = useTranslations('Community');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -139,7 +141,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
             onClick={() => setShowUpload(!showUpload)}
             disabled={attachments.length >= 4}
             className="p-2 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors disabled:opacity-50"
-            title="Dodaj zdjęcie"
+            title={t('add_photo')}
           >
             <ImageIcon className="w-5 h-5" />
           </button>

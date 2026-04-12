@@ -132,8 +132,8 @@ export const MONTH_NAMES_PL: Record<string, string> = {
   '09': 'Wrzesień', '10': 'Październik', '11': 'Listopad', '12': 'Grudzień',
 };
 
-/** "Sesje Maj 2024" — PL-only fallback when monthly_sets.title is unavailable. */
+/** "Maj 2024" — PL-only fallback when monthly_sets.title is unavailable. */
 export function formatSesjeMonthPl(scopeMonth: string): string {
   const [y, mm] = scopeMonth.split('-');
-  return `Sesje ${MONTH_NAMES_PL[mm] || mm} ${y}`;
+  return `${MONTH_NAMES_PL[mm] || mm} ${y}`;
 }

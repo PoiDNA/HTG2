@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Youtube, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface LatestYouTubeBannerProps {
@@ -42,9 +42,6 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-          <Youtube className="w-6 h-6 text-white drop-shadow" />
-        </div>
       </a>
 
       <div className="flex-1 min-w-0">

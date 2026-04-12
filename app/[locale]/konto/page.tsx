@@ -8,6 +8,8 @@ import { isAdminEmail } from '@/lib/roles';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
 import { getDesignVariant } from '@/lib/design-variant';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
+import LatestYouTubeBanner from '@/components/konto/LatestYouTubeBanner';
+import { getLatestYoutubeVideo } from '@/lib/services/latest-youtube-video';
 import NextSessionSection from './_sections/NextSessionSection';
 import VodLibrarySection from './_sections/VodLibrarySection';
 import RemainingSessionsSection from './_sections/RemainingSessionsSection';
@@ -55,6 +57,15 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
   }
 
   const variant = getDesignVariant(cookieStore);
+  const latestVideo = await getLatestYoutubeVideo(locale);
+
+  const ytBanner = latestVideo ? (
+    <LatestYouTubeBanner
+      youtubeId={latestVideo.youtube_id}
+      title={latestVideo.title}
+      thumbnailUrl={latestVideo.thumbnail_url}
+    />
+  ) : null;
 
   // ─── V2 "Sanctuary" — focused listening ─────────────────────
   if (variant === 'v2') {
@@ -66,6 +77,8 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         <Suspense fallback={<SectionSkeleton title="Następna sesja" />}>
           <SanctuaryHero locale={locale} />
         </Suspense>
+
+        {ytBanner}
 
         <Suspense fallback={<SectionSkeleton title="Biblioteka audio" />}>
           <VodLibrarySection locale={locale} />
@@ -89,6 +102,8 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <ContinueCard locale={locale} />
         </Suspense>
 
+        {ytBanner}
+
         <Suspense fallback={<SectionSkeleton title="Nagrania z sesji" />}>
           <VodLibrarySection locale={locale} />
         </Suspense>
@@ -104,6 +119,8 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
   return (
     <div>
       <ActiveCallsWidget locale={locale} />
+
+      {ytBanner}
 
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />

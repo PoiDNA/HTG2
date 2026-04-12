@@ -706,5 +706,9 @@
     "show_translation": "Pokaż tłumaczenie",
     "translating": "Tłumaczenie...",
     "post_language": "Język posta"
+  },
+  "YouTubeBanner": {
+    "new_video": "Nowe nagranie",
+    "watch": "Obejrzyj"
   }
 }

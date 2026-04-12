@@ -7,6 +7,7 @@ import { Banknote } from 'lucide-react';
 import type { Booking } from '@/lib/booking/types';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import BookingCountdown from './BookingCountdown';
+import TopicsEditor from './TopicsEditor';
 import { useReschedule } from './ActiveBookingsSection';
 
 interface BookingCardProps {
@@ -38,9 +39,6 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
   const [loading, setLoading] = useState<string | null>(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showDelayOptions, setShowDelayOptions] = useState(false);
-  const [topics, setTopics] = useState(booking.topics || '');
-  const [topicsSaved, setTopicsSaved] = useState(false);
-  const [savingTopics, setSavingTopics] = useState(false);
 
   const config = SESSION_CONFIG[booking.session_type];
   const slot = booking.slot;
@@ -163,39 +161,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
       {/* Topics / zagadnienia — hidden for past sessions */}
       {isActive && !isPast && (
         <div className="mb-3 pt-3 border-t border-htg-card-border">
-          <label className="block">
-            <span className="text-xs font-medium text-htg-fg-muted mb-1 block">
-              Zagadnienia na sesję
-            </span>
-            <textarea
-              value={topics}
-              onChange={e => { setTopics(e.target.value); setTopicsSaved(false); }}
-              rows={3}
-              maxLength={500}
-              placeholder="Opisz, nad czym chciałbyś/chciałabyś pracować podczas sesji..."
-              className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg text-sm resize-none focus:outline-none focus:ring-1 focus:ring-htg-sage/50"
-            />
-          </label>
-          {topics !== (booking.topics || '') && (
-            <button
-              onClick={async () => {
-                setSavingTopics(true);
-                await fetch(`/api/booking/topics`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ bookingId: booking.id, topics }),
-                });
-                setSavingTopics(false);
-                setTopicsSaved(true);
-                setTimeout(() => setTopicsSaved(false), 3000);
-              }}
-              disabled={savingTopics}
-              className="mt-1 text-xs text-htg-sage hover:text-htg-sage-dark font-medium"
-            >
-              {savingTopics ? 'Zapisywanie...' : topicsSaved ? 'Zapisano ✓' : 'Zapisz zagadnienia'}
-            </button>
-          )}
-          {topicsSaved && <span className="text-xs text-green-400 ml-2">✓</span>}
+          <TopicsEditor bookingId={booking.id} initialTopics={booking.topics || ''} />
         </div>
       )}
 

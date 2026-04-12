@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Check, ChevronDown, Clock, X, ShoppingCart, Loader2, Play } from 'lucide-react';
@@ -46,11 +47,44 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
   const t = useTranslations('Sessions');
   const router = useRouter();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [expandedDescId, setExpandedDescId] = useState<string | null>(null);
   const [selectedMonths, setSelectedMonths] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
 
+  const headerRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const toggleSection = (key: string) => {
-    setExpandedKey(prev => prev === key ? null : key);
+    if (expandedKey === key) {
+      setExpandedDescId(null);
+      setExpandedKey(null);
+      return;
+    }
+
+    if (expandedKey !== null) {
+      const buttonEl = headerRefs.current.get(key);
+      const before = buttonEl?.getBoundingClientRect().top ?? 0;
+
+      containerRef.current?.setAttribute('data-accordion-instant', '');
+
+      flushSync(() => {
+        setExpandedDescId(null);
+        setExpandedKey(key);
+      });
+
+      if (buttonEl) {
+        const after = buttonEl.getBoundingClientRect().top;
+        window.scrollBy({ top: after - before });
+      }
+
+      requestAnimationFrame(() => {
+        containerRef.current?.removeAttribute('data-accordion-instant');
+      });
+      return;
+    }
+
+    setExpandedDescId(null);
+    setExpandedKey(key);
   };
 
   // ── Cart helpers ──────────────────────────────────────────────
@@ -130,7 +164,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
         <h2 className="text-lg font-serif font-semibold text-htg-fg">{t('remaining_sessions')}</h2>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3" ref={containerRef}>
         {months.map(month => {
           const isMonthInCart = !!selectedMonths[month.monthLabel];
           const remainingCost = month.sessions.length * prices.sessionAmount;
@@ -144,6 +178,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
             }`}>
               {/* Header */}
               <button
+                ref={(el) => { if (el) headerRefs.current.set(month.monthLabel, el); else headerRefs.current.delete(month.monthLabel); }}
                 onClick={() => toggleSection(month.monthLabel)}
                 className="group w-full flex items-center justify-between px-4 py-8 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
               >
@@ -187,7 +222,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
               </button>
 
               {/* Sessions list */}
-              <div className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+              <div data-accordion-grid className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
                 expandedKey === month.monthLabel ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
               }`}>
                 <div className="overflow-hidden">
@@ -196,6 +231,8 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                       <ShopSessionCard
                         key={session.id}
                         session={session}
+                        isDescExpanded={expandedDescId === session.id}
+                        onToggleDesc={() => setExpandedDescId(prev => prev === session.id ? null : session.id)}
                       />
                     ))}
                     {/* Buy button — inside expanded content */}
@@ -262,10 +299,13 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
 
 function ShopSessionCard({
   session,
+  isDescExpanded,
+  onToggleDesc,
 }: {
   session: SessionInfo;
+  isDescExpanded: boolean;
+  onToggleDesc: () => void;
 }) {
-  const [expandedDesc, setExpandedDesc] = useState(false);
   const [sentenceIndex, setSentenceIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -276,14 +316,14 @@ function ShopSessionCard({
 
   // Auto-rotate sentences (fade effect) — pause on hover or when expanded
   useEffect(() => {
-    if (sentences.length < 2 || expandedDesc || paused) return;
+    if (sentences.length < 2 || isDescExpanded || paused) return;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reducedMotion) return;
     const id = setInterval(() => {
       setSentenceIndex(prev => (prev + 1) % sentences.length);
     }, 3000);
     return () => clearInterval(id);
-  }, [sentences.length, expandedDesc, paused]);
+  }, [sentences.length, isDescExpanded, paused]);
 
   const canExpand = sentences.length > 1 && (session.description?.length ?? 0) > 100;
 
@@ -316,7 +356,7 @@ function ShopSessionCard({
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
             >
-              {expandedDesc ? (
+              {isDescExpanded ? (
                 <div className="space-y-0">
                   {sentences.map((sentence, i) => (
                     <span key={i}>
@@ -341,10 +381,10 @@ function ShopSessionCard({
               )}
               {canExpand && (
                 <button
-                  onClick={() => setExpandedDesc(!expandedDesc)}
+                  onClick={onToggleDesc}
                   className="text-htg-sage hover:underline mt-1 font-medium"
                 >
-                  {expandedDesc ? 'Zwiń' : 'Rozwiń'}
+                  {isDescExpanded ? 'Zwiń' : 'Rozwiń'}
                 </button>
               )}
             </div>

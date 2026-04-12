@@ -54,6 +54,11 @@ body.hide-footer footer {
   display: none;
 }
 
+/* Instant accordion switch — disable transition during flushSync month change */
+[data-accordion-instant] [data-accordion-grid] {
+  transition: none !important;
+}
+
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

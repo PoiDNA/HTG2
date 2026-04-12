@@ -93,17 +93,16 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
       return;
     }
 
-    if (expandedDescId !== null && buttonEl) {
-      const before = buttonEl.getBoundingClientRect().top;
+    const cardEl = buttonEl?.closest('.session-card') as HTMLElement | null;
 
+    if (expandedDescId !== null) {
       containerRef.current?.setAttribute('data-accordion-instant', '');
 
       flushSync(() => {
         setExpandedDescId(sessionId);
       });
 
-      const after = buttonEl.getBoundingClientRect().top;
-      window.scrollBy({ top: after - before });
+      cardEl?.scrollIntoView({ behavior: 'instant', block: 'nearest' });
 
       requestAnimationFrame(() => {
         containerRef.current?.removeAttribute('data-accordion-instant');
@@ -112,6 +111,9 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
     }
 
     setExpandedDescId(sessionId);
+    requestAnimationFrame(() => {
+      cardEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   };
 
   // ── Cart helpers ─────────────────────���────────────────────────
@@ -355,7 +357,7 @@ function ShopSessionCard({
   const canExpand = sentences.length > 1 && (session.description?.length ?? 0) > 100;
 
   return (
-    <div className="border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30 hover:bg-htg-surface/60 hover:border-htg-fg-muted/30 transition-colors">
+    <div className="session-card border border-htg-card-border rounded-lg overflow-hidden bg-htg-surface/30 hover:bg-htg-surface/60 hover:border-htg-fg-muted/30 transition-colors">
       <div className="p-4 space-y-3">
         {/* Top row: Play icon + toggles */}
         <div className="flex items-center gap-2">

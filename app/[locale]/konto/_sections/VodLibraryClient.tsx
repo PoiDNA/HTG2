@@ -72,23 +72,21 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
 
   const toggleDesc = (sessionId: string, buttonEl: HTMLElement | null) => {
     if (expandedDescId === sessionId) {
-      // Zamykanie — bez scroll correction
       setExpandedDescId(null);
       return;
     }
 
-    if (expandedDescId !== null && buttonEl) {
-      // Zmiana opisu (S1→S2) — flushSync + scroll correction
-      const before = buttonEl.getBoundingClientRect().top;
+    const cardEl = buttonEl?.closest('.session-card') as HTMLElement | null;
 
+    if (expandedDescId !== null) {
+      // Zmiana opisu (S1→S2) — flushSync + scroll to card top
       containerRef.current?.setAttribute('data-accordion-instant', '');
 
       flushSync(() => {
         setExpandedDescId(sessionId);
       });
 
-      const after = buttonEl.getBoundingClientRect().top;
-      window.scrollBy({ top: after - before });
+      cardEl?.scrollIntoView({ behavior: 'instant', block: 'nearest' });
 
       requestAnimationFrame(() => {
         containerRef.current?.removeAttribute('data-accordion-instant');
@@ -96,8 +94,11 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
       return;
     }
 
-    // Pierwsze rozwinięcie opisu
+    // Pierwsze rozwinięcie — scroll to card top after expand
     setExpandedDescId(sessionId);
+    requestAnimationFrame(() => {
+      cardEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   };
 
   const togglePlay = (sessionId: string) => {

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useLocale } from 'next-intl';
 import { ExternalLink, ShieldCheck, ShieldAlert, Lock } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
+import { formatDate } from '@/lib/format';
 
 interface ConsentRecord {
   id: string;
@@ -32,6 +34,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ email, displayName, phone, consents, accountCreatedAt, labels }: ProfileFormProps) {
+  const locale = useLocale();
   const [name, setName] = useState(displayName);
   const [phoneVal, setPhoneVal] = useState(phone);
   const [saved, setSaved] = useState(false);
@@ -159,6 +162,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
             date={accountCreatedAt}
             href="/privacy"
             status="locked"
+            locale={locale}
           />
 
           {/* 2. Terms of service — always shown, not revocable */}
@@ -167,6 +171,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
             date={accountCreatedAt}
             href="/terms"
             status="locked"
+            locale={locale}
           />
 
           {/* 3. Sensitive data (art. 9 RODO) — revocable */}
@@ -179,7 +184,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
                     Dane wrażliwe (RODO art. 9)
                   </p>
                   <p className="text-xs text-htg-fg-muted mt-0.5">
-                    Udzielona: {new Date(sensitiveDataConsent.created_at).toLocaleDateString('pl', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    Udzielona: {formatDate(sensitiveDataConsent.created_at, locale)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -249,6 +254,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
               date={recordingConsent.created_at}
               status="locked"
               note="Warunek umowy — nie podlega wycofaniu. Możesz wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania."
+              locale={locale}
             />
           ) : (
             <div className="bg-htg-surface rounded-lg p-3">
@@ -277,6 +283,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
                 key={consent.id}
                 label={consent.consent_type === 'marketing' ? 'Marketing' : consent.consent_type}
                 date={consent.created_at}
+                locale={locale}
               />
             ))}
         </div>
@@ -294,18 +301,15 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
-function ConsentRow({ label, date, href, status, note }: {
+function ConsentRow({ label, date, href, status, note, locale }: {
   label: string;
   date: string;
   href?: string;
   status?: 'active' | 'locked';
   note?: string;
+  locale: string;
 }) {
-  const formatted = new Date(date).toLocaleDateString('pl', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const formatted = formatDate(date, locale);
 
   const badgeClass = status === 'locked'
     ? 'bg-htg-surface text-htg-fg-muted border border-htg-card-border'

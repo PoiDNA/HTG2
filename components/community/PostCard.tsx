@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale } from 'next-intl';
 import { MessageCircle, Pin, MoreHorizontal, Trash2, Flag, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
@@ -12,6 +13,7 @@ import { VoicePlayer } from './VoicePlayer';
 import { LinkPreview } from './LinkPreview';
 import { PollDisplay } from './PollDisplay';
 import { ReportModal } from './ReportModal';
+import { formatDate as formatDateIntl } from '@/lib/format';
 import type { PostWithAuthor, Attachment, AudioAttachment, LinkPreviewAttachment } from '@/lib/community/types';
 
 interface PostCardProps {
@@ -26,6 +28,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
   const [showMenu, setShowMenu] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  const locale = useLocale();
 
   if (isDeleted) return null;
 
@@ -35,7 +38,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
   const audioAttachments = attachments.filter(a => a.type === 'audio') as AudioAttachment[];
   const linkPreviews = attachments.filter(a => a.type === 'link_preview') as LinkPreviewAttachment[];
   const pollAttachment = attachments.find(a => a.type === 'poll') as (Attachment & { metadata: { question: string; options: string[] } }) | undefined;
-  const timeAgo = formatTimeAgo(post.created_at);
+  const timeAgo = formatTimeAgo(post.created_at, locale);
 
   const handleDelete = async () => {
     if (!confirm('Czy na pewno chcesz usunąć ten post?')) return;
@@ -253,7 +256,7 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function formatTimeAgo(dateStr: string): string {
+function formatTimeAgo(dateStr: string, locale: string): string {
   const date = new Date(dateStr);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
@@ -265,5 +268,5 @@ function formatTimeAgo(dateStr: string): string {
   if (minutes < 60) return `${minutes} min temu`;
   if (hours < 24) return `${hours} godz. temu`;
   if (days < 7) return `${days} dn. temu`;
-  return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+  return formatDateIntl(date, locale, { day: 'numeric', month: 'short' });
 }

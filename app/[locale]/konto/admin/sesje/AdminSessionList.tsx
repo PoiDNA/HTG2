@@ -29,23 +29,23 @@ import type { SessionType } from '@/lib/booking/types';
 
 const SESSION_TYPES_CONFIG = [
   { key: 'all',              label: 'Wszystkie',      short: 'Wszystkie', className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
-  { key: 'natalia_solo',    label: 'Sesje 1:1',        short: '1:1',       className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
-  { key: 'natalia_asysta',  label: 'Sesje z Asystą',   short: 'Asysta',    className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
-  { key: 'natalia_justyna', label: 'Sesje z Justyną',  short: 'Justyna',   className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
-  { key: 'natalia_agata',   label: 'Sesje z Agatą',    short: 'Agata',     className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
-  { key: 'natalia_przemek', label: 'Sesje z Przemkiem', short: 'Przemek',   className: 'bg-sky-900/40 text-sky-300 border border-sky-700/30' },
-  { key: 'natalia_para',    label: 'Sesje dla Par',    short: 'Para',      className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
+  { key: 'natalia_solo',    label: 'Sesje 1:1',        short: '1:1',       className: 'bg-indigo-100 text-indigo-800 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700/30' },
+  { key: 'natalia_asysta',  label: 'Sesje z Asystą',   short: 'Asysta',    className: 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700/30' },
+  { key: 'natalia_justyna', label: 'Sesje z Justyną',  short: 'Justyna',   className: 'bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-700/30' },
+  { key: 'natalia_agata',   label: 'Sesje z Agatą',    short: 'Agata',     className: 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700/30' },
+  { key: 'natalia_przemek', label: 'Sesje z Przemkiem', short: 'Przemek',   className: 'bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-700/30' },
+  { key: 'natalia_para',    label: 'Sesje dla Par',    short: 'Para',      className: 'bg-pink-100 text-pink-800 border border-pink-200 dark:bg-pink-900/40 dark:text-pink-300 dark:border-pink-700/30' },
 ] as const;
 
 type TypeKey = typeof SESSION_TYPES_CONFIG[number]['key'];
 
 const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
-  natalia_solo:    { className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
-  natalia_agata:   { className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
-  natalia_justyna: { className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
-  natalia_przemek: { className: 'bg-sky-900/40 text-sky-300 border border-sky-700/30' },
-  natalia_para:    { className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
-  natalia_asysta:  { className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
+  natalia_solo:    { className: 'bg-indigo-100 text-indigo-800 border border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700/30' },
+  natalia_agata:   { className: 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700/30' },
+  natalia_justyna: { className: 'bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-700/30' },
+  natalia_przemek: { className: 'bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-700/30' },
+  natalia_para:    { className: 'bg-pink-100 text-pink-800 border border-pink-200 dark:bg-pink-900/40 dark:text-pink-300 dark:border-pink-700/30' },
+  natalia_asysta:  { className: 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700/30' },
 };
 
 const DAY_NAMES_SHORT = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];

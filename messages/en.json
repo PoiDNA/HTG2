@@ -22,7 +22,8 @@
     "menu": "Menu",
     "staff": "Staff Panel",
     "switch_locale": "Switch language to {locale}",
-    "skip_to_content": "Skip to content"
+    "skip_to_content": "Skip to content",
+    "close_menu": "Close menu"
   },
   "Footer": {
     "privacy": "Privacy Policy",
@@ -214,7 +215,15 @@
     "history": "History",
     "expired_at": "Expired: {date}",
     "per_month": "mo.",
-    "per_year": "year"
+    "per_year": "year",
+    "cancel": "Cancel",
+    "profile_name_placeholder": "John Smith",
+    "consent_privacy": "Privacy Policy acceptance (GDPR)",
+    "consent_terms": "Terms of Service acceptance",
+    "consent_recording": "Session recording and publication",
+    "consent_recording_note": "Contract requirement — cannot be revoked. You can request removal of specific segments within 7 days of the recording being shared.",
+    "consent_locked": "Contract requirement",
+    "consent_active": "Active"
   },
   "Player": {
     "concurrent_title": "Playing on another device",
@@ -223,7 +232,8 @@
     "loading": "Loading...",
     "load_error_title": "Failed to load",
     "load_error": "Failed to load the recording. Please try again.",
-    "error": "Failed to load recording."
+    "error": "Failed to load recording.",
+    "close": "Close player"
   },
   "Individual": {
     "title": "Individual Sessions",
@@ -811,7 +821,9 @@
     "translating": "Translating...",
     "post_language": "Post language",
     "message_subject_placeholder": "Subject of your message",
-    "search_placeholder": "Search posts..."
+    "search_placeholder": "Search posts...",
+    "notif_new_comments": "New comments",
+    "notif_reactions": "Reactions"
   },
   "YouTubeBanner": {
     "new_video": "New session on YT",

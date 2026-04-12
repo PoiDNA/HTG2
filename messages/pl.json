@@ -22,7 +22,8 @@
     "menu": "Menu",
     "staff": "Panel prowadzącego",
     "switch_locale": "Zmień język na {locale}",
-    "skip_to_content": "Przejdź do treści"
+    "skip_to_content": "Przejdź do treści",
+    "close_menu": "Zamknij menu"
   },
   "Footer": {
     "privacy": "Polityka prywatności",
@@ -214,7 +215,15 @@
     "history": "Historia",
     "expired_at": "Wygasło: {date}",
     "per_month": "mies.",
-    "per_year": "rok"
+    "per_year": "rok",
+    "cancel": "Anuluj",
+    "profile_name_placeholder": "Jan Kowalski",
+    "consent_privacy": "Akceptacja Polityki prywatności (RODO)",
+    "consent_terms": "Akceptacja Regulaminu serwisu",
+    "consent_recording": "Nagrywanie i publikacja sesji",
+    "consent_recording_note": "Warunek umowy — nie podlega wycofaniu. Możesz wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.",
+    "consent_locked": "Warunek umowy",
+    "consent_active": "Aktywna"
   },
   "Player": {
     "concurrent_title": "Odtwarzanie na innym urządzeniu",
@@ -223,7 +232,8 @@
     "loading": "Ładowanie...",
     "load_error_title": "Nie udało się załadować",
     "load_error": "Nie udało się załadować nagrania. Spróbuj ponownie.",
-    "error": "Nie udało się załadować nagrania."
+    "error": "Nie udało się załadować nagrania.",
+    "close": "Zamknij odtwarzacz"
   },
   "Individual": {
     "title": "Sesje indywidualne",
@@ -811,7 +821,9 @@
     "translating": "Tłumaczenie...",
     "post_language": "Język posta",
     "message_subject_placeholder": "Temat Twojej wiadomości",
-    "search_placeholder": "Szukaj postów..."
+    "search_placeholder": "Szukaj postów...",
+    "notif_new_comments": "Nowe komentarze",
+    "notif_reactions": "Reakcje"
   },
   "YouTubeBanner": {
     "new_video": "Nowa sesja na YT",

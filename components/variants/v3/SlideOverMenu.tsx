@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Menu, X } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import SpiritIcon from '@/app/[locale]/konto/SpiritIcon';
@@ -19,6 +20,7 @@ const menuItems = [
  * V3 Slide-over menu — full-height panel from left. Used on desktop and mobile.
  */
 export default function SlideOverMenu() {
+  const t = useTranslations('Nav');
   const [open, setOpen] = useState(false);
 
   const close = useCallback(() => setOpen(false), []);
@@ -28,7 +30,7 @@ export default function SlideOverMenu() {
       <button
         onClick={() => setOpen(true)}
         className="p-2 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
-        aria-label="Menu"
+        aria-label={t('menu')}
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -52,7 +54,7 @@ export default function SlideOverMenu() {
           <button
             onClick={close}
             className="p-1.5 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
-            aria-label="Zamknij menu"
+            aria-label={t('close_menu')}
           >
             <X className="w-5 h-5" />
           </button>

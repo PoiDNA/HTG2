@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ExternalLink, ShieldCheck, ShieldAlert, Lock } from 'lucide-react';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { formatDate } from '@/lib/format';
@@ -35,6 +35,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ email, displayName, phone, consents, accountCreatedAt, labels }: ProfileFormProps) {
   const locale = useLocale();
+  const t = useTranslations('Account');
   const [name, setName] = useState(displayName);
   const [phoneVal, setPhoneVal] = useState(phone);
   const [saved, setSaved] = useState(false);
@@ -110,7 +111,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mt-1 w-full px-4 py-3 rounded-lg border border-htg-card-border bg-htg-bg text-htg-fg text-base"
-            placeholder="Jan Kowalski"
+            placeholder={t('profile_name_placeholder')}
           />
         </label>
 
@@ -158,7 +159,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
 
           {/* 1. Privacy policy — always shown, not revocable */}
           <ConsentRow
-            label="Akceptacja Polityki prywatności (RODO)"
+            label={t('consent_privacy')}
             date={accountCreatedAt}
             href="/privacy"
             status="locked"
@@ -167,7 +168,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
 
           {/* 2. Terms of service — always shown, not revocable */}
           <ConsentRow
-            label="Akceptacja Regulaminu serwisu"
+            label={t('consent_terms')}
             date={accountCreatedAt}
             href="/terms"
             status="locked"
@@ -222,7 +223,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
                       onClick={() => setShowRevokeConfirm(false)}
                       className="text-xs text-htg-fg-muted px-3 py-1.5 rounded hover:bg-htg-surface"
                     >
-                      Anuluj
+                      {t('cancel')}
                     </button>
                   </div>
                 </div>
@@ -250,10 +251,10 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
           {/* 4. Recording & publication — not revocable (contract condition) */}
           {hasRecordingConsent && recordingConsent ? (
             <ConsentRow
-              label="Nagrywanie i publikacja sesji"
+              label={t('consent_recording')}
               date={recordingConsent.created_at}
               status="locked"
-              note="Warunek umowy — nie podlega wycofaniu. Możesz wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania."
+              note={t('consent_recording_note')}
               locale={locale}
             />
           ) : (
@@ -262,7 +263,7 @@ export function ProfileForm({ email, displayName, phone, consents, accountCreate
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-htg-fg-muted inline-flex items-center gap-1.5">
                     <Lock className="w-4 h-4 text-htg-fg-muted shrink-0" />
-                    Nagrywanie i publikacja sesji
+                    {t('consent_recording')}
                   </p>
                   <p className="text-xs text-htg-fg-muted mt-0.5">
                     Wyrażana przy rezerwacji sesji
@@ -338,7 +339,7 @@ function ConsentRow({ label, date, href, status, note, locale }: {
           <p className="text-xs text-htg-fg-muted mt-0.5">Udzielona: {formatted}</p>
         </div>
         <span className={`text-xs font-medium px-2 py-1 rounded shrink-0 ${badgeClass}`}>
-          {status === 'locked' ? 'Warunek umowy' : 'Aktywna'}
+          {status === 'locked' ? t('consent_locked') : t('consent_active')}
         </span>
       </div>
       {note && (

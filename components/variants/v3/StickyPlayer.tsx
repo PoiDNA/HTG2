@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Play, Pause, X } from 'lucide-react';
 import { usePlayer } from '@/lib/player-context';
 
@@ -10,6 +11,7 @@ import { usePlayer } from '@/lib/player-context';
  * Mini progress bar (not waveform). Click title to scroll to content.
  */
 export default function StickyPlayer() {
+  const t = useTranslations('Player');
   const { activeSession, playerState, engineHandle, stopPlayback } = usePlayer();
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState<number | null>(null);
@@ -101,7 +103,7 @@ export default function StickyPlayer() {
         <button
           onClick={stopPlayback}
           className="p-2 rounded-lg text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors shrink-0"
-          aria-label="Zamknij odtwarzacz"
+          aria-label={t('close')}
         >
           <X className="w-4 h-4" />
         </button>

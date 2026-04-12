@@ -28,51 +28,57 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
     setShow(false);
   };
 
-  return (
-    <div className="bg-htg-card border border-htg-card-border rounded-xl p-4 mb-6 flex items-center gap-4">
-      <a
-        href={`https://www.youtube.com/watch?v=${youtubeId}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="shrink-0 relative rounded-lg overflow-hidden w-60 h-42 group"
-      >
-        <img
-          src={thumbnailUrl}
-          alt={title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
-      </a>
+  const ytUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
 
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-htg-sage mb-0.5">{t('new_video')}</p>
+  return (
+    <div className="bg-htg-card border border-htg-card-border rounded-xl p-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <a
-          href={`https://www.youtube.com/watch?v=${youtubeId}`}
+          href={ytUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium text-htg-fg hover:text-htg-sage transition-colors line-clamp-1"
+          className="relative rounded-lg overflow-hidden w-full sm:w-60 aspect-video sm:shrink-0 group"
         >
-          {title}
+          <img
+            src={thumbnailUrl}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
         </a>
+
+        <div className="flex items-center gap-3 sm:contents">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-htg-sage mb-0.5">{t('new_video')}</p>
+            <a
+              href={ytUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-htg-fg hover:text-htg-sage transition-colors line-clamp-2 sm:line-clamp-1"
+            >
+              {title}
+            </a>
+          </div>
+
+          <a
+            href={ytUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 px-3 py-1.5 bg-htg-sage text-white rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
+          >
+            <Headphones className="w-4 h-4" />
+            {t('watch')}
+          </a>
+
+          <button
+            onClick={handleDismiss}
+            className="shrink-0 p-1 text-htg-fg-muted hover:text-htg-fg transition-colors"
+            aria-label="Zamknij"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
-
-      <a
-        href={`https://www.youtube.com/watch?v=${youtubeId}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="shrink-0 px-3 py-1.5 bg-htg-sage text-white rounded-lg text-sm font-medium hover:bg-htg-sage-dark transition-colors whitespace-nowrap hidden sm:inline-flex sm:items-center sm:gap-1.5"
-      >
-        <Headphones className="w-4 h-4" />
-        {t('watch')}
-      </a>
-
-      <button
-        onClick={handleDismiss}
-        className="shrink-0 p-1 text-htg-fg-muted hover:text-htg-fg transition-colors"
-        aria-label="Zamknij"
-      >
-        <X className="w-4 h-4" />
-      </button>
     </div>
   );
 }

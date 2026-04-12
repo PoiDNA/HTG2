@@ -110,7 +110,15 @@
     "individual_sessions": "Individual sessions",
     "sessions_in_set": "{count, plural, one {# session} other {# sessions}} in set",
     "empty_title": "New sessions coming soon",
-    "empty_description": "We're working on making our archive available. Check back soon!"
+    "empty_description": "We're working on making our archive available. Check back soon!",
+    "your_library": "Your Library",
+    "filter_show": "Show",
+    "filter_all": "All",
+    "filter_unlistened": "Unlistened",
+    "filter_bookmarked": "Bookmarked",
+    "remaining_sessions": "Other Sessions",
+    "processing": "Processing...",
+    "go_to_payment": "Go to payment"
   },
   "Subscriptions": {
     "title": "Subscriptions",
@@ -135,7 +143,10 @@
     "listen": "Listen",
     "close": "Close",
     "sharing_prohibited": "Out of respect for privacy and the comfort of the session, this recording is not intended for further sharing.",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "your_recordings": "Your session recordings",
+    "show_all": "Show all",
+    "no_recordings": "Your session recordings will appear here after your first recorded session."
   },
   "Recordings": {
     "title": "Public recordings",

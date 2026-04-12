@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Play, ChevronDown, Clock, CheckCircle2, Bookmark, Film, Headphones, X } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
@@ -18,6 +19,7 @@ type Props = {
 };
 
 export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail, listenedSessionIds, bookmarkedSessionIds }: Props) {
+  const t = useTranslations('Sessions');
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
@@ -92,8 +94,8 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
   };
 
   const pills: { key: typeof filter; label: string; icon: React.ReactNode; activeClass: string }[] = [
-    { key: 'unlistened', label: 'Nieodsłuchane', icon: <CheckCircle2 className="w-3.5 h-3.5" />, activeClass: 'bg-htg-sage text-white border-htg-sage' },
-    { key: 'bookmarked', label: 'Wracam',         icon: <Bookmark className="w-3.5 h-3.5 fill-current" />, activeClass: 'bg-amber-500 text-white border-amber-500' },
+    { key: 'unlistened', label: t('filter_unlistened'), icon: <CheckCircle2 className="w-3.5 h-3.5" />, activeClass: 'bg-htg-sage text-white border-htg-sage' },
+    { key: 'bookmarked', label: t('filter_bookmarked'), icon: <Bookmark className="w-3.5 h-3.5 fill-current" />, activeClass: 'bg-amber-500 text-white border-amber-500' },
   ];
 
   return (
@@ -102,10 +104,10 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
       <div className="mb-2">
         <div className="flex items-center gap-2 mb-2">
           <Film className="w-5 h-5 text-htg-sage" />
-          <h2 className="text-lg font-serif font-semibold text-htg-fg">Twoja Biblioteka</h2>
+          <h2 className="text-lg font-serif font-semibold text-htg-fg">{t('your_library')}</h2>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-htg-fg-muted">Pokaż:</span>
+          <span className="text-xs text-htg-fg-muted">{t('filter_show')}:</span>
           <button
             onClick={() => setFilter('all')}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
@@ -114,7 +116,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                 : 'border-htg-card-border dark:border-white/20 text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg'
             }`}
           >
-            Wszystkie
+            {t('filter_all')}
           </button>
           {pills.map(p => (
             <button

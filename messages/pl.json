@@ -110,7 +110,15 @@
     "individual_sessions": "Sesje pojedyncze",
     "sessions_in_set": "{count, plural, one {# sesja} few {# sesje} other {# sesji}} w zestawie",
     "empty_title": "Wkrótce nowe sesje",
-    "empty_description": "Pracujemy nad udostępnieniem naszego archiwum. Wróć tu wkrótce!"
+    "empty_description": "Pracujemy nad udostępnieniem naszego archiwum. Wróć tu wkrótce!",
+    "your_library": "Twoja Biblioteka",
+    "filter_show": "Pokaż",
+    "filter_all": "Wszystkie",
+    "filter_unlistened": "Nieodsłuchane",
+    "filter_bookmarked": "Wracam",
+    "remaining_sessions": "Pozostałe Sesje",
+    "processing": "Przetwarzanie...",
+    "go_to_payment": "Przejdź do płatności"
   },
   "Subscriptions": {
     "title": "Subskrypcje",
@@ -135,7 +143,10 @@
     "listen": "Odsłuchaj",
     "close": "Zamknij",
     "sharing_prohibited": "W trosce o poufność i komfort sesji, nagranie nie jest przeznaczone do dalszego udostępniania.",
-    "processing": "Przetwarzane..."
+    "processing": "Przetwarzane...",
+    "your_recordings": "Nagrania z Twoich sesji",
+    "show_all": "Pokaż wszystkie",
+    "no_recordings": "Nagrania z Twoich sesji pojawią się tutaj po pierwszej sesji z nagraniem."
   },
   "Recordings": {
     "title": "Nagrania publiczne",

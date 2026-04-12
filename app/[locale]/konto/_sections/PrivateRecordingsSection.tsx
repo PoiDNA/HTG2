@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
@@ -13,6 +14,7 @@ import DashboardRecordingList, { DashboardRecordingItem } from './DashboardRecor
  * Wrapped in <Suspense> by parent — streams independently.
  */
 export default async function PrivateRecordingsSection({ locale }: { locale: string }) {
+  const t = await getTranslations({ locale, namespace: 'PrivateRecordings' });
   const { userId } = await getEffectiveUser();
   const db = createSupabaseServiceRole();
 
@@ -90,14 +92,14 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Headphones className="w-5 h-5 text-htg-sage" />
-          <h2 className="text-lg font-serif font-semibold text-htg-fg">Nagrania z Twoich sesji</h2>
+          <h2 className="text-lg font-serif font-semibold text-htg-fg">{t('your_recordings')}</h2>
         </div>
         {items.length > 0 && (
           <Link
             href="/konto/nagrania-sesji"
             className="text-sm text-htg-sage hover:underline"
           >
-            Pokaż wszystkie &rarr;
+            {t('show_all')} &rarr;
           </Link>
         )}
       </div>
@@ -106,7 +108,7 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">
           <Headphones className="w-10 h-10 text-htg-fg-muted/30 mx-auto mb-3" />
           <p className="text-sm text-htg-fg-muted">
-            Nagrania z Twoich sesji pojawią się tutaj po pierwszej sesji z nagraniem.
+            {t('no_recordings')}
           </p>
         </div>
       ) : (
@@ -118,7 +120,7 @@ export default async function PrivateRecordingsSection({ locale }: { locale: str
               href="/konto/nagrania-sesji"
               className="block text-center text-sm text-htg-sage hover:underline py-2"
             >
-              Pokaż wszystkie nagrania &rarr;
+              {t('show_all')} nagrania &rarr;
             </Link>
           )}
         </div>

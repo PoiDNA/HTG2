@@ -10,6 +10,7 @@ import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
 import { NotificationBell } from './community/NotificationBell';
+import LocaleSwitcher from './LocaleSwitcher';
 
 const menuItems = [
   { href: '/konto/sesje-indywidualne', label: 'Umów Sesję', icon: CalendarDays },
@@ -60,6 +61,7 @@ export default function SiteNav() {
     <nav aria-label="Nawigacja główna">
       {/* Desktop */}
       <div className="hidden md:flex items-center gap-2">
+        <LocaleSwitcher />
         <FontSizeToggle />
         <ThemeToggle />
         {!loading && isLoggedIn && user && <NotificationBell userId={user.id} alwaysShow={isCommunityActive} />}
@@ -207,6 +209,7 @@ export default function SiteNav() {
             )}
 
             <div className="flex items-center gap-3 pt-2 border-t border-htg-card-border mt-2">
+              <LocaleSwitcher />
               <FontSizeToggle />
               <ThemeToggle />
               {!loading && !isLoggedIn && (

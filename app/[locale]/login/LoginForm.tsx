@@ -70,7 +70,9 @@ export default function LoginForm() {
   }, []);
 
   function getLocale() {
-    return window.location.pathname.split('/')[1] || 'pl';
+    const locale = window.location.pathname.split('/')[1] || 'pl';
+    try { localStorage.setItem('htg-locale', locale); } catch {}
+    return locale;
   }
 
   /** UX precheck — gives immediate feedback when email is not registered. */
@@ -295,7 +297,7 @@ export default function LoginForm() {
       const res = await fetch('/api/auth/post-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ consent: true, consentText: t('consent_label') }),
+        body: JSON.stringify({ consent: true, consentText: t('consent_label'), locale: getLocale() }),
       });
       const data = await res.json();
 

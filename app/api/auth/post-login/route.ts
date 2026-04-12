@@ -3,13 +3,14 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { getRoleForEmail } from '@/lib/roles';
 import { sendWelcomeEmail, sendInvitationAccepted } from '@/lib/email/resend';
+import { locales } from '@/i18n-config';
 
 /**
  * POST /api/auth/post-login
  * Centralized post-login hook called after any auth method (OTP, magic link, SSO, passkey).
  * Handles: GDPR consent, role sync, new-user detection, welcome email, gift linking, community join.
  *
- * Body: { consent?: boolean, consentText?: string }
+ * Body: { consent?: boolean, consentText?: string, locale?: string }
  * Returns: { isNew: boolean, role: string | null }
  */
 export async function POST(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { consent, consentText } = await req.json().catch(() => ({}));
+  const { consent, consentText, locale: requestLocale } = await req.json().catch(() => ({} as Record<string, unknown>));
 
   // 1. Record GDPR consent
   if (consent) {
@@ -38,6 +39,22 @@ export async function POST(req: NextRequest) {
       if (expectedRole) {
         await supabase.from('profiles').update({ role: expectedRole }).eq('id', user.id);
         role = expectedRole;
+      }
+    }
+  } catch { /* Non-blocking */ }
+
+  // 2b. Save preferred locale (only if valid and profile doesn't already have one set by the user)
+  try {
+    if (typeof requestLocale === 'string' && (locales as readonly string[]).includes(requestLocale)) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('preferred_locale')
+        .eq('id', user.id)
+        .single();
+
+      // Only set if not already customized (still default 'pl' or null)
+      if (!profile?.preferred_locale || profile.preferred_locale === 'pl') {
+        await supabase.from('profiles').update({ preferred_locale: requestLocale }).eq('id', user.id);
       }
     }
   } catch { /* Non-blocking */ }

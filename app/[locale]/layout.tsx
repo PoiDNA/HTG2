@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
-// LocaleSwitcher removed — Polish only for now
+// LocaleSwitcher is rendered inside SiteNav (via GlobalShell)
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { hasLocale } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
@@ -85,7 +85,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       title,
       description,
       url: `https://htgcyou.com/${locale}`,
-      locale: locale === 'pl' ? 'pl_PL' : 'en_US',
+      locale: ({ pl: 'pl_PL', en: 'en_US', de: 'de_DE', pt: 'pt_PT' } as Record<string, string>)[locale] || 'pl_PL',
     },
     twitter: {
       card: 'summary_large_image',
@@ -200,7 +200,7 @@ export default async function LocaleLayout({
       </head>
       <body className="bg-htg-bg text-htg-fg antialiased min-h-screen flex flex-col transition-colors duration-300">
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-htg-sage focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold">
-          Przejdź do treści
+          {(await getTranslations({ locale, namespace: 'Nav' }))('skip_to_content')}
         </a>
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider variant={variant}>

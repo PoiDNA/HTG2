@@ -1,4 +1,4 @@
-import { setRequestLocale, getFormatter } from 'next-intl/server';
+import { setRequestLocale, getFormatter, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
@@ -49,6 +49,7 @@ export function generateStaticParams() {
 export default async function SessionRecordingsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'PrivateRecordings' });
 
   const { userId } = await getEffectiveUser();
   const db = createSupabaseServiceRole();
@@ -97,7 +98,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       const rawTitle = item.title as string | null;
       const displayTitle = config?.label
         ?? (rawTitle && !rawTitle.startsWith('Import') ? rawTitle : null)
-        ?? 'Sesja indywidualna';
+        ?? t('session_fallback');
 
       const emailMatch = rawTitle?.match(/[\w.+-]+@[\w.-]+\.\w+/);
       const recordingEmail = emailMatch?.[0] ?? null;
@@ -122,7 +123,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
         {portalItems.length === 0 ? (
           <div className="text-center py-16">
             <Headphones className="w-12 h-12 text-htg-fg-muted/30 mx-auto mb-4" />
-            <p className="text-htg-fg-muted">Nie masz jeszcze żadnych nagrań z sesji.</p>
+            <p className="text-htg-fg-muted">{t('no_recordings')}</p>
           </div>
         ) : (
           <DashboardRecordingList items={portalItems} userEmail={userEmail} userId={userId} />
@@ -133,14 +134,12 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
 
         {/* Centrum Kontaktu HTG */}
         <div className="mt-12">
-          <h2 className="font-serif text-xl font-bold text-htg-fg mb-2">Centrum Kontaktu HTG</h2>
+          <h2 className="font-serif text-xl font-bold text-htg-fg mb-2">{t('contact_center')}</h2>
           <p className="text-sm text-htg-fg-muted mb-6 leading-relaxed">
-            Jak coś nie działa albo potrzebujesz dostępu do innych nagrań — napisz przez Centrum Kontaktu HTG.<br />
-            Po prostu daj znać 🙂
+            {t('contact_center_desc1')}
           </p>
           <p className="text-sm text-htg-fg-muted mb-6 leading-relaxed">
-            Po zalogowaniu zawsze możesz wrócić do rozmów i sprawdzić, co było ustalone.<br />
-            Odpowiemy jak najszybciej się da.
+            {t('contact_center_desc2')}
           </p>
           <PortalMessages />
         </div>
@@ -178,17 +177,17 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
     const expiresAt = main.expires_at as string | null;
 
     const recordingStartedLabel = main.recording_started_at && main.session_date && isReady
-      ? `Nagranie od ${format.dateTime(new Date(main.recording_started_at as string), { hour: '2-digit', minute: '2-digit' })}`
+      ? `${t('recording_from')} ${format.dateTime(new Date(main.recording_started_at as string), { hour: '2-digit', minute: '2-digit' })}`
       : null;
 
     const legalHoldMessage = isLegalHold && isReady
-      ? `To nagranie zostało zarchiwizowane. <a href="mailto:htg@htg.cyou" class="text-htg-sage hover:underline">Skontaktuj się z nami</a>, jeśli masz pytania.`
+      ? t('legal_hold_message')
       : null;
 
     const rawTitle = main.title as string | null;
     const displayTitle = config?.label
       ?? (rawTitle && !rawTitle.startsWith('Import') ? rawTitle : null)
-      ?? 'Sesja indywidualna';
+      ?? t('session_fallback');
 
     const emailMatch = rawTitle?.match(/[\w.+-]+@[\w.-]+\.\w+/);
     const recordingEmail = emailMatch?.[0] ?? null;
@@ -204,7 +203,7 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
       isLegalHold,
       dateLabel: main.session_date ? format.dateTime(new Date(main.session_date as string), { dateStyle: 'medium' }) : '',
       durationLabel: main.duration_seconds ? `${Math.floor((main.duration_seconds as number) / 60)} min` : null,
-      expiresLabel: expiresAt && isReady && !isLegalHold ? `Dostępne do ${format.dateTime(new Date(expiresAt), { dateStyle: 'medium' })}` : null,
+      expiresLabel: expiresAt && isReady && !isLegalHold ? `${t('available_until')} ${format.dateTime(new Date(expiresAt), { dateStyle: 'medium' })}` : null,
       recordingStartedLabel,
       legalHoldMessage,
       recordingEmail,
@@ -222,24 +221,21 @@ export default async function SessionRecordingsPage({ params }: { params: Promis
     <div className="max-w-3xl mx-auto py-8 px-4">
       <div className="flex items-center gap-3 mb-6">
         <Headphones className="w-6 h-6 text-htg-sage" />
-        <h1 className="text-2xl font-serif font-bold text-htg-fg">Nagrania z sesji</h1>
+        <h1 className="text-2xl font-serif font-bold text-htg-fg">{t('your_recordings')}</h1>
       </div>
 
       {/* Privacy banner */}
       <div className="bg-htg-surface rounded-xl p-4 mb-6 flex items-start gap-3 border border-htg-card-border">
         <Info className="w-5 h-5 text-htg-fg-muted shrink-0 mt-0.5" />
         <p className="text-sm text-htg-fg-muted">
-          Nagrania z Twoich sesji są dostępne przez okres do 12 miesięcy od daty sesji.
-          Ze względów bezpieczeństwa zastrzegamy sobie prawo do skrócenia tego czasu.
-          Jeśli chcesz usunąć nagranie lub zgłosić problem, napisz do nas na{' '}
-          <a href="mailto:htg@htg.cyou" className="text-htg-sage hover:underline">htg@htg.cyou</a>.
+          {t('privacy_notice')}
         </p>
       </div>
 
       {formattedGroups.length === 0 ? (
         <div className="text-center py-16">
           <Headphones className="w-12 h-12 text-htg-fg-muted/30 mx-auto mb-4" />
-          <p className="text-htg-fg-muted">Nie masz jeszcze żadnych nagrań z sesji.</p>
+          <p className="text-htg-fg-muted">{t('no_recordings')}</p>
         </div>
       ) : (
         <FullRecordingList groups={formattedGroups} userEmail={userEmail} userId={userId} />

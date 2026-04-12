@@ -1,4 +1,4 @@
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
@@ -59,6 +59,7 @@ export default async function SesjaPanelPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'Booking' });
 
   const { userId, supabase, isImpersonating } = await getEffectiveUser();
 
@@ -132,7 +133,7 @@ export default async function SesjaPanelPage({
   if (allBookings.length === 0) {
     return (
       <div className="text-center py-16">
-        <p className="text-htg-fg-muted text-lg">Nie masz zaplanowanych sesji</p>
+        <p className="text-htg-fg-muted text-lg">{t('no_bookings')}</p>
       </div>
     );
   }
@@ -165,13 +166,13 @@ export default async function SesjaPanelPage({
                 )}
                 {!dt && (
                   <p className="text-sm text-htg-fg-muted mt-1">
-                    Data zostanie ustalona
+                    {t('date_tbd')}
                   </p>
                 )}
               </div>
               {!b.isOwner && (
                 <span className="text-xs bg-htg-surface text-htg-fg-muted px-2 py-1 rounded">
-                  Sesja partnerska
+                  {t('partner_session')}
                 </span>
               )}
             </div>
@@ -183,13 +184,13 @@ export default async function SesjaPanelPage({
                   href={`/${locale}/live/${b.live_session_id}`}
                   className="bg-htg-warm text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-htg-warm/90 transition-colors animate-pulse"
                 >
-                  Dołącz do sesji
+                  {t('join_session')}
                 </a>
               )}
 
               {showWaiting && (
                 <span className="text-xs text-htg-fg-muted bg-htg-surface px-3 py-2 rounded-lg">
-                  Poczekalnia otworzy się 30 min przed sesją
+                  {t('session_today_waiting')}
                 </span>
               )}
 
@@ -199,13 +200,13 @@ export default async function SesjaPanelPage({
 
               {isPending && !b.isOwner && (
                 <span className="text-xs text-htg-fg-muted bg-htg-surface px-3 py-2 rounded-lg">
-                  Oczekuje na potwierdzenie
+                  {t('status_pending')}
                 </span>
               )}
 
               {isPending && b.isOwner && isImpersonating && (
                 <span className="text-xs text-htg-fg-muted bg-htg-surface px-3 py-2 rounded-lg">
-                  Potwierdź udział (niedostępne w trybie podglądu)
+                  {t('confirm_btn')}
                 </span>
               )}
             </div>

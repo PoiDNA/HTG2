@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { Play, ChevronDown, Clock, CheckCircle2, Bookmark, Film, Headphones, X } from 'lucide-react';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
@@ -21,21 +22,52 @@ type Props = {
 export default function VodLibraryClient({ sections, singleSessions, futureMonthsCount, userId, userEmail, listenedSessionIds, bookmarkedSessionIds }: Props) {
   const t = useTranslations('Sessions');
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [expandedDescId, setExpandedDescId] = useState<string | null>(null);
 
   const [playingSessionId, setPlayingSessionId] = useState<string | null>(null);
   const [listened, setListened] = useState<Set<string>>(() => new Set(listenedSessionIds));
   const [bookmarked, setBookmarked] = useState<Set<string>>(() => new Set(bookmarkedSessionIds));
   const [filter, setFilter] = useState<'all' | 'unlistened' | 'bookmarked'>('all');
 
+  const headerRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const toggleSection = (key: string) => {
-    setExpandedKey(prev => {
-      if (prev === key) {
-        setPlayingSessionId(null);
-        return null;
-      }
+    if (expandedKey === key) {
+      // Zamykanie — normalna animacja CSS
       setPlayingSessionId(null);
-      return key;
-    });
+      setExpandedDescId(null);
+      setExpandedKey(null);
+      return;
+    }
+
+    if (expandedKey !== null) {
+      // Zmiana miesiaca (A→B) — flushSync + snap + scroll correction
+      const buttonEl = headerRefs.current.get(key);
+      const before = buttonEl?.getBoundingClientRect().top ?? 0;
+
+      containerRef.current?.setAttribute('data-accordion-instant', '');
+
+      flushSync(() => {
+        setPlayingSessionId(null);
+        setExpandedDescId(null);
+        setExpandedKey(key);
+      });
+
+      if (buttonEl) {
+        const after = buttonEl.getBoundingClientRect().top;
+        window.scrollBy({ top: after - before });
+      }
+
+      requestAnimationFrame(() => {
+        containerRef.current?.removeAttribute('data-accordion-instant');
+      });
+      return;
+    }
+
+    // Pierwsze otwarcie (null→key) — normalna animacja CSS
+    setExpandedDescId(null);
+    setExpandedKey(key);
   };
 
   const togglePlay = (sessionId: string) => {
@@ -99,7 +131,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" ref={containerRef}>
       {/* Header: title + filter pills */}
       <div className="mb-2">
         <div className="flex items-center gap-2 mb-2">
@@ -147,6 +179,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
             isExpanded={expandedKey === section.monthLabel}
             onToggle={() => toggleSection(section.monthLabel)}
             backgroundImage={section.coverImageUrl || undefined}
+            buttonRef={(el) => { if (el) headerRefs.current.set(section.monthLabel, el); else headerRefs.current.delete(section.monthLabel); }}
           >
             {section.sessions.length === 0 ? (
               <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center text-htg-fg-muted">
@@ -164,6 +197,8 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                     onToggleListened={() => toggleListened(session.id)}
                     isBookmarked={bookmarked.has(session.id)}
                     onToggleBookmark={() => toggleBookmark(session.id)}
+                    isDescExpanded={expandedDescId === session.id}
+                    onToggleDesc={() => setExpandedDescId(prev => prev === session.id ? null : session.id)}
                     userId={userId}
                     userEmail={userEmail}
                   />
@@ -182,6 +217,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
           bookmarkedCount={singleSessions.filter(s => bookmarked.has(s.id)).length}
           isExpanded={expandedKey === 'singles'}
           onToggle={() => toggleSection('singles')}
+          buttonRef={(el) => { if (el) headerRefs.current.set('singles', el); else headerRefs.current.delete('singles'); }}
         >
           <div className="space-y-4">
             {filterSessions(singleSessions).map(session => (
@@ -194,6 +230,8 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
                 onToggleListened={() => toggleListened(session.id)}
                 isBookmarked={bookmarked.has(session.id)}
                 onToggleBookmark={() => toggleBookmark(session.id)}
+                isDescExpanded={expandedDescId === session.id}
+                onToggleDesc={() => setExpandedDescId(prev => prev === session.id ? null : session.id)}
                 userId={userId}
                 userEmail={userEmail}
               />
@@ -219,6 +257,7 @@ function AccordionMonth({
   isExpanded,
   onToggle,
   backgroundImage,
+  buttonRef,
   children
 }: {
   title: string;
@@ -228,6 +267,7 @@ function AccordionMonth({
   isExpanded: boolean;
   onToggle: () => void;
   backgroundImage?: string;
+  buttonRef?: (el: HTMLButtonElement | null) => void;
   children: React.ReactNode;
 }) {
   return (
@@ -237,6 +277,7 @@ function AccordionMonth({
         : 'border-htg-card-border hover:border-htg-sage/30'
     }`}>
       <button
+        ref={buttonRef}
         onClick={onToggle}
         className="group w-full flex items-center justify-between px-4 py-11 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
       >
@@ -297,6 +338,7 @@ function AccordionMonth({
         />
       </button>
       <div
+        data-accordion-grid
         className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
           isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
         }`}
@@ -328,6 +370,8 @@ function SessionCard({
   onToggleListened,
   isBookmarked,
   onToggleBookmark,
+  isDescExpanded,
+  onToggleDesc,
   userId,
   userEmail
 }: {
@@ -338,10 +382,11 @@ function SessionCard({
   onToggleListened: () => void;
   isBookmarked: boolean;
   onToggleBookmark: () => void;
+  isDescExpanded: boolean;
+  onToggleDesc: () => void;
   userId: string;
   userEmail: string;
 }) {
-  const [expandedDesc, setExpandedDesc] = useState(false);
   const [sentenceIndex, setSentenceIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
@@ -361,14 +406,14 @@ function SessionCard({
 
   // Auto-rotate sentences; pause on hover or when expanded
   useEffect(() => {
-    if (sentences.length < 2 || expandedDesc || paused) return;
+    if (sentences.length < 2 || isDescExpanded || paused) return;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reducedMotion) return;
     const id = setInterval(() => {
       setSentenceIndex(prev => (prev + 1) % sentences.length);
     }, 3500);
     return () => clearInterval(id);
-  }, [sentences.length, expandedDesc, paused]);
+  }, [sentences.length, isDescExpanded, paused]);
 
   const canExpand = sentences.length > 1 && (session.description?.length ?? 0) > 100;
 
@@ -448,7 +493,7 @@ function SessionCard({
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
             >
-              {expandedDesc ? (
+              {isDescExpanded ? (
                 <div className="space-y-0">
                   {sentences.map((sentence, i) => (
                     <span key={i}>
@@ -473,10 +518,10 @@ function SessionCard({
               )}
               {canExpand && (
                 <button
-                  onClick={() => setExpandedDesc(!expandedDesc)}
+                  onClick={onToggleDesc}
                   className="text-htg-sage hover:underline mt-1 font-medium"
                 >
-                  {expandedDesc ? 'Zwiń' : 'Rozwiń'}
+                  {isDescExpanded ? 'Zwiń' : 'Rozwiń'}
                 </button>
               )}
             </div>

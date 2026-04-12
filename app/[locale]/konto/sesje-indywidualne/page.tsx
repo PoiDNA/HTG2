@@ -4,7 +4,7 @@ import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import type { Booking, AccelerationEntry } from '@/lib/booking/types';
-import { PRODUCT_SLUGS } from '@/lib/booking/constants';
+import { PRODUCT_SLUGS, LOCALE_CURRENCY } from '@/lib/booking/constants';
 import BookingCard from '@/components/booking/BookingCard';
 import ActiveBookingsSection from '@/components/booking/ActiveBookingsSection';
 import { PreSessionUpsell } from '@/components/konto/PreSessionUpsell';
@@ -218,14 +218,16 @@ export default async function IndividualSessionsPage({
     ])
     .eq('is_active', true);
 
+  const expectedCurrency = LOCALE_CURRENCY[locale] || 'pln';
   const sessionOptions = (products || []).map((s: any) => {
-    const price = s.prices?.[0];
+    const prices = s.prices || [];
+    const price = prices.find((p: any) => p.currency === expectedCurrency) || prices[0];
     return {
       slug: s.slug,
       name: s.name,
       description: s.description,
       amount: price?.amount || 0,
-      currency: price?.currency || 'pln',
+      currency: price?.currency || expectedCurrency,
       priceId: price?.stripe_price_id || '',
       sessionType: s.metadata?.session_type || '',
     };

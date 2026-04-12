@@ -1,4 +1,4 @@
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
@@ -17,6 +17,7 @@ export default async function SpotkaniePage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'Booking' });
 
   const { userId } = await getEffectiveUser();
 
@@ -94,9 +95,9 @@ export default async function SpotkaniePage({
       <div className="flex items-center gap-3">
         <Video className="w-6 h-6 text-purple-400" />
         <div>
-          <h2 className="text-2xl font-serif font-bold text-htg-fg">Spotkanie wstępne</h2>
+          <h2 className="text-2xl font-serif font-bold text-htg-fg">{t('pre_session_title')}</h2>
           <p className="text-sm text-htg-fg-muted">
-            Krótkie 15-minutowe spotkanie online z asystentką przed Twoją sesją
+            {t('pre_session_desc')}
           </p>
         </div>
       </div>
@@ -119,19 +120,18 @@ export default async function SpotkaniePage({
                 <CheckCircle className="w-8 h-8 text-purple-400 shrink-0 mt-0.5" />
                 <div>
                   <h3 className="font-semibold text-htg-fg text-lg">
-                    Spotkanie z {staff.name} — zarezerwowane ✓
+                    {t('pre_session_booked', { name: staff.name })}
                   </h3>
                   {slot && (
                     <p className="text-htg-fg-muted mt-1">
-                      {new Date(slot.slot_date).toLocaleDateString('pl-PL', {
+                      {new Date(slot.slot_date).toLocaleDateString(locale === 'pl' ? 'pl-PL' : locale === 'de' ? 'de-DE' : locale === 'pt' ? 'pt-PT' : 'en-US', {
                         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
                       })}{' '}
                       o {slot.start_time?.slice(0, 5)}–{slot.end_time?.slice(0, 5)}
                     </p>
                   )}
                   <p className="text-sm text-htg-fg-muted mt-2">
-                    Link do spotkania pojawi się na tej stronie przed terminem.
-                    Spotkania nie można przełożyć — w razie pytań skontaktuj się bezpośrednio.
+                    {t('pre_session_link_info')}
                   </p>
                 </div>
               </div>

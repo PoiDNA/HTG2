@@ -110,7 +110,15 @@
     "individual_sessions": "Individual sessions",
     "sessions_in_set": "{count, plural, one {# session} other {# sessions}} in set",
     "empty_title": "New sessions coming soon",
-    "empty_description": "We're working on making our archive available. Check back soon!"
+    "empty_description": "We're working on making our archive available. Check back soon!",
+    "your_library": "Your Library",
+    "filter_show": "Show",
+    "filter_all": "All",
+    "filter_unlistened": "Unlistened",
+    "filter_bookmarked": "Bookmarked",
+    "remaining_sessions": "Other Sessions",
+    "processing": "Processing...",
+    "go_to_payment": "Go to payment"
   },
   "Subscriptions": {
     "title": "Subscriptions",
@@ -135,7 +143,18 @@
     "listen": "Listen",
     "close": "Close",
     "sharing_prohibited": "Out of respect for privacy and the comfort of the session, this recording is not intended for further sharing.",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "your_recordings": "Your session recordings",
+    "show_all": "Show all",
+    "no_recordings": "Your session recordings will appear here after your first recorded session.",
+    "session_fallback": "Individual session",
+    "privacy_notice": "Your session recordings are available for up to 12 months from the session date. For security reasons, we reserve the right to shorten this period. To delete a recording or report an issue, contact us at htg@htg.cyou.",
+    "recording_from": "Recording from",
+    "available_until": "Available until",
+    "legal_hold_message": "This recording has been archived. Contact us if you have questions.",
+    "contact_center": "HTG Contact Center",
+    "contact_center_desc1": "If something isn't working or you need access to other recordings — write through the HTG Contact Center.",
+    "contact_center_desc2": "You can always come back to check your conversations. We'll respond as soon as possible."
   },
   "Recordings": {
     "title": "Public recordings",
@@ -501,6 +520,12 @@
     "hide_calendar": "Hide calendar",
     "reschedule": "Reschedule",
     "how_late_question": "How many minutes will you be late?",
+    "date_tbd": "Date to be confirmed",
+    "partner_session": "Partner session",
+    "pre_session_title": "Pre-session meeting",
+    "pre_session_desc": "A short 15-minute online meeting with an assistant before your session",
+    "pre_session_booked": "Meeting with {name} — booked ✓",
+    "pre_session_link_info": "The meeting link will appear on this page before the scheduled time. The meeting cannot be rescheduled — contact us directly if you have questions.",
     "countdown": {
       "8plus": {
         "0": "A longer road lies ahead — and that's a beautiful thing. Each day brings you closer.",

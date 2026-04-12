@@ -14,7 +14,7 @@
     "sessions": "Biblioteka sesji",
     "individual": "Umów sesję",
     "subscriptions": "Subskrypcje",
-    "recordings": "Na początek",
+    "recordings": "Nagrania",
     "community": "Społeczność",
     "account": "Moje konto",
     "login": "Zaloguj",
@@ -110,7 +110,15 @@
     "individual_sessions": "Sesje pojedyncze",
     "sessions_in_set": "{count, plural, one {# sesja} few {# sesje} other {# sesji}} w zestawie",
     "empty_title": "Wkrótce nowe sesje",
-    "empty_description": "Pracujemy nad udostępnieniem naszego archiwum. Wróć tu wkrótce!"
+    "empty_description": "Pracujemy nad udostępnieniem naszego archiwum. Wróć tu wkrótce!",
+    "your_library": "Twoja Biblioteka",
+    "filter_show": "Pokaż",
+    "filter_all": "Wszystkie",
+    "filter_unlistened": "Nieodsłuchane",
+    "filter_bookmarked": "Wracam",
+    "remaining_sessions": "Pozostałe Sesje",
+    "processing": "Przetwarzanie...",
+    "go_to_payment": "Przejdź do płatności"
   },
   "Subscriptions": {
     "title": "Subskrypcje",
@@ -135,7 +143,18 @@
     "listen": "Odsłuchaj",
     "close": "Zamknij",
     "sharing_prohibited": "W trosce o poufność i komfort sesji, nagranie nie jest przeznaczone do dalszego udostępniania.",
-    "processing": "Przetwarzane..."
+    "processing": "Przetwarzane...",
+    "your_recordings": "Nagrania z Twoich sesji",
+    "show_all": "Pokaż wszystkie",
+    "no_recordings": "Nagrania z Twoich sesji pojawią się tutaj po pierwszej sesji z nagraniem.",
+    "session_fallback": "Sesja indywidualna",
+    "privacy_notice": "Nagrania z Twoich sesji są dostępne przez okres do 12 miesięcy od daty sesji. Ze względów bezpieczeństwa zastrzegamy sobie prawo do skrócenia tego czasu. Jeśli chcesz usunąć nagranie lub zgłosić problem, napisz do nas na htg@htg.cyou.",
+    "recording_from": "Nagranie od",
+    "available_until": "Dostępne do",
+    "legal_hold_message": "To nagranie zostało zarchiwizowane. Skontaktuj się z nami, jeśli masz pytania.",
+    "contact_center": "Centrum Kontaktu HTG",
+    "contact_center_desc1": "Jak coś nie działa albo potrzebujesz dostępu do innych nagrań — napisz przez Centrum Kontaktu HTG.",
+    "contact_center_desc2": "Po zalogowaniu zawsze możesz wrócić do rozmów i sprawdzić, co było ustalone. Odpowiemy jak najszybciej się da."
   },
   "Recordings": {
     "title": "Nagrania publiczne",
@@ -501,6 +520,12 @@
     "hide_calendar": "Ukryj kalendarz",
     "reschedule": "Zmień termin",
     "how_late_question": "O ile minut się spóźnisz?",
+    "date_tbd": "Data zostanie ustalona",
+    "partner_session": "Sesja partnerska",
+    "pre_session_title": "Spotkanie wstępne",
+    "pre_session_desc": "Krótkie 15-minutowe spotkanie online z asystentką przed Twoją sesją",
+    "pre_session_booked": "Spotkanie z {name} — zarezerwowane ✓",
+    "pre_session_link_info": "Link do spotkania pojawi się na tej stronie przed terminem. Spotkania nie można przełożyć — w razie pytań skontaktuj się bezpośrednio.",
     "countdown": {
       "8plus": {
         "0": "Przed Tobą dłuższa droga — i to jest piękne. Każdy dzień przybliża Cię do sesji.",

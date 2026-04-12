@@ -1,12 +1,13 @@
 'use client';
 
 import { Link, usePathname } from '@/i18n-config';
+import { useTranslations } from 'next-intl';
 import { Film, CalendarDays, MessagesSquare } from 'lucide-react';
 
-const navLinks = [
-  { href: '/konto', label: 'Nagrania', icon: Film },
-  { href: '/konto/sesje-indywidualne', label: 'Spotkania', icon: CalendarDays },
-  { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
+const NAV_ITEMS = [
+  { href: '/konto', labelKey: 'recordings', icon: Film },
+  { href: '/konto/sesje-indywidualne', labelKey: 'individual', icon: CalendarDays },
+  { href: '/spolecznosc', labelKey: 'community', icon: MessagesSquare },
 ] as const;
 
 /**
@@ -14,10 +15,11 @@ const navLinks = [
  */
 export default function NavLinksV3() {
   const pathname = usePathname();
+  const t = useTranslations('Nav');
 
   return (
     <div className="hidden md:flex items-center justify-center gap-1">
-      {navLinks.map(({ href, label, icon: Icon }) => {
+      {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
         const isActive = href === '/konto'
           ? pathname.endsWith('/konto')
           : pathname.includes(href);
@@ -26,7 +28,7 @@ export default function NavLinksV3() {
           <Link
             key={href}
             href={href}
-            title={label}
+            title={t(labelKey)}
             className={`relative p-2 rounded-lg transition-colors ${
               isActive
                 ? 'text-htg-fg bg-htg-surface'

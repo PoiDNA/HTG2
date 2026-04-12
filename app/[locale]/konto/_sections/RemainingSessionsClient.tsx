@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Check, ChevronDown, Clock, X, ShoppingCart, Loader2, Play } from 'lucide-react';
 import FontSizeToggle from '@/components/FontSizeToggle';
@@ -43,6 +43,7 @@ function splitSentences(text: string): string[] {
 
 export default function RemainingSessionsClient({ months, prices }: Props) {
   const locale = useLocale();
+  const t = useTranslations('Sessions');
   const router = useRouter();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [selectedMonths, setSelectedMonths] = useState<Record<string, boolean>>({});
@@ -126,7 +127,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
     <section className={`mt-8 mb-10 ${totalItems > 0 ? 'pb-28' : ''}`}>
       <div className="flex items-center gap-2 mb-4">
         <ShoppingBag className="w-5 h-5 text-htg-sage" />
-        <h2 className="text-lg font-serif font-semibold text-htg-fg">Pozostałe Sesje</h2>
+        <h2 className="text-lg font-serif font-semibold text-htg-fg">{t('remaining_sessions')}</h2>
       </div>
 
       <div className="space-y-3">
@@ -247,7 +248,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
                 className="bg-htg-sage text-white px-6 py-3 rounded-lg font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {loading ? 'Przetwarzanie...' : 'Przejdź do płatności'}
+                {loading ? t('processing') : t('go_to_payment')}
               </button>
             </div>
           </div>

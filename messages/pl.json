@@ -293,7 +293,14 @@
     "hide_all_dates": "Ukryj terminy",
     "want_acceleration": "Chcę przyspieszenie",
     "notify_earlier_slot": "Powiadom gdy zwolni się wcześniejszy termin",
-    "two_people": "2 osoby"
+    "two_people": "2 osoby",
+    "min_amount_error": "Wpisz kwotę min. 1 PLN",
+    "payment_error": "Błąd płatności",
+    "connection_error": "Błąd połączenia",
+    "pay_installment_title": "Wpłać dopłatę / ratę",
+    "pay_custom_desc": "Wpłać dowolną kwotę na poczet sesji:",
+    "payment_amount_label": "Kwota wpłaty (PLN)",
+    "pay_btn": "Wpłać"
   },
   "Legal": {
     "privacy_title": "Polityka prywatności",
@@ -454,7 +461,9 @@
     "pub_archive": "Archiwum",
     "pub_add": "Dodaj sesję",
     "logout": "Wyloguj",
-    "translator_panel": "Panel tłumacza"
+    "translator_panel": "Panel tłumacza",
+    "community": "Społeczność",
+    "session_recordings": "Nagrania z sesji"
   },
   "Booking": {
     "title": "Sesje prywatne",
@@ -526,6 +535,10 @@
     "pre_session_desc": "Krótkie 15-minutowe spotkanie online z asystentką przed Twoją sesją",
     "pre_session_booked": "Spotkanie z {name} — zarezerwowane ✓",
     "pre_session_link_info": "Link do spotkania pojawi się na tej stronie przed terminem. Spotkania nie można przełożyć — w razie pytań skontaktuj się bezpośrednio.",
+    "no_pre_session_slots": "Brak dostępnych terminów — asystentka wkrótce doda nowe",
+    "choose_date": "Wybierz termin",
+    "pre_session_free_note": "Spotkania wstępne są bezpłatne. Po rezerwacji termin jest ostateczny — nie można go przełożyć ani odwołać.",
+    "buy_pre_session": "Kup",
     "countdown": {
       "8plus": {
         "0": "Przed Tobą dłuższa droga — i to jest piękne. Każdy dzień przybliża Cię do sesji.",
@@ -796,7 +809,9 @@
     "show_original": "Pokaż oryginał",
     "show_translation": "Pokaż tłumaczenie",
     "translating": "Tłumaczenie...",
-    "post_language": "Język posta"
+    "post_language": "Język posta",
+    "message_subject_placeholder": "Temat Twojej wiadomości",
+    "search_placeholder": "Szukaj postów..."
   },
   "YouTubeBanner": {
     "new_video": "Nowa sesja na YT",

@@ -78,7 +78,7 @@ export default function UserPanelNav() {
               <DropdownLink href="/konto/admin/uzytkownicy" icon={Users} label={t('admin_users')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/sesje" icon={BookOpen} label={t('admin_sessions')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/podglad" icon={Eye} label={t('admin_preview')} onClick={() => setOpen(false)} />
-              <DropdownLink href="/spolecznosc" icon={MessagesSquare} label="Społeczność" onClick={() => setOpen(false)} />
+              <DropdownLink href="/spolecznosc" icon={MessagesSquare} label={t('community')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/skrzynka" icon={Mail} label="Skrzynka" onClick={() => setOpen(false)} />
               <div className="border-t border-htg-card-border my-1" />
               <DropdownLink href="/konto/admin" icon={LayoutDashboard} label={t('admin_panel')} onClick={() => setOpen(false)} />
@@ -95,8 +95,8 @@ export default function UserPanelNav() {
             <>
               {/* User section */}
               <div className="py-1">
-                <DropdownLink href="/konto/nagrania-sesji" icon={Headphones} label="Nagrania z sesji" onClick={() => setOpen(false)} />
-                <DropdownLink href="/spolecznosc" icon={MessagesSquare} label="Społeczność" onClick={() => setOpen(false)} />
+                <DropdownLink href="/konto/nagrania-sesji" icon={Headphones} label={t('session_recordings')} onClick={() => setOpen(false)} />
+                <DropdownLink href="/spolecznosc" icon={MessagesSquare} label={t('community')} onClick={() => setOpen(false)} />
               </div>
 
               {/* Staff section */}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFeed } from '@/lib/community/hooks/useFeed';
@@ -16,6 +17,7 @@ interface PostFeedProps {
 }
 
 export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: PostFeedProps) {
+  const t = useTranslations('Community');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -77,7 +79,7 @@ export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: Post
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Szukaj postów..."
+          placeholder={t('search_placeholder')}
           className="w-full pl-10 pr-4 py-2.5 bg-htg-card border border-htg-card-border rounded-lg text-sm text-htg-fg placeholder:text-htg-fg-muted focus:outline-none focus:ring-1 focus:ring-htg-sage/50"
         />
       </div>

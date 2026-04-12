@@ -29,23 +29,23 @@ import type { SessionType } from '@/lib/booking/types';
 
 const SESSION_TYPES_CONFIG = [
   { key: 'all',              label: 'Wszystkie',      short: 'Wszystkie', className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
-  { key: 'natalia_solo',    label: 'Sesje 1:1',        short: '1:1',       className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
-  { key: 'natalia_asysta',  label: 'Sesje z Asystą',   short: 'Asysta',    className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
-  { key: 'natalia_justyna', label: 'Sesje z Justyną',  short: 'Justyna',   className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
-  { key: 'natalia_agata',   label: 'Sesje z Agatą',    short: 'Agata',     className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
-  { key: 'natalia_przemek', label: 'Sesje z Przemkiem', short: 'Przemek',   className: 'bg-sky-900/40 text-sky-300 border border-sky-700/30' },
-  { key: 'natalia_para',    label: 'Sesje dla Par',    short: 'Para',      className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
+  { key: 'natalia_solo',    label: 'Sesje 1:1',        short: '1:1',       className: 'bg-indigo-600 text-white' },
+  { key: 'natalia_asysta',  label: 'Sesje z Asystą',   short: 'Asysta',    className: 'bg-amber-600 text-white' },
+  { key: 'natalia_justyna', label: 'Sesje z Justyną',  short: 'Justyna',   className: 'bg-rose-600 text-white' },
+  { key: 'natalia_agata',   label: 'Sesje z Agatą',    short: 'Agata',     className: 'bg-emerald-600 text-white' },
+  { key: 'natalia_przemek', label: 'Sesje z Przemkiem', short: 'Przemek',   className: 'bg-sky-600 text-white' },
+  { key: 'natalia_para',    label: 'Sesje dla Par',    short: 'Para',      className: 'bg-pink-600 text-white' },
 ] as const;
 
 type TypeKey = typeof SESSION_TYPES_CONFIG[number]['key'];
 
 const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
-  natalia_solo:    { className: 'bg-indigo-900/40 text-indigo-300 border border-indigo-700/30' },
-  natalia_agata:   { className: 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/30' },
-  natalia_justyna: { className: 'bg-rose-900/40 text-rose-300 border border-rose-700/30' },
-  natalia_przemek: { className: 'bg-sky-900/40 text-sky-300 border border-sky-700/30' },
-  natalia_para:    { className: 'bg-pink-900/40 text-pink-300 border border-pink-700/30' },
-  natalia_asysta:  { className: 'bg-amber-900/40 text-amber-300 border border-amber-700/30' },
+  natalia_solo:    { className: 'bg-indigo-600 text-white' },
+  natalia_agata:   { className: 'bg-emerald-600 text-white' },
+  natalia_justyna: { className: 'bg-rose-600 text-white' },
+  natalia_przemek: { className: 'bg-sky-600 text-white' },
+  natalia_para:    { className: 'bg-pink-600 text-white' },
+  natalia_asysta:  { className: 'bg-amber-600 text-white' },
 };
 
 const DAY_NAMES_SHORT = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];

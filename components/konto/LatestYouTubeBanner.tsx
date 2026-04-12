@@ -39,7 +39,7 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
           href={ytUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="block w-full sm:w-64 md:w-80 aspect-video sm:aspect-auto sm:shrink-0 relative group"
+          className="block w-full sm:w-64 md:w-80 aspect-video sm:shrink-0 relative group"
         >
           <img
             src={thumbnailUrl}

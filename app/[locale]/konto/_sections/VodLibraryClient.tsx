@@ -107,7 +107,7 @@ export default function VodLibraryClient({ sections, singleSessions, futureMonth
           <h2 className="text-lg font-serif font-semibold text-htg-fg">{t('your_library')}</h2>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-htg-fg-muted">{t('filter_show')}:</span>
+          <span className="hidden sm:inline text-xs text-htg-fg-muted">{t('filter_show')}:</span>
           <button
             onClick={() => setFilter('all')}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${

@@ -223,7 +223,10 @@
     "choose_assistant": "Wybierz asystentkę:",
     "session_pair_name": "Sesja dla par",
     "session_pair_subtitle": "Natalia HTG",
-    "interpreter_note": ""
+    "interpreter_note": "",
+    "processing": "Przetwarzanie...",
+    "book_transfer": "Zarezerwuj sesję",
+    "pay_installment": "Zapłać {n}. ratę"
   },
   "Legal": {
     "privacy_title": "Polityka prywatności",

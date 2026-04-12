@@ -11,8 +11,8 @@ const localeLabels: Record<string, string> = {
   pt: 'PT',
 };
 
-/** Locales visible in the switcher — DE/PT hidden until PR 2 cleanup is done */
-const VISIBLE_LOCALES: readonly string[] = ['pl', 'en'];
+/** Locales visible in the switcher */
+const VISIBLE_LOCALES: readonly string[] = ['pl', 'en', 'de', 'pt'];
 
 interface LocaleSwitcherProps {
   /** Override which locales are shown (default: VISIBLE_LOCALES) */

@@ -71,6 +71,18 @@ export default async function PodarowaneSesje({ params }: { params: Promise<{ lo
         baseUrl={baseUrl}
         locale={locale}
       />
+
+      {/* How to buy a gift */}
+      <div className="bg-htg-surface rounded-xl p-5 border border-htg-card-border">
+        <h3 className="font-serif font-semibold text-sm text-htg-fg mb-2">Jak kupić sesję w prezencie?</h3>
+        <p className="text-sm text-htg-fg-muted">
+          Przejdź do{' '}
+          <Link href={`/${locale}/sesje-indywidualne`} className="text-htg-sage font-medium hover:underline">
+            Umów sesję
+          </Link>
+          {' '}→ wybierz rodzaj sesji → zaznacz opcję <strong className="text-htg-fg">Kup jako prezent</strong>. Po zakupie otrzymasz link do przekazania obdarowanej osobie.
+        </p>
+      </div>
     </div>
   );
 }

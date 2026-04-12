@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Banknote } from 'lucide-react';
-import type { Booking } from '@/lib/booking/types';
+import type { Booking, AccelerationEntry } from '@/lib/booking/types';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import BookingCountdown from './BookingCountdown';
 import TopicsEditor from './TopicsEditor';
+import AccelerationRequest from './AccelerationRequest';
 import { useReschedule } from './ActiveBookingsSection';
 
 interface BookingCardProps {
@@ -22,6 +23,7 @@ interface BookingCardProps {
   /** Countdown suffix, e.g. "do sesji" */
   countdownSuffix?: string | null;
   isPast?: boolean;
+  accelerationEntry?: AccelerationEntry | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -32,7 +34,7 @@ const STATUS_STYLES: Record<string, string> = {
   transferred: 'bg-blue-50 text-blue-600',
 };
 
-export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownMonths, countdownDays, countdownSuffix, isPast }: BookingCardProps) {
+export default function BookingCard({ booking, locale, hasEarlierSlots, countdownPhrase, countdownMonths, countdownDays, countdownSuffix, isPast, accelerationEntry }: BookingCardProps) {
   const t = useTranslations('Booking');
   const router = useRouter();
   const { toggleReschedule, rescheduleBookingId } = useReschedule();
@@ -259,6 +261,18 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
           )}
 
           {/* Reschedule info — shown only when clicking "Zmień termin" (at calendar section) */}
+        </div>
+      )}
+
+      {/* Acceleration queue — inline */}
+      {!isPast && (
+        <div className="pt-3 border-t border-htg-card-border">
+          <AccelerationRequest
+            sessionType={booking.session_type}
+            bookingId={booking.id}
+            existingEntry={accelerationEntry}
+            locale={locale}
+          />
         </div>
       )}
     </div>

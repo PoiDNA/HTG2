@@ -183,7 +183,19 @@
     "watch": "Watch",
     "no_orders": "No orders yet.",
     "no_subscriptions": "You don't have any active subscriptions.",
-    "full_catalog_access": "Full access to the entire session archive"
+    "full_catalog_access": "Full access to the entire session archive",
+    "activations_title": "Your Activations",
+    "activations_subtitle": "Active subscriptions and session packages",
+    "add_package": "Add a package or subscription",
+    "session_with_natalia": "Session with Natalia",
+    "buy_single_desc": "Buy a single 1:1 session",
+    "monthly_access": "Monthly access to sessions",
+    "best_option": "Best option",
+    "yearly_access": "Yearly access to sessions",
+    "history": "History",
+    "expired_at": "Expired: {date}",
+    "per_month": "mo.",
+    "per_year": "year"
   },
   "Player": {
     "concurrent_title": "Playing on another device",

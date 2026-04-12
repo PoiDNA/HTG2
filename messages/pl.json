@@ -183,7 +183,19 @@
     "watch": "Oglądaj",
     "no_orders": "Brak zamówień.",
     "no_subscriptions": "Nie masz aktywnych subskrypcji.",
-    "full_catalog_access": "Pełny dostęp do całego archiwum sesji"
+    "full_catalog_access": "Pełny dostęp do całego archiwum sesji",
+    "activations_title": "Twoje Aktywacje",
+    "activations_subtitle": "Aktywne subskrypcje i pakiety sesji",
+    "add_package": "Dodaj pakiet lub subskrypcję",
+    "session_with_natalia": "Sesja z Natalią",
+    "buy_single_desc": "Kup pojedynczą sesję 1:1",
+    "monthly_access": "Miesięczny dostęp do sesji",
+    "best_option": "Najlepsza opcja",
+    "yearly_access": "Roczny dostęp do sesji",
+    "history": "Historia",
+    "expired_at": "Wygasło: {date}",
+    "per_month": "mies.",
+    "per_year": "rok"
   },
   "Player": {
     "concurrent_title": "Odtwarzanie na innym urządzeniu",

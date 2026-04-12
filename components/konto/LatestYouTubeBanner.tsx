@@ -34,7 +34,7 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
         href={`https://www.youtube.com/watch?v=${youtubeId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="shrink-0 relative rounded-lg overflow-hidden w-60 h-42 group"
+        className="shrink-0 relative rounded-lg overflow-hidden w-60 aspect-video group"
       >
         <img
           src={thumbnailUrl}

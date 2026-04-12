@@ -20,7 +20,9 @@
     "login": "Zaloguj",
     "logout": "Wyloguj",
     "menu": "Menu",
-    "staff": "Panel prowadzącego"
+    "staff": "Panel prowadzącego",
+    "switch_locale": "Zmień język na {locale}",
+    "skip_to_content": "Przejdź do treści"
   },
   "Footer": {
     "privacy": "Polityka prywatności",

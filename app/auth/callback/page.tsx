@@ -49,16 +49,19 @@ export default function AuthCallbackPage() {
             }
           } catch {}
 
+          // Detect locale from stored preference or URL
+          const storedLocale = localStorage.getItem('htg-locale') || 'pl';
+          const locale = ['pl', 'en', 'de', 'pt'].includes(storedLocale) ? storedLocale : 'pl';
+
           // Call centralized post-login hook
           try {
             await fetch('/api/auth/post-login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ consent: true }),
+              body: JSON.stringify({ consent: true, locale }),
             });
           } catch {}
 
-          const locale = window.location.pathname.split('/')[1] || 'pl';
           window.location.href = `/${locale}/konto`;
           return;
         }
@@ -67,8 +70,9 @@ export default function AuthCallbackPage() {
       // If no hash fragment, check if we already have a session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        const locale = window.location.pathname.split('/')[1] || 'pl';
-        window.location.href = `/${locale}/konto`;
+        const storedLocale2 = localStorage.getItem('htg-locale') || 'pl';
+        const sessionLocale = ['pl', 'en', 'de', 'pt'].includes(storedLocale2) ? storedLocale2 : 'pl';
+        window.location.href = `/${sessionLocale}/konto`;
         return;
       }
 

@@ -10,9 +10,7 @@ const VALID_VARIANTS: ReadonlySet<string> = new Set<DesignVariant>(['v1', 'v2', 
 export const DEFAULT_VARIANT: DesignVariant = 'v1';
 
 /** Extra emails allowed to see the design variant switcher (non-admin testers). */
-const VARIANT_TESTER_EMAILS: ReadonlySet<string> = new Set([
-  'przemekbcs@gmail.com',
-]);
+const VARIANT_TESTER_EMAILS: ReadonlySet<string> = new Set<string>([]);
 
 /** Check if the given email can switch design variants (admin OR tester). */
 export function canSwitchVariant(email: string): boolean {

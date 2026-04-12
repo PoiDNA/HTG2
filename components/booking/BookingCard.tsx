@@ -187,14 +187,14 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
                 href={`/pl/live/${booking.live_session_id}`}
                 className="bg-htg-warm text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-htg-warm/90 transition-colors animate-pulse"
               >
-                🎙️ Dołącz do sesji
+                🎙️ {t('join_session')}
               </a>
             )}
 
             {/* Session today but not yet 30 min before */}
             {isConfirmed && sessionDateTime && hoursUntilSession > 0.5 && hoursUntilSession <= 24 && (
               <span className="text-xs text-htg-fg-muted bg-htg-surface px-3 py-2 rounded-lg">
-                Sesja dziś — poczekalnia otworzy się 30 min przed sesją
+                {t('session_today_waiting')}
               </span>
             )}
 
@@ -204,7 +204,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
                 onClick={() => setShowDelayOptions(true)}
                 className="bg-htg-warm/20 text-htg-warm px-4 py-2 rounded-lg text-sm font-medium hover:bg-htg-warm/30 transition-colors"
               >
-                ⏰ Zgłoś spóźnienie
+                ⏰ {t('report_late')}
               </button>
             )}
 
@@ -218,7 +218,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
                     : 'bg-htg-surface text-htg-fg hover:bg-htg-card-border'
                 }`}
               >
-                {rescheduleBookingId === booking.id ? 'Ukryj kalendarz' : 'Zmień termin'}
+                {rescheduleBookingId === booking.id ? t('hide_calendar') : t('reschedule')}
               </button>
             )}
           </div>
@@ -226,7 +226,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
           {/* Delay options */}
           {showDelayOptions && (
             <div className="bg-htg-surface rounded-xl p-4 space-y-3">
-              <p className="text-sm text-htg-fg font-medium">O ile minut się spóźnisz?</p>
+              <p className="text-sm text-htg-fg font-medium">{t('how_late_question')}</p>
               <div className="flex gap-2">
                 {[5, 10, 15].map(mins => (
                   <button
@@ -255,7 +255,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
                 onClick={() => setShowDelayOptions(false)}
                 className="text-xs text-htg-fg-muted hover:text-htg-fg"
               >
-                Anuluj
+                {t('cancel')}
               </button>
             </div>
           )}

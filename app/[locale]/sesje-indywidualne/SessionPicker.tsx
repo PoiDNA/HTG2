@@ -460,7 +460,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
           <div>
             <span className="flex items-center gap-2 text-sm font-medium text-htg-fg mb-3">
               <Calendar className="w-4 h-4 text-htg-sage" />
-              Wybierz termin
+              {ti('choose_date_title')}
             </span>
 
             {loadingSlots ? (
@@ -492,13 +492,13 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                         <Zap className="w-5 h-5 text-htg-sage" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-medium text-htg-fg">Najwcześniejszy termin</p>
+                        <p className="text-sm font-medium text-htg-fg">{ti('earliest_date')}</p>
                         <p className="text-htg-sage font-bold">
                           {formatDate(earliestSlot.slot_date)} · {earliestSlot.start_time.slice(0, 5)}
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs text-htg-sage font-medium px-3 py-1 bg-htg-sage/20 rounded-full">Wybierz</span>
+                    <span className="text-xs text-htg-sage font-medium px-3 py-1 bg-htg-sage/20 rounded-full">{ti('select_btn')}</span>
                   </button>
                 )}
 
@@ -531,7 +531,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                   className="flex items-center gap-2 text-sm text-htg-sage hover:text-htg-sage-dark transition-colors"
                 >
                   <ChevronDown className={`w-4 h-4 transition-transform ${calendarOpen ? 'rotate-180' : ''}`} />
-                  {calendarOpen ? 'Zwiń kalendarz' : 'Pokaż wszystkie dostępne terminy'}
+                  {calendarOpen ? ti('hide_all_dates') : ti('show_all_dates')}
                 </button>
 
                 {/* Calendar grid */}
@@ -634,15 +634,15 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
               />
               <Zap className={`w-4 h-4 shrink-0 ${wantAcceleration ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
               <div className="flex-1">
-                <p className="font-medium text-htg-fg">Chcę przyspieszenie</p>
-                <p className="text-xs text-htg-fg-muted">Powiadom gdy zwolni się wcześniejszy termin</p>
+                <p className="font-medium text-htg-fg">{ti('want_acceleration')}</p>
+                <p className="text-xs text-htg-fg-muted">{ti('notify_earlier_slot')}</p>
               </div>
             </label>
           </div>
 
           {/* Payment mode */}
           <div className="space-y-3">
-            <span className="text-sm font-medium text-htg-fg block">Sposób płatności</span>
+            <span className="text-sm font-medium text-htg-fg block">{ti('payment_method_title')}</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => setPaymentMode('full')}
@@ -652,9 +652,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                     : 'border-htg-card-border hover:border-htg-sage/40'
                 }`}
               >
-                <p className="font-medium text-htg-fg text-sm">Pełna płatność</p>
+                <p className="font-medium text-htg-fg text-sm">{ti('full_payment')}</p>
                 <p className="text-htg-sage font-bold text-lg mt-1">{totalAmount} {currencyCode}</p>
-                <p className="text-htg-fg-muted text-xs">jednorazowo</p>
+                <p className="text-htg-fg-muted text-xs">{ti('one_time')}</p>
               </button>
               <button
                 onClick={() => { setPaymentMode('installments'); setPaymentMethod('stripe'); setProofFile(null); }}
@@ -664,9 +664,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                     : 'border-htg-card-border hover:border-htg-sage/40'
                 }`}
               >
-                <p className="font-medium text-htg-fg text-sm">{installmentsCount} raty miesięczne</p>
+                <p className="font-medium text-htg-fg text-sm">{ti('installments_title', { count: installmentsCount })}</p>
                 <p className="text-htg-sage font-bold text-lg mt-1">{installmentsCount} × {installmentAmount} {currencyCode}</p>
-                <p className="text-htg-fg-muted text-xs">pierwsza rata teraz</p>
+                <p className="text-htg-fg-muted text-xs">{ti('first_installment_now')}</p>
               </button>
             </div>
 
@@ -674,12 +674,12 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
               <div className="bg-htg-surface rounded-xl p-4 text-sm text-htg-fg-muted space-y-2">
                 {Array.from({ length: installmentsCount }, (_, i) => (
                   <div key={i} className="flex justify-between">
-                    <span>Rata {i + 1} {i === 0 ? '(teraz)' : `(za ${i * 30} dni)`}</span>
+                    <span>{ti('installment_label', { n: i + 1 })} {i === 0 ? ti('installment_now') : ti('installment_later', { days: i * 30 })}</span>
                     <span className={i === 0 ? 'font-bold text-htg-fg' : ''}>{installmentAmount} {currencyCode}</span>
                   </div>
                 ))}
                 <div className="flex justify-between pt-2 border-t border-htg-card-border font-medium text-htg-fg">
-                  <span>Łącznie</span>
+                  <span>{ti('total')}</span>
                   <span>{installmentsCount * installmentAmount} {currencyCode}</span>
                 </div>
               </div>
@@ -689,7 +689,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
           {/* Payment method — only for full payment, logged-in users */}
           {paymentMode === 'full' && clientEmail && (
             <div className="space-y-3">
-              <span className="text-sm font-medium text-htg-fg block">Metoda płatności</span>
+              <span className="text-sm font-medium text-htg-fg block">{ti('payment_method')}</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   onClick={() => { setPaymentMethod('stripe'); setProofFile(null); }}
@@ -699,8 +699,8 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                       : 'border-htg-card-border hover:border-htg-sage/40'
                   }`}
                 >
-                  <p className="font-medium text-htg-fg text-sm">Karta / Blik</p>
-                  <p className="text-htg-fg-muted text-xs mt-1">Szybka płatność online</p>
+                  <p className="font-medium text-htg-fg text-sm">{ti('card_blik')}</p>
+                  <p className="text-htg-fg-muted text-xs mt-1">{ti('fast_online_payment')}</p>
                 </button>
                 <button
                   onClick={() => setPaymentMethod('transfer')}
@@ -712,9 +712,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 >
                   <div className="flex items-center gap-2">
                     <Banknote className="w-4 h-4 text-htg-fg-muted" />
-                    <p className="font-medium text-htg-fg text-sm">Przelew bankowy</p>
+                    <p className="font-medium text-htg-fg text-sm">{ti('bank_transfer')}</p>
                   </div>
-                  <p className="text-htg-fg-muted text-xs mt-1">Tradycyjny przelew</p>
+                  <p className="text-htg-fg-muted text-xs mt-1">{ti('traditional_transfer')}</p>
                 </button>
               </div>
 
@@ -723,17 +723,17 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                   <BankTransferCard
                     email={clientEmail}
                     labels={{
-                      title: 'Dane do przelewu',
-                      recipient: 'Odbiorca',
-                      account: 'Numer konta',
-                      reference: 'Tytuł przelewu',
-                      download: 'Pobierz PDF',
-                      print: 'Drukuj',
+                      title: ti('transfer_data'),
+                      recipient: ti('transfer_recipient'),
+                      account: ti('transfer_account'),
+                      reference: ti('transfer_reference'),
+                      download: ti('transfer_download'),
+                      print: ti('transfer_print'),
                     }}
                   />
 
                   <div className="bg-htg-surface border border-htg-card-border rounded-xl p-4">
-                    <p className="text-sm font-medium text-htg-fg mb-3">Załącz potwierdzenie przelewu</p>
+                    <p className="text-sm font-medium text-htg-fg mb-3">{ti('attach_proof')}</p>
                     <input
                       ref={fileRef}
                       type="file"
@@ -747,7 +747,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                         className="flex items-center gap-2 px-4 py-3 bg-htg-card border border-dashed border-htg-card-border rounded-lg text-sm text-htg-fg-muted hover:border-htg-sage/40 hover:text-htg-fg transition-colors w-full justify-center"
                       >
                         <Upload className="w-4 h-4" />
-                        Wybierz plik (zdjęcie lub PDF, max 5MB)
+                        {ti('choose_file')}
                       </button>
                     ) : (
                       <div className="flex items-center justify-between gap-3 px-4 py-3 bg-htg-sage/5 border border-htg-sage/20 rounded-lg">
@@ -761,7 +761,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                       </div>
                     )}
                     <p className="text-xs text-htg-fg-muted mt-2">
-                      Po załączeniu potwierdzenia termin zostanie zarezerwowany. Weryfikacja płatności do 3 dni roboczych.
+                      {ti('proof_note')}
                     </p>
                   </div>
                 </div>
@@ -784,35 +784,35 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
               />
               <Gift className={`w-4 h-4 shrink-0 ${isGift ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
               <div className="flex-1">
-                <p className="font-medium text-htg-fg">Kup jako prezent</p>
-                <p className="text-xs text-htg-fg-muted">Sesja zostanie powiązana z inną osobą</p>
+                <p className="font-medium text-htg-fg">{ti('buy_as_gift')}</p>
+                <p className="text-xs text-htg-fg-muted">{ti('gift_description')}</p>
               </div>
             </label>
 
             {isGift && (
               <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                 <div>
-                  <label className="text-xs font-medium text-htg-fg-muted block mb-1">Email obdarowanej osoby *</label>
+                  <label className="text-xs font-medium text-htg-fg-muted block mb-1">{ti('gift_email_label')}</label>
                   <input
                     type="email"
                     value={giftEmail}
                     onChange={e => setGiftEmail(e.target.value)}
-                    placeholder="np. syn@przykład.pl"
+                    placeholder={ti('gift_email_placeholder')}
                     className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-warm/40"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-htg-fg-muted block mb-1">Wiadomość (opcjonalnie)</label>
+                  <label className="text-xs font-medium text-htg-fg-muted block mb-1">{ti('gift_message_label')}</label>
                   <textarea
                     value={giftMessage}
                     onChange={e => setGiftMessage(e.target.value)}
-                    placeholder="Napisz kilka słów do obdarowanej osoby…"
+                    placeholder={ti('gift_message_placeholder')}
                     rows={2}
                     className="w-full px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-warm/40 resize-none"
                   />
                 </div>
                 <p className="text-xs text-htg-fg-muted">
-                  Po zakupie otrzymasz link do przekazania. Obdarowana osoba może odebrać sesję na swoje konto lub skorzystać z Twojego.
+                  {ti('gift_note')}
                 </p>
               </div>
             )}
@@ -827,11 +827,10 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
               className="mt-0.5 w-4 h-4 rounded border-htg-card-border text-htg-sage focus:ring-htg-sage shrink-0 accent-htg-sage"
             />
             <span className="text-sm text-htg-fg leading-relaxed">
-              Rozumiem, że sesja jest nagrywana i może zostać opublikowana po montażu.
-              Mogę wskazać fragmenty do usunięcia w ciągu 7 dni od udostępnienia nagrania.
+              {ti('recording_consent')}
               <span className="text-xs text-htg-fg-muted block mt-1">
-                Zgoda jest warunkiem realizacji usługi — szczegóły w{' '}
-                <a href="/terms#nagrania" target="_blank" rel="noopener" className="text-htg-indigo hover:underline">regulaminie</a> (pkt 6 i 8).
+                {ti('consent_required_note')}{' '}
+                <a href="/terms#nagrania" target="_blank" rel="noopener" className="text-htg-indigo hover:underline">{ti('terms_link_text')}</a> (pkt 6 i 8).
               </span>
             </span>
           </label>
@@ -861,7 +860,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             </button>
 
             {!selectedSlotId && !wantAcceleration && slots.length > 0 && selectedSession?.priceId && (
-              <p className="text-xs text-htg-warm text-center mt-2">Wybierz termin lub zaznacz opcję przyspieszenia</p>
+              <p className="text-xs text-htg-warm text-center mt-2">{ti('choose_date_title')}</p>
             )}
             {isGift && !giftEmail.trim() && (
               <p className="text-xs text-htg-warm text-center mt-2">Podaj email obdarowanej osoby</p>

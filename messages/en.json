@@ -223,7 +223,12 @@
     "consent_recording": "Session recording and publication",
     "consent_recording_note": "Contract requirement — cannot be revoked. You can request removal of specific segments within 7 days of the recording being shared.",
     "consent_locked": "Contract requirement",
-    "consent_active": "Active"
+    "consent_active": "Active",
+    "friend_email_placeholder": "Enter user's email address...",
+    "remove_friend": "Remove friend",
+    "add_friend": "Add friend",
+    "your_name_placeholder": "Your name...",
+    "invite_message_placeholder": "E.g. Hi! I recommend these sessions, really worth it..."
   },
   "Player": {
     "concurrent_title": "Playing on another device",
@@ -549,6 +554,9 @@
     "choose_date": "Choose a date",
     "pre_session_free_note": "Pre-session meetings are free. Once booked, the time is final — it cannot be rescheduled or cancelled.",
     "buy_pre_session": "Buy",
+    "remove_invite": "Remove invitation",
+    "companion_email_placeholder": "Partner's email (must have an HTG account)",
+    "shrink_text": "Shrink text",
     "countdown": {
       "8plus": {
         "0": "A longer road lies ahead — and that's a beautiful thing. Each day brings you closer.",
@@ -823,7 +831,9 @@
     "message_subject_placeholder": "Subject of your message",
     "search_placeholder": "Search posts...",
     "notif_new_comments": "New comments",
-    "notif_reactions": "Reactions"
+    "notif_reactions": "Reactions",
+    "poll_question_placeholder": "Ask a question...",
+    "add_photo": "Add photo"
   },
   "YouTubeBanner": {
     "new_video": "New session on YT",

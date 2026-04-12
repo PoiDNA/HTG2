@@ -310,6 +310,7 @@ function ConsentRow({ label, date, href, status, note, locale }: {
   note?: string;
   locale: string;
 }) {
+  const t = useTranslations('Account');
   const formatted = formatDate(date, locale);
 
   const badgeClass = status === 'locked'

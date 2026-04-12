@@ -252,7 +252,7 @@ export default function SessionReviewPlayer({
             onClick={handleRestore}
             className="w-8 h-8 flex items-center justify-center rounded-full
                        text-white/50 hover:text-white hover:bg-white/10 transition-colors shrink-0"
-            aria-label="Przywróć odtwarzacz"
+            aria-label="Restore player"
           >
             <X className="w-4 h-4" />
           </button>

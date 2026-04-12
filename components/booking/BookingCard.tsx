@@ -211,12 +211,7 @@ export default function BookingCard({ booking, locale, hasEarlierSlots, countdow
                 {loading === 'confirm' ? t('loading') : t('confirm_btn')}
               </button>
             )}
-            {isPendingTransfer && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500/10 text-amber-600 rounded-lg text-xs font-medium">
-                <Banknote className="w-3.5 h-3.5" />
-                Oczekuje na weryfikację płatności
-              </span>
-            )}
+            {/* Payment verification badge hidden from user view */}
 
             {/* Join live session — active 30 min before session and during session */}
             {isConfirmed && sessionDateTime && hoursUntilSession <= 0.5 && hoursUntilSession > -3 && booking.live_session_id && (

@@ -40,18 +40,52 @@ export default async function AdminSessionsPage({ params }: { params: Promise<{ 
 
   // Enrich with client profiles + pick latest ready sesja recording per booking
   const userIds = [...new Set((bookings || []).map((b: any) => b.user_id).filter(Boolean))];
-  const { data: profiles } = userIds.length > 0
-    ? await db.from('profiles').select('id, email, display_name').in('id', userIds)
-    : { data: [] };
-  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+  const [profilesResult, importedAccessResult] = await Promise.all([
+    userIds.length > 0
+      ? db.from('profiles').select('id, email, display_name').in('id', userIds)
+      : Promise.resolve({ data: [] }),
+    // Fetch imported recordings (no booking_id FK) via access table, matched by user_id + session_date
+    userIds.length > 0
+      ? db
+          .from('booking_recording_access')
+          .select('user_id, recording_id, revoked_at, recording:booking_recordings!inner(id, session_date, status, source)')
+          .in('user_id', userIds)
+          .is('revoked_at', null)
+          .eq('recording.status', 'ready')
+          .eq('recording.source', 'import')
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const profileMap = new Map((profilesResult.data || []).map((p: any) => [p.id, p]));
+
+  // Build map: `${userId}__${sessionDate}` → recording_id (latest wins by recording_id desc)
+  const importedRecordingMap = new Map<string, string>();
+  for (const row of (importedAccessResult.data || []) as any[]) {
+    const rec = Array.isArray(row.recording) ? row.recording[0] : row.recording;
+    if (!rec?.session_date) continue;
+    const key = `${row.user_id}__${rec.session_date}`;
+    if (!importedRecordingMap.has(key)) {
+      importedRecordingMap.set(key, rec.id);
+    }
+  }
+
   const enriched = (bookings || []).map((booking: any) => {
     const readyRecordings = (booking.recordings || [])
       .filter((r: any) => r.recording_phase === 'sesja' && r.status === 'ready')
       .sort((r1: any, r2: any) => (r2.created_at || '').localeCompare(r1.created_at || ''));
+    const liveKitRecordingId = readyRecordings[0]?.id ?? null;
+
+    // Fall back to imported recording matched by user_id + slot_date
+    const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
+    const importedRecordingId = liveKitRecordingId
+      ? null
+      : (importedRecordingMap.get(`${booking.user_id}__${slot?.slot_date}`) ?? null);
+
     return {
       ...booking,
       client: profileMap.get(booking.user_id) || null,
-      readySesjaRecordingId: readyRecordings[0]?.id ?? null,
+      readySesjaRecordingId: liveKitRecordingId ?? importedRecordingId,
     };
   });
 

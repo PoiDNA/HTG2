@@ -305,7 +305,7 @@ export default function SluchajClient({
                       onClick={() => setPlayingSessionId(session.id)}
                       className="flex-1 text-left px-4 py-3.5 min-w-0"
                     >
-                      <span className="font-medium text-htg-fg block pl-3 -indent-3">{session.title}</span>
+                      <span className="font-medium text-htg-fg block pl-8 -indent-8">{session.title}</span>
                     </button>
 
                     {/* Action buttons */}

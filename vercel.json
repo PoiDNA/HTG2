@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/cron/process-recordings",
-      "schedule": "*/2 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/analyze-client",
@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/youtube-check",
       "schedule": "37 */6 * * *"
+    },
+    {
+      "path": "/api/cron/expire-slots",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

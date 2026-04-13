@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { deleteFile } from '@/lib/bunny-storage';
 
 /**
- * POST /api/cron/community-cleanup
+ * GET /api/cron/community-cleanup
  *
  * Cleanup orphaned community data:
  * 1. Hard-delete posts soft-deleted > 30 days ago (CASCADE to comments, reactions)
@@ -13,7 +13,14 @@ import { deleteFile } from '@/lib/bunny-storage';
  *
  * Intended to be called by Vercel Cron or manually.
  */
-export async function POST() {
+export async function GET(request: NextRequest) {
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
+  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const db = createSupabaseServiceRole();
   const results = { posts_deleted: 0, files_deleted: 0, rate_logs_cleaned: 0, notifications_cleaned: 0 };
 

@@ -5,9 +5,10 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 10;
 
 export async function GET(request: NextRequest) {
-  // Verify Vercel Cron secret
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
+  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -30,15 +31,7 @@ export async function GET(request: NextRequest) {
       .select('id');
     results.stale_streams_cleaned = staleStreams?.length ?? 0;
 
-    // 3. Expire acceleration queue offers (24h)
-    const queueThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: expiredQueue } = await supabase
-      .from('acceleration_queue')
-      .update({ status: 'expired' })
-      .eq('status', 'offered')
-      .lt('offered_at', queueThreshold)
-      .select('id');
-    results.expired_queue_offers = expiredQueue?.length ?? 0;
+    // 3. Acceleration queue expiry is handled by expire_held_slots() RPC above
 
     return NextResponse.json({
       ok: true,

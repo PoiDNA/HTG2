@@ -18,19 +18,17 @@ import {
 import { readSiteSettingString } from '@/lib/site-settings';
 
 const SYSTEM_ACTOR = '00000000-0000-0000-0000-000000000000';
-const CRON_SECRET = process.env.CRON_SECRET;
 
 /**
- * POST /api/cron/process-recordings
- * Runs every 2 minutes. 6 logical sections with independent counters.
+ * GET /api/cron/process-recordings
+ * Runs every 5 minutes. 6 logical sections with independent counters.
  */
-export async function POST(request: NextRequest) {
-  // Verify cron secret
-  if (CRON_SECRET) {
-    const auth = request.headers.get('authorization');
-    if (auth !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function GET(request: NextRequest) {
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
+  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const db = createSupabaseServiceRole();

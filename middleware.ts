@@ -111,19 +111,36 @@ export async function middleware(request: NextRequest) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(authCode);
-    if (error) {
-      console.error('Code exchange failed:', error.message);
-      const errCode = (error as any).code ?? '';
-      const errMsg = error.message?.toLowerCase() ?? '';
-      const errorType = (
-        errCode === 'otp_disabled' || errCode === 'user_not_found' ||
-        errMsg.includes('signups not allowed') || errMsg.includes('user not found')
-      ) ? 'not_registered' : 'auth_failed';
-      // Build clean error redirect — don't clone request URL (would carry ?code=, ?next= as garbage)
+    try {
+      const { error } = await Promise.race([
+        supabase.auth.exchangeCodeForSession(authCode),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('exchange_timeout')), 10_000)
+        ),
+      ]);
+      if (error) {
+        console.error('Code exchange failed:', error.message);
+        const errCode = (error as any).code ?? '';
+        const errMsg = error.message?.toLowerCase() ?? '';
+        const errorType = (
+          errCode === 'otp_disabled' || errCode === 'user_not_found' ||
+          errMsg.includes('signups not allowed') || errMsg.includes('user not found')
+        ) ? 'not_registered' : 'auth_failed';
+        // Build clean error redirect — don't clone request URL (would carry ?code=, ?next= as garbage)
+        const errUrl = new URL(`${request.nextUrl.origin}/${locale}/login`);
+        errUrl.searchParams.set('error', errorType);
+        // Preserve nextParam as returnTo so user lands where intended after re-login
+        if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+          errUrl.searchParams.set('returnTo', nextParam);
+        }
+        const errorResponse = NextResponse.redirect(errUrl);
+        errorResponse.headers.set('Cache-Control', 'no-store');
+        return errorResponse;
+      }
+    } catch {
+      // Timeout → redirect to login with timeout error
       const errUrl = new URL(`${request.nextUrl.origin}/${locale}/login`);
-      errUrl.searchParams.set('error', errorType);
-      // Preserve nextParam as returnTo so user lands where intended after re-login
+      errUrl.searchParams.set('error', 'auth_timeout');
       if (nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')) {
         errUrl.searchParams.set('returnTo', nextParam);
       }
@@ -189,8 +206,8 @@ export async function middleware(request: NextRequest) {
           },
         }
       );
-      const { data: { user } } = await supabaseCheck.auth.getUser();
-      if (user) {
+      const { data: { session } } = await supabaseCheck.auth.getSession();
+      if (session?.user) {
         const locale = getLocaleFromPath(pathname);
         const url = request.nextUrl.clone();
         url.pathname = `/${locale}${getPortalHome(host)}`;
@@ -222,7 +239,8 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   if (!user) {
     const locale = getLocaleFromPath(pathname);
@@ -243,21 +261,31 @@ export async function middleware(request: NextRequest) {
   const isAdminPath = withoutLocale.startsWith('/konto/admin') || withoutLocale.startsWith('/prowadzacy') || withoutLocale.startsWith('/konto/tlumacz');
 
   if (isKontoPath && !isZgodyPath && !isAdminPath && !isPortal) {
-    const REQUIRED = ['terms_v3', 'privacy_v3', 'sensitive_data'];
-    const { data: consents } = await supabase
-      .from('consent_records')
-      .select('consent_type')
-      .eq('user_id', user.id)
-      .eq('granted', true);
+    try {
+      const REQUIRED = ['terms_v3', 'privacy_v3', 'sensitive_data'];
+      const { data: consents } = await Promise.race([
+        supabase
+          .from('consent_records')
+          .select('consent_type')
+          .eq('user_id', user.id)
+          .eq('granted', true),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('consent_timeout')), 3_000)
+        ),
+      ]);
 
-    const granted = new Set((consents ?? []).map((c: { consent_type: string }) => c.consent_type));
-    const missing = REQUIRED.filter(t => !granted.has(t));
+      const granted = new Set((consents ?? []).map((c: { consent_type: string }) => c.consent_type));
+      const missing = REQUIRED.filter(t => !granted.has(t));
 
-    if (missing.length > 0) {
-      const locale = getLocaleFromPath(pathname);
-      const url = request.nextUrl.clone();
-      url.pathname = `/${locale}/konto/zgody`;
-      return NextResponse.redirect(url);
+      if (missing.length > 0) {
+        const locale = getLocaleFromPath(pathname);
+        const url = request.nextUrl.clone();
+        url.pathname = `/${locale}/konto/zgody`;
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      // Timeout or DB error → fail-open (let user through)
+      // At normal DB speed this never fires; consent checked again next request
     }
   }
 

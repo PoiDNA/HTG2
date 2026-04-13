@@ -84,10 +84,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <SanctuaryHero locale={locale} />
         </Suspense>
 
-        {/* Desktop: YT banner left + Słuchaj right (only lg+) */}
+        {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right — both always visible */}
         <div className="hidden sm:flex gap-4 mb-6 items-stretch">
-          {ytBanner && <div className="flex-1 min-w-0 [&>*]:mb-0">{ytBanner}</div>}
-          <div className="hidden lg:block lg:w-52 shrink-0">
+          {ytBanner && <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+          <div className="flex-1">
             <SluchajButton />
           </div>
         </div>
@@ -121,10 +121,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <ContinueCard locale={locale} />
         </Suspense>
 
-        {/* Desktop: YT banner left + Słuchaj right (only lg+) */}
+        {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right — both always visible */}
         <div className="hidden sm:flex gap-4 mb-6 items-stretch">
-          {ytBanner && <div className="flex-1 min-w-0 [&>*]:mb-0">{ytBanner}</div>}
-          <div className="hidden lg:block lg:w-52 shrink-0">
+          {ytBanner && <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+          <div className="flex-1">
             <SluchajButton />
           </div>
         </div>
@@ -152,10 +152,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         <SluchajButton />
       </div>
 
-      {/* Desktop: YT banner left + Słuchaj right (only lg+) */}
+      {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right — both always visible */}
       <div className="hidden sm:flex gap-4 mb-6 items-stretch">
-        {ytBanner && <div className="flex-1 min-w-0 [&>*]:mb-0">{ytBanner}</div>}
-        <div className="hidden lg:block lg:w-52 shrink-0">
+        {ytBanner && <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+        <div className="flex-1">
           <SluchajButton />
         </div>
       </div>

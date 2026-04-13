@@ -10,7 +10,7 @@ interface LatestYouTubeBannerProps {
   thumbnailUrl: string;
 }
 
-export default function LatestYouTubeBanner({ youtubeId, title }: LatestYouTubeBannerProps) {
+export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: LatestYouTubeBannerProps) {
   const [show, setShow] = useState(false);
   const t = useTranslations('YouTubeBanner');
 
@@ -31,27 +31,31 @@ export default function LatestYouTubeBanner({ youtubeId, title }: LatestYouTubeB
   const ytUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
 
   return (
-    <div className="relative bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
+    <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
       <div className="flex items-stretch">
-        {/* YouTube embed player — fixed 16:9 ratio, standard YT size */}
-        <div className="shrink-0 w-full sm:w-72 md:w-80 aspect-video">
-          <iframe
-            src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
-            title={title}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
+        {/* Thumbnail — always visible */}
+        <a
+          href={ytUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full sm:w-64 md:w-80 aspect-video sm:shrink-0 relative group overflow-hidden"
+        >
+          <img
+            src={thumbnailUrl}
+            alt={title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
           />
-        </div>
+        </a>
 
         {/* Description + watch button — hidden when not enough space */}
-        <div className="hidden md:flex flex-col flex-1 min-w-0 p-4 pr-8 justify-center gap-1.5">
+        <div className="hidden md:flex flex-col flex-1 min-w-0 p-4 justify-center gap-1.5">
           <p className="text-xs font-medium text-htg-sage">{t('new_video')}</p>
           <a
             href={ytUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-htg-fg hover:text-htg-sage transition-colors line-clamp-3"
+            className="text-sm font-medium text-htg-fg hover:text-htg-sage transition-colors line-clamp-2"
           >
             {title}
           </a>
@@ -67,16 +71,16 @@ export default function LatestYouTubeBanner({ youtubeId, title }: LatestYouTubeB
             </a>
           </div>
         </div>
-      </div>
 
-      {/* Dismiss button — positioned absolutely so it doesn't affect layout */}
-      <button
-        onClick={handleDismiss}
-        className="absolute top-2 right-2 p-1 text-htg-fg-muted hover:text-htg-fg transition-colors bg-htg-card/80 rounded-full"
-        aria-label="Close"
-      >
-        <X className="w-4 h-4" />
-      </button>
+        {/* Dismiss button */}
+        <button
+          onClick={handleDismiss}
+          className="shrink-0 self-start p-1 m-1 text-htg-fg-muted hover:text-htg-fg transition-colors"
+          aria-label="Close"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 }

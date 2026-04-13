@@ -1,28 +1,26 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import type { ComponentProps } from 'react';
-import { Link } from '@/i18n-config';
+import { Link, usePathname } from '@/i18n-config';
 
 type LinkHref = ComponentProps<typeof Link>['href'];
 
 interface SidebarLinkProps {
   href: LinkHref;
   label: string;
-  locale: string;
   children: React.ReactNode; // icon rendered server-side (SVG) — not a component ref
 }
 
-export default function SidebarLink({ href, label, locale, children }: SidebarLinkProps) {
+export default function SidebarLink({ href, label, children }: SidebarLinkProps) {
+  // usePathname from @/i18n-config returns the internal pathname key (e.g. '/konto')
   const pathname = usePathname();
   const hrefStr = typeof href === 'string' ? href : href.pathname;
-  const fullHref = `/${locale}${hrefStr}`;
 
   // Exact match for /konto (dashboard), prefix match for sub-pages
   const isActive =
     hrefStr === '/konto'
-      ? pathname === fullHref
-      : pathname.startsWith(fullHref);
+      ? pathname === hrefStr
+      : pathname.startsWith(hrefStr);
 
   return (
     <Link

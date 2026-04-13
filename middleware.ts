@@ -6,16 +6,53 @@ import { isNagraniaPortal, NAGRANIA_HOME, isSesjaPortal, SESJA_HOME, isAnyPortal
 
 const intlMiddleware = createMiddleware(routing);
 
-// Paths that don't require authentication
+// ─── Localized path → internal path resolution ─────────────────
+// Build a reverse lookup: for each locale, map localized paths back to internal keys.
+// This allows middleware to check paths like /en/account and resolve them to /konto.
+const _reverseMap = new Map<string, string>();
+
+if (routing.pathnames) {
+  for (const [internal, localized] of Object.entries(routing.pathnames)) {
+    if (typeof localized === 'string') {
+      // Same path for all locales — no mapping needed (internal === localized)
+    } else {
+      for (const localePath of Object.values(localized)) {
+        if (localePath !== internal) {
+          // Strip dynamic segments for prefix matching: /account/watch/[sessionId] → /account/watch
+          const staticLocale = localePath.replace(/\/\[.*$/, '');
+          const staticInternal = internal.replace(/\/\[.*$/, '');
+          _reverseMap.set(staticLocale, staticInternal);
+        }
+      }
+    }
+  }
+}
+
+/** Resolve a localized external path (without locale prefix) to its internal equivalent.
+ *  e.g. '/account/session-recordings' → '/konto/nagrania-sesji' */
+function toInternalPath(externalPath: string): string {
+  // Direct match first
+  if (_reverseMap.has(externalPath)) return _reverseMap.get(externalPath)!;
+  // Prefix match for nested/dynamic paths
+  for (const [localized, internal] of _reverseMap) {
+    if (externalPath.startsWith(localized + '/')) {
+      return internal + externalPath.slice(localized.length);
+    }
+  }
+  return externalPath;
+}
+
+// Paths that don't require authentication (internal keys)
 const PUBLIC_PATHS = ['/login', '/privacy', '/terms', '/auth', '/host', '/host-v2', '/host-v3', '/host-v4', '/pilot'];
 
 function isPublicPath(pathname: string): boolean {
-  // Strip locale prefix
+  // Strip locale prefix, then resolve localized path to internal
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
+  const internal = toInternalPath(withoutLocale);
 
   return PUBLIC_PATHS.some(p => {
-    if (p === '/') return withoutLocale === '/';
-    return withoutLocale === p || withoutLocale.startsWith(`${p}/`);
+    if (p === '/') return internal === '/';
+    return internal === p || internal.startsWith(`${p}/`);
   });
 }
 
@@ -24,20 +61,22 @@ function getLocaleFromPath(pathname: string): string {
   return match ? match[1] : routing.defaultLocale;
 }
 
-// Paths allowed on the nagrania.htg.cyou portal (without locale prefix)
+// Paths allowed on the nagrania.htg.cyou portal (internal keys, without locale prefix)
 const NAGRANIA_ALLOWED = ['/login', '/auth', '/konto/nagrania-sesji', '/privacy', '/terms'];
 
 function isNagraniaAllowed(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
-  return NAGRANIA_ALLOWED.some(p => withoutLocale === p || withoutLocale.startsWith(`${p}/`));
+  const internal = toInternalPath(withoutLocale);
+  return NAGRANIA_ALLOWED.some(p => internal === p || internal.startsWith(`${p}/`));
 }
 
-// Paths allowed on the sesja.htg.cyou portal (without locale prefix)
+// Paths allowed on the sesja.htg.cyou portal (internal keys, without locale prefix)
 const SESJA_ALLOWED = ['/login', '/auth', '/konto/sesja-panel', '/live', '/privacy', '/terms'];
 
 function isSesjaAllowed(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
-  return SESJA_ALLOWED.some(p => withoutLocale === p || withoutLocale.startsWith(`${p}/`));
+  const internal = toInternalPath(withoutLocale);
+  return SESJA_ALLOWED.some(p => internal === p || internal.startsWith(`${p}/`));
 }
 
 export async function middleware(request: NextRequest) {
@@ -246,19 +285,21 @@ export async function middleware(request: NextRequest) {
     const locale = getLocaleFromPath(pathname);
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
-    // Preserve original path as returnTo (pathname only — no query for security)
+    // Preserve original path as returnTo using internal path (locale-agnostic)
     const withoutLocaleForReturn = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
-    if (withoutLocaleForReturn !== '/' && withoutLocaleForReturn !== '/login') {
-      url.searchParams.set('returnTo', withoutLocaleForReturn);
+    const internalReturn = toInternalPath(withoutLocaleForReturn);
+    if (internalReturn !== '/' && internalReturn !== '/login') {
+      url.searchParams.set('returnTo', internalReturn);
     }
     return NextResponse.redirect(url);
   }
 
   // ─── Consent Gate for /konto paths ─────────────────────────────
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
-  const isKontoPath = withoutLocale.startsWith('/konto');
-  const isZgodyPath = withoutLocale.startsWith('/konto/zgody');
-  const isAdminPath = withoutLocale.startsWith('/konto/admin') || withoutLocale.startsWith('/prowadzacy') || withoutLocale.startsWith('/konto/tlumacz');
+  const internalPath = toInternalPath(withoutLocale);
+  const isKontoPath = internalPath.startsWith('/konto');
+  const isZgodyPath = internalPath.startsWith('/konto/zgody');
+  const isAdminPath = internalPath.startsWith('/konto/admin') || internalPath.startsWith('/prowadzacy') || internalPath.startsWith('/konto/tlumacz');
 
   if (isKontoPath && !isZgodyPath && !isAdminPath && !isPortal) {
     try {

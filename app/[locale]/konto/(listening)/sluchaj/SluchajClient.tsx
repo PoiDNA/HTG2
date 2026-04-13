@@ -261,7 +261,7 @@ export default function SluchajClient({
 
       {/* Main content — player on top, session list below, centered */}
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-4 pb-4">
-        <div className="w-full max-w-[640px] mx-auto md:my-auto">
+        <div className="w-full max-w-[640px] mx-auto">
           {/* Player — natural aspect ratio (square mobile, 16:9 desktop) */}
           <div className="rounded-t-xl overflow-hidden">
             {playingSessionId ? (
@@ -274,7 +274,15 @@ export default function SluchajClient({
                 tokenEndpoint="/api/video/token"
               />
             ) : (
-              <div className="aspect-square md:aspect-video bg-htg-card flex items-center justify-center">
+              <div className="aspect-square md:aspect-video bg-htg-card relative flex items-center justify-center">
+                {/* Corner labels — visible only when no session is playing */}
+                <span className="absolute top-3 left-4 text-xs text-htg-fg-muted/80 font-medium select-none pointer-events-none">
+                  {currentGroup?.label}
+                </span>
+                <span className="absolute top-3 right-4 text-xs text-htg-fg-muted/80 font-medium select-none pointer-events-none">
+                  Hacking The Game
+                </span>
+
                 {filteredSessions.length > 0 ? (
                   <button
                     onClick={() => setPlayingSessionId(filteredSessions[0].id)}

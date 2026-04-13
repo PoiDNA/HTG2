@@ -84,10 +84,12 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <SanctuaryHero locale={locale} />
         </Suspense>
 
-        {/* Desktop: rząd z banerem + Słuchaj */}
+        {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right */}
         <div className="hidden sm:flex gap-4 mb-6">
-          {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
-          <SluchajButton />
+          {ytBanner && <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+          <div className="flex-1">
+            <SluchajButton />
+          </div>
         </div>
         {/* Mobile: banner pod hero */}
         {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}
@@ -119,10 +121,12 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <ContinueCard locale={locale} />
         </Suspense>
 
-        {/* Desktop: rząd z banerem + Słuchaj */}
+        {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right */}
         <div className="hidden sm:flex gap-4 mb-6">
-          {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
-          <SluchajButton />
+          {ytBanner && <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+          <div className="flex-1">
+            <SluchajButton />
+          </div>
         </div>
         {/* Mobile: banner pod hero */}
         {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}
@@ -148,10 +152,12 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         <SluchajButton />
       </div>
 
-      {/* Desktop: rząd z banerem + Słuchaj */}
+      {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right */}
       <div className="hidden sm:flex gap-4 mb-6">
-        {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
-        <SluchajButton />
+        {ytBanner && <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+        <div className="flex-1">
+          <SluchajButton />
+        </div>
       </div>
       {/* Mobile: banner pod Słuchaj */}
       {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}

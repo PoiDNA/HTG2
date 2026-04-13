@@ -176,10 +176,10 @@ export default function SluchajClient({
 
           {menuOpen && (
             <>
-              {/* Backdrop — z-index above player */}
+              {/* Backdrop — above player */}
               <div className="fixed inset-0 z-[490]" onClick={() => setMenuOpen(false)} />
 
-              {/* Dropdown — z-index above backdrop */}
+              {/* Dropdown — above backdrop */}
               <div className="absolute right-0 top-full mt-1 z-[500] w-72 bg-htg-card border border-htg-card-border rounded-xl shadow-lg overflow-hidden">
                 {/* Month options — scrollable for up to 28 months */}
                 <div className="border-b border-htg-card-border max-h-72 overflow-y-auto">
@@ -259,13 +259,11 @@ export default function SluchajClient({
         </div>
       </div>
 
-      {/* Main content — stacked on mobile, side-by-side on desktop */}
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
-
-        {/* Player column — full-width on mobile, flex-1 on desktop */}
-        <div className="flex-shrink-0 px-4 pt-4 md:flex-1 md:min-w-0 md:flex md:flex-col md:justify-center md:p-6 md:overflow-hidden">
-          {/* Wrapper clips player's bottom corners on mobile for seamless connection with session list */}
-          <div className="overflow-hidden rounded-t-xl md:overflow-visible">
+      {/* Main content — player on top, session list below, centered */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-4 pb-4">
+        <div className="w-full max-w-[640px] mx-auto md:my-auto">
+          {/* Player — natural aspect ratio (square mobile, 16:9 desktop) */}
+          <div className="rounded-t-xl overflow-hidden">
             {playingSessionId ? (
               <SessionReviewPlayer
                 key={playingSessionId}
@@ -276,16 +274,14 @@ export default function SluchajClient({
                 tokenEndpoint="/api/video/token"
               />
             ) : (
-              <div className="aspect-square md:aspect-video bg-htg-card rounded-t-xl md:rounded-xl flex items-center justify-center">
+              <div className="aspect-square md:aspect-video bg-htg-card flex items-center justify-center">
                 <p className="text-htg-fg-muted text-sm">Wybierz sesję</p>
               </div>
             )}
           </div>
-        </div>
 
-        {/* Session list column — below player on mobile, sidebar on desktop */}
-        <div className="px-4 pb-4 md:px-0 md:pb-0 md:w-72 lg:w-80 md:flex-shrink-0 md:border-l md:border-htg-card-border md:overflow-y-auto">
-          <div className="bg-htg-card border border-t-0 border-htg-card-border rounded-b-xl md:rounded-none md:border-0 overflow-hidden">
+          {/* Session list — directly attached below player, full player width */}
+          <div className="bg-htg-card border border-t-0 border-htg-card-border rounded-b-xl overflow-hidden">
             {filteredSessions.length === 0 ? (
               <div className="px-4 py-6 text-center text-htg-fg-muted text-sm">
                 Brak sesji dla wybranego filtru
@@ -350,7 +346,6 @@ export default function SluchajClient({
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

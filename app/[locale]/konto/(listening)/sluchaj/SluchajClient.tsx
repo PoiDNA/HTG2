@@ -11,7 +11,7 @@ const SessionReviewPlayer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex items-center justify-center h-full">
+      <div className="w-[250px] aspect-square flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-htg-fg-muted" />
       </div>
     ),
@@ -26,7 +26,6 @@ type Props = {
 };
 
 export default function SluchajClient({ sections, singleSessions, userId, userEmail }: Props) {
-  // Build playable groups for dropdown
   const groups = useMemo(() => {
     const result: { key: string; label: string; sessions: VodSession[] }[] = [];
 
@@ -50,7 +49,6 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
 
   const currentGroup = groups.find((g) => g.key === selectedKey);
 
-  // Empty state
   if (groups.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full px-6 text-center">
@@ -67,9 +65,9 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
   }
 
   return (
-    <>
+    <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-htg-card-border">
+      <div className="flex items-center justify-between px-4 py-3 shrink-0">
         <Link
           href="/konto"
           className="inline-flex items-center gap-2 text-sm text-htg-fg-muted hover:text-htg-fg transition-colors"
@@ -94,30 +92,32 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
         </select>
       </div>
 
-      {/* Player */}
+      {/* Player — compact, centered, 250px wide */}
       {playingSessionId && (
-        <div className="shrink-0 max-h-[45vh]">
-          <SessionReviewPlayer
-            key={playingSessionId}
-            playbackId={playingSessionId}
-            idFieldName="sessionId"
-            userId={userId}
-            userEmail={userEmail}
-            tokenEndpoint="/api/video/token"
-          />
+        <div className="shrink-0 flex justify-center px-4 py-2">
+          <div className="w-[250px] rounded-xl overflow-hidden">
+            <SessionReviewPlayer
+              key={playingSessionId}
+              playbackId={playingSessionId}
+              idFieldName="sessionId"
+              userId={userId}
+              userEmail={userEmail}
+              tokenEndpoint="/api/video/token"
+            />
+          </div>
         </div>
       )}
 
-      {/* Session list */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
-        <div className="space-y-1">
+      {/* Session list — always visible, framed */}
+      <div className="px-4 pb-4 pt-2">
+        <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
           {currentGroup?.sessions.map((session, index) => (
             <button
               key={session.id}
               onClick={() => setPlayingSessionId(session.id)}
-              className={`w-full text-left px-3 py-3 rounded-lg transition-colors ${
+              className={`w-full text-left px-4 py-3.5 transition-colors border-b border-htg-card-border last:border-b-0 ${
                 playingSessionId === session.id
-                  ? 'bg-htg-sage/10 border-l-2 border-htg-sage pl-2.5'
+                  ? 'bg-htg-sage/10 border-l-2 border-l-htg-sage'
                   : 'hover:bg-htg-surface/60'
               }`}
             >
@@ -127,6 +127,6 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
           ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -22,7 +22,8 @@
     "menu": "Menü",
     "staff": "Mitarbeiter-Panel",
     "switch_locale": "Sprache auf {locale} wechseln",
-    "skip_to_content": "Zum Inhalt springen"
+    "skip_to_content": "Zum Inhalt springen",
+    "close_menu": "Menü schließen"
   },
   "Footer": {
     "privacy": "Datenschutzerklärung",
@@ -95,7 +96,7 @@
     "register_name_required": "Bitte geben Sie Ihren Namen ein.",
     "consent_label": "Ich stimme der Verarbeitung meiner Daten zu Überzeugungen und Gesundheitszustand zum Zweck der Durchführung von Sitzungen zur spirituellen Entwicklung zu (DSGVO Art. 9).",
     "consent_required": "Die Zustimmung ist erforderlich, um fortzufahren.",
-    "login_help": "Um Aufzeichnungen anzuhören: Geben Sie Ihre E-Mail-Adresse ein, klicken Sie auf \u201ELink senden\u201C, öffnen Sie dann Ihren Posteingang und klicken Sie auf den Link in der E-Mail."
+    "login_help": "Um Aufzeichnungen anzuhören: Geben Sie Ihre E-Mail-Adresse ein, klicken Sie auf „Link senden“, öffnen Sie dann Ihren Posteingang und klicken Sie auf den Link in der E-Mail."
   },
   "Sessions": {
     "title": "Gruppensitzungen",
@@ -110,7 +111,15 @@
     "individual_sessions": "Einzelne Sitzungen",
     "sessions_in_set": "{count, plural, one {# Sitzung} other {# Sitzungen}} im Set",
     "empty_title": "Neue Sitzungen folgen in Kürze",
-    "empty_description": "Wir arbeiten daran, unser Archiv verfügbar zu machen. Schauen Sie bald wieder vorbei!"
+    "empty_description": "Wir arbeiten daran, unser Archiv verfügbar zu machen. Schauen Sie bald wieder vorbei!",
+    "your_library": "Meine Bibliothek",
+    "filter_show": "Anzeigen",
+    "filter_all": "Alle",
+    "filter_unlistened": "Nicht angehört",
+    "filter_bookmarked": "Gemerkt",
+    "remaining_sessions": "Weitere Sitzungen",
+    "processing": "Wird verarbeitet...",
+    "go_to_payment": "Zur Zahlung"
   },
   "Subscriptions": {
     "title": "Abonnements",
@@ -135,7 +144,18 @@
     "listen": "Anhören",
     "close": "Schließen",
     "sharing_prohibited": "Zum Schutz der Vertraulichkeit und des Komforts der Sitzung ist diese Aufzeichnung nicht zur Weitergabe bestimmt.",
-    "processing": "Wird verarbeitet..."
+    "processing": "Wird verarbeitet...",
+    "your_recordings": "Ihre Sitzungsaufzeichnungen",
+    "show_all": "Alle anzeigen",
+    "no_recordings": "Aufzeichnungen Ihrer Sitzungen erscheinen hier nach der ersten aufgezeichneten Sitzung.",
+    "session_fallback": "Einzelsitzung",
+    "privacy_notice": "Aufzeichnungen Ihrer Sitzungen sind bis zu 12 Monate nach dem Sitzungsdatum verfügbar. Aus Sicherheitsgründen behalten wir uns das Recht vor, diesen Zeitraum zu verkürzen. Wenn Sie eine Aufzeichnung löschen oder ein Problem melden möchten, schreiben Sie uns an htg@htg.cyou.",
+    "recording_from": "Aufzeichnung von",
+    "available_until": "Verfügbar bis",
+    "legal_hold_message": "Diese Aufzeichnung wurde archiviert. Kontaktieren Sie uns, wenn Sie Fragen haben.",
+    "contact_center": "HTG-Kontaktzentrum",
+    "contact_center_desc1": "Wenn etwas nicht funktioniert oder Sie Zugang zu anderen Aufzeichnungen benötigen — schreiben Sie uns über das HTG-Kontaktzentrum.",
+    "contact_center_desc2": "Nach dem Anmelden können Sie jederzeit zu Ihren Gesprächen zurückkehren und nachsehen, was vereinbart wurde. Wir antworten so schnell wie möglich."
   },
   "Recordings": {
     "title": "Öffentliche Aufzeichnungen",
@@ -183,7 +203,32 @@
     "watch": "Ansehen",
     "no_orders": "Noch keine Bestellungen.",
     "no_subscriptions": "Sie haben keine aktiven Abonnements.",
-    "full_catalog_access": "Voller Zugang zum gesamten Sitzungsarchiv"
+    "full_catalog_access": "Voller Zugang zum gesamten Sitzungsarchiv",
+    "activations_title": "Ihre Aktivierungen",
+    "activations_subtitle": "Aktive Abonnements und Sitzungspakete",
+    "add_package": "Paket oder Abonnement hinzufügen",
+    "session_with_natalia": "Sitzung mit Natalia",
+    "buy_single_desc": "Einzelne 1:1-Sitzung kaufen",
+    "monthly_access": "Monatlicher Sitzungszugang",
+    "best_option": "Beste Option",
+    "yearly_access": "Jährlicher Sitzungszugang",
+    "history": "Verlauf",
+    "expired_at": "Abgelaufen: {date}",
+    "per_month": "Mo.",
+    "per_year": "Jahr",
+    "cancel": "Abbrechen",
+    "profile_name_placeholder": "Max Mustermann",
+    "consent_privacy": "Zustimmung zur Datenschutzerklärung (DSGVO)",
+    "consent_terms": "Zustimmung zu den Nutzungsbedingungen",
+    "consent_recording": "Aufzeichnung und Veröffentlichung der Sitzung",
+    "consent_recording_note": "Vertragsbedingung — nicht widerrufbar. Sie können innerhalb von 7 Tagen nach Bereitstellung der Aufzeichnung zu entfernende Abschnitte benennen.",
+    "consent_locked": "Vertragsbedingung",
+    "consent_active": "Aktiv",
+    "friend_email_placeholder": "E-Mail-Adresse des Benutzers eingeben...",
+    "remove_friend": "Aus Freunden entfernen",
+    "add_friend": "Als Freund hinzufügen",
+    "your_name_placeholder": "Ihr Name...",
+    "invite_message_placeholder": "z. B. Hallo! Ich empfehle Dir diese Sitzungen, sie lohnen sich wirklich..."
   },
   "Player": {
     "concurrent_title": "Wiedergabe auf einem anderen Gerät",
@@ -192,7 +237,8 @@
     "loading": "Wird geladen...",
     "load_error_title": "Laden fehlgeschlagen",
     "load_error": "Die Aufzeichnung konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
-    "error": "Aufzeichnung konnte nicht geladen werden."
+    "error": "Aufzeichnung konnte nicht geladen werden.",
+    "close": "Player schließen"
   },
   "Individual": {
     "title": "Einzelsitzungen",
@@ -223,7 +269,54 @@
     "interpreter_name": "Bernadetta",
     "session_pair_name": "Paarsitzung",
     "session_pair_subtitle": "Natalia HTG + Dolmetscherin",
-    "interpreter_note": "Sitzungen beinhalten Konsekutivdolmetschen durch {name}"
+    "interpreter_note": "Sitzungen beinhalten Konsekutivdolmetschen durch {name}",
+    "choose_assistant": "Assistentin auswählen:",
+    "processing": "Wird verarbeitet...",
+    "book_transfer": "Sitzung reservieren",
+    "pay_installment": "{n}. Rate bezahlen",
+    "payment_method_title": "Zahlungsart",
+    "full_payment": "Vollständige Zahlung",
+    "one_time": "einmalig",
+    "installments_title": "{count} monatliche Raten",
+    "first_installment_now": "erste Rate jetzt",
+    "installment_label": "Rate {n}",
+    "installment_now": "(jetzt)",
+    "installment_later": "(in {days} Tagen)",
+    "total": "Gesamt",
+    "payment_method": "Zahlungsmethode",
+    "card_blik": "Karte / BLIK",
+    "fast_online_payment": "Schnelle Online-Zahlung",
+    "bank_transfer": "Banküberweisung",
+    "traditional_transfer": "Traditionelle Überweisung",
+    "transfer_data": "Überweisungsdaten",
+    "attach_proof": "Zahlungsbeleg anhängen",
+    "choose_file": "Datei auswählen (Foto oder PDF, max. 5 MB)",
+    "proof_note": "Nach Anhängen des Belegs wird der Termin reserviert. Zahlungsverifizierung innerhalb von 3 Werktagen.",
+    "buy_as_gift": "Als Geschenk kaufen",
+    "gift_description": "Die Sitzung wird einer anderen Person zugeordnet",
+    "gift_email_label": "E-Mail der beschenkten Person *",
+    "gift_email_placeholder": "z. B. kind@beispiel.de",
+    "gift_message_label": "Nachricht (optional)",
+    "gift_message_placeholder": "Schreiben Sie ein paar Worte an die beschenkte Person…",
+    "gift_note": "Nach dem Kauf erhalten Sie einen Weiterleitungslink. Die beschenkte Person kann die Sitzung auf ihrem eigenen Konto einlösen oder Ihres nutzen.",
+    "recording_consent": "Ich verstehe, dass die Sitzung aufgezeichnet und nach dem Schnitt veröffentlicht werden kann. Ich kann innerhalb von 7 Tagen nach Bereitstellung der Aufzeichnung zu entfernende Abschnitte benennen.",
+    "consent_required_note": "Die Zustimmung ist Voraussetzung für die Durchführung der Leistung — Details in den",
+    "terms_link_text": "Nutzungsbedingungen",
+    "choose_date_title": "Termin wählen",
+    "earliest_date": "Frühestmöglicher Termin",
+    "select_btn": "Auswählen",
+    "show_all_dates": "Alle verfügbaren Termine anzeigen",
+    "hide_all_dates": "Termine ausblenden",
+    "want_acceleration": "Ich möchte eine Terminbeschleunigung",
+    "notify_earlier_slot": "Benachrichtigen, wenn ein früherer Termin frei wird",
+    "two_people": "2 Personen",
+    "min_amount_error": "Bitte mindestens 1 PLN eingeben",
+    "payment_error": "Zahlungsfehler",
+    "connection_error": "Verbindungsfehler",
+    "pay_installment_title": "Zuzahlung / Rate leisten",
+    "pay_custom_desc": "Beliebigen Betrag für die Sitzung einzahlen:",
+    "payment_amount_label": "Betrag (PLN)",
+    "pay_btn": "Zahlen"
   },
   "Legal": {
     "privacy_title": "Datenschutzerklärung",
@@ -383,7 +476,10 @@
     "pub_my_sessions": "Meine Sitzungen",
     "pub_archive": "Archiv",
     "pub_add": "Sitzung hinzufügen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "translator_panel": "Übersetzer-Panel",
+    "community": "Community",
+    "session_recordings": "Sitzungsaufzeichnungen"
   },
   "Booking": {
     "title": "Private Sitzungen",
@@ -435,47 +531,12 @@
     "reschedule_select": "Auswählen",
     "nav_label": "Einzelsitzungen",
     "countdown": {
-      "8plus": {
-        "0": "Ein längerer Weg liegt vor Ihnen — und das ist etwas Schönes. Jeder Tag bringt Sie näher.",
-        "1": "Die Zeit ist Ihr Verbündeter. Lassen Sie sie für Sie arbeiten.",
-        "2": "Große Dinge brauchen Zeit zum Reifen. Ihre Sitzung ist keine Ausnahme.",
-        "3": "Ein in Stille gesäter Samen keimt bereits. Auch Sie bereiten sich vor, selbst wenn Sie es noch nicht sehen.",
-        "4": "Es ist ein langer Weg, doch jeder Schritt zählt. Ihre Sitzung wartet am Ende dieses Pfades."
-      },
-      "7": {
-        "0": "Sieben Monate sind viel Zeit — und zugleich weniger, als Sie denken.",
-        "1": "Zwischen heute und Ihrer Sitzung liegt eine ganze Welt voller Möglichkeiten.",
-        "2": "Die Jahreszeiten werden sich ändern, bevor wir uns treffen. Und auch Sie könnten sich verändern.",
-        "3": "Noch weit entfernt, doch die Richtung ist klar. Ihre Sitzung steht im Kalender.",
-        "4": "Manche Dinge sind es wert, darauf zu warten. Ihre Sitzung gehört dazu."
-      },
-      "6": {
-        "0": "Ein halbes Jahr bis zu Ihrer Sitzung. Zeit, die Sie weise nutzen können.",
-        "1": "Sechs Monate — lang genug, um sich vorzubereiten, kurz genug, um die Vorfreude zu spüren.",
-        "2": "Sie sind auf halbem Weg seit Ihrer Buchung. Gleichgewicht.",
-        "3": "Sechs Monate vergehen schneller, als Sie erwarten. Besonders wenn Sie wissen, worauf Sie warten.",
-        "4": "Ein halbes Jahr. Stellen Sie sich vor, wer Sie sein werden, wenn der Tag kommt."
-      },
-      "5": {
-        "0": "Fünf Monate. Der Countdown nimmt Fahrt auf.",
-        "1": "Es rückt näher. Fünf Monate sind eine Entfernung, die man am Horizont bereits erkennen kann.",
-        "2": "Ihre Sitzung nähert sich Schritt für Schritt. Fünf Monate sind nicht mehr abstrakt.",
-        "3": "In fünf Monaten werden Sie an einem ganz anderen Ort sein. Die Sitzung ist nur ein Teil dieser Reise.",
-        "4": "Fünf Monate — Zeit, in der Sie viel über sich selbst erfahren können. Und über das, wonach Sie suchen."
-      },
-      "4": {
-        "0": "Vier Monate. Ihre Sitzung taucht langsam aus dem Nebel der Zukunft auf.",
-        "1": "Eine weitere Jahreszeit wird vergehen, bevor wir uns treffen.",
-        "2": "Vier Monate — nah genug, um darüber nachzudenken, was Sie sagen möchten.",
-        "3": "Die Zeit verfliegt. Vier Monate trennen Sie von etwas Bedeutsamem.",
-        "4": "Die Sitzung wird immer greifbarer. Vier Monate sind bereits konkret."
-      },
-      "3": {
-        "0": "Drei Monate — nah genug, um die Vorfreude zu spüren.",
-        "1": "Noch etwas Geduld. Drei Monate vergehen schneller, als Sie denken.",
-        "2": "Ein Quartal. Die Zielgerade vor Ihrer Sitzung beginnt jetzt.",
-        "3": "Drei Monate sind die perfekte Zeit, um Ihre Gedanken zu sammeln und sich auf das Treffen vorzubereiten.",
-        "4": "Countdown in Quartalen — und Ihnen bleibt nur noch eines."
+      "1": {
+        "0": "Nur noch ein Monat. Sie können Ihre Sitzung fast schon an die Tür klopfen hören.",
+        "1": "Ein Monat. Zeit für letzte Vorbereitungen — oder einfach um im Moment zu sein.",
+        "2": "Die Ziellinie. In einem Monat treffen wir uns zu Ihrer Sitzung.",
+        "3": "Vier Wochen. Das ist ein Wimpernschlag im Vergleich zu der Zeit, die Sie bereits gewartet haben.",
+        "4": "Der letzte Monat. Alles, was Sie brauchen, tragen Sie bereits in sich."
       },
       "2": {
         "0": "Zwei Monate. Ihre Sitzung ist fast in greifbarer Nähe.",
@@ -484,12 +545,47 @@
         "3": "In zwei Monaten wird alles klarer werden. Genießen Sie vorerst die Vorfreude.",
         "4": "Die letzte Phase des Countdowns. Zwei Monate und Sie sind da."
       },
-      "1": {
-        "0": "Nur noch ein Monat. Sie können Ihre Sitzung fast schon an die Tür klopfen hören.",
-        "1": "Ein Monat. Zeit für letzte Vorbereitungen — oder einfach um im Moment zu sein.",
-        "2": "Die Ziellinie. In einem Monat treffen wir uns zu Ihrer Sitzung.",
-        "3": "Vier Wochen. Das ist ein Wimpernschlag im Vergleich zu der Zeit, die Sie bereits gewartet haben.",
-        "4": "Der letzte Monat. Alles, was Sie brauchen, tragen Sie bereits in sich."
+      "3": {
+        "0": "Drei Monate — nah genug, um die Vorfreude zu spüren.",
+        "1": "Noch etwas Geduld. Drei Monate vergehen schneller, als Sie denken.",
+        "2": "Ein Quartal. Die Zielgerade vor Ihrer Sitzung beginnt jetzt.",
+        "3": "Drei Monate sind die perfekte Zeit, um Ihre Gedanken zu sammeln und sich auf das Treffen vorzubereiten.",
+        "4": "Countdown in Quartalen — und Ihnen bleibt nur noch eines."
+      },
+      "4": {
+        "0": "Vier Monate. Ihre Sitzung taucht langsam aus dem Nebel der Zukunft auf.",
+        "1": "Eine weitere Jahreszeit wird vergehen, bevor wir uns treffen.",
+        "2": "Vier Monate — nah genug, um darüber nachzudenken, was Sie sagen möchten.",
+        "3": "Die Zeit verfliegt. Vier Monate trennen Sie von etwas Bedeutsamem.",
+        "4": "Die Sitzung wird immer greifbarer. Vier Monate sind bereits konkret."
+      },
+      "5": {
+        "0": "Fünf Monate. Der Countdown nimmt Fahrt auf.",
+        "1": "Es rückt näher. Fünf Monate sind eine Entfernung, die man am Horizont bereits erkennen kann.",
+        "2": "Ihre Sitzung nähert sich Schritt für Schritt. Fünf Monate sind nicht mehr abstrakt.",
+        "3": "In fünf Monaten werden Sie an einem ganz anderen Ort sein. Die Sitzung ist nur ein Teil dieser Reise.",
+        "4": "Fünf Monate — Zeit, in der Sie viel über sich selbst erfahren können. Und über das, wonach Sie suchen."
+      },
+      "6": {
+        "0": "Ein halbes Jahr bis zu Ihrer Sitzung. Zeit, die Sie weise nutzen können.",
+        "1": "Sechs Monate — lang genug, um sich vorzubereiten, kurz genug, um die Vorfreude zu spüren.",
+        "2": "Sie sind auf halbem Weg seit Ihrer Buchung. Gleichgewicht.",
+        "3": "Sechs Monate vergehen schneller, als Sie erwarten. Besonders wenn Sie wissen, worauf Sie warten.",
+        "4": "Ein halbes Jahr. Stellen Sie sich vor, wer Sie sein werden, wenn der Tag kommt."
+      },
+      "7": {
+        "0": "Sieben Monate sind viel Zeit — und zugleich weniger, als Sie denken.",
+        "1": "Zwischen heute und Ihrer Sitzung liegt eine ganze Welt voller Möglichkeiten.",
+        "2": "Die Jahreszeiten werden sich ändern, bevor wir uns treffen. Und auch Sie könnten sich verändern.",
+        "3": "Noch weit entfernt, doch die Richtung ist klar. Ihre Sitzung steht im Kalender.",
+        "4": "Manche Dinge sind es wert, darauf zu warten. Ihre Sitzung gehört dazu."
+      },
+      "8plus": {
+        "0": "Ein längerer Weg liegt vor Ihnen — und das ist etwas Schönes. Jeder Tag bringt Sie näher.",
+        "1": "Die Zeit ist Ihr Verbündeter. Lassen Sie sie für Sie arbeiten.",
+        "2": "Große Dinge brauchen Zeit zum Reifen. Ihre Sitzung ist keine Ausnahme.",
+        "3": "Ein in Stille gesäter Samen keimt bereits. Auch Sie bereiten sich vor, selbst wenn Sie es noch nicht sehen.",
+        "4": "Es ist ein langer Weg, doch jeder Schritt zählt. Ihre Sitzung wartet am Ende dieses Pfades."
       },
       "lt1": {
         "0": "Fast geschafft. Die letzten Tage vor Ihrer Sitzung.",
@@ -498,7 +594,35 @@
         "3": "Nur noch einen Augenblick und wir treffen uns. Machen Sie sich bereit für etwas Besonderes.",
         "4": "Die Zielgerade. Tage trennen Sie von Ihrer Sitzung — keine Monate, keine Wochen. Tage."
       }
-    }
+    },
+    "enlarge_text": "Text vergrößern",
+    "fullscreen": "Vollbild",
+    "close_esc": "Schließen (ESC)",
+    "next_topic": "Nächstes Thema...",
+    "remove_topic": "Punkt entfernen",
+    "add_topic": "Punkt hinzufügen ({count}/8)",
+    "max_topics": "Maximal 8 Punkte",
+    "saving": "Wird gespeichert...",
+    "saved": "✓ Gespeichert",
+    "join_session": "An der Sitzung teilnehmen",
+    "session_today_waiting": "Sitzung heute — der Warteraum öffnet 30 Minuten vor der Sitzung",
+    "report_late": "Verspätung melden",
+    "hide_calendar": "Kalender ausblenden",
+    "reschedule": "Termin verschieben",
+    "how_late_question": "Um wie viele Minuten verspäten Sie sich?",
+    "date_tbd": "Datum wird noch festgelegt",
+    "partner_session": "Paarsitzung",
+    "pre_session_title": "Vorgespräch",
+    "pre_session_desc": "Kurzes 15-minütiges Online-Gespräch mit der Assistentin vor Ihrer Sitzung",
+    "pre_session_booked": "Gespräch mit {name} — gebucht ✓",
+    "pre_session_link_info": "Der Link zum Gespräch erscheint vor dem Termin auf dieser Seite. Das Gespräch kann nicht verschoben werden — bei Fragen wenden Sie sich direkt an uns.",
+    "no_pre_session_slots": "Keine verfügbaren Termine — die Assistentin fügt bald neue hinzu",
+    "choose_date": "Termin auswählen",
+    "pre_session_free_note": "Vorgespräche sind kostenlos. Nach der Buchung ist der Termin verbindlich — er kann weder verschoben noch abgesagt werden.",
+    "buy_pre_session": "Buchen",
+    "remove_invite": "Einladung entfernen",
+    "companion_email_placeholder": "E-Mail des Partners (muss ein HTG-Konto haben)",
+    "shrink_text": "Text verkleinern"
   },
   "Live": {
     "waiting_title": "Warten auf die Sitzungsleitung...",
@@ -699,7 +823,18 @@
     "notif_mention": "hat Sie erwähnt",
     "notif_new_post": "hat einen neuen Beitrag veröffentlicht",
     "notif_group_invite": "hat Sie in eine Gruppe eingeladen",
-    "meta_description": "Treten Sie der HTG-Community bei. Diskutieren Sie, teilen Sie Erfahrungen und wachsen Sie gemeinsam mit anderen."
+    "meta_description": "Treten Sie der HTG-Community bei. Diskutieren Sie, teilen Sie Erfahrungen und wachsen Sie gemeinsam mit anderen.",
+    "auto_translated": "automatisch übersetzt",
+    "show_original": "Original anzeigen",
+    "show_translation": "Übersetzung anzeigen",
+    "translating": "Wird übersetzt...",
+    "post_language": "Sprache des Beitrags",
+    "message_subject_placeholder": "Betreff Ihrer Nachricht",
+    "search_placeholder": "Beiträge suchen...",
+    "poll_question_placeholder": "Frage stellen...",
+    "add_photo": "Foto hinzufügen",
+    "notif_new_comments": "Neue Kommentare",
+    "notif_reactions": "Reaktionen"
   },
   "YouTubeBanner": {
     "new_video": "Neue Sitzung auf YT",

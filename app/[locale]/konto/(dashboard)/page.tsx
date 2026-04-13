@@ -75,14 +75,24 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         {/* ActiveCalls only as critical exception */}
         <ActiveCallsWidget locale={locale} />
 
+        {/* Mobile: Słuchaj na samej górze */}
+        <div className="sm:hidden mb-4">
+          <SluchajButton />
+        </div>
+
         <Suspense fallback={<SectionSkeleton title="Następna sesja" />}>
           <SanctuaryHero locale={locale} />
         </Suspense>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
-          <SluchajButton />
+        {/* Desktop: YT banner left + Słuchaj right (only lg+) */}
+        <div className="hidden sm:flex gap-4 mb-6 items-stretch">
+          {ytBanner && <div className="flex-1 min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+          <div className="hidden lg:block lg:w-52 shrink-0">
+            <SluchajButton />
+          </div>
         </div>
+        {/* Mobile: banner pod hero */}
+        {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}
 
         <Suspense fallback={<SectionSkeleton title="Biblioteka audio" />}>
           <VodLibrarySection locale={locale} />
@@ -102,14 +112,24 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         {/* ActiveCalls only as critical exception */}
         <ActiveCallsWidget locale={locale} />
 
+        {/* Mobile: Słuchaj na samej górze */}
+        <div className="sm:hidden mb-4">
+          <SluchajButton />
+        </div>
+
         <Suspense fallback={<SectionSkeleton title="Kontynuuj" />}>
           <ContinueCard locale={locale} />
         </Suspense>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
-          <SluchajButton />
+        {/* Desktop: YT banner left + Słuchaj right (only lg+) */}
+        <div className="hidden sm:flex gap-4 mb-6 items-stretch">
+          {ytBanner && <div className="flex-1 min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+          <div className="hidden lg:block lg:w-52 shrink-0">
+            <SluchajButton />
+          </div>
         </div>
+        {/* Mobile: banner pod hero */}
+        {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}
 
         <Suspense fallback={<SectionSkeleton title="Nagrania z sesji" />}>
           <VodLibrarySection locale={locale} />
@@ -127,10 +147,20 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
     <div>
       <ActiveCallsWidget locale={locale} />
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
+      {/* Mobile: Słuchaj na samej górze */}
+      <div className="sm:hidden mb-4">
         <SluchajButton />
       </div>
+
+      {/* Desktop: YT banner left + Słuchaj right (only lg+) */}
+      <div className="hidden sm:flex gap-4 mb-6 items-stretch">
+        {ytBanner && <div className="flex-1 min-w-0 [&>*]:mb-0">{ytBanner}</div>}
+        <div className="hidden lg:block lg:w-52 shrink-0">
+          <SluchajButton />
+        </div>
+      </div>
+      {/* Mobile: banner pod Słuchaj */}
+      {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}
 
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />

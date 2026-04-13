@@ -11,7 +11,7 @@ const SessionReviewPlayer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-[250px] aspect-square flex items-center justify-center">
+      <div className="flex items-center justify-center aspect-square md:aspect-video bg-htg-card rounded-xl">
         <Loader2 className="w-8 h-8 animate-spin text-htg-fg-muted" />
       </div>
     ),
@@ -65,7 +65,7 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
   }
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0">
         <Link
@@ -82,7 +82,7 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
             setSelectedKey(e.target.value);
             setPlayingSessionId(null);
           }}
-          className="bg-htg-card border border-htg-card-border rounded-lg px-3 py-1.5 text-sm text-htg-fg focus:outline-none focus:ring-2 focus:ring-htg-sage/50 max-w-[200px] truncate"
+          className="bg-htg-card border border-htg-card-border rounded-lg px-3 py-1.5 text-sm text-htg-fg focus:outline-none focus:ring-2 focus:ring-htg-sage/50 max-w-[220px] truncate"
         >
           {groups.map((g) => (
             <option key={g.key} value={g.key}>
@@ -92,39 +92,43 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
         </select>
       </div>
 
-      {/* Player — compact, centered, 250px wide */}
-      {playingSessionId && (
-        <div className="shrink-0 flex justify-center px-4 py-2">
-          <div className="w-[250px] rounded-xl overflow-hidden">
-            <SessionReviewPlayer
-              key={playingSessionId}
-              playbackId={playingSessionId}
-              idFieldName="sessionId"
-              userId={userId}
-              userEmail={userEmail}
-              tokenEndpoint="/api/video/token"
-            />
+      {/* Main content — single block: player + session list */}
+      <div className="flex-1 min-h-0 flex flex-col md:justify-center overflow-y-auto px-4 pb-4">
+        <div className="w-full max-w-[430px] mx-auto">
+          {/* Player — full width of block */}
+          <div className="rounded-t-xl overflow-hidden">
+            {playingSessionId ? (
+              <SessionReviewPlayer
+                key={playingSessionId}
+                playbackId={playingSessionId}
+                idFieldName="sessionId"
+                userId={userId}
+                userEmail={userEmail}
+                tokenEndpoint="/api/video/token"
+              />
+            ) : (
+              <div className="aspect-square md:aspect-video bg-htg-card flex items-center justify-center rounded-t-xl">
+                <p className="text-htg-fg-muted text-sm">Wybierz sesję</p>
+              </div>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Session list — always visible, framed */}
-      <div className="px-4 pb-4 pt-2">
-        <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
-          {currentGroup?.sessions.map((session, index) => (
-            <button
-              key={session.id}
-              onClick={() => setPlayingSessionId(session.id)}
-              className={`w-full text-left px-4 py-3.5 transition-colors border-b border-htg-card-border last:border-b-0 ${
-                playingSessionId === session.id
-                  ? 'bg-htg-sage/10 border-l-2 border-l-htg-sage'
-                  : 'hover:bg-htg-surface/60'
-              }`}
-            >
-              <span className="text-htg-fg-muted mr-2 tabular-nums text-sm">{index + 1}.</span>
-              <span className="font-medium text-htg-fg">{session.title}</span>
-            </button>
-          ))}
+          {/* Session list — directly attached below player */}
+          <div className="bg-htg-card border border-t-0 border-htg-card-border rounded-b-xl overflow-hidden">
+            {currentGroup?.sessions.map((session) => (
+              <button
+                key={session.id}
+                onClick={() => setPlayingSessionId(session.id)}
+                className={`w-full text-left px-4 py-3.5 transition-colors border-b border-htg-card-border last:border-b-0 ${
+                  playingSessionId === session.id
+                    ? 'bg-htg-sage/10 border-l-2 border-l-htg-sage'
+                    : 'hover:bg-htg-surface/60'
+                }`}
+              >
+                <span className="font-medium text-htg-fg">{session.title}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

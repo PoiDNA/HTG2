@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Loader2, Bookmark, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Bookmark, CheckCircle2, Play } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import FontSizeToggle from '@/components/FontSizeToggle';
@@ -275,7 +275,17 @@ export default function SluchajClient({
               />
             ) : (
               <div className="aspect-square md:aspect-video bg-htg-card flex items-center justify-center">
-                <p className="text-htg-fg-muted text-sm">Wybierz sesję</p>
+                {filteredSessions.length > 0 ? (
+                  <button
+                    onClick={() => setPlayingSessionId(filteredSessions[0].id)}
+                    aria-label="Odtwórz pierwszą sesję"
+                    className="w-24 h-24 rounded-full bg-htg-sage flex items-center justify-center shadow-xl shadow-htg-sage/25 hover:brightness-110 hover:shadow-2xl hover:shadow-htg-sage/35 active:brightness-90 transition-all duration-200"
+                  >
+                    <Play className="w-10 h-10 text-white ml-1" />
+                  </button>
+                ) : (
+                  <p className="text-htg-fg-muted text-sm">Brak sesji</p>
+                )}
               </div>
             )}
           </div>

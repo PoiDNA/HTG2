@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Loader2, Bookmark, CheckCircle2, Play } from 'lucide-react';
+import { ArrowLeft, Loader2, Bookmark, CheckCircle2, Play, Menu } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import FontSizeToggle from '@/components/FontSizeToggle';
@@ -168,10 +168,11 @@ export default function SluchajClient({
         <div className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="bg-htg-card border border-htg-card-border rounded-lg px-3 py-1.5 text-sm text-htg-fg hover:bg-htg-surface transition-colors max-w-[220px] truncate"
+            className="bg-htg-card border border-htg-card-border rounded-lg px-3 py-1.5 text-sm text-htg-fg hover:bg-htg-surface transition-colors flex items-center gap-2 max-w-[240px]"
           >
-            {groups.find((g) => g.key === selectedKey)?.label ?? 'Menu'}
-            <span className="ml-1.5 text-htg-fg-muted">&#9662;</span>
+            <Menu className="w-4 h-4 text-htg-fg-muted shrink-0" />
+            <span className="truncate">{groups.find((g) => g.key === selectedKey)?.label ?? 'Menu'}</span>
+            <span className="text-htg-fg-muted shrink-0">&#9662;</span>
           </button>
 
           {menuOpen && (
@@ -261,7 +262,7 @@ export default function SluchajClient({
 
       {/* Main content — player on top, session list below, centered */}
       <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-4 pb-4">
-        <div className="w-full max-w-[640px] mx-auto md:my-auto">
+        <div className="w-full max-w-[640px] mx-auto">
           {/* Player — natural aspect ratio (square mobile, 16:9 desktop) */}
           <div className="rounded-t-xl overflow-hidden">
             {playingSessionId ? (
@@ -274,7 +275,15 @@ export default function SluchajClient({
                 tokenEndpoint="/api/video/token"
               />
             ) : (
-              <div className="aspect-square md:aspect-video bg-htg-card flex items-center justify-center">
+              <div className="aspect-square md:aspect-video bg-htg-card relative flex items-center justify-center">
+                {/* Corner labels — visible only when no session is playing */}
+                <span className="absolute top-3 left-4 text-xs text-htg-fg-muted/80 font-medium select-none pointer-events-none">
+                  {currentGroup?.label}
+                </span>
+                <span className="absolute top-3 right-4 text-xs text-htg-fg-muted/80 font-medium select-none pointer-events-none">
+                  Hacking The Game
+                </span>
+
                 {filteredSessions.length > 0 ? (
                   <button
                     onClick={() => setPlayingSessionId(filteredSessions[0].id)}

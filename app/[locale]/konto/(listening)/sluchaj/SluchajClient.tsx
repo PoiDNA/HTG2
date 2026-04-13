@@ -185,10 +185,10 @@ export default function SluchajClient({
       </div>
 
       {/* Main content — single block: player + session list */}
-      <div className="flex-1 min-h-0 flex flex-col md:justify-center overflow-y-auto px-4 pb-4">
-        <div className="w-full max-w-[430px] mx-auto">
-          {/* Player — full width, aspect-video so it's fully visible */}
-          <div className="rounded-t-xl overflow-hidden bg-htg-bg">
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-4 pb-4">
+        <div className="w-full max-w-[430px] mx-auto md:my-auto">
+          {/* Player — square format, fully visible */}
+          <div className="rounded-t-xl overflow-hidden bg-htg-bg [&>div]:!aspect-square">
             {playingSessionId ? (
               <SessionReviewPlayer
                 key={playingSessionId}
@@ -199,7 +199,7 @@ export default function SluchajClient({
                 tokenEndpoint="/api/video/token"
               />
             ) : (
-              <div className="aspect-video bg-htg-card flex items-center justify-center rounded-t-xl">
+              <div className="aspect-square bg-htg-card flex items-center justify-center rounded-t-xl">
                 <p className="text-htg-fg-muted text-sm">Wybierz sesję</p>
               </div>
             )}

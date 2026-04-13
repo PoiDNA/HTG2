@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { MessageCircle, Pin, MoreHorizontal, Trash2, Flag, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from './UserAvatar';
@@ -29,6 +29,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
   const [showReport, setShowReport] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const locale = useLocale();
+  const t = useTranslations('Community');
 
   if (isDeleted) return null;
 
@@ -41,19 +42,19 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
   const timeAgo = formatTimeAgo(post.created_at, locale);
 
   const handleDelete = async () => {
-    if (!confirm('Czy na pewno chcesz usunąć ten post?')) return;
+    if (!confirm(t('delete_confirm'))) return;
     try {
       const res = await fetch(`/api/community/posts/${post.id}`, { method: 'DELETE' });
-      if (res.ok) { setIsDeleted(true); toast.success('Post usunięty'); }
-      else toast.error('Nie udało się usunąć posta');
-    } catch { toast.error('Nie udało się usunąć posta'); }
+      if (res.ok) { setIsDeleted(true); toast.success(t('post_deleted')); }
+      else toast.error(t('error_delete_post'));
+    } catch { toast.error(t('error_delete_post')); }
   };
 
   const handlePin = async () => {
     try {
       const res = await fetch(`/api/community/posts/${post.id}/pin`, { method: 'PATCH' });
-      if (!res.ok) toast.error('Nie udało się przypiąć posta');
-    } catch { toast.error('Nie udało się przypiąć posta'); }
+      if (!res.ok) toast.error(t('error_pin_post'));
+    } catch { toast.error(t('error_pin_post')); }
     setShowMenu(false);
   };
 
@@ -66,7 +67,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
           <div>
             <div className="flex items-center gap-2">
               <span className="font-medium text-htg-fg text-sm">
-                {post.author?.display_name || 'Anonim'}
+                {post.author?.display_name || t('anonymous')}
               </span>
               {post.author?.role && post.author.role !== 'user' && (
                 <span className="text-xs px-1.5 py-0.5 rounded-full bg-htg-sage/10 text-htg-sage font-medium">
@@ -77,8 +78,8 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
             <div className="flex items-center gap-1.5 text-xs text-htg-fg-muted">
               <Clock className="w-3 h-3" />
               <span>{timeAgo}</span>
-              {post.is_edited && <span>· edytowano</span>}
-              {post.type === 'migrated_from_fb' && <span>· z Facebooka</span>}
+              {post.is_edited && <span>· {t('edited')}</span>}
+              {post.type === 'migrated_from_fb' && <span>· {t('from_facebook')}</span>}
             </div>
           </div>
         </div>
@@ -102,7 +103,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-500 hover:bg-htg-surface transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Usuń
+                    {t('delete')}
                   </button>
                 )}
                 {canModerate && (
@@ -111,7 +112,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-htg-fg hover:bg-htg-surface transition-colors"
                   >
                     <Pin className="w-4 h-4" />
-                    {post.is_pinned ? 'Odepnij' : 'Przypnij'}
+                    {post.is_pinned ? t('unpin') : t('pin')}
                   </button>
                 )}
                 {!isAuthor && (
@@ -120,7 +121,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
                     className="flex items-center gap-2 w-full px-3 py-2 text-sm text-htg-fg hover:bg-htg-surface transition-colors"
                   >
                     <Flag className="w-4 h-4" />
-                    Zgłoś
+                    {t('report')}
                   </button>
                 )}
               </div>
@@ -179,7 +180,7 @@ export function PostCard({ post, groupId, currentUserId, canModerate }: PostCard
           <MessageCircle className="w-4 h-4" />
           <span>{post.comment_count > 0 ? post.comment_count : ''}</span>
           <span className="hidden sm:inline">
-            {post.comment_count === 0 ? 'Komentuj' : ''}
+            {post.comment_count === 0 ? t('comment_button') : ''}
           </span>
         </button>
 

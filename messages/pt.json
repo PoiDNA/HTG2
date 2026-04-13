@@ -834,7 +834,22 @@
     "poll_question_placeholder": "Faça uma pergunta...",
     "add_photo": "Adicionar foto",
     "notif_new_comments": "Novos comentários",
-    "notif_reactions": "Reações"
+    "notif_reactions": "Reações",
+    "error_load_posts": "Falha ao carregar publicações",
+    "error_publish": "Falha ao publicar",
+    "post_published": "Publicação publicada",
+    "no_search_results": "Sem resultados para \"{query}\"",
+    "no_posts_in_group": "Ainda não há publicações neste grupo.",
+    "post_deleted": "Publicação eliminada",
+    "error_delete_post": "Falha ao eliminar a publicação",
+    "error_pin_post": "Falha ao fixar a publicação",
+    "anonymous": "Anónimo",
+    "delete": "Eliminar",
+    "pin": "Fixar",
+    "unpin": "Desafixar",
+    "comment_button": "Comentar",
+    "error_add_comment": "Falha ao adicionar comentário",
+    "loading": "A carregar..."
   },
   "YouTubeBanner": {
     "new_video": "Nova sessão no YT",

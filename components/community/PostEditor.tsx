@@ -39,7 +39,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
         HTMLAttributes: { class: 'text-htg-sage underline' },
       }),
       Placeholder.configure({
-        placeholder: placeholder || (compact ? 'Napisz komentarz...' : 'Co chcesz powiedzieć?'),
+        placeholder: placeholder || (compact ? t('write_comment') : t('write_something')),
       }),
       Mention.configure({
         HTMLAttributes: {
@@ -72,7 +72,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
       setAttachments([]);
       setShowUpload(false);
     } catch (err) {
-      toast.error('Nie udało się opublikować posta');
+      toast.error(t('error_publish'));
     } finally {
       setSubmitting(false);
     }
@@ -158,7 +158,7 @@ export function PostEditor({ groupId, placeholder, onSubmit, compact = false }: 
           ) : (
             <Send className="w-4 h-4" />
           )}
-          {compact ? '' : <span className="hidden sm:inline">Opublikuj</span>}
+          {compact ? '' : <span className="hidden sm:inline">{t('publish')}</span>}
         </button>
       </div>
     </div>

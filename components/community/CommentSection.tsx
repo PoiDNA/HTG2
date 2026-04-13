@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useComments } from '@/lib/community/hooks/useComments';
 import { PostEditor } from './PostEditor';
 import { CommentItem } from './CommentItem';
@@ -15,6 +16,7 @@ interface CommentSectionProps {
 }
 
 export function CommentSection({ postId, groupId, currentUserId, canModerate }: CommentSectionProps) {
+  const t = useTranslations('Community');
   const { comments, loading, loadingMore, hasMore, loadMore } = useComments({
     postId,
     enabled: true,
@@ -34,7 +36,7 @@ export function CommentSection({ postId, groupId, currentUserId, canModerate }: 
 
     if (!res.ok) {
       const data = await res.json();
-      throw new Error(data.error || 'Nie udało się dodać komentarza');
+      throw new Error(data.error || t('error_add_comment'));
     }
   };
 
@@ -85,7 +87,7 @@ export function CommentSection({ postId, groupId, currentUserId, canModerate }: 
             disabled={loadingMore}
             className="text-sm text-htg-sage hover:underline py-1"
           >
-            {loadingMore ? 'Ładowanie...' : 'Pokaż więcej komentarzy'}
+            {loadingMore ? t('loading') : t('load_more_comments')}
           </button>
         )}
       </div>

@@ -833,7 +833,22 @@
     "poll_question_placeholder": "Zadaj pytanie...",
     "add_photo": "Dodaj zdjęcie",
     "notif_new_comments": "Nowe komentarze",
-    "notif_reactions": "Reakcje"
+    "notif_reactions": "Reakcje",
+    "error_load_posts": "Nie udało się załadować postów",
+    "error_publish": "Nie udało się opublikować",
+    "post_published": "Post opublikowany",
+    "no_search_results": "Brak wyników dla \"{query}\"",
+    "no_posts_in_group": "Brak postów w tej grupie.",
+    "post_deleted": "Post usunięty",
+    "error_delete_post": "Nie udało się usunąć posta",
+    "error_pin_post": "Nie udało się przypiąć posta",
+    "anonymous": "Anonim",
+    "delete": "Usuń",
+    "pin": "Przypnij",
+    "unpin": "Odepnij",
+    "comment_button": "Komentuj",
+    "error_add_comment": "Nie udało się dodać komentarza",
+    "loading": "Ładowanie..."
   },
   "YouTubeBanner": {
     "new_video": "Nowa sesja na YT",

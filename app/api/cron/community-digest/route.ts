@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Resend } from 'resend';
 
@@ -13,7 +13,14 @@ const REPLY_TO = 'htg@htg.cyou';
  *
  * Scheduled via vercel.json: "0 9 * * 1" (Monday 9am)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
+  if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const db = createSupabaseServiceRole();
   const resend = new Resend(process.env.RESEND_API_KEY);
 

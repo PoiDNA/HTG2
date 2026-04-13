@@ -3,7 +3,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 // Vercel Cron Job — runs every 5 minutes
 // Creates live_sessions for confirmed bookings starting within 30 minutes
-// Also expires held slots past their held_until time
+// Slot expiry is handled by the expire-slots cron (via expire_held_slots RPC)
 
 export async function GET(request: NextRequest) {
   // Verify cron secret (Vercel sets this header)
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   const supabase = createSupabaseServiceRole();
 
-  const results = { sessionsCreated: 0, slotsExpired: 0, errors: [] as string[] };
+  const results = { sessionsCreated: 0, errors: [] as string[] };
 
   try {
     // 1. Create live_sessions for bookings starting within 30 minutes
@@ -81,30 +81,6 @@ export async function GET(request: NextRequest) {
           results.sessionsCreated++;
         }
       }
-    }
-
-    // 2. Expire held slots past their held_until time
-    const { data: expiredSlots } = await supabase
-      .from('booking_slots')
-      .update({
-        status: 'available',
-        held_for_user: null,
-        held_until: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('status', 'held')
-      .lt('held_until', now.toISOString())
-      .select('id');
-
-    results.slotsExpired = expiredSlots?.length ?? 0;
-
-    // Also expire pending bookings
-    if (results.slotsExpired > 0) {
-      await supabase
-        .from('bookings')
-        .update({ status: 'cancelled', cancelled_at: now.toISOString() })
-        .eq('status', 'pending_confirmation')
-        .lt('expires_at', now.toISOString());
     }
 
     return NextResponse.json({

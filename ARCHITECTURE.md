@@ -207,7 +207,7 @@ LiveKit egress
     ↓
 Cloudflare R2 (bucket htg-rec, permanentna druga kopia — nic nie usuwane)
     ↓
-Cron /api/cron/process-recordings (co 2 min, Section 1)
+Cron /api/cron/process-recordings (co 5 min, Section 1)
     ↓
 Bunny Storage zone htg-backup-sessions
     └─ recordings/{YYYY-MM-DD}/{email}/{phase}-{session_type}-{short_id}.{ext}
@@ -482,9 +482,16 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 - Portal reply notification — after() best-effort: "Masz nową wiadomość od zespołu HTG"
 
 ### Cron (Vercel)
-- */5 * * * * — /api/cron/prepare-sessions (tworzenie live_sessions + expire slotów)
+- */5 * * * * — /api/cron/prepare-sessions (tworzenie live_sessions dla nadchodzących bookingów)
+- */5 * * * * — /api/cron/expire-slots (expire held slotów via RPC, cleanup stale active_streams)
 - 0 8 * * * — /api/cron/session-reminders (email D-1)
 - * * * * * — /api/cron/process-messages (async email processing: fetch body, AI, attachments)
+- */5 * * * * — /api/cron/process-recordings (upload worker, stuck egress cleanup, RODO purge, HTG meetings)
+- 17 3 * * * — /api/cron/community-cleanup (hard-delete soft-deleted posts >30d, rate logs, notifications)
+- 3 9 * * 1 — /api/cron/community-digest (weekly email digest)
+- */5 * * * * — /api/cron/analyze-client (client analytics pipeline — feature-flagged off)
+- 23 * * * * — /api/cron/htg-meeting-orphan-reaper (orphaned LiveKit egress cleanup)
+- 37 */6 * * * — /api/cron/youtube-check (YouTube RSS → insert new videos)
 
 ### Auth
 - POST /api/auth/session — sync tokens to server cookies
@@ -769,10 +776,16 @@ Kanał `'portal'` w istniejącym Communication Hub. Klient pisze krótkie wiadom
 ### Vercel Cron Jobs
 | Schedule | Endpoint | Opis |
 |---|---|---|
-| */5 * * * * | /api/cron/prepare-sessions | Tworzenie live_sessions + expire slotów |
+| */5 * * * * | /api/cron/prepare-sessions | Tworzenie live_sessions dla nadchodzących bookingów |
+| */5 * * * * | /api/cron/expire-slots | Expire held slotów (RPC), cleanup stale active_streams |
 | 0 8 * * * | /api/cron/session-reminders | Email D-1 reminder |
 | * * * * * | /api/cron/process-messages | Async email processing (body, attachments, AI) |
-| */5 * * * * | /api/cron/analyze-client | Pipeline analityki klienta — Whisper + Claude |
+| */5 * * * * | /api/cron/process-recordings | Upload worker, stuck egress cleanup, RODO purge, HTG |
+| 17 3 * * * | /api/cron/community-cleanup | Hard-delete soft-deleted posts >30d, rate logs, notifs |
+| 3 9 * * 1 | /api/cron/community-digest | Weekly community email digest |
+| */5 * * * * | /api/cron/analyze-client | Pipeline analityki klienta — Whisper + Claude (off) |
+| 23 * * * * | /api/cron/htg-meeting-orphan-reaper | Orphaned LiveKit egress cleanup |
+| 37 */6 * * * | /api/cron/youtube-check | YouTube RSS → insert new videos |
 
 ---
 
@@ -814,7 +827,7 @@ flagiem `CLIENT_ANALYTICS_ENABLED` (default off).
      UPDATE `file_url` (URL R2 z prefiksem bucket'a stripped przez
      `extractR2ObjectKey()` z `lib/r2-presigned.ts`).
 
-3. **Cron `/api/cron/analyze-client` (co 5 min)**:
+3. **Cron `/api/cron/analyze-client` (co 5 min, feature-flagged off)**:
    - `find_next_analytics_candidate()` RPC — wybiera sesję z grace period 2h
    - `claim_analytics_session()` RPC — atomic INSERT/UPDATE w
      `session_client_insights` (`status='processing'`)

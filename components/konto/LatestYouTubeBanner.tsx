@@ -31,7 +31,7 @@ export default function LatestYouTubeBanner({ youtubeId, title, thumbnailUrl }: 
   const ytUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
 
   return (
-    <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden mb-6">
+    <div className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden">
       {/* Mobile: column — thumbnail full-width on top */}
       {/* Desktop: row — thumbnail left (fills card height), text right */}
       <div className="flex flex-col sm:flex-row">

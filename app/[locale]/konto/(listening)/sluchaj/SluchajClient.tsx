@@ -5,13 +5,15 @@ import dynamic from 'next/dynamic';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
+import FontSizeToggle from '@/components/FontSizeToggle';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const SessionReviewPlayer = dynamic(
   () => import('@/components/session-review/SessionReviewPlayer'),
   {
     ssr: false,
     loading: () => (
-      <div className="flex items-center justify-center aspect-square md:aspect-video bg-htg-card rounded-xl">
+      <div className="flex items-center justify-center aspect-square md:aspect-video bg-htg-card">
         <Loader2 className="w-8 h-8 animate-spin text-htg-fg-muted" />
       </div>
     ),
@@ -95,8 +97,8 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
       {/* Main content — single block: player + session list */}
       <div className="flex-1 min-h-0 flex flex-col md:justify-center overflow-y-auto px-4 pb-4">
         <div className="w-full max-w-[430px] mx-auto">
-          {/* Player — full width of block */}
-          <div className="rounded-t-xl overflow-hidden">
+          {/* Player — full width of block, bg-htg-card fills subpixel gaps */}
+          <div className="rounded-t-xl overflow-hidden bg-htg-card">
             {playingSessionId ? (
               <SessionReviewPlayer
                 key={playingSessionId}
@@ -107,7 +109,7 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
                 tokenEndpoint="/api/video/token"
               />
             ) : (
-              <div className="aspect-square md:aspect-video bg-htg-card flex items-center justify-center rounded-t-xl">
+              <div className="aspect-square md:aspect-video bg-htg-card flex items-center justify-center">
                 <p className="text-htg-fg-muted text-sm">Wybierz sesję</p>
               </div>
             )}
@@ -128,6 +130,12 @@ export default function SluchajClient({ sections, singleSessions, userId, userEm
                 <span className="font-medium text-htg-fg">{session.title}</span>
               </button>
             ))}
+          </div>
+
+          {/* Font size + Theme toggles */}
+          <div className="flex items-center justify-center gap-2 py-3">
+            <FontSizeToggle />
+            <ThemeToggle />
           </div>
         </div>
       </div>

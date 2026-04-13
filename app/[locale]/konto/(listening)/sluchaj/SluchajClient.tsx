@@ -279,9 +279,9 @@ export default function SluchajClient({
                   <button
                     onClick={() => setPlayingSessionId(filteredSessions[0].id)}
                     aria-label="Odtwórz pierwszą sesję"
-                    className="w-24 h-24 rounded-full bg-htg-sage flex items-center justify-center shadow-xl shadow-htg-sage/25 hover:brightness-110 hover:shadow-2xl hover:shadow-htg-sage/35 active:brightness-90 transition-all duration-200"
+                    className="w-24 h-24 md:w-36 md:h-36 rounded-full bg-htg-sage flex items-center justify-center shadow-xl shadow-htg-sage/25 hover:scale-105 hover:brightness-110 hover:shadow-2xl hover:shadow-htg-sage/35 active:scale-100 active:brightness-90 transition-all duration-300 ease-out"
                   >
-                    <Play className="w-10 h-10 text-white ml-1" />
+                    <Play className="w-10 h-10 md:w-14 md:h-14 text-white ml-1" />
                   </button>
                 ) : (
                   <p className="text-htg-fg-muted text-sm">Brak sesji</p>

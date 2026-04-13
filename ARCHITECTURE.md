@@ -1,4 +1,4 @@
-# HTG Platform — Architektura v4
+# HTG Platform — Architektura v5
 
 ## Przegląd
 Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesje live + system rezerwacji + pipeline publikacji audio + spotkania wstępne + spotkania grupowe + sesje dla par + prezenty sesyjne + Communication Hub (email/SMS) + Centrum Kontaktu (portal klient-obsługa).
@@ -81,12 +81,17 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 ### Spotkania grupowe (HTG Meetings)
 | Tabela | Opis |
 |--------|------|
-| `htg_meetings` | Definicje spotkań grupowych (self_register, max_participants) |
-| `htg_meeting_sessions` | Sesje spotkań (status: waiting/active/ended, started_at) |
-| `htg_meeting_participants` | Uczestnicy (status: registered/approved/joined/left) |
-| `htg_meeting_speaking_events` | Logi mówienia (start/end, offset_seconds) — D2/D3 profil |
-| `htg_meeting_recordings` | Nagrania spotkań |
-| `participant_profiles` | Profile uczestników (score computation z speaking events) |
+| `htg_meetings` | Definicje spotkań (self_register, max_participants, **visibility** public/private) |
+| `htg_meeting_sessions` | Sesje (status: waiting/active/ended, **composite_recording_started**, recording_lock_until) |
+| `htg_meeting_participants` | Uczestnicy (status: registered/approved/joined/left, **recording_consent_at**, **recording_consent_version**) |
+| `htg_speaking_events` | Logi mówienia (offset_seconds, **is_closed** flag zamiast float equality) — D2/D3 profil |
+| `htg_meeting_egresses` | Junction: 1 row per LiveKit egress (composite/track), participant_user_id, ended_at, stop_error, source_url, duration_seconds. **ON DELETE SET NULL** na session FK (recordings przeżywają DELETE sesji) |
+| `htg_meeting_pending_egresses` | Two-phase commit bridge (client_request_id UNIQUE) — row INSERT'd przed startEgress, DELETE'd po junction INSERT. Chroni przed race z webhook |
+| `htg_meeting_recordings_v2` | Nagrania v2 (composite/track, status: queued/uploading/ready/failed/ignored, source_url, backup_storage_path, expires_at=null keep-forever). **ON DELETE SET NULL** na WSZYSTKIE FK |
+| `htg_meeting_recording_access` | Dostęp użytkowników do nagrań composite (UNIQUE recording_id+user_id, revoked_at, granted_reason) |
+| `htg_meeting_recording_audit` | Audit trail (action TEXT bez CHECK constraint — walidacja w TS via MeetingAuditAction) |
+| `htg_meeting_active_streams` | Concurrent device limit (1 device per user per recording, TTL, atomic via **try_claim_active_stream** RPC) |
+| `htg_participant_profiles` | Profile uczestników (score computation z speaking events) |
 
 ### Sesje dla par (natalia_para)
 | Tabela | Opis |
@@ -164,6 +169,9 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 | `037_footer_templates.sql` | Stopki email: `is_default_footer` na message_templates, unique partial index |
 | `046_recording_phase_and_backup.sql` | **3 fazy + lease lock**: `booking_recordings.recording_phase` (wstep/sesja/podsumowanie), `live_sessions.recording_lock_until` (lease 60s auto-expire), `last_retry_at` (retry cooldown), rozszerzone audit actions |
 | `047_backup_storage_pivot.sql` | **Storage pivot**: `backup_storage_path`, `backup_storage_zone` — ścieżka pliku w Bunny Storage zone |
+| `052_htg_meeting_bugfixes.sql` | **HTG Meetings PR #1**: RLS tighten ALL htg_* tables, speaking events `is_closed` column, `visibility` na meetings, consent columns (recording_consent_at/version) na participants, `composite_recording_started`/`recording_lock_until` na sessions, consent version seed w `site_settings`, performance indexes, RLS assertion DO block (RAISE WARNING on permissive policies) |
+| `053_htg_meeting_recordings_v2.sql` | **HTG Meetings PR #2**: junction `htg_meeting_egresses` (ON DELETE SET NULL), `htg_meeting_pending_egresses` (two-phase commit), `htg_meeting_recordings_v2` (all FK SET NULL), `htg_meeting_recording_access`, `htg_meeting_recording_audit` (bez CHECK constraint), `htg_meeting_active_streams`, **RPC `try_claim_active_stream()`** (atomic UPSERT z WHERE clause, SECURITY DEFINER, service_role only) |
+| `055_drop_old_htg_meeting_recordings.sql` | **HTG Meetings PR #7**: data sanity DO block (RAISE EXCEPTION jeśli stara tabela nie pusta) + DROP TABLE `htg_meeting_recordings` (v1). Bundled z recording-check endpoint update — zero deploy gap |
 
 ---
 
@@ -341,6 +349,83 @@ Per-play audit log z automatycznym flagowaniem:
 
 ---
 
+## HTG Meetings — Recording Pipeline
+
+Mirror Live Sessions recording pattern ale z per-speaker track egresses, consent versioning i two-phase commit na race protection.
+
+### Cele produktowe
+1. **Per-speaker track egresses** → Whisper dostaje speaker-labeled transkrypt (bez diarization)
+2. **Composite MP4 audio-only** → playback dla uczestników w panelu konta
+3. **Warm-DR** w Bunny Storage zone `htg-backup-sessions` folder `meetings/`
+4. **RLS + consent** → lustrzany `booking_recording_access` z consent version match
+
+### Storage layout
+```
+meetings/{YYYY-MM-DD}/{meeting_slug}/
+├── composite-{rec_short_id}.mp4              ← playback klienta
+└── tracks/{user_hash16}-{rec_short_id}.mp4   ← AI (admin only)
+```
+`{user_hash16}` = first 16 hex SHA-256(user_id + MEETING_PATH_SALT). Admin bez salt nie koreluje z user_id.
+
+### Flow: start → record → upload → playback
+```
+1. Moderator POST /control {action:'start'}
+   → consent gate (version match, 412 jeśli brak)
+   → room-side re-check (removeParticipant bez consent)
+   → two-phase commit: pending INSERT → startRoomCompositeEgress → junction INSERT → DELETE pending
+   → per-track loop (same two-phase, partial UNIQUE index 23505 race handling)
+
+2. Late joiner: webhook participant_joined
+   → 3x retry (250/500ms) na participant DB row
+   → consent version check
+   → two-phase commit track egress
+
+3. Session end: POST /control {action:'end'}
+   → Promise.allSettled stopEgress (fail-closed: stop_error zamiast fake ended_at)
+
+4. Webhooks egress_started / egress_ended
+   → upsert htg_meeting_recordings_v2 (out-of-order safe)
+   → resurrect failed records (late egress_ended)
+
+5. Cron Section 8 (co 2 min)
+   → atomic claim queued → uploading
+   → R2 presigned URL → fetch → Bunny Storage upload
+   → status='ready', grant access (composite only)
+   → v9 C3: .eq('status','uploading') guard na każdym terminalnym update
+
+6. Cron Section 10 (co godzinę)
+   → listRooms → listEgress per meeting room
+   → cross-check z junction + pending
+   → stop orphan >30min (bigint nanos age check)
+
+7. Playback: POST /api/video/htg-meeting-recording-token
+   → access check + try_claim_active_stream RPC (atomic single-device)
+   → signHtg2StorageUrl → fail-closed 503 jeśli CDN key missing
+```
+
+### Kluczowe pliki
+| Plik | Rola |
+|------|------|
+| `lib/live/meeting-constants.ts` | Single source of truth: HTG_MEETING_ROOM_PREFIX, CONSENT_VERSION_KEY, UUID_RE, MEETING_AUDIT_ACTIONS (TS enforcement), auditHtgRecording, computeDurationFromEgress, hashUserIdForPath |
+| `lib/live/meeting-recording-lock.ts` | acquireMeetingRecordingLock / releaseMeetingRecordingLock (60s lease) |
+| `lib/site-settings.ts` | readSiteSettingString(db, key) — JSONB normalization helper |
+| `lib/bunny-backup-storage.ts` | buildMeetingStoragePath + sanitizeForPath (exported) |
+| `app/api/htg-meeting/session/[id]/control/route.ts` | Start/end recording (consent + two-phase + per-track) |
+| `app/api/live/webhook/route.ts` | 4 HTG handlery (egress_started/ended, participant_joined/left) |
+| `app/api/cron/process-recordings/route.ts` | Sections 7-HTG, 8, 9 |
+| `app/api/cron/htg-meeting-orphan-reaper/route.ts` | Section 10 (hourly, CRON_SECRET fail-closed) |
+| `app/api/video/htg-meeting-recording-token/route.ts` | Signed URL + device limit |
+| `app/api/video/htg-meeting-recording-revoke/route.ts` | Self-service revoke |
+
+### Consent flow
+- Checkbox przy self-register (keep-forever wording, per RODO)
+- `recording_consent_version` match z `site_settings.htg_meeting_current_consent_version`
+- Bump version → re-consent wymagany (412 przy join)
+- Admin bypass z audit `admin_bypass_consent_gate`
+- Room-side re-check w `control/start` (removeParticipant bez valid consent po composite started)
+
+---
+
 ## Pipeline publikacji audio
 
 ```
@@ -441,10 +526,23 @@ Surowe MP4 → Ekstrakcja WAV → Transkrypcja (Whisper) → Analiza (Claude) �
 - POST /api/htg-meeting/session/self-register — rejestracja uczestnika (+ DELETE cancel)
 - POST /api/htg-meeting/session/[sessionId]/approve-participant — admin approve/reject
 - GET /api/htg-meeting/session/my-active — aktywne sesje usera (polling 10s)
-- POST /api/htg-meeting/session/[id]/speaking-event — log mówienia (start/end + offset)
-- GET /api/htg-meeting/session/[id]/recording-check — sprawdź nagranie
+- POST /api/htg-meeting/session/[id]/speaking-event — log mówienia (start/end + offset + is_closed, Zod, status='active' guard)
+- GET /api/htg-meeting/session/[id]/recording-check — sprawdź nagranie composite (**v2**: query htg_meeting_recordings_v2 WHERE composite + ready)
 - POST /api/htg-meeting/session/[id]/state — zmiana stanu sesji
+- POST /api/htg-meeting/session/[id]/control — **start/end recording** (consent gate z version match, two-phase commit, per-track egress, Promise.allSettled stopEgress, fail-closed)
+- POST /api/htg-meeting/session/[id]/accept-recording-consent — UPDATE only (nie upsert), consent version match
+- POST /api/htg-meeting/session/[id]/leave — server-side removeParticipant (late-joiner declined consent)
+- POST /api/htg-meeting/session/join — LiveKit token (TTL 5min), consent gate 412, admin bypass, identity sanitization
 - GET /api/htg-meeting/profiles — profile uczestników
+
+### HTG Meeting Recording Pipeline
+- POST /api/live/webhook — **4 HTG handlery** (prefix filter `meeting-*`, early return):
+  - `egress_started` → recordings_v2 upsert (queued), orphan → audit only (no kill, Section 10 reaper)
+  - `egress_ended` → finalize source_url + duration, resurrect failed recordings
+  - `participant_joined` → late-joiner track egress (two-phase commit, consent version check, 3x 250/500ms retry)
+  - `participant_left` → stopEgress fail-closed (ended_at only on success, stop_error column on fail)
+- POST /api/video/htg-meeting-recording-token — signed URL (composite only, Zod, try_claim_active_stream RPC, fail-closed 503)
+- POST /api/video/htg-meeting-recording-revoke — self-service revoke (service role, idempotent, clears active_streams)
 
 ### Companion (sesja dla par)
 - POST /api/companion/invite — utwórz zaproszenie (invite_token) + DELETE usuń

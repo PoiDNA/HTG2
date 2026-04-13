@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n-config';
-import SpiritIcon from '@/app/[locale]/konto/SpiritIcon';
+import SpiritIcon from '@/app/[locale]/konto/(dashboard)/SpiritIcon';
 
 const menuItems = [
   { href: '/konto', label: 'Nagrania', spiritIcon: 'portal' as const },

@@ -15,6 +15,7 @@ import VodLibrarySection from './_sections/VodLibrarySection';
 import RemainingSessionsSection from './_sections/RemainingSessionsSection';
 import SanctuaryHero from './_sections/SanctuaryHero';
 import ContinueCard from './_sections/ContinueCard';
+import SluchajButton from '@/components/konto/SluchajButton';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -78,7 +79,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <SanctuaryHero locale={locale} />
         </Suspense>
 
-        {ytBanner}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
+          <SluchajButton />
+        </div>
 
         <Suspense fallback={<SectionSkeleton title="Biblioteka audio" />}>
           <VodLibrarySection locale={locale} />
@@ -102,7 +106,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <ContinueCard locale={locale} />
         </Suspense>
 
-        {ytBanner}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
+          <SluchajButton />
+        </div>
 
         <Suspense fallback={<SectionSkeleton title="Nagrania z sesji" />}>
           <VodLibrarySection locale={locale} />
@@ -120,7 +127,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
     <div>
       <ActiveCallsWidget locale={locale} />
 
-      {ytBanner}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        {ytBanner && <div className="flex-1 min-w-0">{ytBanner}</div>}
+        <SluchajButton />
+      </div>
 
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />

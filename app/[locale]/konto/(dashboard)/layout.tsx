@@ -185,7 +185,7 @@ export default async function AccountLayout({
     <>
       <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
       {items.map(({ href, label, icon: Icon }) => (
-        <SidebarLink key={typeof href === 'string' ? href : href.pathname} href={href} label={label} locale={locale}>
+        <SidebarLink key={typeof href === 'string' ? href : href.pathname} href={href} label={label}>
           <Icon className="w-5 h-5" />
         </SidebarLink>
       ))}
@@ -198,7 +198,7 @@ export default async function AccountLayout({
     <>
       <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
       {userItems.map(({ href, label, spiritIcon }) => (
-        <SidebarLink key={href} href={href} label={label} locale={locale}>
+        <SidebarLink key={href} href={href} label={label}>
           <SpiritIcon type={spiritIcon} />
         </SidebarLink>
       ))}

@@ -22,7 +22,8 @@
     "menu": "Menu",
     "staff": "Painel do facilitador",
     "switch_locale": "Mudar idioma para {locale}",
-    "skip_to_content": "Saltar para o conteúdo"
+    "skip_to_content": "Saltar para o conteúdo",
+    "close_menu": "Fechar menu"
   },
   "Footer": {
     "privacy": "Política de Privacidade",
@@ -110,7 +111,15 @@
     "individual_sessions": "Sessões individuais",
     "sessions_in_set": "{count, plural, one {# sessão} other {# sessões}} no conjunto",
     "empty_title": "Novas sessões em breve",
-    "empty_description": "Estamos a trabalhar na disponibilização do nosso arquivo. Volte em breve!"
+    "empty_description": "Estamos a trabalhar na disponibilização do nosso arquivo. Volte em breve!",
+    "your_library": "A sua Biblioteca",
+    "filter_show": "Mostrar",
+    "filter_all": "Todas",
+    "filter_unlistened": "Não ouvidas",
+    "filter_bookmarked": "Marcadas",
+    "remaining_sessions": "Restantes Sessões",
+    "processing": "A processar...",
+    "go_to_payment": "Ir para o pagamento"
   },
   "Subscriptions": {
     "title": "Subscrições",
@@ -135,7 +144,18 @@
     "listen": "Ouvir",
     "close": "Fechar",
     "sharing_prohibited": "Por respeito à privacidade e ao conforto da sessão, esta gravação não se destina a ser partilhada.",
-    "processing": "A processar..."
+    "processing": "A processar...",
+    "your_recordings": "Gravações das suas sessões",
+    "show_all": "Mostrar todas",
+    "no_recordings": "As gravações das suas sessões aparecerão aqui após a primeira sessão gravada.",
+    "session_fallback": "Sessão individual",
+    "privacy_notice": "As gravações das suas sessões estão disponíveis durante um período até 12 meses após a data da sessão. Por razões de segurança, reservamo-nos o direito de encurtar este período. Se pretender eliminar uma gravação ou comunicar um problema, escreva-nos para htg@htg.cyou.",
+    "recording_from": "Gravação de",
+    "available_until": "Disponível até",
+    "legal_hold_message": "Esta gravação foi arquivada. Contacte-nos se tiver dúvidas.",
+    "contact_center": "Centro de Contacto HTG",
+    "contact_center_desc1": "Se algo não funcionar ou precisar de acesso a outras gravações — escreva-nos através do Centro de Contacto HTG.",
+    "contact_center_desc2": "Após iniciar sessão, pode sempre voltar às conversas e verificar o que foi acordado. Responderemos o mais brevemente possível."
   },
   "Recordings": {
     "title": "Gravações públicas",
@@ -183,7 +203,32 @@
     "watch": "Ver",
     "no_orders": "Sem encomendas.",
     "no_subscriptions": "Não tem subscrições ativas.",
-    "full_catalog_access": "Acesso completo a todo o arquivo de sessões"
+    "full_catalog_access": "Acesso completo a todo o arquivo de sessões",
+    "activations_title": "As suas Ativações",
+    "activations_subtitle": "Subscrições ativas e pacotes de sessões",
+    "add_package": "Adicionar pacote ou subscrição",
+    "session_with_natalia": "Sessão com Natalia",
+    "buy_single_desc": "Comprar uma sessão 1:1 individual",
+    "monthly_access": "Acesso mensal a sessões",
+    "best_option": "Melhor opção",
+    "yearly_access": "Acesso anual a sessões",
+    "history": "Histórico",
+    "expired_at": "Expirou: {date}",
+    "per_month": "mês",
+    "per_year": "ano",
+    "cancel": "Cancelar",
+    "profile_name_placeholder": "Maria Silva",
+    "consent_privacy": "Aceitação da Política de Privacidade (RGPD)",
+    "consent_terms": "Aceitação dos Termos e Condições do serviço",
+    "consent_recording": "Gravação e publicação da sessão",
+    "consent_recording_note": "Condição contratual — não pode ser revogada. Pode indicar secções a remover no prazo de 7 dias após a disponibilização da gravação.",
+    "consent_locked": "Condição contratual",
+    "consent_active": "Ativa",
+    "friend_email_placeholder": "Introduza o endereço de e-mail do utilizador...",
+    "remove_friend": "Remover dos amigos",
+    "add_friend": "Adicionar aos amigos",
+    "your_name_placeholder": "O seu nome...",
+    "invite_message_placeholder": "Ex.: Olá! Recomendo-te estas sessões, vale mesmo a pena..."
   },
   "Player": {
     "concurrent_title": "A reproduzir noutro dispositivo",
@@ -192,7 +237,8 @@
     "loading": "A carregar...",
     "load_error_title": "Falha ao carregar",
     "load_error": "Não foi possível carregar a gravação. Tente novamente.",
-    "error": "Não foi possível carregar a gravação."
+    "error": "Não foi possível carregar a gravação.",
+    "close": "Fechar leitor"
   },
   "Individual": {
     "title": "Sessões individuais",
@@ -223,7 +269,54 @@
     "interpreter_name": "Edyta",
     "session_pair_name": "Sessão para casais",
     "session_pair_subtitle": "Natalia HTG + intérprete",
-    "interpreter_note": "As sessões incluem interpretação consecutiva por {name}"
+    "interpreter_note": "As sessões incluem interpretação consecutiva por {name}",
+    "choose_assistant": "Escolha a assistente:",
+    "processing": "A processar...",
+    "book_transfer": "Reservar sessão",
+    "pay_installment": "Pagar {n}.ª prestação",
+    "payment_method_title": "Método de pagamento",
+    "full_payment": "Pagamento integral",
+    "one_time": "uma vez",
+    "installments_title": "{count} prestações mensais",
+    "first_installment_now": "primeira prestação agora",
+    "installment_label": "Prestação {n}",
+    "installment_now": "(agora)",
+    "installment_later": "(daqui a {days} dias)",
+    "total": "Total",
+    "payment_method": "Método de pagamento",
+    "card_blik": "Cartão / BLIK",
+    "fast_online_payment": "Pagamento online rápido",
+    "bank_transfer": "Transferência bancária",
+    "traditional_transfer": "Transferência tradicional",
+    "transfer_data": "Dados para transferência",
+    "attach_proof": "Anexar comprovativo de transferência",
+    "choose_file": "Selecionar ficheiro (foto ou PDF, máx. 5 MB)",
+    "proof_note": "Após anexar o comprovativo, o horário será reservado. Verificação do pagamento em até 3 dias úteis.",
+    "buy_as_gift": "Comprar como presente",
+    "gift_description": "A sessão será associada a outra pessoa",
+    "gift_email_label": "E-mail do destinatário *",
+    "gift_email_placeholder": "ex.: filho@exemplo.pt",
+    "gift_message_label": "Mensagem (opcional)",
+    "gift_message_placeholder": "Escreva algumas palavras para o destinatário…",
+    "gift_note": "Após a compra, receberá uma ligação para partilhar. O destinatário pode resgatar a sessão na sua própria conta ou utilizar a sua.",
+    "recording_consent": "Compreendo que a sessão é gravada e pode ser publicada após edição. Posso indicar secções a remover no prazo de 7 dias após a disponibilização da gravação.",
+    "consent_required_note": "O consentimento é condição para a prestação do serviço — detalhes nos",
+    "terms_link_text": "termos e condições",
+    "choose_date_title": "Escolher data",
+    "earliest_date": "Data mais próxima disponível",
+    "select_btn": "Selecionar",
+    "show_all_dates": "Mostrar todas as datas disponíveis",
+    "hide_all_dates": "Ocultar datas",
+    "want_acceleration": "Quero aceleração",
+    "notify_earlier_slot": "Notificar quando surgir um horário mais cedo",
+    "two_people": "2 pessoas",
+    "min_amount_error": "Introduza um valor mínimo de 1 PLN",
+    "payment_error": "Erro de pagamento",
+    "connection_error": "Erro de ligação",
+    "pay_installment_title": "Efetuar pagamento adicional / prestação",
+    "pay_custom_desc": "Pague qualquer valor para a sua sessão:",
+    "payment_amount_label": "Valor do pagamento (PLN)",
+    "pay_btn": "Pagar"
   },
   "Legal": {
     "privacy_title": "Política de Privacidade",
@@ -383,7 +476,10 @@
     "pub_my_sessions": "As minhas sessões",
     "pub_archive": "Arquivo",
     "pub_add": "Adicionar sessão",
-    "logout": "Sair"
+    "logout": "Sair",
+    "translator_panel": "Painel do tradutor",
+    "community": "Comunidade",
+    "session_recordings": "Gravações de sessões"
   },
   "Booking": {
     "title": "Sessões privadas",
@@ -435,47 +531,12 @@
     "reschedule_select": "Selecionar",
     "nav_label": "Sessões individuais",
     "countdown": {
-      "8plus": {
-        "0": "Há um longo caminho pela frente — e isso é algo belo. Cada dia aproxima-o da sua sessão.",
-        "1": "O tempo é o seu aliado. Deixe-o trabalhar a seu favor.",
-        "2": "As grandes coisas precisam de tempo para amadurecer. A sua sessão não é exceção.",
-        "3": "Uma semente plantada em silêncio já está a germinar. Também se está a preparar, mesmo que ainda não o veja.",
-        "4": "É uma longa caminhada, mas cada passo conta. A sua sessão espera-o no final deste caminho."
-      },
-      "7": {
-        "0": "Sete meses é muito tempo — e, ao mesmo tempo, menos do que pensa.",
-        "1": "Entre hoje e a sua sessão, há todo um espaço para mudanças.",
-        "2": "As estações vão mudar antes de nos encontrarmos. E talvez você também mude.",
-        "3": "Ainda está longe, mas a direção é clara. A sua sessão está no calendário.",
-        "4": "Há coisas que vale a pena esperar. A sua sessão é uma delas."
-      },
-      "6": {
-        "0": "Meio ano até à sua sessão. Tempo que pode aproveitar bem.",
-        "1": "Seis meses — tempo suficiente para se preparar, curto o bastante para sentir a expectativa.",
-        "2": "Está a meio do caminho desde que reservou. Equilíbrio.",
-        "3": "Seis meses passam mais depressa do que espera. Especialmente quando sabe o que o aguarda.",
-        "4": "Meio ano. Imagine quem será quando o dia chegar."
-      },
-      "5": {
-        "0": "Cinco meses. A contagem decrescente ganha velocidade.",
-        "1": "Cada vez mais perto. Cinco meses é uma distância que já se avista no horizonte.",
-        "2": "A sua sessão aproxima-se passo a passo. Cinco meses já não é abstrato.",
-        "3": "Daqui a cinco meses estará num lugar completamente diferente. A sessão é apenas uma parte dessa jornada.",
-        "4": "Cinco meses — tempo em que pode aprender muito sobre si. E sobre o que procura."
-      },
-      "4": {
-        "0": "Quatro meses. A sessão começa lentamente a emergir da névoa do futuro.",
-        "1": "Mais uma estação passará antes de nos encontrarmos.",
-        "2": "Quatro meses — perto o suficiente para começar a pensar no que quer dizer.",
-        "3": "O tempo voa. Quatro meses separam-no de algo importante.",
-        "4": "A sessão torna-se cada vez mais real. Quatro meses já é concreto."
-      },
-      "3": {
-        "0": "Três meses — perto o suficiente para sentir a expectativa.",
-        "1": "Só mais um pouco de paciência. Três meses passarão mais depressa do que pensa.",
-        "2": "Um trimestre. A reta final antes da sua sessão começa agora.",
-        "3": "Três meses é o tempo perfeito para reunir os seus pensamentos e preparar-se para o encontro.",
-        "4": "A contar em trimestres — e só lhe falta um."
+      "1": {
+        "0": "Falta apenas um mês. Quase se ouve a sessão a bater à porta.",
+        "1": "Um mês. Tempo para os últimos preparativos — ou simplesmente para estar presente.",
+        "2": "A meta. Daqui a um mês encontrar-nos-emos para a sua sessão.",
+        "3": "Quatro semanas. Num piscar de olhos, comparado com o tempo que já esperou.",
+        "4": "O último mês. Tudo o que precisa já está dentro de si."
       },
       "2": {
         "0": "Dois meses. A sessão está quase ao alcance.",
@@ -484,12 +545,47 @@
         "3": "Em dois meses tudo ficará mais claro. Por agora — desfrute da expectativa.",
         "4": "A fase final da contagem decrescente. Dois meses e estará lá."
       },
-      "1": {
-        "0": "Falta apenas um mês. Quase se ouve a sessão a bater à porta.",
-        "1": "Um mês. Tempo para os últimos preparativos — ou simplesmente para estar presente.",
-        "2": "A meta. Daqui a um mês encontrar-nos-emos para a sua sessão.",
-        "3": "Quatro semanas. Num piscar de olhos, comparado com o tempo que já esperou.",
-        "4": "O último mês. Tudo o que precisa já está dentro de si."
+      "3": {
+        "0": "Três meses — perto o suficiente para sentir a expectativa.",
+        "1": "Só mais um pouco de paciência. Três meses passarão mais depressa do que pensa.",
+        "2": "Um trimestre. A reta final antes da sua sessão começa agora.",
+        "3": "Três meses é o tempo perfeito para reunir os seus pensamentos e preparar-se para o encontro.",
+        "4": "A contar em trimestres — e só lhe falta um."
+      },
+      "4": {
+        "0": "Quatro meses. A sessão começa lentamente a emergir da névoa do futuro.",
+        "1": "Mais uma estação passará antes de nos encontrarmos.",
+        "2": "Quatro meses — perto o suficiente para começar a pensar no que quer dizer.",
+        "3": "O tempo voa. Quatro meses separam-no de algo importante.",
+        "4": "A sessão torna-se cada vez mais real. Quatro meses já é concreto."
+      },
+      "5": {
+        "0": "Cinco meses. A contagem decrescente ganha velocidade.",
+        "1": "Cada vez mais perto. Cinco meses é uma distância que já se avista no horizonte.",
+        "2": "A sua sessão aproxima-se passo a passo. Cinco meses já não é abstrato.",
+        "3": "Daqui a cinco meses estará num lugar completamente diferente. A sessão é apenas uma parte dessa jornada.",
+        "4": "Cinco meses — tempo em que pode aprender muito sobre si. E sobre o que procura."
+      },
+      "6": {
+        "0": "Meio ano até à sua sessão. Tempo que pode aproveitar bem.",
+        "1": "Seis meses — tempo suficiente para se preparar, curto o bastante para sentir a expectativa.",
+        "2": "Está a meio do caminho desde que reservou. Equilíbrio.",
+        "3": "Seis meses passam mais depressa do que espera. Especialmente quando sabe o que o aguarda.",
+        "4": "Meio ano. Imagine quem será quando o dia chegar."
+      },
+      "7": {
+        "0": "Sete meses é muito tempo — e, ao mesmo tempo, menos do que pensa.",
+        "1": "Entre hoje e a sua sessão, há todo um espaço para mudanças.",
+        "2": "As estações vão mudar antes de nos encontrarmos. E talvez você também mude.",
+        "3": "Ainda está longe, mas a direção é clara. A sua sessão está no calendário.",
+        "4": "Há coisas que vale a pena esperar. A sua sessão é uma delas."
+      },
+      "8plus": {
+        "0": "Há um longo caminho pela frente — e isso é algo belo. Cada dia aproxima-o da sua sessão.",
+        "1": "O tempo é o seu aliado. Deixe-o trabalhar a seu favor.",
+        "2": "As grandes coisas precisam de tempo para amadurecer. A sua sessão não é exceção.",
+        "3": "Uma semente plantada em silêncio já está a germinar. Também se está a preparar, mesmo que ainda não o veja.",
+        "4": "É uma longa caminhada, mas cada passo conta. A sua sessão espera-o no final deste caminho."
       },
       "lt1": {
         "0": "Quase lá. Os últimos dias antes da sua sessão.",
@@ -498,7 +594,35 @@
         "3": "Só mais um momento e encontrar-nos-emos. Prepare-se para algo especial.",
         "4": "A reta final. São dias que o separam da sessão — não meses, não semanas. Dias."
       }
-    }
+    },
+    "enlarge_text": "Aumentar texto",
+    "fullscreen": "Ecrã inteiro",
+    "close_esc": "Fechar (ESC)",
+    "next_topic": "Próximo tema...",
+    "remove_topic": "Remover ponto",
+    "add_topic": "Adicionar ponto ({count}/8)",
+    "max_topics": "Máximo de 8 pontos",
+    "saving": "A guardar...",
+    "saved": "✓ Guardado",
+    "join_session": "Entrar na sessão",
+    "session_today_waiting": "Sessão hoje — a sala de espera abre 30 minutos antes da sessão",
+    "report_late": "Comunicar atraso",
+    "hide_calendar": "Ocultar calendário",
+    "reschedule": "Remarcar",
+    "how_late_question": "Quantos minutos de atraso terá?",
+    "date_tbd": "A data será definida posteriormente",
+    "partner_session": "Sessão para casal",
+    "pre_session_title": "Reunião prévia",
+    "pre_session_desc": "Breve reunião online de 15 minutos com a assistente antes da sua sessão",
+    "pre_session_booked": "Reunião com {name} — reservada ✓",
+    "pre_session_link_info": "A ligação para a reunião aparecerá nesta página antes do horário marcado. A reunião não pode ser remarcada — em caso de dúvidas, contacte-nos diretamente.",
+    "no_pre_session_slots": "Sem horários disponíveis — a assistente adicionará novos em breve",
+    "choose_date": "Escolher data",
+    "pre_session_free_note": "As reuniões prévias são gratuitas. Após a reserva, o horário é definitivo — não pode ser remarcado nem cancelado.",
+    "buy_pre_session": "Reservar",
+    "remove_invite": "Remover convite",
+    "companion_email_placeholder": "E-mail do parceiro (deve ter conta HTG)",
+    "shrink_text": "Diminuir texto"
   },
   "Live": {
     "waiting_title": "À espera do facilitador...",
@@ -699,7 +823,18 @@
     "notif_mention": "mencionou-o",
     "notif_new_post": "adicionou uma nova publicação",
     "notif_group_invite": "convidou-o para um grupo",
-    "meta_description": "Junte-se à comunidade HTG. Discuta, partilhe experiências e cresça com outros."
+    "meta_description": "Junte-se à comunidade HTG. Discuta, partilhe experiências e cresça com outros.",
+    "auto_translated": "traduzido automaticamente",
+    "show_original": "Mostrar original",
+    "show_translation": "Mostrar tradução",
+    "translating": "A traduzir...",
+    "post_language": "Idioma da publicação",
+    "message_subject_placeholder": "Assunto da sua mensagem",
+    "search_placeholder": "Pesquisar publicações...",
+    "poll_question_placeholder": "Faça uma pergunta...",
+    "add_photo": "Adicionar foto",
+    "notif_new_comments": "Novos comentários",
+    "notif_reactions": "Reações"
   },
   "YouTubeBanner": {
     "new_video": "Nova sessão no YT",

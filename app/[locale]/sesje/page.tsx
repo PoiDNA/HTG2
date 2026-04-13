@@ -71,7 +71,7 @@ export default async function SessionsPage({ params }: { params: Promise<{ local
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Sessions' });
 
-  const monthlySets = await getMonthlySets();
+  const monthlySets = await getMonthlySets(locale);
 
   // Fetch prices from shared helper
   const prices = await getSessionPrices();

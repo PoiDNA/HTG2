@@ -12,7 +12,7 @@ export default async function RemainingSessionsSection({ locale }: { locale: str
   try {
     const { userId, supabase } = await getEffectiveUser();
     const [allSets, purchased, prices] = await Promise.all([
-      getMonthlySets(),
+      getMonthlySets(locale),
       getUserPurchased(supabase, userId),
       getSessionPrices(),
     ]);

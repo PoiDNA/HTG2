@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Loader2, Bookmark, CheckCircle2, Play } from 'lucide-react';
+import { ArrowLeft, Loader2, Bookmark, CheckCircle2, Play, Menu } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import type { MonthSection, VodSession } from '@/lib/services/vod-library';
 import FontSizeToggle from '@/components/FontSizeToggle';
@@ -168,10 +168,11 @@ export default function SluchajClient({
         <div className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="bg-htg-card border border-htg-card-border rounded-lg px-3 py-1.5 text-sm text-htg-fg hover:bg-htg-surface transition-colors max-w-[220px] truncate"
+            className="bg-htg-card border border-htg-card-border rounded-lg px-3 py-1.5 text-sm text-htg-fg hover:bg-htg-surface transition-colors flex items-center gap-2 max-w-[240px]"
           >
-            {groups.find((g) => g.key === selectedKey)?.label ?? 'Menu'}
-            <span className="ml-1.5 text-htg-fg-muted">&#9662;</span>
+            <Menu className="w-4 h-4 text-htg-fg-muted shrink-0" />
+            <span className="truncate">{groups.find((g) => g.key === selectedKey)?.label ?? 'Menu'}</span>
+            <span className="text-htg-fg-muted shrink-0">&#9662;</span>
           </button>
 
           {menuOpen && (

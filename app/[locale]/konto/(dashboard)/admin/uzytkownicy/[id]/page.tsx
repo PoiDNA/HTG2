@@ -3,7 +3,8 @@ import { Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect, notFound } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import {
   ArrowLeft, User, Mail, Calendar, CreditCard, BookOpen, Package,
   Crown, Shield, ExternalLink, Clock,
@@ -31,7 +32,7 @@ export default async function AdminUserDetailPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user: adminUser } } = await sessionClient.auth.getUser();
-  if (!adminUser || !isAdminEmail(adminUser.email ?? '')) redirect(`/${locale}/konto`);
+  if (!adminUser || !isAdminEmail(adminUser.email ?? '')) redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 

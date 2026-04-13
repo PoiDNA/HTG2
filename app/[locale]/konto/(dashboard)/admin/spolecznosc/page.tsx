@@ -2,7 +2,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { Link } from '@/i18n-config';
 import type { ComponentProps } from 'react';
 import { Users, MessageSquare, Lock, Globe, Shield, Archive, Flag, Plus, ExternalLink } from 'lucide-react';
@@ -23,7 +23,7 @@ export default async function AdminCommunityPage({
   // Auth check
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
   const activeTab = sp.tab || 'groups';

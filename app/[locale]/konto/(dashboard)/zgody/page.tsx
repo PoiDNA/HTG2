@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { useLocale } from 'next-intl';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { getPortalHomeClient } from '@/lib/portal';
@@ -65,7 +65,7 @@ export default function ConsentGatePage() {
       }
 
       // Redirect to portal home (nagrania, sesja, or default /konto)
-      router.push(`/${locale}${getPortalHomeClient()}`);
+      router.push(getPortalHomeClient() as '/konto');
       router.refresh();
     } catch {
       setError('Wystąpił błąd. Spróbuj ponownie.');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { FilePlus, Loader2 } from 'lucide-react';
 
 interface Props {
@@ -26,13 +26,13 @@ export function CreatePublicationButton({ liveSessionId }: Props) {
       if (!res.ok) {
         // If already exists, navigate to it
         if (res.status === 409 && json.publicationId) {
-          router.push(`/pl/publikacja/sesje/${json.publicationId}`);
+          router.push({pathname: '/publikacja/sesje/[id]', params: {id: json.publicationId}} as any);
           return;
         }
         setError(json.error || 'Błąd');
         return;
       }
-      router.push(`/pl/publikacja/sesje/${json.publication.id}`);
+      router.push({pathname: '/publikacja/sesje/[id]', params: {id: json.publication.id}} as any);
     } catch {
       setError('Błąd połączenia');
     } finally {

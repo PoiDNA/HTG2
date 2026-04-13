@@ -3,7 +3,7 @@ import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { cookies } from 'next/headers';
 import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
 import { startImpersonation } from '@/lib/admin/impersonate';
@@ -32,8 +32,8 @@ export default async function AdminPreviewPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
-  if (!isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user) return redirect({href: '/login', locale});
+  if (!isAdminEmail(user.email ?? '')) return redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 

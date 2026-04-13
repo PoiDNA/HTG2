@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  redirect(`/${locale}/konto`);
+  redirect({href: '/konto', locale});
 }

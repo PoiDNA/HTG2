@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { Gift } from 'lucide-react';
 
 export default function ClaimButton({ token, locale }: { token: string; locale: string }) {
@@ -22,7 +22,7 @@ export default function ClaimButton({ token, locale }: { token: string; locale: 
       const data = await res.json();
       if (res.ok || data.alreadyClaimed) {
         setDone(true);
-        setTimeout(() => router.push(`/${locale}/konto/sesje-indywidualne`), 2000);
+        setTimeout(() => router.push('/konto/sesje-indywidualne'), 2000);
       } else {
         setError(data.error ?? 'Wystąpił błąd');
       }

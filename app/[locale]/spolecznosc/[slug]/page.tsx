@@ -2,7 +2,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { PostFeed } from '@/components/community/PostFeed';
 import { GroupHeader } from '@/components/community/GroupHeader';
 import type { CommunityGroup } from '@/lib/community/types';
@@ -37,7 +37,7 @@ export default async function GroupPage({
   // Auth
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const email = user.email ?? '';
   const isAdmin = isAdminEmail(email);
@@ -53,12 +53,12 @@ export default async function GroupPage({
     .single();
 
   if (!group) {
-    redirect(`/${locale}/spolecznosc`);
+    return redirect({href: '/spolecznosc', locale});
   }
 
   // Visibility check
   if (group.visibility === 'staff_only' && !isStaff) {
-    redirect(`/${locale}/spolecznosc`);
+    return redirect({href: '/spolecznosc', locale});
   }
 
   // Fetch membership
@@ -73,7 +73,7 @@ export default async function GroupPage({
 
   // Private group: require membership
   if (group.visibility === 'private' && !isMember) {
-    redirect(`/${locale}/spolecznosc`);
+    return redirect({href: '/spolecznosc', locale});
   }
 
   // Member count

@@ -1,6 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
-import { locales } from '@/i18n-config';
+import { locales, redirect } from '@/i18n-config';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { isAdminEmail } from '@/lib/roles';
 import PlayStatsClient from './PlayStatsClient';
@@ -18,12 +17,12 @@ export default async function StatystykiPage({
   setRequestLocale(locale);
 
   const { user, staffMember } = await getEffectiveStaffMember();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const isAdmin = isAdminEmail(user.email ?? '');
   const canSeeStats = isAdmin || staffMember?.role === 'practitioner';
 
-  if (!canSeeStats) redirect(`/${locale}/prowadzacy`);
+  if (!canSeeStats) return redirect({href: '/prowadzacy', locale});
 
   return <PlayStatsClient />;
 }

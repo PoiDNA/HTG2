@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { useLocale, useTranslations } from 'next-intl';
 import { LiveKitRoom, RoomAudioRenderer, useRoomContext, useConnectionState } from '@livekit/components-react';
 import { Room, RoomEvent, DataPacket_Kind, ConnectionState } from 'livekit-client';
@@ -123,8 +123,8 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const handleTransitionComplete = useCallback(() => {}, []);
 
   const handleOutroClose = useCallback(() => {
-    router.push(`/${locale}/konto`);
-  }, [router, locale]);
+    router.push('/konto');
+  }, [router]);
 
   const handlePhaseChanged = useCallback((newPhase: Phase) => {
     setPhase(newPhase);
@@ -144,8 +144,8 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   );
 
   useEffect(() => {
-    if (phase === 'ended') router.push(`/${locale}/konto`);
-  }, [phase, router, locale]);
+    if (phase === 'ended') router.push('/konto');
+  }, [phase, router]);
 
   // Recording status polling — staff-only, sesja phase only
   // Polls /api/live/recording-status every 30s + immediately on tab focus.
@@ -225,7 +225,7 @@ function LiveRoomInner({ initialSession, isStaff, phase, setPhase }: InnerProps)
   const isConnected = connectionState === ConnectionState.Connected;
   const isConnecting = connectionState === ConnectionState.Connecting;
   const isVideoPhase = phase === 'wstep' || phase === 'podsumowanie';
-  const backUrl = `/${locale}/konto`;
+  const backUrl = '/konto';
 
   // Pick animation variant based on phase
   const animVariant = phase === 'sesja' || phase === 'przejscie_1' ? 1

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { Users, Loader2, Check, XCircle } from 'lucide-react';
 
 export default function InviteJoinPage({ params }: { params: Promise<{ token: string; locale: string }> }) {
@@ -41,7 +41,7 @@ export default function InviteJoinPage({ params }: { params: Promise<{ token: st
       if (data.joined || data.already_member) {
         setJoined(true);
         setTimeout(() => {
-          router.push(`/${locale}/spolecznosc/${data.group_slug || info?.group_slug}`);
+          router.push({pathname: '/spolecznosc/[slug]', params: {slug: data.group_slug || info?.group_slug}} as any);
         }, 1500);
       } else if (data.error) {
         setError(data.error);
@@ -73,7 +73,7 @@ export default function InviteJoinPage({ params }: { params: Promise<{ token: st
   if (!info) return null;
 
   if (info.is_member) {
-    router.push(`/${locale}/spolecznosc/${info.group_slug}`);
+    router.push({pathname: '/spolecznosc/[slug]', params: {slug: info.group_slug}} as any);
     return null;
   }
 

@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
@@ -13,7 +13,7 @@ export default async function PolaczeniePage({
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const db = createSupabaseServiceRole();
 
@@ -25,7 +25,7 @@ export default async function PolaczeniePage({
     .single();
 
   if (!call || call.status === 'ended') {
-    redirect(`/${locale}/konto`);
+    return redirect({href: '/konto', locale});
   }
 
   // Verify user is a participant
@@ -36,7 +36,7 @@ export default async function PolaczeniePage({
     .eq('user_id', user.id)
     .single();
 
-  if (!participant) redirect(`/${locale}/konto`);
+  if (!participant) return redirect({href: '/konto', locale});
 
   const isCreator = call.created_by === user.id;
   const isStaff   = isAdminEmail(user.email ?? '') || isStaffEmail(user.email ?? '');

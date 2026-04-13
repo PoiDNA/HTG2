@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -264,8 +264,8 @@ export default function QuickCallRoom({ callId, isCreator, locale, backUrl }: Qu
       }).catch(() => {});
     }
 
-    router.push(backUrl);
-  }, [callId, isCreator, locale, router]);
+    router.push(backUrl as '/prowadzacy');
+  }, [callId, isCreator, backUrl, router]);
 
   if (error) {
     return (
@@ -273,7 +273,7 @@ export default function QuickCallRoom({ callId, isCreator, locale, backUrl }: Qu
         <div className="text-center text-white space-y-4">
           <p className="text-red-400">{error}</p>
           <button
-            onClick={() => router.push(`/${locale}/prowadzacy`)}
+            onClick={() => router.push('/prowadzacy')}
             className="px-6 py-2 rounded-xl bg-htg-sage text-white text-sm"
           >
             Wróć do panelu

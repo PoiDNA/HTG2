@@ -1,6 +1,6 @@
 import { Eye } from 'lucide-react';
 import { stopUserImpersonation } from '@/lib/admin/impersonate';
-import CollapsibleSidebar from '@/app/[locale]/konto/CollapsibleSidebar';
+import CollapsibleSidebar from '@/app/[locale]/konto/(dashboard)/CollapsibleSidebar';
 
 export default function AccountShellV1({
   sidebar,

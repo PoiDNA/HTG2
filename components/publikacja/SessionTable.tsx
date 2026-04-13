@@ -80,7 +80,7 @@ export function SessionTable({ sessions, labels, statusLabels, locale }: Session
                     </td>
                     <td className="px-4 py-3">
                       <Link
-                        href={`/publikacja/sesje/${session.id}`}
+                        href={{pathname: '/publikacja/sesje/[id]', params: {id: session.id}}}
                         className="text-sm text-htg-sage hover:text-htg-sage/80 font-medium"
                       >
                         {labels.view}

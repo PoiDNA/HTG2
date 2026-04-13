@@ -29,7 +29,8 @@ export default function LocaleSwitcher({ showLocales = VISIBLE_LOCALES }: Locale
     // Store in localStorage for auth callback redirect
     try { localStorage.setItem('htg-locale', targetLocale); } catch {}
 
-    router.replace(pathname, { locale: targetLocale });
+    // next-intl preserves current params when switching locale via usePathname()
+    router.replace(pathname as any, { locale: targetLocale });
 
     // Persist preference to server (best-effort)
     fetch('/api/profile/locale', {

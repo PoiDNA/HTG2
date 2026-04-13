@@ -114,7 +114,7 @@ export default async function LibrarySuggestSection({ userId, locale }: Props) {
       </div>
 
       <Link
-        href={`/${locale}/konto`}
+        href="/konto"
         className="inline-flex items-center gap-2 bg-htg-sage text-white text-base font-semibold px-6 py-3 rounded-xl hover:bg-htg-sage/90 transition-colors"
       >
         <Film className="w-5 h-5" />

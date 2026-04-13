@@ -90,7 +90,7 @@ export default async function ContinueCard({ locale }: { locale: string }) {
 
       {/* Main resume card */}
       <Link
-        href={`/${locale}/konto`}
+        href="/konto"
         className="block bg-htg-card border border-htg-card-border rounded-xl p-5 hover:border-htg-warm/30 transition-colors group mb-3"
       >
         <div className="flex items-center justify-between gap-4">
@@ -125,7 +125,7 @@ export default async function ContinueCard({ locale }: { locale: string }) {
           {secondaryItems.map((item) => (
             <Link
               key={item.sessionId}
-              href={`/${locale}/konto`}
+              href="/konto"
               className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors group"
             >
               <Play className="w-3 h-3 shrink-0 text-htg-fg-muted group-hover:text-htg-warm" />

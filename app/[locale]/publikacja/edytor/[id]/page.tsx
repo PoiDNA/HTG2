@@ -60,7 +60,7 @@ export default async function EditorPage({
       {/* Back link + title */}
       <div className="flex items-center gap-3">
         <Link
-          href={`/publikacja/sesje/${id}`}
+          href={{pathname: '/publikacja/sesje/[id]', params: {id}}}
           className="flex items-center gap-1 text-sm text-htg-fg-muted hover:text-htg-fg transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />

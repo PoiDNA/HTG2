@@ -137,21 +137,21 @@ export default async function AdminPreviewPage({
             {s.member && (
               <div className="grid grid-cols-3 gap-1.5">
                 <a
-                  href={`/${locale}/prowadzacy`}
+                  href="/prowadzacy"
                   className="flex flex-col items-center gap-1 p-2 bg-htg-surface hover:bg-htg-card-border rounded-lg text-htg-fg-muted hover:text-htg-fg transition-colors text-[10px]"
                 >
                   <Presentation className="w-3.5 h-3.5" />
                   Dashboard
                 </a>
                 <a
-                  href={`/${locale}/prowadzacy/sesje`}
+                  href="/prowadzacy/sesje"
                   className="flex flex-col items-center gap-1 p-2 bg-htg-surface hover:bg-htg-card-border rounded-lg text-htg-fg-muted hover:text-htg-fg transition-colors text-[10px]"
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   Sesje
                 </a>
                 <a
-                  href={`/${locale}/prowadzacy/klienci`}
+                  href="/prowadzacy/klienci"
                   className="flex flex-col items-center gap-1 p-2 bg-htg-surface hover:bg-htg-card-border rounded-lg text-htg-fg-muted hover:text-htg-fg transition-colors text-[10px]"
                 >
                   <Users className="w-3.5 h-3.5" />

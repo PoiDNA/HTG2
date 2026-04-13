@@ -149,13 +149,13 @@ export default async function AdminUsersPage({ params, searchParams }: {
               {(users || []).map((u) => (
                 <tr key={u.id} className="border-b border-htg-card-border last:border-0 hover:bg-htg-surface/50 cursor-pointer">
                   <td className="py-3 px-4">
-                    <Link href={`/konto/admin/uzytkownicy/${u.id}`} className="flex items-center gap-2">
+                    <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: u.id}}} className="flex items-center gap-2">
                       {roleIcon(u.role)}
                       <span className="text-htg-fg font-medium hover:text-htg-indigo transition-colors">{u.display_name || '—'}</span>
                     </Link>
                   </td>
                   <td className="py-3 px-4 text-htg-fg-muted">
-                    <Link href={`/konto/admin/uzytkownicy/${u.id}`} className="hover:text-htg-fg transition-colors">
+                    <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: u.id}}} className="hover:text-htg-fg transition-colors">
                       {u.email || '—'}
                     </Link>
                   </td>
@@ -188,13 +188,13 @@ export default async function AdminUsersPage({ params, searchParams }: {
             </p>
             <div className="flex gap-1">
               {page > 1 && (
-                <Link href={`/konto/admin/uzytkownicy?page=${page - 1}${sp.q ? '&q=' + sp.q : ''}${sp.role ? '&role=' + sp.role : ''}`}
+                <Link href={{pathname: '/konto/admin/uzytkownicy', query: {page: String(page - 1), ...(sp.q ? {q: sp.q} : {}), ...(sp.role ? {role: sp.role} : {})}}}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border">
                   ← Poprz.
                 </Link>
               )}
               {page < totalPages && (
-                <Link href={`/konto/admin/uzytkownicy?page=${page + 1}${sp.q ? '&q=' + sp.q : ''}${sp.role ? '&role=' + sp.role : ''}`}
+                <Link href={{pathname: '/konto/admin/uzytkownicy', query: {page: String(page + 1), ...(sp.q ? {q: sp.q} : {}), ...(sp.role ? {role: sp.role} : {})}}}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border">
                   Nast. →
                 </Link>

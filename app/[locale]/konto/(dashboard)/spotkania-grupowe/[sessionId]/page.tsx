@@ -61,7 +61,7 @@ export default async function MeetingRecordingPage({
   return (
     <div>
       <Link
-        href={`/${locale}/konto/spotkania-grupowe`}
+        href="/konto/spotkania-grupowe"
         className="inline-flex items-center gap-2 text-sm text-htg-fg-muted hover:text-htg-fg transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />

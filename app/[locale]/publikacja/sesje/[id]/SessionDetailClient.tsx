@@ -122,7 +122,7 @@ export function SessionDetailClient({ session: initialSession, isAdmin, userId, 
           <h3 className="text-lg font-serif font-bold text-htg-fg">{labels.source_tracks}</h3>
           {((session.source_tracks || []) as TrackInfo[]).length > 0 && (
             <Link
-              href={`/publikacja/edytor/${session.id}`}
+              href={{pathname: '/publikacja/edytor/[id]', params: {id: session.id}}}
               className="flex items-center gap-2 px-4 py-2 bg-htg-sage text-white text-sm font-medium rounded-lg hover:bg-htg-sage/90 transition-colors"
             >
               <Headphones className="w-4 h-4" />

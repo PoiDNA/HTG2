@@ -333,7 +333,7 @@ export default async function IndividualSessionsPage({
                         </div>
                         {b.live_session_id && (
                           <a
-                            href={`/${locale}/live/${b.live_session_id}`}
+                            href={`/live/${b.live_session_id}`}
                             className="px-3 py-1.5 rounded-lg bg-htg-sage text-white text-xs font-medium hover:bg-htg-sage/80 transition-colors"
                           >
                             Dołącz

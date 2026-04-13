@@ -52,7 +52,7 @@ export default async function MeetingSessionsPage({ params }: { params: Promise<
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link href={`/prowadzacy/spotkania-htg/${meetingId}`} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
+          <Link href={{pathname: '/prowadzacy/spotkania-htg/[meetingId]', params: {meetingId}}} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -99,7 +99,7 @@ export default async function MeetingSessionsPage({ params }: { params: Promise<
                   </div>
                   {isActive && (
                     <Link
-                      href={`/spotkanie/${s.id}`}
+                      href={{pathname: '/spotkanie/[sessionId]', params: {sessionId: s.id}}}
                       className="px-4 py-2 rounded-xl bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage/80 transition-colors"
                     >
                       Wejdź

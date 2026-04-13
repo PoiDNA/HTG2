@@ -359,7 +359,7 @@ export default function LoginForm() {
   // Auto-redirect logged-in users to their portal
   useEffect(() => {
     if (loggedInUser) {
-      router.push(portalHome);
+      router.push(portalHome as '/konto');
     }
   }, [loggedInUser, router, portalHome]);
 

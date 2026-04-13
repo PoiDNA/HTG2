@@ -77,7 +77,7 @@ export default function OperatorTermsBanner() {
           </p>
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             <Link
-              href={'/operator-terms' as any}
+              href="/operator-terms"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-htg-sage/40 text-htg-sage hover:bg-htg-sage/10 transition-colors text-sm font-medium"
             >
               <FileText className="w-4 h-4" />

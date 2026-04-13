@@ -64,14 +64,14 @@ export default async function AdminDashboard({
   const staffMembers = staffRes.data ?? [];
 
   const quickLinks = [
-    { href: '/konto/admin/uzytkownicy', label: 'Użytkownicy', icon: Users },
-    { href: '/konto/admin/sesje', label: 'Sesje', icon: BookOpen },
-    { href: '/konto/admin/podglad', label: 'Podgląd użytkowników', icon: Eye },
-    { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
-    { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },
-    { href: '/konto/admin/kalendarz', label: t('go_to_calendar'), icon: Calendar },
-    { href: '/konto/admin/kolejka', label: t('go_to_queue'), icon: Users },
-    { href: '/konto/admin/sloty', label: t('go_to_slots'), icon: Clock },
+    { href: '/konto/admin/uzytkownicy' as const, label: 'Użytkownicy', icon: Users },
+    { href: '/konto/admin/sesje' as const, label: 'Sesje', icon: BookOpen },
+    { href: '/konto/admin/podglad' as const, label: 'Podgląd użytkowników', icon: Eye },
+    { href: '/spolecznosc' as const, label: 'Społeczność', icon: MessagesSquare },
+    { href: '/konto/admin/skrzynka' as const, label: 'Skrzynka', icon: Mail },
+    { href: '/konto/admin/kalendarz' as const, label: t('go_to_calendar'), icon: Calendar },
+    { href: '/konto/admin/kolejka' as const, label: t('go_to_queue'), icon: Users },
+    { href: '/konto/admin/sloty' as const, label: t('go_to_slots'), icon: Clock },
   ];
 
   return (
@@ -112,7 +112,7 @@ export default async function AdminDashboard({
             <h2 className="text-xl font-serif font-bold text-htg-fg">Podgląd paneli</h2>
             <p className="text-sm text-htg-fg-muted">Otwórz panel jako dowolny pracownik lub użytkownik</p>
           </div>
-          <Link href={`/${locale}/konto/admin/podglad`} className="text-xs text-htg-sage hover:underline">
+          <Link href="/konto/admin/podglad" className="text-xs text-htg-sage hover:underline">
             Zaawansowany podgląd →
           </Link>
         </div>

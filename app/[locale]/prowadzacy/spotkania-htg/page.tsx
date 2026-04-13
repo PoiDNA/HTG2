@@ -75,7 +75,7 @@ export default async function SpotkaniasHTGPage({ params }: { params: Promise<{ 
                   </p>
                 </div>
                 <Link
-                  href={`/prowadzacy/spotkania-htg/peek/${s.id}`}
+                  href={{pathname: '/prowadzacy/spotkania-htg/peek/[sessionId]', params: {sessionId: s.id}}}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg
                     bg-green-500/10 hover:bg-green-500/20 text-green-400
                     ring-1 ring-green-500/20 text-sm font-medium transition-colors"
@@ -115,14 +115,14 @@ export default async function SpotkaniasHTGPage({ params }: { params: Promise<{ 
               </div>
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/prowadzacy/spotkania-htg/${m.id}`}
+                  href={{pathname: '/prowadzacy/spotkania-htg/[meetingId]', params: {meetingId: m.id}}}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors"
                 >
                   <Settings className="w-4 h-4" />
                   Konfiguruj
                 </Link>
                 <Link
-                  href={`/prowadzacy/spotkania-htg/${m.id}/sesje`}
+                  href={{pathname: '/prowadzacy/spotkania-htg/[meetingId]/sesje', params: {meetingId: m.id}}}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-htg-sage/10 hover:bg-htg-sage/20 text-htg-sage text-sm font-medium transition-colors"
                 >
                   <Play className="w-4 h-4" />

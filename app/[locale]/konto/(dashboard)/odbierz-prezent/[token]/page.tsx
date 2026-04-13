@@ -44,7 +44,7 @@ export default async function OdbierzPrezent({
     return (
       <div className="space-y-6 max-w-md mx-auto">
         <div className="flex items-center gap-3">
-          <Link href={`/${locale}/konto`} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
+          <Link href="/konto" className="text-htg-fg-muted hover:text-htg-fg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h2 className="text-xl font-serif font-semibold text-htg-fg">Odbiór prezentu</h2>
@@ -62,7 +62,7 @@ export default async function OdbierzPrezent({
     return (
       <div className="space-y-6 max-w-md mx-auto">
         <div className="flex items-center gap-3">
-          <Link href={`/${locale}/konto`} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
+          <Link href="/konto" className="text-htg-fg-muted hover:text-htg-fg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h2 className="text-xl font-serif font-semibold text-htg-fg">Odbiór prezentu</h2>
@@ -88,7 +88,7 @@ export default async function OdbierzPrezent({
   return (
     <div className="space-y-6 max-w-md mx-auto">
       <div className="flex items-center gap-3">
-        <Link href={`/${locale}/konto`} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
+        <Link href="/konto" className="text-htg-fg-muted hover:text-htg-fg transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <h2 className="text-xl font-serif font-semibold text-htg-fg flex items-center gap-2">
@@ -121,7 +121,7 @@ export default async function OdbierzPrezent({
               </p>
             )}
             <Link
-              href={`/${locale}/konto/sesje-indywidualne`}
+              href="/konto/sesje-indywidualne"
               className="inline-block mt-3 text-sm text-htg-warm hover:underline"
             >
               Przejdź do moich sesji →

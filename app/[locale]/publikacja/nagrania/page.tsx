@@ -178,7 +178,7 @@ export default async function NagraniePage({
                     {STATUS_LABELS[pub.status] || pub.status}
                   </span>
                   <Link
-                    href={`/publikacja/sesje/${pub.id}` as any}
+                    href={{pathname: '/publikacja/sesje/[id]', params: {id: pub.id}}}
                     className="p-2 rounded-lg hover:bg-htg-surface text-htg-fg-muted hover:text-htg-fg transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />

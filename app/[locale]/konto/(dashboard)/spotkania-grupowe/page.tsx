@@ -79,7 +79,7 @@ export default async function SpotkaniaDane({ params }: { params: Promise<{ loca
                 </div>
                 {hasRecording ? (
                   <Link
-                    href={`/${locale}/konto/spotkania-grupowe/${m.id}`}
+                    href={{pathname: '/konto/spotkania-grupowe/[sessionId]', params: {sessionId: m.id}}}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-htg-sage/15 hover:bg-htg-sage/25 text-htg-sage text-sm font-medium transition-colors"
                   >
                     <PlayCircle className="w-4 h-4" />

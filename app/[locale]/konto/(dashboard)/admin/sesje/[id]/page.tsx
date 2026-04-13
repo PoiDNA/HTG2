@@ -116,7 +116,7 @@ export default async function AdminSessionDetailPage({
             <User className="w-4 h-4" />
             <ClientNameEditor userId={booking.user_id} initialName={clientProfile?.display_name || ''} />
             <Link
-              href={`/konto/admin/uzytkownicy/${booking.user_id}`}
+              href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: booking.user_id}}}
               className="text-htg-indigo hover:text-htg-indigo/70 transition-colors"
               title="Profil użytkownika"
             >
@@ -210,7 +210,7 @@ export default async function AdminSessionDetailPage({
               return (
                 <Link
                   key={h.id}
-                  href={`/konto/admin/sesje/${h.id}`}
+                  href={{pathname: '/konto/admin/sesje/[id]', params: {id: h.id}}}
                   className={`flex items-center gap-3 p-2 rounded-lg text-sm transition-colors ${
                     isCurrent ? 'bg-htg-sage/10 border border-htg-sage/30' : 'hover:bg-htg-surface/50'
                   }`}

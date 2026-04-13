@@ -209,7 +209,7 @@ export default async function StaffDashboard({
                   {/* Join button */}
                   {booking.live_session_id && canJoin && (
                     <Link
-                      href={`/live/${booking.live_session_id}` as any}
+                      href={{pathname: '/live/[sessionId]', params: {sessionId: booking.live_session_id}}}
                       className="bg-htg-warm text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-htg-warm/90 transition-colors flex items-center gap-2 shrink-0"
                     >
                       <Mic className="w-4 h-4" />
@@ -262,14 +262,14 @@ export default async function StaffDashboard({
                   return (
                     <tr key={booking.id} className={`border-b border-htg-card-border last:border-0 hover:bg-htg-surface/50 cursor-pointer ${isToday ? 'bg-htg-sage/5' : ''}`}>
                       <td className="py-3 pr-4 text-htg-fg font-medium whitespace-nowrap">
-                        <Link href={`/prowadzacy/sesje/${booking.id}` as any} className="hover:underline">
+                        <Link href={{pathname: '/prowadzacy/sesje/[id]', params: {id: booking.id}}} className="hover:underline">
                           {isToday && <span className="text-htg-sage text-xs font-bold mr-1">DZIŚ</span>}
                           {slot?.slot_date || '—'}
                         </Link>
                       </td>
                       <td className="py-3 pr-4 text-htg-fg">{slot?.start_time?.slice(0,5) || '—'}</td>
                       <td className="py-3 pr-4 text-htg-fg">
-                        <Link href={`/prowadzacy/sesje/${booking.id}` as any} className="hover:underline">
+                        <Link href={{pathname: '/prowadzacy/sesje/[id]', params: {id: booking.id}}} className="hover:underline">
                           {client?.display_name || client?.email || '—'}
                         </Link>
                       </td>
@@ -293,14 +293,14 @@ export default async function StaffDashboard({
                       <td className="py-3">
                         {booking.live_session_id ? (
                           <Link
-                            href={`/live/${booking.live_session_id}` as any}
+                            href={{pathname: '/live/[sessionId]', params: {sessionId: booking.live_session_id}}}
                             className="text-htg-sage hover:text-htg-sage-dark text-xs font-medium flex items-center gap-1"
                           >
                             Wejdź <ArrowRight className="w-3 h-3" />
                           </Link>
                         ) : (
                           <Link
-                            href={`/prowadzacy/sesje/${booking.id}` as any}
+                            href={{pathname: '/prowadzacy/sesje/[id]', params: {id: booking.id}} as any}
                             className="text-htg-fg-muted hover:text-htg-fg text-xs flex items-center gap-1"
                           >
                             Szczegóły <ArrowRight className="w-3 h-3" />

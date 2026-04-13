@@ -26,7 +26,7 @@ export function GroupCard({ group }: GroupCardProps) {
 
   return (
     <Link
-      href={`/spolecznosc/${group.slug}`}
+      href={{pathname: '/spolecznosc/[slug]', params: {slug: group.slug}}}
       className="block bg-htg-card border border-htg-card-border rounded-xl p-4 hover:border-htg-sage/30 transition-colors group"
     >
       <div className="flex items-start gap-3">

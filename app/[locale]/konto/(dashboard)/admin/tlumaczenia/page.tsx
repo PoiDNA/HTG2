@@ -3,6 +3,7 @@ import { redirect } from '@/i18n-config';
 import { locales } from '@/i18n-config';
 import { requireAdmin } from '@/lib/admin/auth';
 import { CheckCircle, XCircle, Clock, Globe } from 'lucide-react';
+import IssueActionButton from './IssueActionButton';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -85,16 +86,8 @@ export default async function AdminTranslationsPage({
 
               {issue.status === 'open' && (
                 <div className="flex gap-2 mt-3">
-                  <form action={`/api/admin/translation-issues/${issue.id}/resolve`} method="POST">
-                    <button type="submit" className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:opacity-90">
-                      Rozwiązane
-                    </button>
-                  </form>
-                  <form action={`/api/admin/translation-issues/${issue.id}/reject`} method="POST">
-                    <button type="submit" className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-600 text-white hover:opacity-90">
-                      Odrzuć
-                    </button>
-                  </form>
+                  <IssueActionButton id={issue.id} action="resolve" label="Rozwiązane" className="bg-green-600" />
+                  <IssueActionButton id={issue.id} action="reject" label="Odrzuć" className="bg-red-600" />
                 </div>
               )}
             </div>

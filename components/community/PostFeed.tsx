@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFeed } from '@/lib/community/hooks/useFeed';
@@ -18,6 +18,7 @@ interface PostFeedProps {
 
 export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: PostFeedProps) {
   const t = useTranslations('Community');
+  const locale = useLocale();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -59,7 +60,7 @@ export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: Post
     const res = await fetch('/api/community/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ group_id: groupId, content, attachments }),
+      body: JSON.stringify({ group_id: groupId, content, attachments, source_locale: locale }),
     });
 
     if (!res.ok) {

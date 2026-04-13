@@ -11,7 +11,7 @@ export function getStripe(): Stripe {
     _stripe = new Stripe(key, {
       typescript: true,
       timeout: 30000, // 30s timeout
-      maxNetworkRetries: 1,
+      maxNetworkRetries: 3,
     });
   }
   return _stripe;

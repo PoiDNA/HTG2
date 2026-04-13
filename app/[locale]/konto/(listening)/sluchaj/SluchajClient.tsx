@@ -49,7 +49,7 @@ export default function SluchajClient({
     for (const section of sections) {
       const playable = section.sessions.filter((s) => s.isPlayable);
       if (playable.length > 0) {
-        result.push({ key: section.monthLabel, label: section.title.replace(/\.$/, ''), sessions: playable });
+        result.push({ key: section.monthLabel, label: section.title.trim().replace(/\.+$/, '').trim(), sessions: playable });
       }
     }
 

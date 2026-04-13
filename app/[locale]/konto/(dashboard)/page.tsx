@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { cookies } from 'next/headers';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
@@ -49,10 +49,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
     if (user) {
       const isAdminByEmail = isAdminEmail(user.email ?? '');
       if (isAdminByEmail) {
-        redirect(`/${locale}/konto/admin`);
+        redirect({href: '/konto/admin', locale});
       } else {
         const { data: profile } = await sessionClient.from('profiles').select('role').eq('id', user.id).single();
-        if (profile?.role === 'admin') redirect(`/${locale}/konto/admin`);
+        if (profile?.role === 'admin') redirect({href: '/konto/admin', locale});
       }
     }
   }

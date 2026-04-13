@@ -1,6 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
-import { locales, Link } from '@/i18n-config';
+import { locales, Link, redirect } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Gift, ArrowLeft, XCircle } from 'lucide-react';
@@ -23,7 +22,7 @@ export default async function OdbierzPrezent({
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/${locale}/login?returnTo=/${locale}/konto/odbierz-prezent/${token}`);
+    return redirect({href: {pathname: '/login', query: {returnTo: `/konto/odbierz-prezent/${token}`}}, locale});
   }
 
   const db = createSupabaseServiceRole();

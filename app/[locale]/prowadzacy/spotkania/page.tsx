@@ -1,8 +1,7 @@
 import { setRequestLocale } from 'next-intl/server';
-import { locales } from '@/i18n-config';
+import { locales, redirect } from '@/i18n-config';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
-import { redirect } from 'next/navigation';
 import { PreSessionManager } from '@/components/prowadzacy/PreSessionManager';
 
 export function generateStaticParams() {
@@ -20,7 +19,7 @@ export default async function SpotkaniaPrzedSesjaPage({
   const { staffMember, user } = await getEffectiveStaffMember();
 
   if (!staffMember || staffMember.role !== 'assistant') {
-    redirect(`/${locale}/prowadzacy`);
+    return redirect({href: '/prowadzacy', locale});
   }
 
   const db = createSupabaseServiceRole();

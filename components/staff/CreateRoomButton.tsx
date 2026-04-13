@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { Mic, Loader2 } from 'lucide-react';
 
 export default function CreateRoomButton({ bookingId }: { bookingId: string }) {
@@ -26,7 +26,7 @@ export default function CreateRoomButton({ bookingId }: { bookingId: string }) {
       // Room created — navigate to live session
       const sessionId = data.session?.id || data.id;
       if (sessionId) {
-        router.push(`/pl/live/${sessionId}`);
+        router.push({pathname: '/live/[sessionId]', params: {sessionId}} as any);
       } else {
         router.refresh();
       }

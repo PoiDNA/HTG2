@@ -4,7 +4,7 @@ import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { canViewClientRecordings } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 import { Headphones, ChevronLeft, ChevronRight, Info } from 'lucide-react';
@@ -60,7 +60,7 @@ export default async function AdminRecordingsPage({
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
   if (!user || !canViewClientRecordings(user.email ?? '')) {
-    redirect(`/${locale}/konto`);
+    redirect({href: '/konto', locale});
   }
 
   const sp = await searchParams;

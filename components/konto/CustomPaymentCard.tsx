@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { CreditCard, ChevronDown } from 'lucide-react';
 
 const SESSION_TYPE_LABELS: Record<string, string> = {
@@ -48,7 +48,7 @@ export function CustomPaymentCard({ sessionType, slotId }: Props) {
         }),
       });
       const data = await res.json();
-      if (res.status === 401) { router.push(`/${locale}/login`); return; }
+      if (res.status === 401) { router.push('/login'); return; }
       if (data.url) window.location.href = data.url;
       else setError(data.error || t('payment_error'));
     } catch {

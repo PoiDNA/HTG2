@@ -3,7 +3,7 @@ import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { cookies } from 'next/headers';
 import { startImpersonation, startUserImpersonation } from '@/lib/admin/impersonate';
 import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
@@ -26,7 +26,7 @@ export default async function AdminDashboard({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
 
   const supabase = createSupabaseServiceRole();
 

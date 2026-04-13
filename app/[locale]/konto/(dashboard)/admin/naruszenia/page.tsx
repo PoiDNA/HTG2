@@ -3,7 +3,7 @@ import { locales } from '@/i18n-config';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { Link } from '@/i18n-config';
 import {
   AlertTriangle, ShieldAlert, Info, CheckCircle,
@@ -49,7 +49,7 @@ export default async function NaruszeniaPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 

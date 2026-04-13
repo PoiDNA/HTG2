@@ -1,6 +1,5 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { redirect } from 'next/navigation';
-import { locales, Link } from '@/i18n-config';
+import { locales, Link, redirect } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
@@ -24,13 +23,13 @@ export default async function StaffLayout({
 
   const { user, staffMember, isAdminViewAs, viewAsName } = await getEffectiveStaffMember();
 
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const isAdmin = isAdminEmail(user.email ?? '');
   const isAdminOrMod = isAdmin || false; // admin always allowed
 
   if (!staffMember && !isAdminOrMod) {
-    redirect(`/${locale}/konto`);
+    return redirect({href: '/konto', locale});
   }
 
   const displayName = viewAsName ?? staffMember?.name ?? user.email ?? '';

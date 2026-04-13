@@ -6,7 +6,7 @@ import { GroupCard } from '@/components/community/GroupCard';
 import { PushConsentBanner } from '@/components/community/PushConsentBanner';
 import { Users2, Plus, Bookmark } from 'lucide-react';
 import { Link } from '@/i18n-config';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import type { GroupWithMeta } from '@/lib/community/types';
 import type { Metadata } from 'next';
 
@@ -32,7 +32,7 @@ export default async function CommunityPage({
   // Auth
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const email = user.email ?? '';
   const isAdmin = isAdminEmail(email);

@@ -2,7 +2,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { Link } from '@/i18n-config';
 import { ArrowLeft, Calendar, Clock, User, Mail, FileText, CreditCard, History, ExternalLink, Banknote, Download } from 'lucide-react';
 import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
@@ -35,7 +35,7 @@ export default async function AdminSessionDetailPage({
   // Admin auth
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 

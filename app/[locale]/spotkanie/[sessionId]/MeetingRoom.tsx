@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -838,14 +838,14 @@ function EndedScreen({
   useEffect(() => {
     if (countdown <= 0) {
       router.push(hasRecording
-        ? `/${locale}/konto/spotkania-grupowe/${sessionId}`
-        : `/${locale}/konto/spotkania-grupowe`
+        ? {pathname: '/konto/spotkania-grupowe/[sessionId]', params: {sessionId}} as any
+        : '/konto/spotkania-grupowe'
       );
       return;
     }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [countdown, hasRecording, locale, router, sessionId]);
+  }, [countdown, hasRecording, router, sessionId]);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-htg-indigo">
@@ -865,14 +865,14 @@ function EndedScreen({
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           {hasRecording && (
             <button
-              onClick={() => router.push(`/${locale}/konto/spotkania-grupowe/${sessionId}`)}
+              onClick={() => router.push({pathname: '/konto/spotkania-grupowe/[sessionId]', params: {sessionId}} as any)}
               className="px-6 py-2.5 rounded-xl bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage/80 transition-colors"
             >
               Obejrzyj nagranie
             </button>
           )}
           <button
-            onClick={() => router.push(`/${locale}/konto/spotkania-grupowe`)}
+            onClick={() => router.push('/konto/spotkania-grupowe')}
             className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm transition-colors"
           >
             Moje spotkania
@@ -927,14 +927,14 @@ export default function MeetingRoom({
   }, [loadState]);
 
   const handleLeave = useCallback(() => {
-    router.push(`/${locale}/konto`);
-  }, [locale, router]);
+    router.push('/konto');
+  }, [router]);
 
   if (error) return (
     <div className="fixed inset-0 flex items-center justify-center bg-htg-indigo">
       <div className="text-center text-white space-y-4">
         <p className="text-red-400">{error}</p>
-        <button onClick={() => router.push(`/${locale}/konto`)} className="px-6 py-2 rounded-xl bg-htg-sage text-white text-sm">Wróć</button>
+        <button onClick={() => router.push('/konto')} className="px-6 py-2 rounded-xl bg-htg-sage text-white text-sm">Wróć</button>
       </div>
     </div>
   );

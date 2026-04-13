@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
@@ -9,7 +9,7 @@ export default async function SpotkaniePage({ params }: { params: Promise<{ loca
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const db = createSupabaseServiceRole();
 
@@ -19,7 +19,7 @@ export default async function SpotkaniePage({ params }: { params: Promise<{ loca
     .eq('id', sessionId)
     .single();
 
-  if (!session || session.status === 'ended') redirect(`/${locale}/konto`);
+  if (!session || session.status === 'ended') return redirect({href: '/konto', locale});
 
   const isAdmin = isAdminEmail(user.email ?? '');
 
@@ -33,7 +33,7 @@ export default async function SpotkaniePage({ params }: { params: Promise<{ loca
       .eq('user_id', user.id)
       .single();
 
-    if (!data) redirect(`/${locale}/konto`);
+    if (!data) return redirect({href: '/konto', locale});
     participant = data;
   }
 

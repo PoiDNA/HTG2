@@ -2,7 +2,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { PreSessionBooking } from '@/components/konto/PreSessionBooking';
 import { CheckCircle, Video } from 'lucide-react';
 
@@ -31,7 +31,7 @@ export default async function SpotkaniePage({
     .eq('is_active', true);
 
   if (!eligibilities || eligibilities.length === 0) {
-    redirect(`/${locale}/konto`);
+    return redirect({href: '/konto', locale});
   }
 
   // Fetch assistant details + their settings
@@ -54,7 +54,7 @@ export default async function SpotkaniePage({
   const activeEligibilities = eligibilities.filter((e: any) => settingsMap.has(e.staff_member_id));
 
   if (activeEligibilities.length === 0) {
-    redirect(`/${locale}/konto`);
+    return redirect({href: '/konto', locale});
   }
 
   // Fetch available slots per assistant

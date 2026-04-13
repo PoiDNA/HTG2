@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isStaffEmail } from '@/lib/roles';
@@ -19,7 +19,7 @@ export default async function LiveSessionPage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/${locale}/login`);
+    return redirect({href: '/login', locale});
   }
 
   const staff = isStaffEmail(user.email ?? '');
@@ -44,7 +44,7 @@ export default async function LiveSessionPage({ params }: PageProps) {
     .single();
 
   if (error || !session) {
-    redirect(`/${locale}/konto`);
+    return redirect({href: '/konto', locale});
   }
 
   // Access check: must be staff, booking owner, or accepted companion
@@ -65,12 +65,12 @@ export default async function LiveSessionPage({ params }: PageProps) {
     }
 
     if (!isCompanion) {
-      redirect(`/${locale}/konto`);
+      return redirect({href: '/konto', locale});
     }
   }
 
   if (session.phase === 'ended') {
-    redirect(`/${locale}/konto`);
+    return redirect({href: '/konto', locale});
   }
 
   const { booking: _, ...sessionData } = session as any;

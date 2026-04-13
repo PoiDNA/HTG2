@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { BookmarksList } from '@/components/community/BookmarksList';
 import { Bookmark } from 'lucide-react';
 import { Link } from '@/i18n-config';
@@ -15,7 +15,7 @@ export default async function BookmarksPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   return (
     <div>

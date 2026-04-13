@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 
 interface MeetingFormProps {
   locale: string;
@@ -46,7 +46,7 @@ export default function MeetingForm({ locale, initial, meetingId, basePath = '/p
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Błąd'); return; }
-      router.push(`/${locale}${basePath}/${data.id ?? meetingId}`);
+      router.push({pathname: '/prowadzacy/spotkania-htg/[meetingId]', params: {meetingId: data.id ?? meetingId}} as any);
     } catch {
       setError('Błąd sieci');
     } finally {

@@ -1,5 +1,6 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { locales } from '@/i18n-config';
+import type { ComponentProps } from 'react';
+import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
@@ -180,11 +181,11 @@ export default async function AccountLayout({
   const profileItem = { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw } as const;
 
   // Helper to render a nav section with lucide icons
-  const renderSection = (title: string, items: ReadonlyArray<{ href: string; label: string; icon: React.ComponentType<{ className?: string }> }>) => (
+  const renderSection = (title: string, items: ReadonlyArray<{ href: ComponentProps<typeof Link>['href']; label: string; icon: React.ComponentType<{ className?: string }> }>) => (
     <>
       <p className="hidden md:block px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-1">{title}</p>
       {items.map(({ href, label, icon: Icon }) => (
-        <SidebarLink key={href} href={href} label={label} locale={locale}>
+        <SidebarLink key={typeof href === 'string' ? href : href.pathname} href={href} label={label} locale={locale}>
           <Icon className="w-5 h-5" />
         </SidebarLink>
       ))}

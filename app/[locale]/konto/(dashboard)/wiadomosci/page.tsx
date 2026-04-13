@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import PortalMessages from '@/components/account/PortalMessages';
 
 export default async function PortalMessagesPage({
@@ -13,7 +13,7 @@ export default async function PortalMessagesPage({
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) redirect({href: '/login', locale});
 
   return (
     <div>

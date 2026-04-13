@@ -1,5 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
@@ -15,15 +15,15 @@ export default async function MeetingSessionsPage({ params }: { params: Promise<
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const isAdmin = isAdminEmail(user.email ?? '');
   const { staffMember } = await getEffectiveStaffMember();
-  if (!isAdmin && !staffMember) redirect(`/${locale}/konto`);
+  if (!isAdmin && !staffMember) return redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
   const { data: meeting } = await db.from('htg_meetings').select('*').eq('id', meetingId).single();
-  if (!meeting) redirect(`/${locale}/prowadzacy/spotkania-htg`);
+  if (!meeting) return redirect({href: '/prowadzacy/spotkania-htg', locale});
 
   const { data: sessions } = await db
     .from('htg_meeting_sessions')
@@ -52,7 +52,7 @@ export default async function MeetingSessionsPage({ params }: { params: Promise<
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link href={`/prowadzacy/spotkania-htg/${meetingId}`} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
+          <Link href={{pathname: '/prowadzacy/spotkania-htg/[meetingId]', params: {meetingId}}} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
@@ -99,7 +99,7 @@ export default async function MeetingSessionsPage({ params }: { params: Promise<
                   </div>
                   {isActive && (
                     <Link
-                      href={`/spotkanie/${s.id}`}
+                      href={{pathname: '/spotkanie/[sessionId]', params: {sessionId: s.id}}}
                       className="px-4 py-2 rounded-xl bg-htg-sage text-white text-sm font-medium hover:bg-htg-sage/80 transition-colors"
                     >
                       Wejdź

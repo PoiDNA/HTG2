@@ -1,5 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
@@ -14,15 +14,15 @@ export default async function EditMeetingPage({ params }: { params: Promise<{ lo
 
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const isAdmin = isAdminEmail(user.email ?? '');
   const { staffMember } = await getEffectiveStaffMember();
-  if (!isAdmin && !staffMember) redirect(`/${locale}/konto`);
+  if (!isAdmin && !staffMember) return redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
   const { data: meeting } = await db.from('htg_meetings').select('*').eq('id', meetingId).single();
-  if (!meeting) redirect(`/${locale}/prowadzacy/spotkania-htg`);
+  if (!meeting) return redirect({href: '/prowadzacy/spotkania-htg', locale});
 
   const { data: stages } = await db
     .from('htg_meeting_stages')

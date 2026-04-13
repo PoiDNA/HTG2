@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import Image from 'next/image';
 import { LogOut } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function NagraniaHeader({ userEmail, locale }: NagraniaHeaderProp
   async function handleLogout() {
     const supabase = createSupabaseBrowser();
     await supabase.auth.signOut();
-    router.push(`/${locale}/login`);
+    router.push('/login');
   }
 
   return (

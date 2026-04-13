@@ -140,7 +140,7 @@ export default async function SessionDetailPage({
             />
             {isAdmin && (
               <Link
-                href={`/konto/admin/uzytkownicy/${booking.user_id}`}
+                href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: booking.user_id}}}
                 className="text-htg-indigo hover:text-htg-indigo/70 transition-colors"
                 title="Profil użytkownika"
               >

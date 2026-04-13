@@ -3,7 +3,7 @@ import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { cookies } from 'next/headers';
 import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
 import { startImpersonation } from '@/lib/admin/impersonate';
@@ -32,8 +32,8 @@ export default async function AdminPreviewPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user) redirect(`/${locale}/login`);
-  if (!isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user) return redirect({href: '/login', locale});
+  if (!isAdminEmail(user.email ?? '')) return redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 
@@ -137,21 +137,21 @@ export default async function AdminPreviewPage({
             {s.member && (
               <div className="grid grid-cols-3 gap-1.5">
                 <a
-                  href={`/${locale}/prowadzacy`}
+                  href="/prowadzacy"
                   className="flex flex-col items-center gap-1 p-2 bg-htg-surface hover:bg-htg-card-border rounded-lg text-htg-fg-muted hover:text-htg-fg transition-colors text-[10px]"
                 >
                   <Presentation className="w-3.5 h-3.5" />
                   Dashboard
                 </a>
                 <a
-                  href={`/${locale}/prowadzacy/sesje`}
+                  href="/prowadzacy/sesje"
                   className="flex flex-col items-center gap-1 p-2 bg-htg-surface hover:bg-htg-card-border rounded-lg text-htg-fg-muted hover:text-htg-fg transition-colors text-[10px]"
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   Sesje
                 </a>
                 <a
-                  href={`/${locale}/prowadzacy/klienci`}
+                  href="/prowadzacy/klienci"
                   className="flex flex-col items-center gap-1 p-2 bg-htg-surface hover:bg-htg-card-border rounded-lg text-htg-fg-muted hover:text-htg-fg transition-colors text-[10px]"
                 >
                   <Users className="w-3.5 h-3.5" />

@@ -181,7 +181,7 @@ export default async function SesjaPanelPage({
             <div className="flex flex-wrap gap-2">
               {canJoin && (
                 <a
-                  href={`/${locale}/live/${b.live_session_id}`}
+                  href={`/live/${b.live_session_id}`}
                   className="bg-htg-warm text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-htg-warm/90 transition-colors animate-pulse"
                 >
                   {t('join_session')}

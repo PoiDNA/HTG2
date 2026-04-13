@@ -70,7 +70,7 @@ export default async function PublikacjaDashboard({
             {recent.map((session) => (
               <Link
                 key={session.id}
-                href={`/publikacja/sesje/${session.id}`}
+                href={{pathname: '/publikacja/sesje/[id]', params: {id: session.id}}}
                 className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg hover:bg-htg-surface transition-colors"
               >
                 <div className="min-w-0">

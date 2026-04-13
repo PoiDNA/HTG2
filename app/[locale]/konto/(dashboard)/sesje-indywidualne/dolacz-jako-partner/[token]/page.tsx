@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Link } from '@/i18n-config';
@@ -17,7 +17,7 @@ export default async function DolaczJakoPartnerPage({
 
   if (!user) {
     // Store token in redirect so user can come back after login
-    redirect(`/${locale}/login?redirect=/konto/sesje-indywidualne/dolacz-jako-partner/${token}`);
+    redirect({href: {pathname: '/login', query: {redirect: `/konto/sesje-indywidualne/dolacz-jako-partner/${token}`}}, locale});
   }
 
   const db = createSupabaseServiceRole();
@@ -39,7 +39,7 @@ export default async function DolaczJakoPartnerPage({
     return (
       <div className="max-w-lg mx-auto py-16 text-center space-y-4">
         <p className="text-htg-fg-muted">Zaproszenie jest nieważne lub wygasło.</p>
-        <Link href={`/${locale}/konto`} className="text-htg-sage text-sm hover:underline">
+        <Link href="/konto" className="text-htg-sage text-sm hover:underline">
           Wróć do konta
         </Link>
       </div>

@@ -86,7 +86,7 @@ export function GroupAdminRow({ group, locale }: GroupAdminRowProps) {
 
         <div className="flex items-center gap-1 shrink-0">
           <Link
-            href={`/spolecznosc/${group.slug}`}
+            href={{pathname: '/spolecznosc/[slug]', params: {slug: group.slug}}}
             className="p-2 rounded-lg text-htg-fg-muted hover:text-htg-sage hover:bg-htg-surface transition-colors"
             title="Otwórz grupę"
           >

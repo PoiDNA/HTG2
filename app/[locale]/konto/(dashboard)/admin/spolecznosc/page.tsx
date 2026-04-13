@@ -2,8 +2,9 @@ import { setRequestLocale } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { Link } from '@/i18n-config';
+import type { ComponentProps } from 'react';
 import { Users, MessageSquare, Lock, Globe, Shield, Archive, Flag, Plus, ExternalLink } from 'lucide-react';
 import { CreateGroupForm } from '@/components/community/admin/CreateGroupForm';
 import { GroupAdminRow } from '@/components/community/admin/GroupAdminRow';
@@ -22,7 +23,7 @@ export default async function AdminCommunityPage({
   // Auth check
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
   const activeTab = sp.tab || 'groups';
@@ -98,9 +99,9 @@ export default async function AdminCommunityPage({
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-htg-card-border">
-        <TabLink href="?tab=groups" active={activeTab === 'groups'}>Grupy</TabLink>
-        <TabLink href="?tab=create" active={activeTab === 'create'}>Nowa grupa</TabLink>
-        <TabLink href="?tab=reports" active={activeTab === 'reports'}>
+        <TabLink href={{pathname: '/konto/admin/spolecznosc', query: {tab: 'groups'}}} active={activeTab === 'groups'}>Grupy</TabLink>
+        <TabLink href={{pathname: '/konto/admin/spolecznosc', query: {tab: 'create'}}} active={activeTab === 'create'}>Nowa grupa</TabLink>
+        <TabLink href={{pathname: '/konto/admin/spolecznosc', query: {tab: 'reports'}}} active={activeTab === 'reports'}>
           Zgłoszenia {pendingReportsCount ? `(${pendingReportsCount})` : ''}
         </TabLink>
       </div>
@@ -153,7 +154,7 @@ function StatCard({ label, value, icon: Icon, highlight }: {
   );
 }
 
-function TabLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+function TabLink({ href, active, children }: { href: ComponentProps<typeof Link>['href']; active: boolean; children: React.ReactNode }) {
   return (
     <Link
       href={href}

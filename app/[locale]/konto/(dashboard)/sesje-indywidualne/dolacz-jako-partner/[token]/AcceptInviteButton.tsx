@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { Heart, Loader2 } from 'lucide-react';
 
 export default function AcceptInviteButton({ token, locale }: { token: string; locale: string }) {
@@ -20,7 +20,7 @@ export default function AcceptInviteButton({ token, locale }: { token: string; l
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? 'Błąd'); return; }
-      router.push(`/${locale}/konto/sesje-indywidualne`);
+      router.push('/konto/sesje-indywidualne');
     } catch {
       setError('Błąd sieci');
     } finally {

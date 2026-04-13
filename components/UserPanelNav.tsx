@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ComponentProps } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
@@ -146,7 +146,7 @@ function DropdownLink({
   label,
   onClick,
 }: {
-  href: string;
+  href: ComponentProps<typeof Link>['href'];
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   onClick: () => void;

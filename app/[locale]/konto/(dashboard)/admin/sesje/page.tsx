@@ -3,7 +3,7 @@ import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { Presentation } from 'lucide-react';
 import AdminSessionList from './AdminSessionList';
 
@@ -17,7 +17,7 @@ export default async function AdminSessionsPage({ params }: { params: Promise<{ 
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) return redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 

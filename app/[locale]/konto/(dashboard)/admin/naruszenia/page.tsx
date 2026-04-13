@@ -3,7 +3,7 @@ import { locales } from '@/i18n-config';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { Link } from '@/i18n-config';
 import {
   AlertTriangle, ShieldAlert, Info, CheckCircle,
@@ -49,7 +49,7 @@ export default async function NaruszeniaPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 
@@ -125,7 +125,7 @@ export default async function NaruszeniaPage({
         ].map(({ key, label }) => (
           <Link
             key={key}
-            href={`/${locale}/konto/admin/naruszenia?filter=${key}` as any}
+            href={{pathname: '/konto/admin/naruszenia', query: {filter: key}}}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === key
                 ? 'bg-htg-indigo text-white'
@@ -146,7 +146,7 @@ export default async function NaruszeniaPage({
               Historia odtworzeń — {(profileMap.get(userId) as any)?.email || userId.slice(0, 8)}
             </h3>
             <Link
-              href={`/${locale}/konto/admin/naruszenia?filter=${filter}` as any}
+              href={{pathname: '/konto/admin/naruszenia', query: {filter}}}
               className="text-xs text-htg-fg-muted hover:text-htg-fg transition-colors"
             >
               ✕ Zamknij historię
@@ -229,7 +229,7 @@ export default async function NaruszeniaPage({
                   {!flag.resolved && (
                     <div className="flex items-center gap-2 shrink-0">
                       <Link
-                        href={`/${locale}/konto/admin/naruszenia?filter=${filter}&userId=${flag.user_id}` as any}
+                        href={{pathname: '/konto/admin/naruszenia', query: {filter, userId: flag.user_id}}}
                         className="p-2 rounded-lg hover:bg-htg-surface text-htg-fg-muted hover:text-htg-fg transition-colors"
                         title="Historia odtworzeń"
                       >

@@ -1,6 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
-import { locales, Link } from '@/i18n-config';
+import { locales, Link, redirect } from '@/i18n-config';
 import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { ArrowLeft } from 'lucide-react';
 import MeetingPlayerClient from './MeetingPlayerClient';
@@ -25,7 +24,7 @@ export default async function MeetingRecordingPage({
     .eq('user_id', userId)
     .single();
 
-  if (!participation) redirect(`/${locale}/konto/spotkania-grupowe`);
+  if (!participation) return redirect({href: '/konto/spotkania-grupowe', locale});
 
   // Fetch session + related meeting name
   const { data: session } = await supabase
@@ -37,7 +36,7 @@ export default async function MeetingRecordingPage({
     .eq('id', sessionId)
     .single();
 
-  if (!session) redirect(`/${locale}/konto/spotkania-grupowe`);
+  if (!session) return redirect({href: '/konto/spotkania-grupowe', locale});
 
   // PR #7: fetch composite recording from recordings_v2. Status must be 'ready'
   // for playback (access check + URL token comes from htg-meeting-recording-token).
@@ -61,7 +60,7 @@ export default async function MeetingRecordingPage({
   return (
     <div>
       <Link
-        href={`/${locale}/konto/spotkania-grupowe`}
+        href="/konto/spotkania-grupowe"
         className="inline-flex items-center gap-2 text-sm text-htg-fg-muted hover:text-htg-fg transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />

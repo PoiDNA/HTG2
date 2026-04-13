@@ -1,6 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
-import { locales } from '@/i18n-config';
+import { locales, redirect } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
@@ -18,11 +17,11 @@ export default async function PeekPage({
   setRequestLocale(locale);
 
   const { user, staffMember } = await getEffectiveStaffMember();
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const isAdmin       = isAdminEmail(user.email ?? '');
   const isPractitioner = staffMember?.role === 'practitioner';
-  if (!isAdmin && !isPractitioner) redirect(`/${locale}/prowadzacy`);
+  if (!isAdmin && !isPractitioner) return redirect({href: '/prowadzacy', locale});
 
   const db = createSupabaseServiceRole();
   const { data: session } = await db
@@ -35,7 +34,7 @@ export default async function PeekPage({
     .single();
 
   if (!session || session.status === 'ended') {
-    redirect(`/${locale}/prowadzacy/spotkania-htg`);
+    return redirect({href: '/prowadzacy/spotkania-htg', locale});
   }
 
   return (

@@ -16,7 +16,7 @@ export default function StaffFooterLinks() {
     <>
       <span className="text-white/30" aria-hidden="true">·</span>
       <Link
-        href={'/operator-terms' as any}
+        href="/operator-terms"
         className="whitespace-nowrap hover:text-white transition-colors"
       >
         Regulamin Operatora

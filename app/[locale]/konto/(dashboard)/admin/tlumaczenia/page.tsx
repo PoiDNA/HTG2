@@ -1,5 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { locales } from '@/i18n-config';
 import { requireAdmin } from '@/lib/admin/auth';
 import { CheckCircle, XCircle, Clock, Globe } from 'lucide-react';
@@ -28,7 +28,7 @@ export default async function AdminTranslationsPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const result = await requireAdmin();
-  if ('error' in result) redirect(`/${locale}/konto`);
+  if ('error' in result) return redirect({href: '/konto', locale});
   const { supabase } = result;
 
   const { data: issues } = await supabase

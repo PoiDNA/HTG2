@@ -3,7 +3,8 @@ import { Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect, notFound } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import {
   ArrowLeft, User, Mail, Calendar, CreditCard, BookOpen, Package,
   Crown, Shield, ExternalLink, Clock,
@@ -31,7 +32,7 @@ export default async function AdminUserDetailPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user: adminUser } } = await sessionClient.auth.getUser();
-  if (!adminUser || !isAdminEmail(adminUser.email ?? '')) redirect(`/${locale}/konto`);
+  if (!adminUser || !isAdminEmail(adminUser.email ?? '')) redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 
@@ -193,7 +194,7 @@ export default async function AdminUserDetailPage({
           {/* Quick actions */}
           <div className="flex flex-col gap-2 shrink-0">
             <Link
-              href={`/konto/admin/podglad?email=${encodeURIComponent(profile.email || '')}`}
+              href={{pathname: '/konto/admin/podglad', query: {email: profile.email || ''}}}
               className="flex items-center gap-2 px-4 py-2 bg-htg-indigo text-white rounded-xl text-sm font-medium hover:bg-htg-indigo/90 transition-colors"
             >
               <ExternalLink className="w-4 h-4" />
@@ -244,7 +245,7 @@ export default async function AdminUserDetailPage({
               const ps = b.payment_status ? PAYMENT_STATUS_BADGE[b.payment_status] : null;
               const bs = BOOKING_STATUS_LABELS[b.status] || { label: b.status, color: 'text-htg-fg-muted' };
               return (
-                <Link key={b.id} href={`/konto/admin/sesje/${b.id}`} className="flex items-center justify-between py-2.5 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap hover:bg-htg-surface/70 transition-colors">
+                <Link key={b.id} href={{pathname: '/konto/admin/sesje/[id]', params: {id: b.id}}} className="flex items-center justify-between py-2.5 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap hover:bg-htg-surface/70 transition-colors">
                   <div className="flex items-center gap-3">
                     <div>
                       <p className="text-sm font-medium text-htg-fg">
@@ -352,7 +353,7 @@ export default async function AdminUserDetailPage({
             {pastBookings.map(b => {
               const ps = b.payment_status ? PAYMENT_STATUS_BADGE[b.payment_status] : null;
               return (
-                <Link key={b.id} href={`/konto/admin/sesje/${b.id}`} className="flex items-center justify-between py-2 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap hover:bg-htg-surface/70 transition-colors">
+                <Link key={b.id} href={{pathname: '/konto/admin/sesje/[id]', params: {id: b.id}}} className="flex items-center justify-between py-2 px-3 bg-htg-surface rounded-lg gap-2 flex-wrap hover:bg-htg-surface/70 transition-colors">
                   <div>
                     <p className="text-sm text-htg-fg">{SESSION_CONFIG[b.session_type as SessionType]?.label || b.session_type}</p>
                     <p className="text-xs text-htg-fg-muted">{getBookingDate(b)} · {getBookingTime(b)?.slice(0,5)}</p>

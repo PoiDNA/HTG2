@@ -1,6 +1,5 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { redirect } from 'next/navigation';
-import { locales, Link } from '@/i18n-config';
+import { locales, Link, redirect } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
@@ -24,13 +23,13 @@ export default async function StaffLayout({
 
   const { user, staffMember, isAdminViewAs, viewAsName } = await getEffectiveStaffMember();
 
-  if (!user) redirect(`/${locale}/login`);
+  if (!user) return redirect({href: '/login', locale});
 
   const isAdmin = isAdminEmail(user.email ?? '');
   const isAdminOrMod = isAdmin || false; // admin always allowed
 
   if (!staffMember && !isAdminOrMod) {
-    redirect(`/${locale}/konto`);
+    return redirect({href: '/konto', locale});
   }
 
   const displayName = viewAsName ?? staffMember?.name ?? user.email ?? '';
@@ -47,24 +46,24 @@ export default async function StaffLayout({
   const isPractitioner = staffMember?.role === 'practitioner';
 
   const navItems = [
-    { href: '/prowadzacy', label: t('dashboard'), icon: LayoutDashboard },
-    { href: '/prowadzacy/sesje', label: t('sessions'), icon: Presentation },
-    { href: '/prowadzacy/grafik', label: t('schedule'), icon: Calendar },
-    { href: '/prowadzacy/klienci', label: t('clients'), icon: Users },
+    { href: '/prowadzacy' as const, label: t('dashboard'), icon: LayoutDashboard },
+    { href: '/prowadzacy/sesje' as const, label: t('sessions'), icon: Presentation },
+    { href: '/prowadzacy/grafik' as const, label: t('schedule'), icon: Calendar },
+    { href: '/prowadzacy/klienci' as const, label: t('clients'), icon: Users },
     // Items below only for assistants and admin (not practitioner/Natalia)
     ...(!isPractitioner ? [
-      { href: '/konto/nagrania-klienta', label: 'Nagrania przed/po', icon: Video },
-      { href: '/prowadzacy/symulator', label: 'Symulator sesji', icon: MonitorPlay },
-      { href: '/prowadzacy/symulator-live', label: 'Symulator live', icon: MonitorPlay },
+      { href: '/konto/nagrania-klienta' as const, label: 'Nagrania przed/po', icon: Video },
+      { href: '/prowadzacy/symulator' as const, label: 'Symulator sesji', icon: MonitorPlay },
+      { href: '/prowadzacy/symulator-live' as const, label: 'Symulator live', icon: MonitorPlay },
     ] : []),
-    ...(canSeeStats && !isPractitioner ? [{ href: '/prowadzacy/statystyki', label: 'Statystyki odtworzeń', icon: BarChart2 }] : []),
+    ...(canSeeStats && !isPractitioner ? [{ href: '/prowadzacy/statystyki' as const, label: 'Statystyki odtworzeń', icon: BarChart2 }] : []),
     ...(!isPractitioner ? [
-      { href: '/prowadzacy/spotkania-htg', label: 'Spotkania HTG', icon: Users2 },
+      { href: '/prowadzacy/spotkania-htg' as const, label: 'Spotkania HTG', icon: Users2 },
     ] : []),
-    ...(canSeeStats && !isPractitioner ? [{ href: '/prowadzacy/spotkania-htg/profile-uczestnikow', label: 'Profile uczestników', icon: BarChart2 }] : []),
+    ...(canSeeStats && !isPractitioner ? [{ href: '/prowadzacy/spotkania-htg/profile-uczestnikow' as const, label: 'Profile uczestników', icon: BarChart2 }] : []),
     ...(!isPractitioner ? [
-      { href: '/prowadzacy/spotkania-htg/symulator', label: 'Symulator spotkania', icon: MonitorPlay },
-      { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator', label: 'Symulator odtwarzacza', icon: MonitorPlay },
+      { href: '/prowadzacy/spotkania-htg/symulator' as const, label: 'Symulator spotkania', icon: MonitorPlay },
+      { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator' as const, label: 'Symulator odtwarzacza', icon: MonitorPlay },
     ] : []),
   ];
 

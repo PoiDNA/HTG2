@@ -3,8 +3,9 @@ import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { CreditCard, User, CheckCircle, XCircle } from 'lucide-react';
+import { Link } from '@/i18n-config';
 import SubscriptionsClient from './SubscriptionsClient';
 
 export function generateStaticParams() {
@@ -149,7 +150,7 @@ export default async function AdminSubscriptionsPage({
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
 
   const supabase = createSupabaseServiceRole();
 
@@ -356,20 +357,20 @@ export default async function AdminSubscriptionsPage({
             </p>
             <div className="flex gap-1">
               {page > 1 && (
-                <a
-                  href={`/${locale}/konto/admin/subskrypcje?page=${page - 1}${q ? '&q=' + q : ''}${filter !== 'all' ? '&filter=' + filter : ''}`}
+                <Link
+                  href={{pathname: '/konto/admin/subskrypcje', query: {page: String(page - 1), ...(q ? {q} : {}), ...(filter !== 'all' ? {filter} : {})}}}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border"
                 >
                   ← Poprz.
-                </a>
+                </Link>
               )}
               {page < totalPages && (
-                <a
-                  href={`/${locale}/konto/admin/subskrypcje?page=${page + 1}${q ? '&q=' + q : ''}${filter !== 'all' ? '&filter=' + filter : ''}`}
+                <Link
+                  href={{pathname: '/konto/admin/subskrypcje', query: {page: String(page + 1), ...(q ? {q} : {}), ...(filter !== 'all' ? {filter} : {})}}}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border"
                 >
                   Nast. →
-                </a>
+                </Link>
               )}
             </div>
           </div>

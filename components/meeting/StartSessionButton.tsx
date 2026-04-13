@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { Play, Loader2, CalendarPlus, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface StartSessionButtonProps {
@@ -36,7 +36,7 @@ export default function StartSessionButton({ meetingId, locale }: StartSessionBu
         setScheduled(true);
         setShowSchedule(false);
       } else {
-        router.push(`/${locale}/spotkanie/${data.sessionId}`);
+        router.push({pathname: '/spotkanie/[sessionId]', params: {sessionId: data.sessionId}} as any);
       }
     } catch {
       setError('Błąd sieci');

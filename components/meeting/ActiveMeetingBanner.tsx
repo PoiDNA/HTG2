@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { Users2, ChevronRight, Loader2 } from 'lucide-react';
 
 interface ActiveSession {
@@ -36,7 +36,7 @@ export default function ActiveMeetingBanner({ locale }: { locale: string }) {
 
   const handleJoin = (sessionId: string) => {
     setJoining(sessionId);
-    router.push(`/${locale}/spotkanie/${sessionId}`);
+    router.push({pathname: '/spotkanie/[sessionId]', params: {sessionId}} as any);
   };
 
   return (

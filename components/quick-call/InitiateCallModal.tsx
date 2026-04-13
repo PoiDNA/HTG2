@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n-config';
 import { Phone, X, Plus, Trash2, Loader2, AlertCircle, Users } from 'lucide-react';
 
 interface InitiateCallModalProps {
@@ -51,7 +51,7 @@ export default function InitiateCallModal({ locale }: InitiateCallModalProps) {
       }
 
       setOpen(false);
-      router.push(`/${locale}/polaczenie/${data.callId}`);
+      router.push({pathname: '/polaczenie/[callId]', params: {callId: data.callId}} as any);
     } catch {
       setError('Błąd sieci');
     } finally {

@@ -1,6 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
-import { locales, Link } from '@/i18n-config';
+import { locales, Link, redirect } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Gift, ArrowLeft, XCircle } from 'lucide-react';
@@ -23,7 +22,7 @@ export default async function OdbierzPrezent({
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/${locale}/login?returnTo=/${locale}/konto/odbierz-prezent/${token}`);
+    return redirect({href: {pathname: '/login', query: {returnTo: `/konto/odbierz-prezent/${token}`}}, locale});
   }
 
   const db = createSupabaseServiceRole();
@@ -44,7 +43,7 @@ export default async function OdbierzPrezent({
     return (
       <div className="space-y-6 max-w-md mx-auto">
         <div className="flex items-center gap-3">
-          <Link href={`/${locale}/konto`} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
+          <Link href="/konto" className="text-htg-fg-muted hover:text-htg-fg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h2 className="text-xl font-serif font-semibold text-htg-fg">Odbiór prezentu</h2>
@@ -62,7 +61,7 @@ export default async function OdbierzPrezent({
     return (
       <div className="space-y-6 max-w-md mx-auto">
         <div className="flex items-center gap-3">
-          <Link href={`/${locale}/konto`} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
+          <Link href="/konto" className="text-htg-fg-muted hover:text-htg-fg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h2 className="text-xl font-serif font-semibold text-htg-fg">Odbiór prezentu</h2>
@@ -88,7 +87,7 @@ export default async function OdbierzPrezent({
   return (
     <div className="space-y-6 max-w-md mx-auto">
       <div className="flex items-center gap-3">
-        <Link href={`/${locale}/konto`} className="text-htg-fg-muted hover:text-htg-fg transition-colors">
+        <Link href="/konto" className="text-htg-fg-muted hover:text-htg-fg transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <h2 className="text-xl font-serif font-semibold text-htg-fg flex items-center gap-2">
@@ -121,7 +120,7 @@ export default async function OdbierzPrezent({
               </p>
             )}
             <Link
-              href={`/${locale}/konto/sesje-indywidualne`}
+              href="/konto/sesje-indywidualne"
               className="inline-block mt-3 text-sm text-htg-warm hover:underline"
             >
               Przejdź do moich sesji →

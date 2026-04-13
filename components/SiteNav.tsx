@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ComponentProps } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
@@ -226,7 +226,7 @@ export default function SiteNav() {
   );
 }
 
-function MobileLink({ href, label, pathname, onClick }: { href: string; label: string; pathname: string; onClick: () => void }) {
+function MobileLink({ href, label, pathname, onClick }: { href: ComponentProps<typeof Link>['href']; label: string; pathname: string; onClick: () => void }) {
   return (
     <Link
       href={href}

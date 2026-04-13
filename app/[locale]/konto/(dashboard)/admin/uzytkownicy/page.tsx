@@ -3,7 +3,7 @@ import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n-config';
 import { Users, Search, Crown, Shield, User } from 'lucide-react';
 import CreateUserButton from './CreateUserButton';
 
@@ -23,7 +23,7 @@ export default async function AdminUsersPage({ params, searchParams }: {
   // Verify admin via session (server client), then use service role for data
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect(`/${locale}/konto`);
+  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
 
   const supabase = createSupabaseServiceRole();
 
@@ -149,13 +149,13 @@ export default async function AdminUsersPage({ params, searchParams }: {
               {(users || []).map((u) => (
                 <tr key={u.id} className="border-b border-htg-card-border last:border-0 hover:bg-htg-surface/50 cursor-pointer">
                   <td className="py-3 px-4">
-                    <Link href={`/konto/admin/uzytkownicy/${u.id}`} className="flex items-center gap-2">
+                    <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: u.id}}} className="flex items-center gap-2">
                       {roleIcon(u.role)}
                       <span className="text-htg-fg font-medium hover:text-htg-indigo transition-colors">{u.display_name || '—'}</span>
                     </Link>
                   </td>
                   <td className="py-3 px-4 text-htg-fg-muted">
-                    <Link href={`/konto/admin/uzytkownicy/${u.id}`} className="hover:text-htg-fg transition-colors">
+                    <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: u.id}}} className="hover:text-htg-fg transition-colors">
                       {u.email || '—'}
                     </Link>
                   </td>
@@ -188,13 +188,13 @@ export default async function AdminUsersPage({ params, searchParams }: {
             </p>
             <div className="flex gap-1">
               {page > 1 && (
-                <Link href={`/konto/admin/uzytkownicy?page=${page - 1}${sp.q ? '&q=' + sp.q : ''}${sp.role ? '&role=' + sp.role : ''}`}
+                <Link href={{pathname: '/konto/admin/uzytkownicy', query: {page: String(page - 1), ...(sp.q ? {q: sp.q} : {}), ...(sp.role ? {role: sp.role} : {})}}}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border">
                   ← Poprz.
                 </Link>
               )}
               {page < totalPages && (
-                <Link href={`/konto/admin/uzytkownicy?page=${page + 1}${sp.q ? '&q=' + sp.q : ''}${sp.role ? '&role=' + sp.role : ''}`}
+                <Link href={{pathname: '/konto/admin/uzytkownicy', query: {page: String(page + 1), ...(sp.q ? {q: sp.q} : {}), ...(sp.role ? {role: sp.role} : {})}}}
                   className="px-3 py-1 bg-htg-surface rounded text-xs text-htg-fg hover:bg-htg-card-border">
                   Nast. →
                 </Link>

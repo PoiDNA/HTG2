@@ -836,10 +836,12 @@ Fizyczne foldery pozostają po polsku (`app/[locale]/konto/...`). next-intl rewr
 - `pathnames` — ~80 kluczy (route → `{pl, en, de, pt}` lub identity string dla tras admin/prowadzący)
 - `AppPathnames` — typ wygenerowany z `pathnames`; `Link` jest otypowany — błąd TS przy niezarejestrowanej ścieżce
 
-### UI Messages (25 namespace, 726 kluczy)
+### UI Messages (25 namespace, 741 kluczy)
 Pliki: `messages/{pl,en,de,pt}.json`. Strategia **deep-merge**: PL jako baza, inne lokale nadpisują — brakujące klucze fallbackują do polskiego (nie rzucają błędu).
 
 Namespace przykłady: `Common`, `Navigation`, `Sessions`, `Community`, `Bookings`, `Admin`, `Translator`, `VOD`, `Live`, `Profile`, `Payments`, `Email`, `Portal`, `Gifts`, `Companions`, `Meetings`, `Publications`, `YouTube`, `Sluchaj`, `Konto`, `Sesje`, `Privacy`, `Auth`, `Errors`.
+
+Komponenty community (`PostFeed`, `PostCard`, `CommentSection`, `PostEditor`) używają `useTranslations('Community')` — wszystkie user-visible strings zlokalizowane (toasty, empty states, etykiety akcji: Usuń/Pin/Komentuj/Anonim/Ładowanie).
 
 ### Content i18n (tytuły/opisy sesji i zestawów)
 Kolumny `title_i18n: JSONB` i `description_i18n: JSONB` na `session_templates`, `monthly_sets`, `products`. Format: `{"pl":"...", "en":"...", "de":"...", "pt":"..."}`.

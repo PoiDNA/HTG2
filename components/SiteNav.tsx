@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail, User, Library, Globe, Presentation } from 'lucide-react';
+import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail, User, Library, Globe, Presentation, Languages } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
@@ -34,7 +34,8 @@ export default function SiteNav() {
   const tNav = useTranslations('Nav');
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isLoggedIn, isAdmin, isStaff, loading } = useUserRole();
+  const { user, isLoggedIn, isAdmin, isStaff, isTranslator, loading } = useUserRole();
+  const hasPrivilegedZone = isAdmin || isStaff || isTranslator;
 
   async function handleLogout() {
     const supabase = createSupabaseBrowser();
@@ -113,8 +114,13 @@ export default function SiteNav() {
                   </Link>
                 ))}
 
-                {/* User menu section */}
+                {/* User menu section — with "Konto użytkownika" label for staff/translators */}
                 <div className="border-t border-htg-card-border my-1.5" />
+                {hasPrivilegedZone && (
+                  <p className="px-4 py-1 text-[10px] font-semibold text-htg-fg-muted uppercase tracking-wider">
+                    Konto użytkownika
+                  </p>
+                )}
                 {userMenuItems.map(({ href, label, icon: Icon }) => (
                   <Link
                     key={href}
@@ -130,8 +136,8 @@ export default function SiteNav() {
                   </Link>
                 ))}
 
-                {/* Admin/Staff links */}
-                {(isAdmin || isStaff) && (
+                {/* Admin / Operator / Translator links */}
+                {hasPrivilegedZone && (
                   <>
                     <div className="border-t border-htg-card-border my-1.5" />
                     {isAdmin && (
@@ -144,6 +150,12 @@ export default function SiteNav() {
                       <Link href="/prowadzacy" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface">
                         <Presentation className="w-4 h-4 shrink-0" />
                         Operator
+                      </Link>
+                    )}
+                    {isTranslator && !isStaff && !isAdmin && (
+                      <Link href="/tlumacz" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface">
+                        <Languages className="w-4 h-4 shrink-0" />
+                        Panel Tłumacza
                       </Link>
                     )}
                   </>
@@ -193,17 +205,22 @@ export default function SiteNav() {
               <MobileLink key={href} href={href} label={label} pathname={pathname} onClick={() => setMobileOpen(false)} />
             ))}
 
-            {/* User menu */}
+            {/* User menu — with "Konto użytkownika" label for staff/translators */}
             {isLoggedIn && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
+                {hasPrivilegedZone && (
+                  <p className="px-4 py-1 text-[10px] font-semibold text-htg-fg-muted uppercase tracking-wider">
+                    Konto użytkownika
+                  </p>
+                )}
                 {userMenuItems.map(({ href, label }) => (
                   <MobileLink key={href} href={href} label={label} pathname={pathname} onClick={() => setMobileOpen(false)} />
                 ))}
               </>
             )}
 
-            {/* Admin/Operator link */}
+            {/* Admin / Operator / Translator link */}
             {isAdmin && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
@@ -214,6 +231,12 @@ export default function SiteNav() {
               <>
                 <div className="border-t border-htg-card-border my-2" />
                 <MobileLink href="/prowadzacy" label="Operator" pathname={pathname} onClick={() => setMobileOpen(false)} />
+              </>
+            )}
+            {isTranslator && !isStaff && !isAdmin && (
+              <>
+                <div className="border-t border-htg-card-border my-2" />
+                <MobileLink href="/tlumacz" label="Panel Tłumacza" pathname={pathname} onClick={() => setMobileOpen(false)} />
               </>
             )}
 

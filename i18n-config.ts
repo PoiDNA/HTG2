@@ -233,6 +233,13 @@ export const routing = defineRouting({
     '/konto/admin/zestawy': '/konto/admin/zestawy',
     '/konto/admin/zgloszenia': '/konto/admin/zgloszenia',
 
+    // ─── /tlumacz (internal translator panel, no translation) ───
+    '/tlumacz': '/tlumacz',
+    '/tlumacz/sesje': '/tlumacz/sesje',
+    '/tlumacz/grafik': '/tlumacz/grafik',
+    '/tlumacz/klienci': '/tlumacz/klienci',
+    '/translator-terms': '/translator-terms',
+
     // ─── /prowadzacy (internal staff, no translation) ────────────
     '/prowadzacy': '/prowadzacy',
     '/prowadzacy/grafik': '/prowadzacy/grafik',

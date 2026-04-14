@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { Link, useRouter } from '@/i18n-config';
 import { Search, Calendar, CheckCircle, Download, ExternalLink, Plus, X, Loader2, UserCheck, UserPlus } from 'lucide-react';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
 import RowSessionPlayer from '@/components/recordings/RowSessionPlayer';
@@ -488,7 +487,7 @@ tr:nth-child(even){background:#f9f9f9}
                       : 'bg-htg-card border-htg-card-border'
                   } ${statusTab === 'past' ? 'opacity-70' : ''}`}
                 >
-                  <Link href={{pathname: '/konto/admin/sesje/[id]', params: {id: b.id}} as any} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                  <Link href={{pathname: '/konto/admin/sesje/[id]', params: {id: b.id}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
                     <div className="flex items-center gap-2 flex-wrap">
                       {isToday && statusTab === 'upcoming' && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
@@ -526,7 +525,7 @@ tr:nth-child(even){background:#f9f9f9}
                         </button>
                       </>
                     )}
-                    <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: b.user_id}} as any}
+                    <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: b.user_id}}}
                       className="p-1.5 rounded-lg text-htg-fg-muted hover:text-htg-indigo hover:bg-htg-indigo/10 transition-colors"
                       title="Profil klienta" onClick={e => e.stopPropagation()}>
                       <ExternalLink className="w-4 h-4" />

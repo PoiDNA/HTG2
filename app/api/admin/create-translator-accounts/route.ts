@@ -32,18 +32,23 @@ export async function POST(req: NextRequest) {
 
   const results: Array<{ email: string; status: string; userId?: string }> = [];
 
+  // Fetch all users once (not per-translator)
+  const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+
   for (const translator of TRANSLATORS) {
-    // Check if user already exists
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existing = existingUsers?.users?.find(
       u => u.email?.toLowerCase() === translator.email.toLowerCase()
     );
 
     if (existing) {
-      // Ensure role is set to translator
-      await db.from('profiles')
-        .update({ role: 'translator', preferred_locale: translator.locale })
-        .eq('id', existing.id);
+      // Upsert profile (handles missing rows from manual auth user creation)
+      await db.from('profiles').upsert({
+        id: existing.id,
+        email: translator.email,
+        display_name: translator.name,
+        role: 'translator',
+        preferred_locale: translator.locale,
+      }, { onConflict: 'id' });
 
       results.push({ email: translator.email, status: 'already_exists', userId: existing.id });
       continue;
@@ -68,14 +73,14 @@ export async function POST(req: NextRequest) {
       }
 
       if (newUser?.user) {
-        // Set profile role and locale
-        await db.from('profiles')
-          .update({
-            role: 'translator',
-            display_name: translator.name,
-            preferred_locale: translator.locale,
-          })
-          .eq('id', newUser.user.id);
+        // Upsert profile with role and locale
+        await db.from('profiles').upsert({
+          id: newUser.user.id,
+          email: translator.email,
+          display_name: translator.name,
+          role: 'translator',
+          preferred_locale: translator.locale,
+        }, { onConflict: 'id' });
 
         results.push({ email: translator.email, status: 'created', userId: newUser.user.id });
       }

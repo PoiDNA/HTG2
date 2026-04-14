@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireStaff } from '@/lib/staff/auth';
-import { SESSION_CONFIG, slotEndTime } from '@/lib/booking/constants';
+import { SESSION_CONFIG, slotEndTime, isInterpreterSessionType } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
 // GET: list slots based on staff role
@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
     // Natalia sees all her future slots
     const { data: slots, error } = await supabase
       .from('booking_slots')
-      .select('*, assistant:staff_members!booking_slots_assistant_id_fkey(id, name, slug, role)')
+      .select(`
+        *,
+        assistant:staff_members!booking_slots_assistant_id_fkey(id, name, slug, role),
+        translator:staff_members!booking_slots_translator_id_fkey(id, name, slug, role, locale)
+      `)
       .gte('slot_date', today)
       .order('slot_date', { ascending: true })
       .order('start_time', { ascending: true });
@@ -78,7 +82,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Tylko prowadząca może tworzyć terminy' }, { status: 403 });
   }
 
-  const { date, start_time, session_type, private_for_email, solo_locked, assistant_id: reqAssistantId } = await request.json();
+  const {
+    date,
+    start_time,
+    session_type,
+    private_for_email,
+    solo_locked,
+    assistant_id: reqAssistantId,
+    translator_id: reqTranslatorId,
+  } = await request.json();
 
   if (!date || !start_time) {
     return NextResponse.json({ error: 'date and start_time required' }, { status: 400 });
@@ -87,12 +99,44 @@ export async function POST(request: NextRequest) {
   // Determine session type based on assistant
   let finalType: SessionType = session_type || 'natalia_solo';
   let finalAssistantId: string | null = reqAssistantId || null;
+  let finalTranslatorId: string | null = reqTranslatorId || null;
 
   if (finalAssistantId && !session_type) {
-    // Look up assistant slug to determine type
+    // Look up assistant slug to determine type (PL-only mapping; interpreter flows
+    // must pass session_type explicitly).
     const { data: asst } = await supabase.from('staff_members').select('slug').eq('id', finalAssistantId).single();
     if (asst?.slug === 'agata') finalType = 'natalia_agata';
     else if (asst?.slug === 'justyna') finalType = 'natalia_justyna';
+  }
+
+  // Interpreter session types require a translator_id
+  if (isInterpreterSessionType(finalType)) {
+    if (!finalTranslatorId) {
+      return NextResponse.json(
+        { error: 'translator_id required for interpreter session types' },
+        { status: 400 },
+      );
+    }
+    const { data: t } = await supabase
+      .from('staff_members')
+      .select('role, locale, is_active')
+      .eq('id', finalTranslatorId)
+      .single();
+    if (!t || t.role !== 'translator' || !t.is_active) {
+      return NextResponse.json({ error: 'Invalid translator' }, { status: 400 });
+    }
+    if (finalType === 'natalia_interpreter_asysta' && !finalAssistantId) {
+      return NextResponse.json(
+        { error: 'assistant_id required for natalia_interpreter_asysta' },
+        { status: 400 },
+      );
+    }
+  } else if (finalTranslatorId) {
+    // Non-interpreter type with translator_id is nonsensical
+    return NextResponse.json(
+      { error: 'translator_id only valid for interpreter session types' },
+      { status: 400 },
+    );
   }
 
   const endTime = slotEndTime(start_time, finalType);
@@ -145,6 +189,7 @@ export async function POST(request: NextRequest) {
       is_extra: true,
       notes,
       assistant_id: finalAssistantId,
+      translator_id: finalTranslatorId,
       solo_locked: solo_locked ?? false,
     })
     .select()

@@ -1,6 +1,18 @@
-export type SessionType = 'natalia_solo' | 'natalia_agata' | 'natalia_justyna' | 'natalia_przemek' | 'pre_session' | 'natalia_para' | 'natalia_asysta' | 'natalia_interpreter';
+export type SessionType =
+  | 'natalia_solo'
+  | 'natalia_agata'
+  | 'natalia_justyna'
+  | 'natalia_przemek'
+  | 'pre_session'
+  | 'natalia_para'
+  | 'natalia_asysta'
+  | 'natalia_interpreter'          // deprecated legacy (120 min) — retained for historic bookings
+  | 'natalia_interpreter_solo'     // new 180 min
+  | 'natalia_interpreter_asysta'   // new 180 min (requires assistant_id)
+  | 'natalia_interpreter_para';    // new 180 min (maxClients=2)
 export type PaymentStatus = 'confirmed_paid' | 'installments' | 'partial_payment' | 'pending_verification';
-export type StaffRole = 'practitioner' | 'assistant';
+export type StaffRole = 'practitioner' | 'assistant' | 'translator';
+export type TranslatorLocale = 'en' | 'de' | 'pt';
 export type SlotStatus = 'available' | 'held' | 'booked' | 'completed' | 'cancelled';
 export type BookingStatus = 'pending_confirmation' | 'confirmed' | 'completed' | 'cancelled' | 'transferred';
 export type AccelerationStatus = 'waiting' | 'offered' | 'accepted' | 'expired' | 'cancelled';
@@ -13,6 +25,7 @@ export interface StaffMember {
   role: StaffRole;
   session_types: SessionType[];
   email: string | null;
+  locale: TranslatorLocale | null;  // set only for role='translator'
   is_active: boolean;
 }
 
@@ -48,9 +61,11 @@ export interface BookingSlot {
   is_extra: boolean;
   notes: string | null;
   assistant_id: string | null;
+  translator_id: string | null;
   created_at: string;
   // Joined data
   assistant?: Pick<StaffMember, 'id' | 'name' | 'slug' | 'role'>;
+  translator?: Pick<StaffMember, 'id' | 'name' | 'slug' | 'role' | 'locale'>;
 }
 
 export interface Booking {

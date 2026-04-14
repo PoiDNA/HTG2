@@ -237,6 +237,7 @@ export const routing = defineRouting({
     '/tlumacz': '/tlumacz',
     '/tlumacz/sesje': '/tlumacz/sesje',
     '/tlumacz/grafik': '/tlumacz/grafik',
+    '/tlumacz/grafik/edytuj': '/tlumacz/grafik/edytuj',
     '/tlumacz/klienci': '/tlumacz/klienci',
     '/translator-terms': '/translator-terms',
 

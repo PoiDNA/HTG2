@@ -81,6 +81,12 @@ export default async function TranslatorGrafikPage({
         <Calendar className="w-6 h-6 text-htg-indigo" />
         <h2 className="text-2xl font-serif font-bold text-htg-fg">Grafik</h2>
         <span className="text-sm text-htg-fg-muted">— kolejne 60 dni</span>
+        <Link
+          href="/tlumacz/grafik/edytuj"
+          className="ml-auto text-sm text-htg-indigo font-medium hover:underline"
+        >
+          Edytuj grafik →
+        </Link>
       </div>
 
       {sortedDates.length === 0 ? (

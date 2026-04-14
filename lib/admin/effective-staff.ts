@@ -23,7 +23,7 @@ export async function getEffectiveStaffMember() {
   if (isAdmin && viewAsCookie?.value) {
     const { data: staff } = await db
       .from('staff_members')
-      .select('id, name, email, role, slug, session_types, is_active, user_id')
+      .select('id, name, email, role, slug, session_types, is_active, user_id, locale')
       .eq('id', viewAsCookie.value)
       .single();
     if (staff) {
@@ -34,7 +34,7 @@ export async function getEffectiveStaffMember() {
   // Normal: find by user_id
   const { data: byId } = await db
     .from('staff_members')
-    .select('id, name, email, role, slug, session_types, is_active, user_id')
+    .select('id, name, email, role, slug, session_types, is_active, user_id, locale')
     .eq('user_id', user.id)
     .eq('is_active', true)
     .single();
@@ -44,7 +44,7 @@ export async function getEffectiveStaffMember() {
   if (user.email) {
     const { data: byEmail } = await db
       .from('staff_members')
-      .select('id, name, email, role, slug, session_types, is_active, user_id')
+      .select('id, name, email, role, slug, session_types, is_active, user_id, locale')
       .eq('email', user.email)
       .eq('is_active', true)
       .single();

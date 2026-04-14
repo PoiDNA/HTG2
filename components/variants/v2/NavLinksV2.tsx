@@ -27,13 +27,13 @@ export default function NavLinksV2() {
           <Link
             key={href}
             href={href}
-            className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               isActive
                 ? 'text-htg-fg'
                 : 'text-htg-fg-muted hover:text-htg-fg'
             }`}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-3.5 h-3.5" />
             {label}
           </Link>
         );

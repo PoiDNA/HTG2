@@ -2,10 +2,10 @@
 
 import { Link, usePathname } from '@/i18n-config';
 import { useTranslations } from 'next-intl';
-import { Film, CalendarDays, MessagesSquare } from 'lucide-react';
+import { Library, CalendarDays, MessagesSquare } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { href: '/konto', labelKey: 'recordings', icon: Film },
+  { href: '/konto', labelKey: 'recordings', icon: Library },
   { href: '/konto/sesje-indywidualne', labelKey: 'individual', icon: CalendarDays },
   { href: '/spolecznosc', labelKey: 'community', icon: MessagesSquare },
 ] as const;

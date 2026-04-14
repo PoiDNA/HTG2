@@ -39,3 +39,6 @@ next-env.d.ts
 migration-report-*.json
 scripts/data/wix-*.json
 !scripts/data/wix-example.json
+
+# ai review output
+/reviews

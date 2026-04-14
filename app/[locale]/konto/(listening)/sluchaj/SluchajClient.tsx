@@ -172,7 +172,6 @@ export default function SluchajClient({
           >
             <Menu className="w-4 h-4 text-htg-fg-muted shrink-0" />
             <span className="truncate">{groups.find((g) => g.key === selectedKey)?.label ?? 'Menu'}</span>
-            <span className="text-htg-fg-muted shrink-0">&#9662;</span>
           </button>
 
           {menuOpen && (

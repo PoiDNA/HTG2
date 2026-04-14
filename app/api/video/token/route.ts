@@ -178,6 +178,10 @@ export async function POST(request: NextRequest) {
         'mov': 'video/quicktime',
       };
       mimeType = (ext && mimeMap[ext]) ?? null;
+      // Fallback for extensionless HTG storage paths (e.g. HTG-Month/HTG CYOU 2025-03-1_...).
+      // These are MP4 containers; without a mimeType hint Safari must sniff format
+      // from CDN Content-Type which returns application/octet-stream on cache miss.
+      if (!mimeType) mimeType = 'video/mp4';
     }
 
     return NextResponse.json({

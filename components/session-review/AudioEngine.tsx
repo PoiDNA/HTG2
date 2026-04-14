@@ -353,8 +353,9 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           hlsRef.current = null;
         }
         
-        // Clear native source to stop ongoing downloads
+        // Clear native source and any <source> children to stop ongoing downloads
         audio.removeAttribute('src');
+        while (audio.firstChild) audio.removeChild(audio.firstChild);
         audio.load();
 
         const onSourceReady = () => {
@@ -398,7 +399,9 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           }
           const code = audio.error?.code;
           if (code === 4) {
-            enterTerminalError('unsupported', 'Format nagrania nie jest obsługiwany przez tę przeglądarkę.');
+            // Auto-retry once before giving up — Safari often fails on first request
+            // for extensionless files (CDN returns application/octet-stream on cache miss).
+            triggerRetry('Problemy z formatem nagrania, ponawianie...');
           } else if (code === 2) {
             triggerRetry('Błąd sieci podczas odtwarzania.');
           } else {
@@ -437,8 +440,15 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           hls.attachMedia(audio);
           hlsRef.current = hls;
         } else if (audio.canPlayType('application/vnd.apple.mpegurl') || data.deliveryType === 'direct') {
-          // Safari native HLS or direct file
-          audio.src = data.url;
+          // Safari native HLS or direct file.
+          // Use a <source> child element so we can pass an explicit type attribute.
+          // Without it, Safari must sniff format from CDN Content-Type headers;
+          // extensionless files often get application/octet-stream on cache miss → code 4.
+          const srcEl = document.createElement('source');
+          srcEl.src = data.url;
+          if (data.mimeType) srcEl.type = data.mimeType;
+          audio.appendChild(srcEl);
+          audio.load();
           audio.addEventListener('loadedmetadata', onSourceReady);
         } else {
           enterTerminalError('unsupported', 'Twoja przeglądarka nie obsługuje tego formatu nagrania.');

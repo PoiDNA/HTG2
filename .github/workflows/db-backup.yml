@@ -1,0 +1,202 @@
+name: DB Backup
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 11:00 CEST (UTC+2)
+    - cron: '0 15 * * *'  # 17:00 CEST (UTC+2)
+  workflow_dispatch:
+
+# Nie przerywaj trwającego backupu — concurrent runs kolejkują się
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      PGHOST: ${{ secrets.SUPABASE_DB_HOST }}
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGUSER: postgres
+      PGDATABASE: postgres
+      PGSSLMODE: require
+      PG_VERSION: ${{ vars.SUPABASE_PG_VERSION }}
+      BUNNY_HOST: storage.bunnycdn.com
+      BUNNY_ZONE: ${{ vars.BUNNY_DB_ZONE }}
+      BUNNY_API_KEY: ${{ secrets.BUNNY_DB_API_KEY }}
+      AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      ALERT_TO: ${{ secrets.BACKUP_ALERT_TO }}
+      ALERT_FROM: ${{ secrets.BACKUP_ALERT_FROM }}
+
+    steps:
+      - name: Install tools
+        run: |
+          # Dodaj PGDG repo — ubuntu-latest nie zawiera wszystkich wersji postgresql-client
+          sudo sh -c "echo \"deb https://apt.postgresql.org/pub/repos/apt \$(lsb_release -cs)-pgdg main\" \
+            > /etc/apt/sources.list.d/pgdg.list"
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            "postgresql-client-${PG_VERSION}" \
+            age
+
+      - name: Set timestamp
+        run: |
+          set -euo pipefail
+          echo "TIMESTAMP=$(date +%Y-%m-%d_%H-%M)" >> "$GITHUB_ENV"
+
+      - name: Check pg_dump version matches server
+        run: |
+          set -euo pipefail
+          CLIENT_VER=$(pg_dump --version | grep -oP '\d+' | head -1)
+          SERVER_VER=$(psql --no-password -tAc 'SHOW server_version_num;' | cut -c1-2)
+          echo "pg_dump major: $CLIENT_VER | server major: $SERVER_VER"
+          if [ "$CLIENT_VER" != "$SERVER_VER" ]; then
+            echo "ERROR: pg_dump version ($CLIENT_VER) does not match server ($SERVER_VER)"
+            exit 1
+          fi
+
+      - name: Dump database
+        run: |
+          set -euo pipefail
+          DUMP_FILE="htg2_backup_${TIMESTAMP}.dump"
+          ENC_FILE="${DUMP_FILE}.age"
+          echo "DUMP_FILE=$DUMP_FILE" >> "$GITHUB_ENV"
+          echo "ENC_FILE=$ENC_FILE"   >> "$GITHUB_ENV"
+
+          # Retry pg_dump do 3 razy z 60s odstępem
+          for attempt in 1 2 3; do
+            if pg_dump \
+                --format=custom \
+                --no-password \
+                --file="$DUMP_FILE"; then
+              break
+            fi
+            echo "pg_dump attempt $attempt failed."
+            if [ "$attempt" -ge 3 ]; then
+              echo "ERROR: pg_dump failed after 3 attempts"
+              exit 1
+            fi
+            sleep 60
+          done
+
+          # Walidacja rozmiaru — min 1 MB (production DB z RLS/migrations)
+          FILESIZE=$(stat --format=%s "$DUMP_FILE")
+          echo "Dump size: $(du -sh "$DUMP_FILE" | cut -f1) (${FILESIZE} bytes)"
+          if [ "$FILESIZE" -lt 1048576 ]; then
+            echo "ERROR: Backup suspiciously small ($FILESIZE bytes < 1MB)"
+            exit 1
+          fi
+
+          # Szyfrowanie dump → .dump.age
+          age -r "$AGE_RECIPIENT" -o "$ENC_FILE" "$DUMP_FILE"
+          rm "$DUMP_FILE"   # usuń plaintext z dysku runnera
+
+      - name: Upload to Bunny Storage
+        run: |
+          set -euo pipefail
+          LOCAL_SIZE=$(stat --format=%s "$ENC_FILE")
+
+          # Upload z retry
+          for attempt in 1 2 3; do
+            # -T streamuje z dysku zamiast ładować do RAM (bezpieczne dla dużych plików)
+            HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}" \
+              -T "$ENC_FILE" \
+              "https://${BUNNY_HOST}/${BUNNY_ZONE}/sql/${ENC_FILE}" \
+              -H "AccessKey: ${BUNNY_API_KEY}" \
+              -H "Content-Type: application/octet-stream")
+
+            if [ "$HTTP_STATUS" = "201" ]; then
+              echo "Upload OK (HTTP $HTTP_STATUS)"
+              break
+            fi
+            echo "Upload attempt $attempt returned HTTP $HTTP_STATUS."
+            if [ "$attempt" -ge 3 ]; then
+              echo "ERROR: Upload failed after 3 attempts"
+              exit 1
+            fi
+            sleep 30
+          done
+
+          # Weryfikacja integralności: HEAD → porównanie Content-Length
+          REMOTE_SIZE=$(curl -sf -I \
+            "https://${BUNNY_HOST}/${BUNNY_ZONE}/sql/${ENC_FILE}" \
+            -H "AccessKey: ${BUNNY_API_KEY}" \
+            | grep -i content-length | grep -oP '\d+' | tr -d '[:space:]')
+
+          echo "Local: ${LOCAL_SIZE} bytes | Remote: ${REMOTE_SIZE} bytes"
+          if [ "$LOCAL_SIZE" != "$REMOTE_SIZE" ]; then
+            echo "ERROR: Size mismatch — upload may be incomplete"
+            exit 1
+          fi
+
+      - name: Prune backups older than 30 days (keep min 7)
+        run: |
+          set -euo pipefail
+          CUTOFF=$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%S)
+
+          FILES=$(curl -sf \
+            "https://${BUNNY_HOST}/${BUNNY_ZONE}/sql/" \
+            -H "AccessKey: ${BUNNY_API_KEY}" \
+            -H "Accept: application/json")
+
+          export FILES CUTOFF
+          python3 << 'PYEOF'
+import json, os, urllib.request, sys
+
+data = json.loads(os.environ["FILES"])
+cutoff = os.environ["CUTOFF"]
+api_key = os.environ["BUNNY_API_KEY"]
+host = os.environ["BUNNY_HOST"]
+zone = os.environ["BUNNY_ZONE"]
+
+# Filtruj pliki (nie katalogi), posortuj od najnowszego
+files = [f for f in data if not f.get("IsDirectory")]
+files.sort(key=lambda f: f.get("DateCreated", ""), reverse=True)
+
+# Zachowaj co najmniej 7 najnowszych niezależnie od daty
+MIN_KEEP = 7
+protected = {f["ObjectName"] for f in files[:MIN_KEEP]}
+
+errors = []
+for f in files:
+    name = f["ObjectName"]
+    created = f.get("DateCreated", "")[:19]
+    if name in protected:
+        print(f"Keeping (protected): {name}")
+        continue
+    if created and created < cutoff:
+        print(f"Deleting (>{cutoff[:10]}): {name}")
+        try:
+            req = urllib.request.Request(
+                f"https://{host}/{zone}/sql/{name}",
+                method="DELETE",
+                headers={"AccessKey": api_key}
+            )
+            urllib.request.urlopen(req)
+        except Exception as e:
+            errors.append(f"{name}: {e}")
+
+if errors:
+    print("Prune errors:", errors, file=sys.stderr)
+    sys.exit(1)
+PYEOF
+
+      - name: Notify on failure
+        if: failure() || cancelled()
+        continue-on-error: true   # nie maskuj pierwotnego błędu jeśli Resend padnie
+        run: |
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -sf -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer ${RESEND_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"from\": \"${ALERT_FROM}\",
+              \"to\": [\"${ALERT_TO}\"],
+              \"subject\": \"[HTG2] DB backup failed — ${TIMESTAMP}\",
+              \"text\": \"Backup ${TIMESTAMP} failed.\\nDetails: ${RUN_URL}\"
+            }"

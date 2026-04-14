@@ -7,7 +7,8 @@ import { redirect } from '@/i18n-config';
 import { cookies } from 'next/headers';
 import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
 import { startImpersonation, startUserImpersonation } from '@/lib/admin/impersonate';
-import { Eye, ExternalLink, Calendar, Users, Presentation, Languages } from 'lucide-react';
+import { Eye, ExternalLink, Calendar, Users, Presentation, Languages, AlertCircle } from 'lucide-react';
+import CreateTranslatorAccountsButton from '@/components/admin/CreateTranslatorAccountsButton';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -61,6 +62,21 @@ export default async function AdminPreviewPage({
         .select('id, session_type, status, slot_date, assistant_id')
         .in('status', ['booked', 'completed'])
     : { data: [] };
+
+  // Check translator account existence (auth + profile)
+  const translatorEmails = TRANSLATOR_LIST.map(t => t.email);
+  const { data: translatorProfiles } = await db
+    .from('profiles')
+    .select('id, email')
+    .in('email', translatorEmails);
+  const translatorEmailsWithAccount = new Set(
+    (translatorProfiles ?? []).map((p: any) => (p.email ?? '').toLowerCase())
+  );
+  const enrichedTranslators = TRANSLATOR_LIST.map(t => ({
+    ...t,
+    hasAccount: translatorEmailsWithAccount.has(t.email.toLowerCase()),
+  }));
+  const missingTranslatorAccounts = enrichedTranslators.filter(t => !t.hasAccount).length;
 
   const enriched = STAFF_LIST.map(s => {
     const member = (staffMembers ?? []).find(m => m.email === s.email);
@@ -198,11 +214,27 @@ export default async function AdminPreviewPage({
         <h3 className="text-sm font-medium text-htg-fg-muted uppercase tracking-wide">Tłumacze</h3>
       </div>
 
+      {missingTranslatorAccounts > 0 && (
+        <div className="flex flex-col gap-3 p-4 bg-htg-warm/10 border border-htg-warm/30 rounded-xl">
+          <div className="flex items-start gap-2 text-sm text-htg-warm">
+            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>
+              {missingTranslatorAccounts === enrichedTranslators.length
+                ? 'Konta tłumaczy nie zostały jeszcze utworzone w bazie — bez nich tłumacze nie mogą się zalogować.'
+                : `${missingTranslatorAccounts} z ${enrichedTranslators.length} kont tłumaczy nie istnieje w bazie.`}
+            </span>
+          </div>
+          <CreateTranslatorAccountsButton />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {TRANSLATOR_LIST.map((t) => (
+        {enrichedTranslators.map((t) => (
           <div
             key={t.email}
-            className="bg-htg-card border border-htg-card-border rounded-xl p-5 space-y-4"
+            className={`bg-htg-card border rounded-xl p-5 space-y-4 ${
+              t.hasAccount ? 'border-htg-card-border' : 'border-htg-warm/40'
+            }`}
           >
             <div className="flex items-center gap-3">
               <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold ${t.color}`}>
@@ -219,18 +251,25 @@ export default async function AdminPreviewPage({
 
             <p className="text-xs text-htg-fg-muted">{t.email}</p>
 
-            <form action={startUserImpersonation}>
-              <input type="hidden" name="email" value={t.email} />
-              <input type="hidden" name="locale" value={locale} />
-              <input type="hidden" name="redirectTo" value="/konto/tlumacz" />
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-htg-indigo/20 text-htg-cream/80 hover:bg-htg-indigo/40 transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Otwórz panel {t.label}
-              </button>
-            </form>
+            {t.hasAccount ? (
+              <form action={startUserImpersonation}>
+                <input type="hidden" name="email" value={t.email} />
+                <input type="hidden" name="locale" value={locale} />
+                <input type="hidden" name="redirectTo" value="/konto/tlumacz" />
+                <button
+                  type="submit"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-htg-indigo/20 text-htg-cream/80 hover:bg-htg-indigo/40 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Otwórz panel {t.label}
+                </button>
+              </form>
+            ) : (
+              <p className="flex items-center gap-2 text-xs text-htg-warm italic">
+                <AlertCircle className="w-3.5 h-3.5" />
+                Brak konta w bazie — utwórz je przyciskiem powyżej
+              </p>
+            )}
           </div>
         ))}
       </div>

@@ -6,8 +6,8 @@ import { isAdminEmail } from '@/lib/roles';
 import { redirect } from '@/i18n-config';
 import { cookies } from 'next/headers';
 import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
-import { startImpersonation } from '@/lib/admin/impersonate';
-import { Eye, ExternalLink, Calendar, Users, Presentation } from 'lucide-react';
+import { startImpersonation, startUserImpersonation } from '@/lib/admin/impersonate';
+import { Eye, ExternalLink, Calendar, Users, Presentation, Languages } from 'lucide-react';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -20,6 +20,12 @@ const STAFF_LIST = [
   { email: 'marta@htg.cyou',   label: 'Marta',    description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
   { email: 'ania@htg.cyou',    label: 'Ania',     description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
   { email: 'dominika@htg.cyou',label: 'Dominika', description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
+];
+
+const TRANSLATOR_LIST = [
+  { email: 'melania@htg.cyou',     label: 'Melania',     description: 'Tłumaczka EN', locale: 'en', color: 'bg-htg-lavender' },
+  { email: 'bernadetta@htg.cyou',  label: 'Bernadetta',  description: 'Tłumaczka DE', locale: 'de', color: 'bg-htg-lavender' },
+  { email: 'edytap@htg.cyou',      label: 'Edyta',       description: 'Tłumaczka PT', locale: 'pt', color: 'bg-htg-lavender' },
 ];
 
 export default async function AdminPreviewPage({
@@ -87,6 +93,11 @@ export default async function AdminPreviewPage({
           <span>Aktualnie przeglądasz czyjś panel. Wejdź na <a href={`/${locale}/prowadzacy`} className="underline font-medium">/prowadzacy</a> lub kliknij inną osobę poniżej.</span>
         </div>
       )}
+
+      <div className="flex items-center gap-2 pt-2">
+        <Presentation className="w-4 h-4 text-htg-fg-muted" />
+        <h3 className="text-sm font-medium text-htg-fg-muted uppercase tracking-wide">Staff</h3>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {enriched.map((s) => (
@@ -178,6 +189,48 @@ export default async function AdminPreviewPage({
                 </button>
               </form>
             )}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2 pt-4">
+        <Languages className="w-4 h-4 text-htg-fg-muted" />
+        <h3 className="text-sm font-medium text-htg-fg-muted uppercase tracking-wide">Tłumacze</h3>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {TRANSLATOR_LIST.map((t) => (
+          <div
+            key={t.email}
+            className="bg-htg-card border border-htg-card-border rounded-xl p-5 space-y-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold ${t.color}`}>
+                {t.label[0]}
+              </div>
+              <div>
+                <p className="font-medium text-htg-fg">{t.label}</p>
+                <p className="text-xs text-htg-fg-muted">{t.description}</p>
+              </div>
+              <span className="ml-auto text-[10px] px-2 py-0.5 bg-htg-lavender/20 text-htg-lavender rounded-full uppercase">
+                {t.locale}
+              </span>
+            </div>
+
+            <p className="text-xs text-htg-fg-muted">{t.email}</p>
+
+            <form action={startUserImpersonation}>
+              <input type="hidden" name="email" value={t.email} />
+              <input type="hidden" name="locale" value={locale} />
+              <input type="hidden" name="redirectTo" value="/konto/tlumacz" />
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-htg-indigo/20 text-htg-cream/80 hover:bg-htg-indigo/40 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Otwórz panel {t.label}
+              </button>
+            </form>
           </div>
         ))}
       </div>

@@ -35,6 +35,7 @@ export async function stopImpersonation(formData: FormData) {
 export async function startUserImpersonation(formData: FormData) {
   const email = formData.get('email') as string;
   const locale = (formData.get('locale') as string) || 'pl';
+  const redirectTo = (formData.get('redirectTo') as string) || '/konto';
 
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
@@ -57,7 +58,9 @@ export async function startUserImpersonation(formData: FormData) {
     sameSite: 'lax',
   });
 
-  redirect(`/${locale}/konto`);
+  // Safety: only allow internal paths
+  const safeRedirect = redirectTo.startsWith('/') ? redirectTo : '/konto';
+  redirect(`/${locale}${safeRedirect}`);
 }
 
 export async function stopUserImpersonation(formData: FormData) {

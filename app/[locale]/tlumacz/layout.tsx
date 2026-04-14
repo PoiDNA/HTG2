@@ -62,6 +62,7 @@ export default async function TranslatorLayout({
 
       <div className="flex flex-col md:flex-row gap-8">
         <nav className="md:w-56 shrink-0">
+          <p className="hidden md:block px-4 mb-2 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">Panel</p>
           <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
             {navItems.map(({ href, label, icon: Icon }) => (
               <Link

@@ -1,10 +1,10 @@
 'use client';
 
 import { Link, usePathname } from '@/i18n-config';
-import { Film, CalendarDays, MessagesSquare } from 'lucide-react';
+import { Library, CalendarDays, MessagesSquare } from 'lucide-react';
 
 const navLinks = [
-  { href: '/konto', label: 'Nagrania', icon: Film },
+  { href: '/konto', label: 'Nagrania', icon: Library },
   { href: '/konto/sesje-indywidualne', label: 'Spotkania', icon: CalendarDays },
   { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
 ] as const;
@@ -35,9 +35,6 @@ export default function NavLinksV2() {
           >
             <Icon className="w-4 h-4" />
             {label}
-            {isActive && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-htg-indigo" />
-            )}
           </Link>
         );
       })}

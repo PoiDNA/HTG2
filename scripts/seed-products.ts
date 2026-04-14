@@ -70,7 +70,7 @@ const PRODUCTS = [
     name: 'Sesja z tłumaczem',
     slug: 'sesja-natalia-tlumacz',
     description: 'Indywidualna sesja z Natalią z tłumaczem (EN/DE/PT). 180 minut.',
-    type: 'individual_session' as const,
+    type: 'vod_single' as const,
     stripe_product_id: 'prod_UKjuklKlcizbqk',
     is_active: true,
     metadata: { session_type: 'natalia_interpreter', valid_months: 6 },

@@ -49,7 +49,7 @@ export default function SluchajClient({
     for (const section of sections) {
       const playable = section.sessions.filter((s) => s.isPlayable);
       if (playable.length > 0) {
-        result.push({ key: section.monthLabel, label: section.title.replace(/\.$/, ''), sessions: playable });
+        result.push({ key: section.monthLabel, label: section.title.trim().replace(/\.+$/, '').trim(), sessions: playable });
       }
     }
 
@@ -172,7 +172,6 @@ export default function SluchajClient({
           >
             <Menu className="w-4 h-4 text-htg-fg-muted shrink-0" />
             <span className="truncate">{groups.find((g) => g.key === selectedKey)?.label ?? 'Menu'}</span>
-            <span className="text-htg-fg-muted shrink-0">&#9662;</span>
           </button>
 
           {menuOpen && (

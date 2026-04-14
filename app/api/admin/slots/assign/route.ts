@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { HOLD_HOURS } from '@/lib/booking/constants';
+import { sendTranslatorBookingNotification } from '@/lib/email/resend';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin();
@@ -76,6 +79,40 @@ export async function POST(request: NextRequest) {
 
   if (updateEntryErr) {
     return NextResponse.json({ error: updateEntryErr.message }, { status: 500 });
+  }
+
+  // Notify translator if this is an interpreter slot (non-blocking)
+  if (availableSlot.translator_id) {
+    try {
+      const { data: translator } = await supabase
+        .from('staff_members')
+        .select('name, email')
+        .eq('id', availableSlot.translator_id)
+        .single();
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', entry.user_id)
+        .single();
+
+      if (translator?.email) {
+        const sessionLabel = SESSION_CONFIG[availableSlot.session_type as SessionType]?.label || availableSlot.session_type;
+        const dateFormatted = new Date(availableSlot.slot_date + 'T00:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const timeFormatted = availableSlot.start_time.slice(0, 5);
+        const clientName = profile?.display_name || profile?.email?.split('@')[0] || 'Klient';
+
+        await sendTranslatorBookingNotification(translator.email, {
+          translatorName: translator.name,
+          clientName,
+          sessionType: sessionLabel,
+          date: dateFormatted,
+          time: timeFormatted,
+        });
+      }
+    } catch (emailErr) {
+      console.error('Translator acceleration notification failed:', emailErr);
+    }
   }
 
   return NextResponse.json({

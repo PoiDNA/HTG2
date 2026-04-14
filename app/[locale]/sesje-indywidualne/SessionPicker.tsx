@@ -98,19 +98,30 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
     })();
   }, [userEmail]);
 
-  // Derive sessions
-  const soloSession = sessions.find(s => s.sessionType === 'natalia_solo');
-  const assistantSessions = sessions.filter(
-    s => s.sessionType === 'natalia_agata' || s.sessionType === 'natalia_justyna'
-  );
-  const paraSession = sessions.find(s => s.sessionType === 'natalia_para') ?? {
+  // Derive sessions — PL uses classic types; non-PL uses natalia_interpreter_* variants.
+  // Non-PL clients see sessions with the translator for their locale (set at slot level).
+  const isInterpreterLocale = locale !== 'pl';
+
+  const soloSession = isInterpreterLocale
+    ? sessions.find(s => s.sessionType === 'natalia_interpreter_solo')
+    : sessions.find(s => s.sessionType === 'natalia_solo');
+
+  const assistantSessions = isInterpreterLocale
+    ? sessions.filter(s => s.sessionType === 'natalia_interpreter_asysta')
+    : sessions.filter(
+        s => s.sessionType === 'natalia_agata' || s.sessionType === 'natalia_justyna'
+      );
+
+  const paraSession = (isInterpreterLocale
+    ? sessions.find(s => s.sessionType === 'natalia_interpreter_para')
+    : sessions.find(s => s.sessionType === 'natalia_para')) ?? {
     slug: PRODUCT_SLUGS.SESSION_PARA,
     name: SESSION_CONFIG.natalia_para.label,
     description: 'Sesja dla dwóch osób z Natalią',
     amount: 160000,
     currency: 'pln',
     priceId: '',
-    sessionType: 'natalia_para',
+    sessionType: isInterpreterLocale ? 'natalia_interpreter_para' : 'natalia_para',
   };
   // Representative assistant price (same for both)
   const assistantPrice = assistantSessions[0]?.amount ?? 0;
@@ -124,11 +135,59 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
     return null;
   }, [selectedGroup, selectedAssistant, soloSession, assistantSessions, paraSession]);
 
-  // Load available slots when session type changes
+  // Load available slots when session type changes.
+  // Interpreter session types use the multi-staff intersection endpoint
+  // (/api/booking/available-slots). Classic PL types use the legacy monthly endpoint.
   useEffect(() => {
     if (!selectedSession) { setSlots([]); setSelectedSlotId(null); return; }
 
     setLoadingSlots(true);
+    const st = selectedSession.sessionType;
+    const isInterpreter =
+      st === 'natalia_interpreter_solo' ||
+      st === 'natalia_interpreter_asysta' ||
+      st === 'natalia_interpreter_para';
+
+    if (isInterpreter) {
+      const from = new Date().toISOString().slice(0, 10);
+      const toDate = new Date();
+      toDate.setDate(toDate.getDate() + 90);
+      const to = toDate.toISOString().slice(0, 10);
+      const params = new URLSearchParams({
+        session_type: st,
+        locale,
+        from,
+        to,
+      });
+      if (st === 'natalia_interpreter_asysta' && selectedAssistant) {
+        // selectedAssistant is a product slug like "sesja-natalia-agata"; for interpreter flow
+        // the UI sub-pick may also encode operator slug directly. Attempt best-effort mapping.
+        const op = selectedAssistant.includes('agata') ? 'agata'
+          : selectedAssistant.includes('justyna') ? 'justyna'
+          : null;
+        if (op) params.set('operator', op);
+      }
+
+      fetch(`/api/booking/available-slots?${params.toString()}`)
+        .then(r => r.json())
+        .then(data => {
+          const list: SlotInfo[] = (data.slots ?? []).map((s: any, idx: number) => ({
+            id: s.id ?? `gen-${s.slot_date}-${s.start_time}-${idx}`,
+            slot_date: s.slot_date,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            session_type: s.session_type,
+            status: 'available',
+          }));
+          setSlots(list);
+          setSelectedSlotId(null);
+          setLoadingSlots(false);
+        })
+        .catch(() => setLoadingSlots(false));
+      return;
+    }
+
+    // Legacy PL path
     const now = new Date();
     const monthPromises = [];
     for (let i = 0; i < 3; i++) {
@@ -168,7 +227,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
         setLoadingSlots(false);
       })
       .catch(() => setLoadingSlots(false));
-  }, [selectedSession?.sessionType]);
+  }, [selectedSession?.sessionType, selectedAssistant, locale]);
 
   const slotsByDate = useMemo(() => {
     const map = new Map<string, SlotInfo[]>();

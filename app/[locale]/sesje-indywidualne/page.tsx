@@ -16,8 +16,19 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: t('title') };
 }
 
-async function getIndividualSessions() {
+async function getIndividualSessions(locale: string) {
   const supabase = await createSupabaseServer();
+
+  // PL shows classic variants; non-PL shows interpreter variants.
+  // Interpreter products live under PRODUCT_SLUGS.SESSION_INTERPRETER (seed in separate PR).
+  const slugs = locale === 'pl'
+    ? [
+        PRODUCT_SLUGS.SESSION_1ON1,
+        PRODUCT_SLUGS.SESSION_AGATA,
+        PRODUCT_SLUGS.SESSION_JUSTYNA,
+        PRODUCT_SLUGS.SESSION_PARA,
+      ]
+    : [PRODUCT_SLUGS.SESSION_INTERPRETER];
 
   const { data: products } = await supabase
     .from('products')
@@ -25,12 +36,7 @@ async function getIndividualSessions() {
       id, name, slug, description, metadata,
       prices ( id, stripe_price_id, amount, currency )
     `)
-    .in('slug', [
-      PRODUCT_SLUGS.SESSION_1ON1,
-      PRODUCT_SLUGS.SESSION_AGATA,
-      PRODUCT_SLUGS.SESSION_JUSTYNA,
-      PRODUCT_SLUGS.SESSION_PARA
-    ])
+    .in('slug', slugs)
     .eq('is_active', true);
 
   return products || [];
@@ -41,7 +47,7 @@ export default async function IndividualSessionsPage({ params }: { params: Promi
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'Individual' });
 
-  const sessions = await getIndividualSessions();
+  const sessions = await getIndividualSessions(locale);
 
   // Transform for client component — pick price matching locale currency
   const currency = LOCALE_CURRENCY[locale] || 'pln';

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('booking_slots')
-    .select('*')
+    .select('*, translator:staff_members!booking_slots_translator_id_fkey(id, name, slug, locale)')
     .order('slot_date', { ascending: true })
     .order('start_time', { ascending: true })
     .limit(200);

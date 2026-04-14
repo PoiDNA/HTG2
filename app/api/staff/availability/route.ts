@@ -134,12 +134,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Auto-generate booking_slots for next 8 weeks
-  const created = await generateSlotsForRule(supabase, {
-    day_of_week,
-    start_time,
-    solo_only: solo_only ?? false,
-  });
+  // Auto-generate booking_slots only for the practitioner (Natalia).
+  // Assistants and translators contribute availability for intersection;
+  // their rules do not spawn standalone slots.
+  let created = 0;
+  if (staffMember.role === 'practitioner') {
+    created = await generateSlotsForRule(supabase, {
+      day_of_week,
+      start_time,
+      solo_only: solo_only ?? false,
+    });
+  }
 
   return NextResponse.json({ rule, slots_created: created });
 }

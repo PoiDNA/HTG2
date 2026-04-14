@@ -27,25 +27,40 @@ import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
 const SESSION_TYPES_CONFIG = [
-  { key: 'all',              label: 'Wszystkie',      short: 'Wszystkie', className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
-  { key: 'natalia_solo',    label: 'Sesje 1:1',        short: '1:1',       className: 'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-300' },
-  { key: 'natalia_asysta',  label: 'Sesje z Asystą',   short: 'Asysta',    className: 'bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300' },
-  { key: 'natalia_justyna', label: 'Sesje z Justyną',  short: 'Justyna',   className: 'bg-rose-200 text-rose-900 dark:bg-rose-900/40 dark:text-rose-300' },
-  { key: 'natalia_agata',   label: 'Sesje z Agatą',    short: 'Agata',     className: 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-300' },
-  { key: 'natalia_przemek', label: 'Sesje z Przemkiem', short: 'Przemek',   className: 'bg-sky-200 text-sky-900 dark:bg-sky-900/40 dark:text-sky-300' },
-  { key: 'natalia_para',    label: 'Sesje dla Par',    short: 'Para',      className: 'bg-pink-200 text-pink-900 dark:bg-pink-900/40 dark:text-pink-300' },
+  { key: 'all',                       label: 'Wszystkie',           short: 'Wszystkie',  className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
+  { key: 'natalia_solo',              label: 'Sesje 1:1',            short: '1:1',        className: 'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  { key: 'natalia_asysta',            label: 'Sesje z Asystą',       short: 'Asysta',     className: 'bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300' },
+  { key: 'natalia_justyna',           label: 'Sesje z Justyną',      short: 'Justyna',    className: 'bg-rose-200 text-rose-900 dark:bg-rose-900/40 dark:text-rose-300' },
+  { key: 'natalia_agata',             label: 'Sesje z Agatą',        short: 'Agata',      className: 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-300' },
+  { key: 'natalia_przemek',           label: 'Sesje z Przemkiem',    short: 'Przemek',    className: 'bg-sky-200 text-sky-900 dark:bg-sky-900/40 dark:text-sky-300' },
+  { key: 'natalia_para',              label: 'Sesje dla Par',        short: 'Para',       className: 'bg-pink-200 text-pink-900 dark:bg-pink-900/40 dark:text-pink-300' },
+  { key: 'natalia_interpreter_solo',  label: 'Interpreter Solo',     short: 'Interp.1:1', className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
+  { key: 'natalia_interpreter_asysta',label: 'Interpreter z Asystą', short: 'Interp.A',   className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
+  { key: 'natalia_interpreter_para',  label: 'Interpreter Para',     short: 'Interp.P',   className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
 ] as const;
 
 type TypeKey = typeof SESSION_TYPES_CONFIG[number]['key'];
 
 const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
-  natalia_solo:    { className: 'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-300' },
-  natalia_agata:   { className: 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-300' },
-  natalia_justyna: { className: 'bg-rose-200 text-rose-900 dark:bg-rose-900/40 dark:text-rose-300' },
-  natalia_przemek: { className: 'bg-sky-200 text-sky-900 dark:bg-sky-900/40 dark:text-sky-300' },
-  natalia_para:    { className: 'bg-pink-200 text-pink-900 dark:bg-pink-900/40 dark:text-pink-300' },
-  natalia_asysta:  { className: 'bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300' },
+  natalia_solo:               { className: 'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  natalia_agata:              { className: 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-300' },
+  natalia_justyna:            { className: 'bg-rose-200 text-rose-900 dark:bg-rose-900/40 dark:text-rose-300' },
+  natalia_przemek:            { className: 'bg-sky-200 text-sky-900 dark:bg-sky-900/40 dark:text-sky-300' },
+  natalia_para:               { className: 'bg-pink-200 text-pink-900 dark:bg-pink-900/40 dark:text-pink-300' },
+  natalia_asysta:             { className: 'bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300' },
+  natalia_interpreter_solo:   { className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
+  natalia_interpreter_asysta: { className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
+  natalia_interpreter_para:   { className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
 };
+
+const INTERPRETER_TYPES = new Set(['natalia_interpreter_solo', 'natalia_interpreter_asysta', 'natalia_interpreter_para']);
+
+// Translator slugs → label (seeded by migration 074)
+const TRANSLATORS = [
+  { slug: 'melania',    name: 'Melania (EN)',    locale: 'en' },
+  { slug: 'bernadetta', name: 'Bernadetta (DE)', locale: 'de' },
+  { slug: 'edytap',     name: 'Edyta (PT)',      locale: 'pt' },
+] as const;
 
 const DAY_NAMES_SHORT = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 function getDayShort(dateStr: string): string {
@@ -81,6 +96,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
   const [selectedUser, setSelectedUser] = useState<UserSuggestion | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [sessionType, setSessionType] = useState<string>('natalia_solo');
+  const [translatorSlug, setTranslatorSlug] = useState<string>('melania');
   const [slotDate, setSlotDate] = useState(() => {
     // Default to today in YYYY-MM-DD (Warsaw timezone)
     return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
@@ -90,6 +106,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInterpreter = INTERPRETER_TYPES.has(sessionType);
 
   const fetchSuggestions = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -163,6 +180,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
           slotDate,
           startTime,
           paymentStatus,
+          ...(isInterpreter && { translatorSlug }),
         }),
       });
       const data = await res.json();
@@ -227,6 +245,19 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
               ))}
             </select>
           </div>
+
+          {/* Translator — visible only for interpreter session types */}
+          {isInterpreter && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-htg-fg">Tłumacz</label>
+              <select value={translatorSlug} onChange={e => setTranslatorSlug(e.target.value)}
+                className="w-full px-3 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-sm text-htg-fg focus:outline-none focus:ring-2 focus:ring-htg-indigo/40">
+                {TRANSLATORS.map(tr => (
+                  <option key={tr.slug} value={tr.slug}>{tr.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Date + Time */}
           <div className="grid grid-cols-2 gap-3">

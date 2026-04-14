@@ -67,12 +67,39 @@ export const SESSION_CONFIG: Record<SessionType, {
     color: 'bg-purple-600',
   },
   natalia_interpreter: {
-    label: 'Session with interpreter',
-    labelShort: 'Natalia + interpreter',
+    // DEPRECATED legacy type (120 min). Kept in the enum to support historic
+    // bookings. New flow uses natalia_interpreter_{solo,asysta,para} (180 min).
+    label: 'Session with interpreter (legacy)',
+    labelShort: 'Natalia + interpreter (legacy)',
     durationMinutes: 120,
-    pricePln: 0,  // EN/DE/PT have their own prices in EUR/USD
+    pricePln: 0,
     requiredStaff: ['natalia'],
     color: 'bg-htg-warm',
+  },
+  natalia_interpreter_solo: {
+    label: 'Session with interpreter',
+    labelShort: 'Natalia + interpreter',
+    durationMinutes: 180,
+    pricePln: 0,  // EN/DE/PT have their own prices in EUR/USD via sessions table
+    requiredStaff: ['natalia'],
+    color: 'bg-htg-warm',
+  },
+  natalia_interpreter_asysta: {
+    label: 'Session with assistance + interpreter',
+    labelShort: 'Assistance + interpreter',
+    durationMinutes: 180,
+    pricePln: 0,
+    requiredStaff: ['natalia'],  // assistant_id picked at slot level
+    color: 'bg-amber-600',
+  },
+  natalia_interpreter_para: {
+    label: 'Couples session with interpreter',
+    labelShort: 'Couples + interpreter',
+    durationMinutes: 180,
+    pricePln: 0,
+    requiredStaff: ['natalia'],
+    color: 'bg-rose-600',
+    maxClients: 2,
   },
 };
 
@@ -92,9 +119,35 @@ export const PRODUCT_SLUGS = {
   SESSION_AGATA:       'sesja-natalia-agata',
   SESSION_JUSTYNA:     'sesja-natalia-justyna',
   SESSION_PARA:        'sesja-natalia-para',
+  SESSION_INTERPRETER: 'sesja-natalia-tlumacz',
 } as const;
 
-export const ALL_SESSION_TYPES: SessionType[] = ['natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_przemek', 'natalia_para', 'natalia_asysta', 'natalia_interpreter'];
+// Includes all session types ever used (including deprecated `natalia_interpreter`)
+// for historic reporting. UI should iterate BOOKABLE_SESSION_TYPES instead.
+export const ALL_SESSION_TYPES: SessionType[] = [
+  'natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_przemek',
+  'natalia_para', 'natalia_asysta',
+  'natalia_interpreter',  // deprecated — kept for historic bookings
+  'natalia_interpreter_solo', 'natalia_interpreter_asysta', 'natalia_interpreter_para',
+];
+
+// Session types that can be newly booked via SessionPicker / booking flow.
+// Excludes deprecated `natalia_interpreter` and `pre_session` (separate flow).
+export const BOOKABLE_SESSION_TYPES: SessionType[] = [
+  'natalia_solo', 'natalia_agata', 'natalia_justyna', 'natalia_przemek',
+  'natalia_para', 'natalia_asysta',
+  'natalia_interpreter_solo', 'natalia_interpreter_asysta', 'natalia_interpreter_para',
+];
+
+// Interpreter variant session types (180 min, require translator_id).
+export const INTERPRETER_SESSION_TYPES: SessionType[] = [
+  'natalia_interpreter_solo', 'natalia_interpreter_asysta', 'natalia_interpreter_para',
+];
+
+export function isInterpreterSessionType(t: SessionType): boolean {
+  return INTERPRETER_SESSION_TYPES.includes(t);
+}
+
 export const PRE_SESSION_DURATION = 15;
 
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {

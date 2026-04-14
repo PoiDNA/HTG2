@@ -71,7 +71,7 @@ const PRODUCTS = [
     slug: 'sesja-natalia-tlumacz',
     description: 'Indywidualna sesja z Natalią z tłumaczem (EN/DE/PT). 180 minut.',
     type: 'individual_session' as const,
-    stripe_product_id: null, // TODO: fill after Stripe setup (one product, 2 prices: USD + EUR)
+    stripe_product_id: 'prod_UKjuklKlcizbqk',
     is_active: true,
     metadata: { session_type: 'natalia_interpreter', valid_months: 6 },
   },
@@ -103,15 +103,15 @@ const PRICES = [
   },
   {
     product_slug: 'sesja-natalia-tlumacz',
-    stripe_price_id: 'price_placeholder_interpreter_usd', // TODO: replace with Stripe price ID
-    amount: 0, // TODO: set USD amount in cents after Stripe product creation
+    stripe_price_id: 'price_1TM4RxKwJfb68PaVRKiJsBUM',
+    amount: 83000, // $830 USD
     currency: 'usd',
     interval: null,
   },
   {
     product_slug: 'sesja-natalia-tlumacz',
-    stripe_price_id: 'price_placeholder_interpreter_eur', // TODO: replace with Stripe price ID
-    amount: 0, // TODO: set EUR amount in cents after Stripe product creation
+    stripe_price_id: 'price_1TM4RxKwJfb68PaVKlQF1yaW',
+    amount: 71000, // €710 EUR
     currency: 'eur',
     interval: null,
   },

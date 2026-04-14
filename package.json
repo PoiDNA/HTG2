@@ -11,7 +11,9 @@
     "test:watch": "vitest",
     "migrate:wix": "npx tsx scripts/migrate-wix.ts",
     "migrate:wix:dry": "npx tsx scripts/migrate-wix.ts --dry-run",
-    "seed:products": "npx tsx scripts/seed-products.ts"
+    "seed:products": "npx tsx scripts/seed-products.ts",
+    "review": "tsx scripts/review.ts --staged",
+    "review:deep": "tsx scripts/review.ts --staged --mode deep"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",

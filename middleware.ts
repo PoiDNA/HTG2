@@ -299,7 +299,7 @@ export async function middleware(request: NextRequest) {
   const internalPath = toInternalPath(withoutLocale);
   const isKontoPath = internalPath.startsWith('/konto');
   const isZgodyPath = internalPath.startsWith('/konto/zgody');
-  const isAdminPath = internalPath.startsWith('/konto/admin') || internalPath.startsWith('/prowadzacy') || internalPath.startsWith('/konto/tlumacz');
+  const isAdminPath = internalPath.startsWith('/konto/admin') || internalPath.startsWith('/prowadzacy') || internalPath.startsWith('/konto/tlumacz') || internalPath.startsWith('/tlumacz');
 
   if (isKontoPath && !isZgodyPath && !isAdminPath && !isPortal) {
     try {

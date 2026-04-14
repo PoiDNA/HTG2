@@ -1,0 +1,85 @@
+import { setRequestLocale } from 'next-intl/server';
+import { locales, Link, redirect } from '@/i18n-config';
+import { createSupabaseServer } from '@/lib/supabase/server';
+import { isTranslatorEmail, isAdminEmail, TRANSLATOR_LOCALE } from '@/lib/roles';
+import { LayoutDashboard, Calendar, Presentation, Users, Languages } from 'lucide-react';
+
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }));
+}
+
+const LOCALE_LABELS: Record<string, string> = {
+  en: 'Angielski',
+  de: 'Niemiecki',
+  pt: 'Portugalski',
+};
+
+export default async function TranslatorLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const sessionClient = await createSupabaseServer();
+  const { data: { user } } = await sessionClient.auth.getUser();
+
+  if (!user) return redirect({ href: '/login', locale });
+
+  const email = user.email ?? '';
+  const isTranslator = isTranslatorEmail(email);
+  const isAdmin = isAdminEmail(email);
+
+  if (!isTranslator && !isAdmin) {
+    return redirect({ href: '/konto', locale });
+  }
+
+  const assignedLocale = TRANSLATOR_LOCALE[email.toLowerCase()] ?? null;
+  const localeLabel = assignedLocale ? LOCALE_LABELS[assignedLocale] ?? assignedLocale.toUpperCase() : null;
+
+  const navItems = [
+    { href: '/tlumacz' as const,          label: 'Dashboard',    icon: LayoutDashboard },
+    { href: '/tlumacz/sesje' as const,    label: 'Moje sesje',   icon: Presentation },
+    { href: '/tlumacz/grafik' as const,   label: 'Grafik',       icon: Calendar },
+    { href: '/tlumacz/klienci' as const,  label: 'Moi klienci',  icon: Users },
+  ];
+
+  return (
+    <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="flex items-center gap-3 mb-8">
+        <Languages className="w-7 h-7 text-htg-indigo shrink-0" />
+        <div>
+          <h1 className="text-3xl font-serif font-bold text-htg-fg">Panel Tłumacza</h1>
+          <p className="text-sm text-htg-fg-muted">
+            {email}
+            {localeLabel && <> &mdash; język: <span className="font-medium">{localeLabel}</span></>}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-8">
+        <nav className="md:w-56 shrink-0">
+          <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+            {navItems.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors whitespace-nowrap"
+              >
+                <Icon className="w-5 h-5 shrink-0" />
+                {label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+
+        <div className="flex-grow min-w-0">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}

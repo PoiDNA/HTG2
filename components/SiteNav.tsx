@@ -5,26 +5,32 @@ import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail, User } from 'lucide-react';
+import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail, User, Library, Globe, Presentation } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
 import { NotificationBell } from './community/NotificationBell';
 import LocaleSwitcher from './LocaleSwitcher';
 
-const menuItems = [
-  { href: '/konto/sesje-indywidualne', label: 'Umów Sesję', icon: CalendarDays },
+// Top-left account section (after email): updates + contact center
+const accountMenuItems = [
+  { href: '/konto/aktualizacja', label: 'Aktualizacje', icon: RefreshCw },
+  { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', icon: Mail },
+] as const;
+
+// User menu: main navigation for every logged-in user
+const userMenuItems = [
+  { href: '/konto', label: 'Nagrania', icon: Library },
+  { href: '/konto/sesje-indywidualne', label: 'Umów sesję', icon: CalendarDays },
+  { href: '/spolecznosc', label: 'Społeczność', icon: Globe },
   { href: '/konto/polubieni', label: 'Twoi Znajomi', icon: Users },
   { href: '/konto/podarowane-sesje', label: 'Podarowane Sesje', icon: Gift },
-  { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw },
-  { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', icon: Mail },
 ] as const;
 
 export default function SiteNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const tPanel = useTranslations('PanelNav');
   const tNav = useTranslations('Nav');
   const pathname = usePathname();
   const router = useRouter();
@@ -91,13 +97,30 @@ export default function SiteNav() {
                   </div>
                 </div>
 
-                {/* Menu items */}
-                {menuItems.map(({ href, label, icon: Icon }) => (
+                {/* Account section: Aktualizacje + Centrum Kontaktu */}
+                {accountMenuItems.map(({ href, label, icon: Icon }) => (
                   <Link
                     key={href}
                     href={href}
                     className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
                       pathname.includes(href)
+                        ? 'text-htg-fg bg-htg-surface'
+                        : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {label}
+                  </Link>
+                ))}
+
+                {/* User menu section */}
+                <div className="border-t border-htg-card-border my-1.5" />
+                {userMenuItems.map(({ href, label, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                      pathname === href || pathname.startsWith(href + '/')
                         ? 'text-htg-fg bg-htg-surface'
                         : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'
                     }`}
@@ -113,12 +136,14 @@ export default function SiteNav() {
                     <div className="border-t border-htg-card-border my-1.5" />
                     {isAdmin && (
                       <Link href="/konto/admin" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface">
+                        <Presentation className="w-4 h-4 shrink-0" />
                         Admin
                       </Link>
                     )}
                     {isStaff && !isAdmin && (
                       <Link href="/prowadzacy" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface">
-                        Panel prowadzącego
+                        <Presentation className="w-4 h-4 shrink-0" />
+                        Operator
                       </Link>
                     )}
                   </>
@@ -163,36 +188,32 @@ export default function SiteNav() {
               </div>
             )}
 
-            {/* Main nav */}
-            <MobileLink href="/konto" label={tNav('recordings')} pathname={pathname} onClick={() => setMobileOpen(false)} />
-            <MobileLink href="/konto/sesje-indywidualne" label={tNav('individual')} pathname={pathname} onClick={() => setMobileOpen(false)} />
-            <MobileLink href="/spolecznosc" label={tNav('community')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+            {/* Account section: Aktualizacje + Centrum Kontaktu */}
+            {isLoggedIn && accountMenuItems.map(({ href, label }) => (
+              <MobileLink key={href} href={href} label={label} pathname={pathname} onClick={() => setMobileOpen(false)} />
+            ))}
 
-            {/* Menu items */}
+            {/* User menu */}
             {isLoggedIn && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
-                {menuItems.map(({ href, label }) => (
+                {userMenuItems.map(({ href, label }) => (
                   <MobileLink key={href} href={href} label={label} pathname={pathname} onClick={() => setMobileOpen(false)} />
                 ))}
               </>
             )}
 
-            {/* Admin/Staff */}
+            {/* Admin/Operator link */}
             {isAdmin && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
-                <p className="px-4 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">Admin</p>
-                <MobileLink href="/konto/admin" label={tPanel('admin_panel')} pathname={pathname} onClick={() => setMobileOpen(false)} />
-                <MobileLink href="/konto/admin/kalendarz" label={tPanel('admin_calendar')} pathname={pathname} onClick={() => setMobileOpen(false)} />
-                <MobileLink href="/konto/admin/uzytkownicy" label={tPanel('admin_users')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+                <MobileLink href="/konto/admin" label="Admin" pathname={pathname} onClick={() => setMobileOpen(false)} />
               </>
             )}
             {isStaff && !isAdmin && (
               <>
                 <div className="border-t border-htg-card-border my-2" />
-                <MobileLink href="/prowadzacy" label={tPanel('staff_panel')} pathname={pathname} onClick={() => setMobileOpen(false)} />
-                <MobileLink href="/prowadzacy/grafik" label={tPanel('staff_schedule')} pathname={pathname} onClick={() => setMobileOpen(false)} />
+                <MobileLink href="/prowadzacy" label="Operator" pathname={pathname} onClick={() => setMobileOpen(false)} />
               </>
             )}
 

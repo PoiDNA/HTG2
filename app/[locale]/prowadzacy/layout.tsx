@@ -4,7 +4,7 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { stopImpersonation } from '@/lib/admin/impersonate';
-import { LayoutDashboard, Calendar, Presentation, Users, Video, ArrowLeft, Eye, MonitorPlay, BarChart2, Users2 } from 'lucide-react';
+import { LayoutDashboard, Calendar, Presentation, Users, ArrowLeft, Eye } from 'lucide-react';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -26,9 +26,8 @@ export default async function StaffLayout({
   if (!user) return redirect({href: '/login', locale});
 
   const isAdmin = isAdminEmail(user.email ?? '');
-  const isAdminOrMod = isAdmin || false; // admin always allowed
 
-  if (!staffMember && !isAdminOrMod) {
+  if (!staffMember && !isAdmin) {
     return redirect({href: '/konto', locale});
   }
 
@@ -39,32 +38,11 @@ export default async function StaffLayout({
       ? t('role_assistant')
       : t('role_admin');
 
-  const isAssistant = staffMember?.role === 'assistant';
-  // Stats visible only to admin and practitioner (Natalia), not assistants
-  const canSeeStats = isAdmin || staffMember?.role === 'practitioner';
-
-  const isPractitioner = staffMember?.role === 'practitioner';
-
   const navItems = [
     { href: '/prowadzacy' as const, label: t('dashboard'), icon: LayoutDashboard },
     { href: '/prowadzacy/sesje' as const, label: t('sessions'), icon: Presentation },
     { href: '/prowadzacy/grafik' as const, label: t('schedule'), icon: Calendar },
     { href: '/prowadzacy/klienci' as const, label: t('clients'), icon: Users },
-    // Items below only for assistants and admin (not practitioner/Natalia)
-    ...(!isPractitioner ? [
-      { href: '/konto/nagrania-klienta' as const, label: 'Nagrania przed/po', icon: Video },
-      { href: '/prowadzacy/symulator' as const, label: 'Symulator sesji', icon: MonitorPlay },
-      { href: '/prowadzacy/symulator-live' as const, label: 'Symulator live', icon: MonitorPlay },
-    ] : []),
-    ...(canSeeStats && !isPractitioner ? [{ href: '/prowadzacy/statystyki' as const, label: 'Statystyki odtworzeń', icon: BarChart2 }] : []),
-    ...(!isPractitioner ? [
-      { href: '/prowadzacy/spotkania-htg' as const, label: 'Spotkania HTG', icon: Users2 },
-    ] : []),
-    ...(canSeeStats && !isPractitioner ? [{ href: '/prowadzacy/spotkania-htg/profile-uczestnikow' as const, label: 'Profile uczestników', icon: BarChart2 }] : []),
-    ...(!isPractitioner ? [
-      { href: '/prowadzacy/spotkania-htg/symulator' as const, label: 'Symulator spotkania', icon: MonitorPlay },
-      { href: '/prowadzacy/spotkania-htg/odtwarzacz-symulator' as const, label: 'Symulator odtwarzacza', icon: MonitorPlay },
-    ] : []),
   ];
 
   return (
@@ -95,6 +73,7 @@ export default async function StaffLayout({
 
       <div className="flex flex-col md:flex-row gap-8">
         <nav className="md:w-56 shrink-0">
+          <p className="hidden md:block px-4 mb-2 text-xs font-semibold text-htg-fg-muted uppercase tracking-wider">Panel</p>
           <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
             {navItems.map(({ href, label, icon: Icon }) => (
               <Link

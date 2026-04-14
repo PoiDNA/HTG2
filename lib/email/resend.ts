@@ -288,6 +288,45 @@ export async function sendInvitationEmail(to: string, data: {
   });
 }
 
+export async function sendTranslatorBookingNotification(to: string, data: {
+  translatorName: string;
+  clientName: string;
+  sessionType: string;
+  date: string;
+  time: string;
+}) {
+  return getResend().emails.send({
+    from: FROM_EMAIL,
+    to,
+    replyTo: REPLY_TO,
+    subject: `Nowa sesja zarezerwowana — ${data.date} ${data.time}`,
+    html: `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; color: #1a1a2e;">
+        <div style="background: #1a1a2e; padding: 32px; text-align: center;">
+          <h1 style="color: #c9b97a; margin: 0; font-size: 28px;">HTG</h1>
+          <p style="color: #a0a0b0; margin: 8px 0 0;">Hacking The Game</p>
+        </div>
+        <div style="padding: 32px; background: #f8f6f0;">
+          <h2 style="color: #1a1a2e; margin-top: 0;">Nowa sesja z t\u0142umaczeniem</h2>
+          <p>Cze\u015b\u0107 ${escapeHtml(data.translatorName)},</p>
+          <p>Klient zarezerwowa\u0142 sesj\u0119 wymagaj\u0105c\u0105 t\u0142umaczenia. B\u0119dziesz potrzebny/a na tej sesji.</p>
+          <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Klient:</strong> ${escapeHtml(data.clientName)}</p>
+            <p style="margin: 8px 0 0;"><strong>Typ sesji:</strong> ${escapeHtml(data.sessionType)}</p>
+            <p style="margin: 8px 0 0;"><strong>Data:</strong> ${escapeHtml(data.date)}</p>
+            <p style="margin: 8px 0 0;"><strong>Godzina:</strong> ${escapeHtml(data.time)}</p>
+          </div>
+          <p style="color: #666; font-size: 14px;">Sesja pojawi si\u0119 w Twoim grafiku. Je\u015bli masz pytania \u2014 odpowiedz na tego maila.</p>
+          <a href="https://htgcyou.com/pl/tlumacz/grafik" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Tw\u00f3j grafik \u2192</a>
+        </div>
+        <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
+          <p>HTG Operator PSA | htg@htg.cyou</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
 export async function sendInvitationAccepted(to: string, data: {
   inviterName: string;
   newUserName: string;

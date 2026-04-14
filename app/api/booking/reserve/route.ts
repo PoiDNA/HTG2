@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { sendBookingConfirmation } from '@/lib/email/resend';
+import { sendBookingConfirmation, sendTranslatorBookingNotification } from '@/lib/email/resend';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
@@ -68,9 +68,10 @@ export async function POST(request: NextRequest) {
 
     // Send booking confirmation email (non-blocking) — Stripe flow
     try {
-      const { data: slot } = await supabase
+      const db = createSupabaseServiceRole();
+      const { data: slot } = await db
         .from('booking_slots')
-        .select('slot_date, start_time, end_time, session_type')
+        .select('slot_date, start_time, end_time, session_type, translator_id, translator:staff_members!booking_slots_translator_id_fkey(id, name, email)')
         .eq('id', slotId)
         .single();
       const { data: profile } = await supabase
@@ -80,14 +81,30 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (slot && profile?.email) {
+        const sessionLabel = SESSION_CONFIG[slot.session_type as SessionType]?.label || slot.session_type;
+        const dateFormatted = new Date(slot.slot_date + 'T00:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const timeFormatted = slot.start_time.slice(0, 5);
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
+
         await sendBookingConfirmation(profile.email, {
           name: profile.display_name || profile.email.split('@')[0],
-          sessionType: SESSION_CONFIG[slot.session_type as SessionType]?.label || slot.session_type,
-          date: new Date(slot.slot_date + 'T00:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-          time: slot.start_time.slice(0, 5),
+          sessionType: sessionLabel,
+          date: dateFormatted,
+          time: timeFormatted,
           expiresAt,
         });
+
+        // Notify translator if this is an interpreter session
+        const translator = Array.isArray((slot as any).translator) ? (slot as any).translator[0] : (slot as any).translator;
+        if (translator?.email) {
+          await sendTranslatorBookingNotification(translator.email, {
+            translatorName: translator.name,
+            clientName: profile.display_name || profile.email.split('@')[0],
+            sessionType: sessionLabel,
+            date: dateFormatted,
+            time: timeFormatted,
+          });
+        }
       }
     } catch (emailErr) {
       console.error('Booking confirmation email failed:', emailErr);

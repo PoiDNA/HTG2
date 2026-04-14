@@ -125,18 +125,28 @@ export default function SlotsTable() {
                 <th className="py-3 px-4 text-htg-fg-muted font-medium">{t('col_date')}</th>
                 <th className="py-3 px-4 text-htg-fg-muted font-medium">{t('col_time')}</th>
                 <th className="py-3 px-4 text-htg-fg-muted font-medium">{t('col_session_type')}</th>
+                <th className="py-3 px-4 text-htg-fg-muted font-medium hidden sm:table-cell">Tłumacz</th>
                 <th className="py-3 px-4 text-htg-fg-muted font-medium">{t('col_status')}</th>
                 <th className="py-3 px-4 text-htg-fg-muted font-medium">{t('col_actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {slots.map(slot => (
+              {(slots as any[]).map((slot) => (
                 <tr key={slot.id} className="border-b border-htg-card-border last:border-0">
                   <td className="py-3 px-4 text-htg-fg">{slot.slot_date}</td>
                   <td className="py-3 px-4 text-htg-fg-muted">{slot.start_time}–{slot.end_time}</td>
                   <td className="py-3 px-4">
-                    <span className={`inline-block w-2 h-2 rounded-full mr-2 ${SESSION_CONFIG[slot.session_type]?.color ?? ''}`} />
-                    {SESSION_CONFIG[slot.session_type]?.labelShort ?? slot.session_type}
+                    <span className={`inline-block w-2 h-2 rounded-full mr-2 ${SESSION_CONFIG[slot.session_type as SessionType]?.color ?? ''}`} />
+                    {SESSION_CONFIG[slot.session_type as SessionType]?.labelShort ?? slot.session_type}
+                  </td>
+                  <td className="py-3 px-4 hidden sm:table-cell">
+                    {slot.translator ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                        {slot.translator.name} ({slot.translator.locale?.toUpperCase()})
+                      </span>
+                    ) : (
+                      <span className="text-htg-fg-muted text-xs">—</span>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -146,7 +156,7 @@ export default function SlotsTable() {
                       slot.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                       'bg-htg-surface text-htg-fg-muted'
                     }`}>
-                      {t(STATUS_KEY[slot.status])}
+                      {t(STATUS_KEY[slot.status as SlotStatus])}
                     </span>
                   </td>
                   <td className="py-3 px-4 space-x-2">

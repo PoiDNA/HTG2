@@ -66,9 +66,18 @@ const PRODUCTS = [
     is_active: true,
     metadata: { entitlement_type: 'yearly', valid_months: 12 },
   },
+  {
+    name: 'Sesja z tłumaczem',
+    slug: 'sesja-natalia-tlumacz',
+    description: 'Indywidualna sesja z Natalią z tłumaczem (EN/DE/PT). 180 minut.',
+    type: 'individual_session' as const,
+    stripe_product_id: null, // TODO: fill after Stripe setup (one product, 2 prices: USD + EUR)
+    is_active: true,
+    metadata: { session_type: 'natalia_interpreter', valid_months: 6 },
+  },
 ];
 
-// Prices — amounts in grosz (1 PLN = 100 grosz)
+// Prices — amounts in grosz/cents (1 PLN = 100 grosz, 1 USD = 100 cents, 1 EUR = 100 cents)
 // TODO: Update amounts and stripe_price_id after Stripe setup
 const PRICES = [
   {
@@ -91,6 +100,20 @@ const PRICES = [
     amount: 300000, // 3000 PLN (10 months × 300)
     currency: 'pln',
     interval: 'year' as const,
+  },
+  {
+    product_slug: 'sesja-natalia-tlumacz',
+    stripe_price_id: 'price_placeholder_interpreter_usd', // TODO: replace with Stripe price ID
+    amount: 0, // TODO: set USD amount in cents after Stripe product creation
+    currency: 'usd',
+    interval: null,
+  },
+  {
+    product_slug: 'sesja-natalia-tlumacz',
+    stripe_price_id: 'price_placeholder_interpreter_eur', // TODO: replace with Stripe price ID
+    amount: 0, // TODO: set EUR amount in cents after Stripe product creation
+    currency: 'eur',
+    interval: null,
   },
 ];
 

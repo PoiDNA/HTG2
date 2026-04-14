@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const {
     userId, sessionType, slotDate, startTime, endTime, paymentStatus, topics,
-    assistantId, translatorId,
+    assistantId, translatorId, translatorSlug,
   } = await req.json();
 
   if (!userId || !sessionType || !slotDate || !startTime) {
@@ -43,23 +43,29 @@ export async function POST(req: NextRequest) {
     endNorm = `${String(Math.floor(totalMin / 60) % 24).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}:00`;
   }
 
-  // Resolve translator + locale if provided (interpreter sessions)
+  // Resolve translator — accept either translatorId (UUID) or translatorSlug.
+  let resolvedTranslatorId: string | null = translatorId || null;
   let interpreterLocale: string | null = null;
-  if (translatorId) {
+  if (!resolvedTranslatorId && translatorSlug) {
+    const { data: tBySlug } = await db
+      .from('staff_members')
+      .select('id, role, locale, is_active')
+      .eq('slug', translatorSlug)
+      .single();
+    if (tBySlug) resolvedTranslatorId = tBySlug.id;
+  }
+  if (resolvedTranslatorId) {
     const { data: t } = await db
       .from('staff_members')
       .select('role, locale, is_active')
-      .eq('id', translatorId)
+      .eq('id', resolvedTranslatorId)
       .single();
     if (!t || t.role !== 'translator' || !t.is_active) {
       return NextResponse.json({ error: 'Invalid translator' }, { status: 400 });
     }
     interpreterLocale = t.locale;
   }
-  if (isInterpreterSessionType(sessionType as SessionType) && !translatorId) {
-    // Admin is allowed to create interpreter slots without translator (assign later),
-    // but in that case interpreter_locale stays NULL.
-  }
+  // Admin may create interpreter slot without translator (assign later) — interpreterLocale stays NULL.
 
   // Create booking_slot (is_extra=true: manual admin override)
   const { data: slot, error: slotErr } = await db
@@ -72,7 +78,7 @@ export async function POST(req: NextRequest) {
       status: 'booked',
       is_extra: true,
       assistant_id: assistantId || null,
-      translator_id: translatorId || null,
+      translator_id: resolvedTranslatorId,
     })
     .select('id')
     .single();

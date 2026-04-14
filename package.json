@@ -11,7 +11,9 @@
     "test:watch": "vitest",
     "migrate:wix": "npx tsx scripts/migrate-wix.ts",
     "migrate:wix:dry": "npx tsx scripts/migrate-wix.ts --dry-run",
-    "seed:products": "npx tsx scripts/seed-products.ts"
+    "seed:products": "npx tsx scripts/seed-products.ts",
+    "review": "tsx scripts/review.ts --staged",
+    "review:deep": "tsx scripts/review.ts --staged --mode deep"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",
@@ -55,6 +57,7 @@
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^4.1.3",
     "tailwindcss": "^4.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vitest": "^4.1.3"
   }

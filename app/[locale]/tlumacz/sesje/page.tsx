@@ -2,7 +2,8 @@ import { setRequestLocale } from 'next-intl/server';
 import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { Presentation, Calendar } from 'lucide-react';
+import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
+import { Presentation, Calendar, Users } from 'lucide-react';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
@@ -23,6 +24,30 @@ export default async function TranslatorSessionsPage({
   if (!user) return null;
 
   const db = createSupabaseServiceRole();
+
+  // Fetch staff member to know translator_id and locale for "available with me"
+  const { staffMember } = await getEffectiveStaffMember();
+  const translatorLocale = (staffMember as any)?.locale ?? locale;
+  const translatorId = staffMember?.id ?? null;
+
+  // Available-with-me: natalia_interpreter_solo slots where translator_id = me (next 28 days)
+  const todayForSlots = new Date().toISOString().split('T')[0];
+  const inFourWeeks = new Date(); inFourWeeks.setDate(inFourWeeks.getDate() + 28);
+  const toDateForSlots = inFourWeeks.toISOString().split('T')[0];
+
+  let availableWithMe: any[] = [];
+  if (translatorId) {
+    const { data: avSlots } = await db
+      .from('booking_slots')
+      .select('id, slot_date, start_time, end_time, session_type')
+      .eq('session_type', `natalia_interpreter_solo`)
+      .eq('translator_id', translatorId)
+      .eq('status', 'available')
+      .gte('slot_date', todayForSlots)
+      .lte('slot_date', toDateForSlots)
+      .order('slot_date').order('start_time');
+    availableWithMe = avSlots || [];
+  }
   const todayStr = new Date().toISOString().split('T')[0];
 
   const { data: rawBookings } = await db
@@ -133,6 +158,39 @@ export default async function TranslatorSessionsPage({
           </div>
         </div>
       )}
+
+      {/* Dostępne ze mną */}
+      <div>
+        <h3 className="text-sm font-semibold text-htg-fg-muted uppercase tracking-wide mb-3 flex items-center gap-2">
+          <Users className="w-4 h-4" />
+          Dostępne ze mną ({availableWithMe.length})
+        </h3>
+        <p className="text-xs text-htg-fg-muted mb-3">
+          Terminy Natalii w Twoim języku ({translatorLocale.toUpperCase()}), dostępne do zakupu przez klientów.
+        </p>
+        {availableWithMe.length === 0 ? (
+          <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">
+            <Users className="w-10 h-10 text-htg-fg-muted mx-auto mb-3" />
+            <p className="text-htg-fg-muted text-sm">Brak dostępnych terminów w najbliższych 28 dniach.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {availableWithMe.map((slot: any) => {
+              const d = new Date(slot.slot_date + 'T00:00:00');
+              const dayNames = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+              const isToday = slot.slot_date === todayStr;
+              return (
+                <div key={slot.id} className={`bg-htg-card border rounded-lg p-3 text-center ${isToday ? 'border-htg-sage/50 bg-htg-sage/5' : 'border-htg-card-border'}`}>
+                  <p className="text-xs text-htg-fg-muted">{dayNames[d.getDay()]} {slot.slot_date.split('-')[2]}.{slot.slot_date.split('-')[1]}</p>
+                  <p className="text-base font-bold text-htg-fg mt-1">{slot.start_time.slice(0, 5)}</p>
+                  <p className="text-xs text-htg-fg-muted">–{slot.end_time.slice(0, 5)}</p>
+                  {isToday && <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

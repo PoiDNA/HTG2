@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { PRODUCT_SLUGS } from '@/lib/booking/constants';
-import { sendOrderConfirmation, sendPaymentFailedNotification, sendGiftNotification } from '@/lib/email/resend';
+import { sendOrderConfirmation, sendPaymentFailedNotification, sendGiftNotification, sendBookingConfirmation, sendTranslatorBookingNotification, sendAssistantBookingNotification } from '@/lib/email/resend';
+import { SESSION_CONFIG } from '@/lib/booking/constants';
+import type { SessionType } from '@/lib/booking/types';
 
 // ── Pending checkout processor ──────────────────────────────────────────────
 
@@ -225,6 +227,97 @@ export async function POST(request: NextRequest) {
           // ── NEW: pending_checkouts flow ──
           checkoutResult = await processPendingCheckout(db, checkoutId, userId, order.id, lineItems);
         } else if (isFirstInsert) {
+          // ── INDIVIDUAL SESSION: pre-reserved slot confirmation ──
+          const bookingId = session.metadata?.booking_id;
+          if (bookingId) {
+            try {
+              const { data: confirmData } = await db.rpc('confirm_booking_by_payment', {
+                p_booking_id: bookingId,
+              });
+              const confirmResult = Array.isArray(confirmData) ? confirmData[0] : confirmData;
+
+              if (confirmResult?.success) {
+                checkoutResult = 'completed';
+
+                // Send confirmation email + staff notifications after successful payment
+                try {
+                  const { data: booking } = await db
+                    .from('bookings')
+                    .select('user_id, slot_id, session_type')
+                    .eq('id', bookingId)
+                    .single();
+
+                  if (booking) {
+                    const { data: slot } = await db
+                      .from('booking_slots')
+                      .select('slot_date, start_time, session_type, translator_id, assistant_id, translator:staff_members!booking_slots_translator_id_fkey(id, name, email), assistant:staff_members!booking_slots_assistant_id_fkey(id, name, email)')
+                      .eq('id', booking.slot_id)
+                      .single();
+                    const { data: profile } = await db
+                      .from('profiles')
+                      .select('email, display_name')
+                      .eq('id', booking.user_id)
+                      .single();
+
+                    if (slot && profile?.email) {
+                      const sessionType = slot.session_type as SessionType;
+                      const sessionLabel = SESSION_CONFIG[sessionType]?.label || sessionType;
+                      const dateFormatted = new Date(slot.slot_date + 'T00:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                      const timeFormatted = slot.start_time.slice(0, 5);
+                      const clientName = profile.display_name || profile.email.split('@')[0];
+
+                      await sendBookingConfirmation(profile.email, {
+                        name: clientName,
+                        sessionType: sessionLabel,
+                        date: dateFormatted,
+                        time: timeFormatted,
+                        expiresAt: '',
+                      });
+
+                      const translator = Array.isArray((slot as any).translator) ? (slot as any).translator[0] : (slot as any).translator;
+                      if (translator?.email) {
+                        await sendTranslatorBookingNotification(translator.email, {
+                          translatorName: translator.name,
+                          clientName,
+                          sessionType: sessionLabel,
+                          date: dateFormatted,
+                          time: timeFormatted,
+                        });
+                      }
+
+                      const assistant = Array.isArray((slot as any).assistant) ? (slot as any).assistant[0] : (slot as any).assistant;
+                      if (assistant?.email) {
+                        await sendAssistantBookingNotification(assistant.email, {
+                          assistantName: assistant.name,
+                          clientName,
+                          sessionType: sessionLabel,
+                          date: dateFormatted,
+                          time: timeFormatted,
+                        });
+                      }
+                    }
+                  }
+                } catch (notifyErr) {
+                  console.error('[webhook] Post-confirm notifications failed:', notifyErr);
+                }
+              } else if (confirmResult?.message === 'booking_expired_needs_refund') {
+                // Hold expired before payment — flag for manual admin refund
+                console.error('[webhook] NEEDS MANUAL REFUND — booking expired before Stripe payment:', {
+                  bookingId,
+                  paymentIntent: session.payment_intent,
+                  stripeSession: session.id,
+                });
+                checkoutResult = 'completed'; // Mark as processed so webhook doesn't retry indefinitely
+              } else {
+                // Duplicate event, already confirmed, or cancelled — safe to ignore
+                console.warn('[webhook] confirm_booking_by_payment non-success:', confirmResult?.message, bookingId);
+                checkoutResult = 'skipped';
+              }
+            } catch (e) {
+              console.error('[webhook] confirm_booking_by_payment failed:', e);
+              checkoutResult = 'failed';
+            }
+          } else {
           // ── EXISTING: yearly, pre_session, generic (only on first insert) ──
           try {
             const purchaseType = session.metadata?.purchase_type;
@@ -349,6 +442,7 @@ export async function POST(request: NextRequest) {
             console.error('Legacy checkout processing failed:', e);
             checkoutResult = 'failed';
           }
+          } // end else (not bookingId path)
         }
         // else: isFirstInsert=false and no checkoutId → skipped (retry of legacy)
       }

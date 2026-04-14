@@ -24,8 +24,7 @@ async function getIndividualSessions(locale: string) {
   const slugs = locale === 'pl'
     ? [
         PRODUCT_SLUGS.SESSION_1ON1,
-        PRODUCT_SLUGS.SESSION_AGATA,
-        PRODUCT_SLUGS.SESSION_JUSTYNA,
+        PRODUCT_SLUGS.SESSION_ASYSTA,  // unified asysta product (replaces per-operator slugs)
         PRODUCT_SLUGS.SESSION_PARA,
       ]
     : [PRODUCT_SLUGS.SESSION_INTERPRETER];

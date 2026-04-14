@@ -533,219 +533,368 @@ function PractitionerEditor() {
 // ────────────────────────────────────────────
 // Assistant Schedule Editor
 // ────────────────────────────────────────────
+interface AvailableSlotRow {
+  id: string;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  effective_end_time?: string;
+  available_operators?: { id: string; name: string; slug: string }[];
+}
+
+interface MyBookingRow {
+  slot_id: string;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  session_type: string;
+  slot_status: string;
+  booking_id: string;
+  booking_status: string;
+  payment_status: string;
+  topics: string | null;
+  client_name: string;
+  client_email: string | null;
+}
+
+const DAY_LABELS_PL = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+const DAY_LABELS_FULL_PL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+
+const ASSISTANT_TIME_OPTIONS: string[] = [];
+for (let h = 6; h <= 22; h++) {
+  for (const m of [0, 30]) {
+    ASSISTANT_TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+  }
+}
+
 function AssistantEditor() {
   const t = useTranslations('Staff');
-
-  const [availableSlots, setAvailableSlots] = useState<SlotData[]>([]);
-  const [mySlots, setMySlots] = useState<SlotData[]>([]);
-  const [otherAssistants, setOtherAssistants] = useState<StaffMember[]>([]);
+  const [myId, setMyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [acting, setActing] = useState<string | null>(null);
-  const [swapping, setSwapping] = useState<string | null>(null); // slotId being swapped
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [slotsRes, staffRes] = await Promise.all([
-      fetch('/api/staff/slots').then(r => r.ok ? r.json() : { availableSlots: [], mySlots: [] }),
-      fetch('/api/admin/staff').then(r => r.ok ? r.json() : { staff: [] }).catch(() => ({ staff: [] })),
+  // Availability rules
+  const [rules, setRules] = useState<AvailabilityRule[]>([]);
+  const [exceptions, setExceptions] = useState<AvailabilityException[]>([]);
+  const [savingRule, setSavingRule] = useState(false);
+  const [newDay, setNewDay] = useState(1);
+  const [newStart, setNewStart] = useState('09:00');
+  const [newEnd, setNewEnd] = useState('16:00');
+  const [excDate, setExcDate] = useState('');
+  const [excReason, setExcReason] = useState('');
+
+  // Available-with-me slots
+  const [availableWithMe, setAvailableWithMe] = useState<AvailableSlotRow[]>([]);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
+
+  // Booked-with-me
+  const [myBookings, setMyBookings] = useState<MyBookingRow[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+
+  const fetchRules = useCallback(async () => {
+    const [rulesRes, excRes] = await Promise.all([
+      fetch('/api/staff/availability').then(r => r.ok ? r.json() : { rules: [] }),
+      fetch('/api/staff/exceptions').then(r => r.ok ? r.json() : { exceptions: [] }).catch(() => ({ exceptions: [] })),
     ]);
-    setAvailableSlots(slotsRes.availableSlots ?? []);
-    setMySlots(slotsRes.mySlots ?? []);
-    // Get other assistants (not me)
-    const meRes = await fetch('/api/staff/me').then(r => r.ok ? r.json() : { staffMember: null });
-    const myId = meRes.staffMember?.id;
-    setOtherAssistants((staffRes.staff ?? []).filter((s: StaffMember) => s.role === 'assistant' && s.is_active && s.id !== myId));
-    setLoading(false);
+    setRules(rulesRes.rules ?? []);
+    setExceptions(excRes.exceptions ?? []);
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const fetchAvailableWithMe = useCallback(async (staffId: string) => {
+    setLoadingAvailable(true);
+    const from = new Date().toISOString().slice(0, 10);
+    const toDate = new Date(); toDate.setDate(toDate.getDate() + 28);
+    const to = toDate.toISOString().slice(0, 10);
+    const res = await fetch(`/api/booking/available-slots?session_type=natalia_asysta&locale=pl&from=${from}&to=${to}`);
+    const data = res.ok ? await res.json() : { slots: [] };
+    // Filter to slots where I appear in available_operators
+    const filtered = (data.slots || []).filter((s: any) =>
+      s.available_operators?.some((op: any) => op.id === staffId)
+    );
+    setAvailableWithMe(filtered);
+    setLoadingAvailable(false);
+  }, []);
 
-  const joinSlot = async (slotId: string) => {
-    setActing(slotId);
-    const res = await fetch('/api/staff/slots/join', {
+  const fetchMyBookings = useCallback(async () => {
+    setLoadingBookings(true);
+    const res = await fetch('/api/staff/my-bookings');
+    const data = res.ok ? await res.json() : { bookings: [] };
+    setMyBookings(data.bookings ?? []);
+    setLoadingBookings(false);
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch('/api/staff/me')
+      .then(r => r.ok ? r.json() : { staffMember: null })
+      .then(data => {
+        const id = data.staffMember?.id ?? null;
+        setMyId(id);
+        return Promise.all([fetchRules(), id ? fetchAvailableWithMe(id) : Promise.resolve(), fetchMyBookings()]);
+      })
+      .finally(() => setLoading(false));
+  }, [fetchRules, fetchAvailableWithMe, fetchMyBookings]);
+
+  const addRule = async () => {
+    if (newStart >= newEnd) { alert('Godzina zakończenia musi być późniejsza niż rozpoczęcia.'); return; }
+    setSavingRule(true);
+    const res = await fetch('/api/staff/availability', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slotId }),
+      body: JSON.stringify({ day_of_week: newDay, start_time: newStart, end_time: newEnd }),
     });
-    setActing(null);
-    if (res.ok) {
-      fetchData();
-    } else {
-      const data = await res.json();
-      alert(data.error || 'Błąd');
-    }
+    setSavingRule(false);
+    if (res.ok) fetchRules();
+    else { const d = await res.json().catch(() => ({})); alert(d.error || 'Błąd zapisu'); }
   };
 
-  const leaveSlot = async (slotId: string) => {
-    if (!confirm('Czy na pewno chcesz opuścić ten termin?')) return;
-    setActing(slotId);
-    const res = await fetch('/api/staff/slots/leave', {
+  const deleteRule = async (id: string) => {
+    if (!confirm('Usunąć tę regułę?')) return;
+    setSavingRule(true);
+    await fetch(`/api/staff/availability?id=${id}`, { method: 'DELETE' });
+    setSavingRule(false);
+    fetchRules();
+  };
+
+  const addException = async () => {
+    if (!excDate) { alert('Wybierz datę.'); return; }
+    setSavingRule(true);
+    const res = await fetch('/api/staff/exceptions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slotId }),
+      body: JSON.stringify({ exception_date: excDate, all_day: true, is_available: false, reason: excReason || null }),
     });
-    setActing(null);
-    if (res.ok) fetchData();
-    else { const data = await res.json(); alert(data.error || 'Błąd'); }
+    setSavingRule(false);
+    if (res.ok) { setExcDate(''); setExcReason(''); fetchRules(); }
+    else { const d = await res.json().catch(() => ({})); alert(d.error || 'Błąd'); }
   };
 
-  // Swap: transfer slot to another assistant
-  const swapToAssistant = async (slotId: string, newAssistantId: string) => {
-    setActing(slotId);
-    // First leave, then the new assistant needs to confirm
-    // For now: use PATCH to change assistant directly (Natalia-level action)
-    const res = await fetch('/api/staff/slots/swap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slotId, newAssistantId }),
-    });
-    setActing(null);
-    setSwapping(null);
-    if (res.ok) fetchData();
-    else { const data = await res.json(); alert(data.error || 'Błąd'); }
-  };
-
-  // Group available slots by month
-  const slotsByMonth = availableSlots.reduce<Record<string, SlotData[]>>((acc, slot) => {
-    const [y, m] = slot.slot_date.split('-');
-    const key = `${y}-${m}`;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(slot);
-    return acc;
-  }, {});
-
-  const MONTH_NAMES_PL: Record<string, string> = {
-    '01': 'Styczeń', '02': 'Luty', '03': 'Marzec', '04': 'Kwiecień',
-    '05': 'Maj', '06': 'Czerwiec', '07': 'Lipiec', '08': 'Sierpień',
-    '09': 'Wrzesień', '10': 'Październik', '11': 'Listopad', '12': 'Grudzień',
+  const deleteException = async (id: string) => {
+    setSavingRule(true);
+    await fetch(`/api/staff/exceptions?id=${id}`, { method: 'DELETE' });
+    setSavingRule(false);
+    fetchRules();
   };
 
   const formatDay = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const dayNames = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
-    return dayNames[d.getDay()] + ' ' + dateStr.split('-')[2];
+    const d = new Date(dateStr + 'T00:00:00');
+    return DAY_LABELS_PL[d.getDay()] + ' ' + dateStr.split('-')[2] + '.' + dateStr.split('-')[1];
   };
 
   if (loading) return <p className="text-htg-fg-muted">{t('loading')}</p>;
 
+  const rulesByDay = DAY_LABELS_FULL_PL.map((label, dayOfWeek) => ({
+    label,
+    dayOfWeek,
+    rules: rules.filter(r => r.day_of_week === dayOfWeek).sort((a, b) => a.start_time.localeCompare(b.start_time)),
+  }));
+
   return (
     <div className="space-y-8">
-      {/* 1. My assigned slots — ON TOP */}
+      {/* 1. Moje godziny — weekly availability rules */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-        <h3 className="text-lg font-serif font-bold text-htg-fg mb-2 flex items-center gap-2">
-          <UserCheck className="w-5 h-5 text-htg-warm" />
-          Moje terminy
+        <h3 className="text-lg font-serif font-bold text-htg-fg mb-1 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-htg-sage" />
+          Moje godziny
         </h3>
-        <p className="text-sm text-htg-fg-muted mb-4">
-          Terminy, do których dołączyłaś jako asystentka.
+        <p className="text-sm text-htg-fg-muted mb-5">
+          Ustaw przedziały, kiedy jesteś dostępna/y — strefa Europe/Warsaw. Klienci zobaczą tylko terminy Natalii pokrywające się z Twoją dostępnością.
         </p>
 
-        {mySlots.length === 0 ? (
-          <p className="text-sm text-htg-fg-muted">Nie masz jeszcze przypisanych terminów.</p>
+        {/* Day rules */}
+        <div className="space-y-3 mb-6">
+          {rulesByDay.map(({ label, dayOfWeek, rules: dayRules }) => (
+            <div key={dayOfWeek} className="bg-htg-surface rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-htg-fg">{label}</span>
+                {dayRules.length === 0 && <span className="text-xs text-htg-fg-muted">brak reguł</span>}
+              </div>
+              <div className="space-y-1">
+                {dayRules.map(rule => (
+                  <div key={rule.id} className="flex items-center justify-between bg-htg-card rounded px-3 py-1.5">
+                    <span className="text-sm text-htg-fg">{rule.start_time.slice(0, 5)} – {rule.end_time.slice(0, 5)}</span>
+                    <button onClick={() => deleteRule(rule.id)} className="text-htg-fg-muted hover:text-red-500 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Add rule form */}
+        <div className="border-t border-htg-card-border pt-4">
+          <p className="text-xs font-medium text-htg-fg-muted mb-3">Dodaj przedział dostępności:</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-xs text-htg-fg-muted block mb-1">Dzień</label>
+              <select
+                value={newDay}
+                onChange={e => setNewDay(Number(e.target.value))}
+                className="px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/40"
+              >
+                {DAY_LABELS_FULL_PL.map((label, i) => (
+                  <option key={i} value={i}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-htg-fg-muted block mb-1">Od</label>
+              <select
+                value={newStart}
+                onChange={e => setNewStart(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/40"
+              >
+                {ASSISTANT_TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-htg-fg-muted block mb-1">Do</label>
+              <select
+                value={newEnd}
+                onChange={e => setNewEnd(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/40"
+              >
+                {ASSISTANT_TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={addRule}
+              disabled={savingRule}
+              className="flex items-center gap-2 px-4 py-2 bg-htg-sage text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              Dodaj
+            </button>
+          </div>
+        </div>
+
+        {/* Exceptions */}
+        {exceptions.length > 0 && (
+          <div className="mt-5 border-t border-htg-card-border pt-4">
+            <p className="text-xs font-medium text-htg-fg-muted mb-2">Dni wolne / wyjątki:</p>
+            <div className="flex flex-wrap gap-2">
+              {exceptions.map(ex => (
+                <span key={ex.id} className="flex items-center gap-1 px-3 py-1 bg-htg-warm/10 text-htg-warm rounded-full text-xs">
+                  {ex.exception_date} {ex.reason && `· ${ex.reason}`}
+                  <button onClick={() => deleteException(ex.id)} className="ml-1 hover:text-red-500">✕</button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add exception */}
+        <div className="mt-4 border-t border-htg-card-border pt-4">
+          <p className="text-xs font-medium text-htg-fg-muted mb-3">Dodaj dzień wolny:</p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-xs text-htg-fg-muted block mb-1">Data</label>
+              <input
+                type="date"
+                value={excDate}
+                onChange={e => setExcDate(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/40"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-htg-fg-muted block mb-1">Powód (opcj.)</label>
+              <input
+                type="text"
+                value={excReason}
+                onChange={e => setExcReason(e.target.value)}
+                placeholder="np. urlop"
+                className="px-3 py-2 rounded-lg border border-htg-card-border bg-htg-surface text-htg-fg text-sm focus:outline-none focus:ring-2 focus:ring-htg-sage/40"
+              />
+            </div>
+            <button
+              onClick={addException}
+              disabled={savingRule}
+              className="flex items-center gap-2 px-4 py-2 bg-htg-warm/80 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              <CalendarPlus className="w-4 h-4" />
+              Zablokuj
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Dostępne ze mną — slots where I appear as available operator */}
+      <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
+        <h3 className="text-lg font-serif font-bold text-htg-fg mb-1 flex items-center gap-2">
+          <UserCheck className="w-5 h-5 text-htg-sage" />
+          Dostępne ze mną
+        </h3>
+        <p className="text-sm text-htg-fg-muted mb-4">
+          Terminy Natalii, w których jesteś dostępna/y i możesz zostać wybrany/a przez klienta.
+        </p>
+
+        {loadingAvailable ? (
+          <p className="text-sm text-htg-fg-muted">Ładowanie...</p>
+        ) : availableWithMe.length === 0 ? (
+          <p className="text-sm text-htg-fg-muted">
+            Brak terminów w najbliższych 28 dniach. Upewnij się, że masz ustawione godziny dostępności powyżej.
+          </p>
         ) : (
-          <div className="space-y-2">
-            {mySlots.map(slot => (
-              <div key={slot.id} className="bg-htg-surface rounded-lg px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-htg-fg">{formatDay(slot.slot_date)}</span>
-                    <span className="text-sm text-htg-fg">{slot.slot_date}</span>
-                    <span className="text-sm text-htg-fg-muted">{slot.start_time.slice(0,5)}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      slot.status === 'available' ? 'bg-htg-sage/20 text-htg-sage-dark' :
-                      slot.status === 'booked' ? 'bg-htg-indigo/20 text-htg-indigo' :
-                      slot.status === 'held' ? 'bg-htg-warm/20 text-htg-warm-text' :
-                      'bg-htg-surface text-htg-fg-muted'
-                    }`}>{slot.status === 'available' ? 'Wolny' : slot.status === 'booked' ? 'Zarezerwowany' : slot.status}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {otherAssistants.length > 0 && slot.status !== 'booked' && (
-                      <button
-                        onClick={() => setSwapping(swapping === slot.id ? null : slot.id)}
-                        className="text-xs text-htg-fg-muted hover:text-htg-warm transition-colors"
-                      >
-                        Przekaż →
-                      </button>
-                    )}
-                    {slot.status !== 'booked' && (
-                      <button
-                        onClick={() => leaveSlot(slot.id)}
-                        disabled={acting === slot.id}
-                        className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
-                      >
-                        <UserMinus className="w-3.5 h-3.5" />
-                        {acting === slot.id ? '...' : 'Opuść'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {/* Swap picker */}
-                {swapping === slot.id && (
-                  <div className="mt-2 flex items-center gap-2 pl-4 border-t border-htg-card-border pt-2">
-                    <span className="text-xs text-htg-fg-muted">Przekaż do:</span>
-                    {otherAssistants.map(a => (
-                      <button
-                        key={a.id}
-                        onClick={() => swapToAssistant(slot.id, a.id)}
-                        disabled={acting === slot.id}
-                        className="px-3 py-1 bg-htg-warm/20 text-htg-warm rounded-lg text-xs font-medium hover:bg-htg-warm/30 transition-colors disabled:opacity-50"
-                      >
-                        {a.name}
-                      </button>
-                    ))}
-                    <button onClick={() => setSwapping(null)} className="text-xs text-htg-fg-muted hover:text-htg-fg">✕</button>
-                  </div>
-                )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {availableWithMe.map((slot) => (
+              <div key={slot.id || `${slot.slot_date}-${slot.start_time}`} className="bg-htg-surface border border-htg-card-border rounded-lg p-3 text-center">
+                <p className="text-xs text-htg-fg-muted">{formatDay(slot.slot_date)}</p>
+                <p className="text-base font-bold text-htg-fg mt-1">{slot.start_time.slice(0, 5)}</p>
+                <p className="text-xs text-htg-fg-muted">–{(slot.effective_end_time || slot.end_time).slice(0, 5)}</p>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* 2. Available slots grouped by month */}
+      {/* 3. Zarezerwowane ze mną */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-        <h3 className="text-lg font-serif font-bold text-htg-fg mb-2 flex items-center gap-2">
-          <UserPlus className="w-5 h-5 text-htg-sage" />
-          Dostępne terminy Natalii
+        <h3 className="text-lg font-serif font-bold text-htg-fg mb-1 flex items-center gap-2">
+          <UserCheck className="w-5 h-5 text-htg-warm" />
+          Zarezerwowane ze mną
         </h3>
         <p className="text-sm text-htg-fg-muted mb-4">
-          Wybierz terminy, do których chcesz dołączyć.
+          Sesje, na które klienci zarezerwowali miejsce z Twoim udziałem.
         </p>
 
-        {Object.keys(slotsByMonth).length === 0 ? (
-          <p className="text-sm text-htg-fg-muted">Brak dostępnych terminów.</p>
+        {loadingBookings ? (
+          <p className="text-sm text-htg-fg-muted">Ładowanie...</p>
+        ) : myBookings.length === 0 ? (
+          <p className="text-sm text-htg-fg-muted">Brak sesji.</p>
         ) : (
-          <div className="space-y-6">
-            {Object.entries(slotsByMonth).sort(([a], [b]) => a.localeCompare(b)).map(([monthKey, monthSlots]) => {
-              const [y, m] = monthKey.split('-');
-              const monthName = MONTH_NAMES_PL[m] || m;
-              return (
-                <div key={monthKey}>
-                  <h4 className="text-sm font-semibold text-htg-fg mb-3">{monthName} {y}</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    {monthSlots.map(slot => (
-                      <div key={slot.id} className="bg-htg-surface border border-htg-card-border rounded-lg p-3 flex flex-col items-center gap-2">
-                        <span className="text-xs text-htg-fg-muted">{formatDay(slot.slot_date)}</span>
-                        <span className="text-lg font-bold text-htg-fg">{slot.start_time.slice(0,5)}</span>
-                        <button
-                          onClick={() => joinSlot(slot.id)}
-                          disabled={acting === slot.id}
-                          className="w-full flex items-center justify-center gap-1 bg-htg-sage text-white px-2 py-1.5 rounded-lg text-xs font-medium hover:bg-htg-sage-dark transition-colors disabled:opacity-50"
-                        >
-                          <UserPlus className="w-3 h-3" />
-                          {acting === slot.id ? '...' : 'Dołącz'}
-                        </button>
-                      </div>
-                    ))}
+          <div className="space-y-2">
+            {myBookings.map(b => (
+              <div key={b.booking_id} className={`flex items-center gap-4 p-4 rounded-xl border ${
+                b.slot_date >= new Date().toISOString().slice(0, 10)
+                  ? 'bg-htg-sage/5 border-htg-sage/30'
+                  : 'bg-htg-card border-htg-card-border opacity-70'
+              }`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    {b.slot_date === new Date().toISOString().slice(0, 10) && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
+                    )}
+                    <span className="font-bold text-htg-fg text-sm">{b.slot_date}</span>
+                    <span className="text-htg-fg text-sm">{b.start_time.slice(0, 5)}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      b.booking_status === 'confirmed' ? 'bg-htg-sage/20 text-htg-sage-dark' :
+                      b.booking_status === 'completed' ? 'bg-htg-indigo/20 text-htg-indigo' :
+                      'bg-htg-warm/20 text-htg-warm'
+                    }`}>
+                      {b.booking_status === 'confirmed' ? 'Potwierdzona' : b.booking_status === 'completed' ? 'Zakończona' : b.booking_status}
+                    </span>
                   </div>
+                  <p className="text-sm text-htg-fg-muted">{b.client_name}</p>
+                  {b.topics && <p className="text-xs text-htg-fg-muted mt-0.5 line-clamp-1">📝 {b.topics}</p>}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* 3. Pre-session meetings */}
+      {/* 4. Pre-session meetings */}
       <PreSessionGrafikSection />
     </div>
   );

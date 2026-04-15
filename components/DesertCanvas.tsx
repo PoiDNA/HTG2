@@ -132,16 +132,16 @@ export default function DesertCanvas() {
     let piles:     Float32Array[] = [];  // piles[ri][xi] = wys. hałdy w kolumnie xi
 
     function makeGrain(spreadFull: boolean): Grain {
-      const tiny = Math.random() < 0.68;
+      const tiny = Math.random() < 0.55;
       return {
         angle:      Math.random() * Math.PI * 2,
         r:          spreadFull ? Math.random() * MAX_R : Math.random() * MAX_R * 0.15,
-        speed:      0.06 + Math.random() * 0.28,  // bardzo wolny ruch radialny
+        speed:      0.06 + Math.random() * 0.28,
         angDrift:   (Math.random() - 0.5) * 0.0006,
-        // Rozmiary podbite: było 0.35–1.5, teraz 0.6–2.2 px
-        maxSize:    tiny ? 0.6 + Math.random() * 0.6 : 1.0 + Math.random() * 1.2,
-        // Opacity podbita: było 0.12–0.67, teraz 0.35–0.90
-        maxOpacity: 0.35 + Math.random() * 0.55,
+        // Duże, wyraźne ziarna — widoczne na jasnym tle
+        maxSize:    tiny ? 1.2 + Math.random() * 1.0 : 2.0 + Math.random() * 2.0,
+        // Wysoka opacity — nikt nie powie że "nie widać"
+        maxOpacity: 0.55 + Math.random() * 0.40,
         ci:         Math.floor(Math.random() * S.length),
       };
     }
@@ -260,9 +260,10 @@ export default function DesertCanvas() {
 
           // Perspektywa: opacity rośnie liniowo (nie kwadratowo jak poprzednio).
           // Ziarna są widoczne już w połowie drogi — nie dopiero przy krawędzi.
-          const opacity = g.maxOpacity * t01;
-          if (opacity < 0.02) continue;
-          const size = g.maxSize * (0.15 + t01 * 0.85);
+          // Minimum opacity = 0.25 od samego centrum — ziarna widoczne od razu
+          const opacity = g.maxOpacity * Math.max(0.25, t01);
+          if (opacity < 0.05) continue;
+          const size = g.maxSize * (0.3 + t01 * 0.7);
 
           // Detekcja krawędzi DOM → akumulacja w hałdzie
           let caught = false;

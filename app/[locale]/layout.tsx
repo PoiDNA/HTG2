@@ -17,7 +17,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import GlobalShellV1 from "@/components/variants/v1/GlobalShell";
 import GlobalShellV2 from "@/components/variants/v2/GlobalShell";
 import GlobalShellV3 from "@/components/variants/v3/GlobalShell";
-import DesertCanvas from "@/components/DesertCanvas";
+
 import DesignVariantSwitcher from "@/components/DesignVariantSwitcher";
 import { PlayerProvider } from "@/lib/player-context";
 import GlobalPlayer from "@/components/player/GlobalPlayer";
@@ -205,7 +205,7 @@ export default async function LocaleLayout({
         </a>
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider variant={variant}>
-            {variant === 'v1' && <DesertCanvas />}
+
             <DesignVariantProvider variant={variant}>
               <PlayerProvider>
                 <Shell isNagrania={isNagrania}>

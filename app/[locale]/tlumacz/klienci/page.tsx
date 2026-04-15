@@ -2,6 +2,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Users, Mail, Calendar, Hash } from 'lucide-react';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
@@ -25,11 +26,23 @@ export default async function TranslatorClientsPage({
   const db = createSupabaseServiceRole();
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const { data: bookings } = await db
-    .from('bookings')
-    .select(`id, session_type, status, topics, user_id, slot:booking_slots(slot_date, start_time)`)
-    .in('status', ['confirmed', 'completed', 'pending_confirmation'])
-    .order('created_at', { ascending: false });
+  const { staffMember } = await getEffectiveStaffMember();
+  const translatorId = staffMember?.id ?? null;
+
+  // Step 1: slot IDs for this translator
+  const { data: mySlotRows } = translatorId
+    ? await db.from('booking_slots').select('id').eq('translator_id', translatorId)
+    : { data: [] };
+  const mySlotIds = (mySlotRows || []).map((s: any) => s.id);
+
+  const { data: bookings } = mySlotIds.length > 0
+    ? await db
+        .from('bookings')
+        .select(`id, session_type, status, topics, user_id, slot:booking_slots(slot_date, start_time)`)
+        .in('slot_id', mySlotIds)
+        .in('status', ['confirmed', 'completed', 'pending_confirmation'])
+        .order('created_at', { ascending: false })
+    : { data: [] };
 
   const userIds = [...new Set((bookings || []).map((b: any) => b.user_id).filter(Boolean))];
   const { data: profiles } = userIds.length > 0

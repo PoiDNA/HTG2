@@ -3,9 +3,10 @@ import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
-import { Presentation, Calendar, Users } from 'lucide-react';
+import { Presentation, Calendar, Users, Plus } from 'lucide-react';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
+import ClaimableSlots from './ClaimableSlots';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -48,6 +49,27 @@ export default async function TranslatorSessionsPage({
       .order('slot_date').order('start_time');
     availableWithMe = avSlots || [];
   }
+
+  // Claimable slots: Natalia's "Otwarta" solos (natalia_solo, locale='pl',
+  // translator_locked=false, translator_id NULL) in the next 28 days.
+  // Translator can claim one to convert it into a natalia_interpreter_solo
+  // in her locale (see /api/translator/claim-slot + migration 082).
+  let claimable: any[] = [];
+  if (translatorId) {
+    const { data: claimableData } = await db
+      .from('booking_slots')
+      .select('id, slot_date, start_time, end_time')
+      .eq('session_type', 'natalia_solo')
+      .eq('status', 'available')
+      .eq('translator_locked', false)
+      .eq('locale', 'pl')
+      .is('translator_id', null)
+      .gte('slot_date', todayForSlots)
+      .lte('slot_date', toDateForSlots)
+      .order('slot_date').order('start_time');
+    claimable = claimableData || [];
+  }
+
   const todayStr = new Date().toISOString().split('T')[0];
 
   // Step 1: slot IDs belonging to this translator
@@ -167,6 +189,18 @@ export default async function TranslatorSessionsPage({
           </div>
         </div>
       )}
+
+      {/* Claimable — Natalia's open slots I can attach to */}
+      <div>
+        <h3 className="text-sm font-semibold text-htg-fg-muted uppercase tracking-wide mb-3 flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Otwarte terminy Natalii — dopnij się ({claimable.length})
+        </h3>
+        <p className="text-xs text-htg-fg-muted mb-3">
+          Natalia oznaczyła te terminy jako &bdquo;Otwarta&rdquo;. Kliknij &bdquo;Dopnij&rdquo; aby dodać je do puli sesji z tłumaczem {translatorLocale.toUpperCase()}. Po dopięciu slot znika z puli PL i pojawi się w sekcji &bdquo;Dostępne ze mną&rdquo; poniżej.
+        </p>
+        <ClaimableSlots slots={claimable} translatorLocale={translatorLocale} />
+      </div>
 
       {/* Dostępne ze mną */}
       <div>

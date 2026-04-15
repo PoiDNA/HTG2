@@ -69,7 +69,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
   const locale = useLocale();
   const ti = useTranslations('Individual');
   // 'solo' | 'asysta' | 'para' | null
-  const [selectedGroup, setSelectedGroup] = useState<'solo' | 'asysta' | 'para' | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<'solo' | 'asysta' | 'para' | null>('asysta');
   // Per-slot operator picked after slot selection (asysta sessions only)
   const [selectedOperatorForSlot, setSelectedOperatorForSlot] = useState<SlotOperator | null>(null);
   const [operatorPickerSlotId, setOperatorPickerSlotId] = useState<string | null>(null);
@@ -401,7 +401,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
         setSelectedOperatorForSlot(slot.available_operators[0]);
         setOperatorPickerSlotId(null);
       } else {
-        setSelectedOperatorForSlot(null);
+        // Prefer Agata as default; still show picker so user can change
+        const agata = slot.available_operators.find(op => op.slug === 'agata');
+        setSelectedOperatorForSlot(agata ?? null);
         setOperatorPickerSlotId(slotId);
       }
     } else {

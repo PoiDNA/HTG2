@@ -1,8 +1,8 @@
 'use client';
 
-// DesertCanvas — Wariant A1: "Rozpad iluzji" (dissolution)
-// Ziarna z zewnątrz → centrum. Forma (złoto) rozpuszcza się w pustkę (biel/fiolet).
-// Spiralny wir, medytacyjne tempo, brak akumulacji.
+// DesertCanvas — Wariant A1b: "Rozpad iluzji — koło" (dissolution vortex)
+// Jeden kierunek obrotu, 3× wolniej, 3× więcej ziaren, 5× zagęszczenie na zewnątrz.
+// Spiralny wir jednostronny, głęboko medytacyjny przepływ.
 
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
@@ -55,12 +55,12 @@ interface Grain {
   ci:         number;  // indeks koloru — ziarna cieplejsze vs. eteryczne
 }
 
-// ─── Liczba ziaren wg rozdzielczości ────────────────────────────────────────
+// ─── Liczba ziaren wg rozdzielczości (3× więcej niż bazowy A1) ──────────────
 function grainCount(w: number): number {
-  if (w >= 1280) return 22000;
-  if (w >= 1024) return 14000;
-  if (w >= 640)  return 6000;
-  return 2000;
+  if (w >= 1280) return 66000;
+  if (w >= 1024) return 42000;
+  if (w >= 640)  return 18000;
+  return 6000;
 }
 
 // ─── Komponent ───────────────────────────────────────────────────────────────
@@ -117,15 +117,15 @@ export default function DesertCanvas() {
 
       return {
         angle:      Math.random() * Math.PI * 2,
-        // Ziarna startują przy krawędzi — wciągane do centrum
+        // Rozkład r: Math.pow(u, 0.3) skupia 5× więcej ziaren przy zewnętrznej krawędzi
+        // (PDF przy r=MAX_R jest ~5× większe niż przy r=MAX_R/2)
         r:          spreadFull
-                      ? MAX_R * (0.15 + Math.random() * 0.85)
-                      : MAX_R * (0.70 + Math.random() * 0.30),
-        // Medytacyjnie wolny ruch
-        speed:      0.03 + Math.random() * 0.12,
-        // Silna spirala — wir pochłaniający
-        // Większość kręci w tę samą stronę = efekt wiru
-        angDrift:   (Math.random() < 0.75 ? 1 : -1) * (0.0008 + Math.random() * 0.002),
+                      ? MAX_R * Math.pow(Math.random(), 0.3)
+                      : MAX_R * (0.75 + Math.random() * 0.25),
+        // 3× wolniej niż A1 bazowy — głęboko medytacyjny przepływ
+        speed:      0.01 + Math.random() * 0.03,
+        // Jeden kierunek kręcenia — czyste koło, nie chaos
+        angDrift:   0.0008 + Math.random() * 0.0018,
         maxSize:    warm
                       ? 1.8 + Math.random() * 1.8   // większe przy krawędzi (forma)
                       : 0.8 + Math.random() * 1.2,  // mniejsze eteryczne

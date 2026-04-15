@@ -10,26 +10,26 @@
 --   - edytorki: Marta, Ania (anna@), Dominika (bianka@) — nowe wpisy
 --   - tłumacze: dodana Milena EN; Melania oznaczona is_active=false
 
--- ─── 1. Przemianuj 'assistant' → 'operator' PRZED zmianą constraintu ─────────
---     (constraint dodany w kroku 2 nie zna 'assistant' — UPDATE musi być pierwszy)
-
-UPDATE public.staff_members
-SET role = 'operator'
-WHERE role = 'assistant';
-
--- ─── 2. Rozszerz CHECK constraint na role ────────────────────────────────────
+-- ─── 1. Zrzuć OBA stare constrainty zanim cokolwiek zmienisz ─────────────────
+--     locale_check (074) zna tylko 'assistant' — po UPDATE dostałby 'operator' i wybuchłby
 
 ALTER TABLE public.staff_members
   DROP CONSTRAINT IF EXISTS staff_members_role_check;
 
 ALTER TABLE public.staff_members
-  ADD CONSTRAINT staff_members_role_check
-  CHECK (role IN ('practitioner', 'operator', 'editor', 'translator'));
+  DROP CONSTRAINT IF EXISTS staff_members_locale_check;
 
--- ─── 3. Zaktualizuj locale CHECK ─────────────────────────────────────────────
+-- ─── 2. Przemianuj 'assistant' → 'operator' ──────────────────────────────────
+
+UPDATE public.staff_members
+SET role = 'operator'
+WHERE role = 'assistant';
+
+-- ─── 3. Dodaj nowe constrainty ────────────────────────────────────────────────
 
 ALTER TABLE public.staff_members
-  DROP CONSTRAINT IF EXISTS staff_members_locale_check;
+  ADD CONSTRAINT staff_members_role_check
+  CHECK (role IN ('practitioner', 'operator', 'editor', 'translator'));
 
 ALTER TABLE public.staff_members
   ADD CONSTRAINT staff_members_locale_check

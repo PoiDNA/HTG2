@@ -69,9 +69,12 @@ export default function SiteNav() {
     <nav aria-label={tNav('menu')}>
       {/* Desktop */}
       <div className="hidden md:flex items-center gap-2">
-        <LocaleSwitcher />
-        <FontSizeToggle />
-        <ThemeToggle />
+        {/* Utilities — fade when scrolling up, return on top */}
+        <div className="flex items-center gap-2 transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none">
+          <LocaleSwitcher />
+          <FontSizeToggle />
+          <ThemeToggle />
+        </div>
         {!loading && isLoggedIn && user && <NotificationBell userId={user.id} alwaysShow={isCommunityActive} />}
 
         {/* MENU dropdown (logged in) — contains user email, menu items, logout */}

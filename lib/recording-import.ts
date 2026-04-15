@@ -5,7 +5,7 @@
 
 const AUDIO_VIDEO_EXTS = /\.(m4v|mp4|mp3|m4a|wav|aac|webm)$/i;
 
-export const FOLDER_ALLOWLIST = ['htg-sessions-arch-03-2026', '1-1'];
+export const FOLDER_ALLOWLIST = ['htg-sessions-arch-03-2026', '1-1', 'HTG Sessions'];
 
 export function isAudioVideoFile(filename: string): boolean {
   return AUDIO_VIDEO_EXTS.test(filename);

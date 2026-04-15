@@ -1198,4 +1198,127 @@ Kolumny `title_i18n`, `description_i18n` (JSONB DEFAULT '{}') na:
 
 ---
 
-*Ostatnia aktualizacja: 2026-04-14*
+*Ostatnia aktualizacja: 2026-04-15*
+
+---
+
+## Procedura importu nagrań zewnętrznych (Zoom / inne źródła)
+
+Procedura stosowana gdy nagrania sesji powstały poza systemem LiveKit (np. Zoom) i muszą być ręcznie wprowadzone do HTG2.
+
+### Wymagania wstępne
+
+- `ffmpeg` zainstalowany lokalnie (`brew install ffmpeg`)
+- Dostęp do `.env.local` z kluczami Supabase i Bunny
+- Pliki źródłowe — MP4 z nagraniami Zoom (pełna sesja, po edycji)
+
+---
+
+### Krok 1 — Konwersja do M4V
+
+Pliki Zoom (`.mp4`) konwertujemy do `.m4v` (ten sam kontener MPEG-4, bez re-encodingu):
+
+```bash
+ffmpeg -i "Sesja ... .mp4" -c copy "2026-04-14 email@domain.com.m4v"
+```
+
+**Format nazwy pliku docelowego:** `YYYY-MM-DD email@domain.com.m4v`
+
+- Data = data sesji (z nazwy folderu lub metadanych)
+- Email = adres klienta (z nazwy folderu, **nie** z nazwy pliku MP4 — Zoom może obcinać domenę, np. `@o2` zamiast `@o2.pl`)
+- Rozszerzenie `.m4v` — wymagane dla spójności z archiwum historycznym
+
+**Przykłady:**
+```
+Sesja 1-1 z Natalią : 20260414 Dominika ... dominikaszczeplik@gmail.com.mp4
+  → 2026-04-14 dominikaszczeplik@gmail.com.m4v
+
+Sesja Natalii z Agatą : 20260415 Kasia katarzyna-stasiak83@o2.mp4   ← ucięty email!
+  → 2026-04-15 katarzyna-stasiak83@o2.pl.m4v                         ← poprawiony z folderu
+```
+
+---
+
+### Krok 2 — Upload do Bunny Storage (strefa htg2, folder HTG Sessions)
+
+```bash
+ZONE="htg2"
+HOST="storage.bunnycdn.com"
+KEY="$BUNNY_STORAGE_API_KEY"
+
+curl -X PUT \
+  "https://$HOST/$ZONE/HTG%20Sessions/$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "2026-04-14 email@domain.com.m4v")" \
+  -H "AccessKey: $KEY" \
+  -H "Content-Type: application/octet-stream" \
+  --upload-file "2026-04-14 email@domain.com.m4v"
+# Oczekiwana odpowiedź: HTTP 201
+```
+
+**Folder docelowy:** `HTG Sessions/` w strefie `htg2`
+- URL CDN: `https://htg2-cdn.b-cdn.net/HTG%20Sessions/...`
+- `source_url` w DB: `HTG Sessions/2026-04-14 email@domain.com.m4v` (relatywna ścieżka)
+
+> Folder `HTG Sessions` jest na liście `FOLDER_ALLOWLIST` w `lib/recording-import.ts` — scan-bunny widzi te pliki automatycznie.
+
+---
+
+### Krok 3 — Import do bazy (konta + nagrania + dostęp)
+
+Używamy skryptu `scripts/upload-april-recordings.ts` jako szablonu. Skrypt:
+
+1. **Sprawdza duplikaty** — pomija pliki z istniejącym `source_url` w `booking_recordings`
+2. **Tworzy konto** — `supabase.auth.admin.createUser(email, email_confirm: true)` gdy email nie istnieje w `auth.users`
+3. **Szuka bookingu** — opcjonalnie łączy z `bookings` (±7 dni od daty sesji)
+4. **Wstawia `booking_recordings`**:
+   - `source = 'import'`
+   - `status = 'ready'`
+   - `recording_phase = 'sesja'` ← **krytyczne** — tylko ta faza jest widoczna klientowi
+   - `import_confidence = 'exact_email'`
+   - `expires_at = NULL` ← retencja wyłączona, pliki trzymamy na zawsze
+5. **Wstawia `booking_recording_access`**:
+   - `granted_reason = 'booking_client'` jeśli znaleziono booking
+   - `granted_reason = 'import_match'` jeśli brak bookingu w systemie
+6. **Audit log** — `booking_recording_audit` z `action = 'import_matched'`
+
+```bash
+# Dry-run — bez żadnych zmian w DB
+cd /Users/lk/work/HTG2
+env $(grep -v '^#' .env.local | grep '=' | xargs) \
+  npx tsx scripts/upload-april-recordings.ts --dry-run
+
+# Live
+env $(grep -v '^#' .env.local | grep '=' | xargs) \
+  npx tsx scripts/upload-april-recordings.ts
+```
+
+Raport zapisywany do `upload-april-report.json`.
+
+---
+
+### Efekt dla klienta
+
+Nagrania pojawiają się pod adresem `/konto/nagrania-sesji` jako **"Nagrania z Twoich sesji"**. Odtwarzanie przez `<audio>` tag z podpisanym URL (HMAC-SHA256, TTL 4h) z Pull Zone `htg2-cdn.b-cdn.net`.
+
+---
+
+### Typy sesji (session_type) — mapowanie z nazwy sesji Zoom
+
+| Fragment nazwy folderu/pliku | `session_type` w DB |
+|------------------------------|---------------------|
+| `1-1 z Natalią` / `solo` | `natalia_solo` |
+| `Natalii z Agatą` / `Natalii i Agaty` | `natalia_agata` |
+| `Natalii z Justyną` | `natalia_justyna` |
+| `Natalii z Przemkiem` | `natalia_asysta` |
+| `para` | `natalia_para` |
+
+---
+
+### Pułapki
+
+| Problem | Rozwiązanie |
+|---------|-------------|
+| Email ucięty przez Zoom w nazwie pliku (`@o2` zamiast `@o2.pl`) | Zawsze sprawdzaj email w **nazwie folderu**, nie pliku |
+| `recording_phase` ≠ `sesja` | Klient nie zobaczy nagrania (3 warstwy ochrony) |
+| Upload bez URL-encoding spacji w `HTG Sessions` | Użyj `HTG%20Sessions` w URL |
+| Duplikat `source_url` | Supabase zwraca `23505` — skrypt pomija, nie duplikuje |
+| Nowe konto bez hasła | User dostaje magic link przy pierwszym logowaniu (email OTP) |

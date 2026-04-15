@@ -22,13 +22,13 @@ export default function GlobalShellV3({
       {!isNagrania && (
         <ScrollHeader bgClassName="bg-htg-card backdrop-blur-md border-b border-htg-card-border/50">
           <div className="mx-auto max-w-5xl px-4 py-2 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none">
               <SlideOverMenu />
               <Link href="/" className="flex items-center" aria-label="Strona główna HTG">
                 <HeaderLogo />
               </Link>
             </div>
-            <nav className="flex-1 flex justify-center">
+            <nav className="flex-1 flex justify-center transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none">
               <NavLinks />
             </nav>
             <SiteNav />

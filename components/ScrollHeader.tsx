@@ -55,8 +55,9 @@ export default function ScrollHeader({
 
   return (
     <header
-      className="sticky top-0 z-50 transition-transform duration-300 ease-out"
+      className="group sticky top-0 z-50 transition-transform duration-300 ease-out"
       style={{ transform: translate }}
+      data-scroll-state={state}
     >
       <div
         aria-hidden

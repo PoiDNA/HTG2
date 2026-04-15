@@ -4,15 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useDesignVariant } from '@/lib/design-variant-context';
 
-// ─── Paleta piasku — 6 odcieni ───────────────────────────────────────────────
+// ─── Paleta ziaren — 6 kolorów, 3 złote + 3 śnieżnobiałe ───────────────────
 // Format: 'rgba(r,g,b,' — domykamy: + alpha.toFixed(2) + ')'
 const S = [
-  'rgba(212,168,64,',
-  'rgba(196,150,74,',
-  'rgba(232,188,82,',
-  'rgba(178,136,52,',
-  'rgba(220,172,68,',
-  'rgba(244,204,108,',
+  'rgba(212,168,64,',   // złoty
+  'rgba(255,255,255,',  // śnieżna biel
+  'rgba(196,150,74,',   // ciepły brąz
+  'rgba(255,255,255,',  // śnieżna biel
+  'rgba(232,188,82,',   // jasny złoty
+  'rgba(255,255,255,',  // śnieżna biel
 ] as const;
 
 // Pre-obliczone stringi fillStyle — 6 kolorów × 32 poziomy opacity.

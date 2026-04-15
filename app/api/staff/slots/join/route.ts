@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   if (staffMember.slug === 'agata') newSessionType = 'natalia_agata';
   else if (staffMember.slug === 'justyna') newSessionType = 'natalia_justyna';
   else {
-    return NextResponse.json({ error: 'Nieznana asystentka' }, { status: 400 });
+    return NextResponse.json({ error: 'Nieznana operatorka' }, { status: 400 });
   }
 
   const newEndTime = slotEndTime(slot.start_time, newSessionType);

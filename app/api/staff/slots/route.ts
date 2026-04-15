@@ -254,7 +254,7 @@ export async function PATCH(request: NextRequest) {
 
     if (assistant.slug === 'agata') newSessionType = 'natalia_agata';
     else if (assistant.slug === 'justyna') newSessionType = 'natalia_justyna';
-    else return NextResponse.json({ error: 'Nieznana asystentka' }, { status: 400 });
+    else return NextResponse.json({ error: 'Nieznana operatorka' }, { status: 400 });
   }
 
   // Get current slot to compute new end time

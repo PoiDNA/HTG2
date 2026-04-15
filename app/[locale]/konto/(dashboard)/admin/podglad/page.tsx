@@ -16,11 +16,11 @@ export function generateStaticParams() {
 
 const STAFF_LIST = [
   { email: 'natalia@htg.cyou',  label: 'Natalia',  description: 'Prowadząca sesje',   color: 'bg-htg-indigo' },
-  { email: 'agata@htg.cyou',   label: 'Agata',    description: 'Asystentka',           color: 'bg-htg-sage' },
-  { email: 'justyna@htg.cyou', label: 'Justyna',  description: 'Asystentka',           color: 'bg-htg-sage' },
-  { email: 'marta@htg.cyou',   label: 'Marta',    description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
-  { email: 'ania@htg.cyou',    label: 'Ania',     description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
-  { email: 'dominika@htg.cyou',label: 'Dominika', description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
+  { email: 'agata@htg.cyou',   label: 'Agata',    description: 'Operatorka',  color: 'bg-htg-sage' },
+  { email: 'justyna@htg.cyou', label: 'Justyna',  description: 'Operatorka',  color: 'bg-htg-sage' },
+  { email: 'marta@htg.cyou',   label: 'Marta',    description: 'Edytorka',    color: 'bg-htg-warm' },
+  { email: 'ania@htg.cyou',    label: 'Ania',     description: 'Edytorka',    color: 'bg-htg-warm' },
+  { email: 'dominika@htg.cyou',label: 'Dominika', description: 'Edytorka',    color: 'bg-htg-warm' },
 ];
 
 const TRANSLATOR_LIST = [
@@ -146,7 +146,7 @@ export default async function AdminPreviewPage({
                 <div className="bg-htg-surface rounded-lg py-2">
                   <p className="text-xs text-htg-fg-muted">Rola</p>
                   <p className="text-[10px] font-medium text-htg-fg">
-                    {s.member.role === 'practitioner' ? 'prowad.' : 'asyst.'}
+                    {s.member.role === 'practitioner' ? 'prowad.' : s.member.role === 'translator' ? 'tłum.' : 'oper.'}
                   </p>
                 </div>
                 <div className="bg-htg-surface rounded-lg py-2">

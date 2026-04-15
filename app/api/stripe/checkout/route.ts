@@ -268,6 +268,7 @@ export async function POST(request: NextRequest) {
         installments_total: metadata.installments_total || '',
         session_type: metadata.session_type || '',
         slot_id: metadata.slot_id || '',
+        booking_id: metadata.booking_id || '',
         pre_session_staff_id: metadata.pre_session_staff_id || '',
         pre_session_source_booking_id: metadata.pre_session_source_booking_id || '',
         gift_for_email: metadata.gift_for_email || '',

@@ -18,13 +18,21 @@ interface SessionOption {
   sessionType: string;
 }
 
+interface SlotOperator {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface SlotInfo {
   id: string;
   slot_date: string;
   start_time: string;
   end_time: string;
+  effective_end_time?: string;
   session_type: string;
   status: string;
+  available_operators?: SlotOperator[];
 }
 
 interface SessionPickerProps {
@@ -62,8 +70,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
   const ti = useTranslations('Individual');
   // 'solo' | 'asysta' | 'para' | null
   const [selectedGroup, setSelectedGroup] = useState<'solo' | 'asysta' | 'para' | null>(null);
-  // slug of chosen assistant session (sesja-natalia-agata or sesja-natalia-justyna)
-  const [selectedAssistant, setSelectedAssistant] = useState<string | null>(null);
+  // Per-slot operator picked after slot selection (asysta sessions only)
+  const [selectedOperatorForSlot, setSelectedOperatorForSlot] = useState<SlotOperator | null>(null);
+  const [operatorPickerSlotId, setOperatorPickerSlotId] = useState<string | null>(null);
 
   const [slots, setSlots] = useState<SlotInfo[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -106,11 +115,10 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
     ? sessions.find(s => s.sessionType === 'natalia_interpreter_solo')
     : sessions.find(s => s.sessionType === 'natalia_solo');
 
-  const assistantSessions = isInterpreterLocale
-    ? sessions.filter(s => s.sessionType === 'natalia_interpreter_asysta')
-    : sessions.filter(
-        s => s.sessionType === 'natalia_agata' || s.sessionType === 'natalia_justyna'
-      );
+  // Asysta: unified product (PL: natalia_asysta via sesja-natalia-agata; non-PL: interpreter_asysta)
+  const asystaSingleProduct = isInterpreterLocale
+    ? sessions.find(s => s.sessionType === 'natalia_interpreter_asysta') ?? null
+    : sessions.find(s => s.slug === PRODUCT_SLUGS.SESSION_ASYSTA) ?? null;
 
   const paraSession = (isInterpreterLocale
     ? sessions.find(s => s.sessionType === 'natalia_interpreter_para')
@@ -123,111 +131,57 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
     priceId: '',
     sessionType: isInterpreterLocale ? 'natalia_interpreter_para' : 'natalia_para',
   };
-  // Representative assistant price (same for both)
-  const assistantPrice = assistantSessions[0]?.amount ?? 0;
 
-  // The active session that determines slot fetching / checkout
+  // The active session that determines slot fetching / checkout.
+  // Asysta no longer requires pre-selecting an operator at card level — operator picked per slot.
   const selectedSession = useMemo(() => {
     if (selectedGroup === 'solo') return soloSession ?? null;
-    if (selectedGroup === 'asysta' && selectedAssistant)
-      return assistantSessions.find(s => s.slug === selectedAssistant) ?? null;
+    if (selectedGroup === 'asysta') return asystaSingleProduct;
     if (selectedGroup === 'para') return paraSession;
     return null;
-  }, [selectedGroup, selectedAssistant, soloSession, assistantSessions, paraSession]);
+  }, [selectedGroup, soloSession, asystaSingleProduct, paraSession]);
 
   // Load available slots when session type changes.
-  // Interpreter session types use the multi-staff intersection endpoint
-  // (/api/booking/available-slots). Classic PL types use the legacy monthly endpoint.
+  // All types now use /api/booking/available-slots (PL direct types handled server-side).
   useEffect(() => {
     if (!selectedSession) { setSlots([]); setSelectedSlotId(null); return; }
 
     setLoadingSlots(true);
+    setSelectedOperatorForSlot(null);
     const st = selectedSession.sessionType;
+    const isAsystaST = st === 'natalia_asysta' || st === 'natalia_interpreter_asysta';
     const isInterpreter =
       st === 'natalia_interpreter_solo' ||
       st === 'natalia_interpreter_asysta' ||
       st === 'natalia_interpreter_para';
 
-    if (isInterpreter) {
-      const from = new Date().toISOString().slice(0, 10);
-      const toDate = new Date();
-      toDate.setDate(toDate.getDate() + 90);
-      const to = toDate.toISOString().slice(0, 10);
-      const params = new URLSearchParams({
-        session_type: st,
-        locale,
-        from,
-        to,
-      });
-      if (st === 'natalia_interpreter_asysta' && selectedAssistant) {
-        // selectedAssistant is a product slug like "sesja-natalia-agata"; for interpreter flow
-        // the UI sub-pick may also encode operator slug directly. Attempt best-effort mapping.
-        const op = selectedAssistant.includes('agata') ? 'agata'
-          : selectedAssistant.includes('justyna') ? 'justyna'
-          : null;
-        if (op) params.set('operator', op);
-      }
+    const defaultDays = isAsystaST ? 28 : 90;
+    const from = new Date().toISOString().slice(0, 10);
+    const toDate = new Date();
+    toDate.setDate(toDate.getDate() + defaultDays);
+    const to = toDate.toISOString().slice(0, 10);
+    const urlParams = new URLSearchParams({ session_type: st, locale, from, to });
+    // No pre-selected operator for asysta — endpoint returns available_operators[] per slot
 
-      fetch(`/api/booking/available-slots?${params.toString()}`)
-        .then(r => r.json())
-        .then(data => {
-          const list: SlotInfo[] = (data.slots ?? []).map((s: any, idx: number) => ({
-            id: s.id ?? `gen-${s.slot_date}-${s.start_time}-${idx}`,
-            slot_date: s.slot_date,
-            start_time: s.start_time,
-            end_time: s.end_time,
-            session_type: s.session_type,
-            status: 'available',
-          }));
-          setSlots(list);
-          setSelectedSlotId(null);
-          setLoadingSlots(false);
-        })
-        .catch(() => setLoadingSlots(false));
-      return;
-    }
-
-    // Legacy PL path
-    const now = new Date();
-    const monthPromises = [];
-    for (let i = 0; i < 3; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      monthPromises.push(fetch(`/api/booking/slots?month=${m}`).then(r => r.json()));
-    }
-
-    Promise.all(monthPromises)
-      .then(results => {
-        const allSlots: SlotInfo[] = [];
-        for (const data of results) {
-          if (data.slots) {
-            for (const dateSlots of Object.values(data.slots)) {
-              for (const slot of dateSlots as SlotInfo[]) {
-                if (
-                  slot.session_type === selectedSession.sessionType ||
-                  slot.session_type === 'natalia_solo'
-                ) {
-                  allSlots.push(slot);
-                }
-              }
-            }
-          }
-        }
-        allSlots.sort((a, b) => {
-          const cmp = a.slot_date.localeCompare(b.slot_date);
-          return cmp !== 0 ? cmp : a.start_time.localeCompare(b.start_time);
-        });
-        const seen = new Set<string>();
-        setSlots(allSlots.filter(s => {
-          if (seen.has(s.id)) return false;
-          seen.add(s.id);
-          return true;
+    fetch(`/api/booking/available-slots?${urlParams.toString()}`)
+      .then(r => r.json())
+      .then(data => {
+        const list: SlotInfo[] = (data.slots ?? []).map((s: any, idx: number) => ({
+          id: s.id ?? `gen-${s.slot_date}-${s.start_time}-${idx}`,
+          slot_date: s.slot_date,
+          start_time: s.start_time,
+          end_time: s.end_time,
+          effective_end_time: s.effective_end_time,
+          session_type: s.session_type,
+          status: 'available',
+          available_operators: s.available_operators,
         }));
+        setSlots(list);
         setSelectedSlotId(null);
         setLoadingSlots(false);
       })
       .catch(() => setLoadingSlots(false));
-  }, [selectedSession?.sessionType, selectedAssistant, locale]);
+  }, [selectedSession?.sessionType, locale]);
 
   const slotsByDate = useMemo(() => {
     const map = new Map<string, SlotInfo[]>();
@@ -264,7 +218,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
 
   const totalAmount = selectedSession ? selectedSession.amount / 100 : 0;
   const currencyCode = (selectedSession?.currency || 'pln').toUpperCase();
-  const isWithAssistant = selectedSession?.sessionType === 'natalia_agata' || selectedSession?.sessionType === 'natalia_justyna';
+  const isWithAssistant = selectedSession?.sessionType === 'natalia_asysta' || selectedSession?.sessionType === 'natalia_interpreter_asysta';
   const isPara = selectedSession?.sessionType === 'natalia_para';
   // Split into 3 installments with integer amounts, largest last
   const installmentsCount = 3;
@@ -328,7 +282,66 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
       return;
     }
 
-    // Stripe flow (existing)
+    // Stripe — Path A: slot selected → hold first, then redirect with booking_id
+    if (selectedSlotId && !wantAcceleration) {
+      if (!selectedSession.priceId) return;
+      const isAsystaSession = selectedSession.sessionType === 'natalia_asysta' || selectedSession.sessionType === 'natalia_interpreter_asysta';
+      setLoading(true);
+      try {
+        // 1. Hold slot via reserve (stripe_pending = no email yet, hold returned)
+        const reserveRes = await fetch('/api/booking/reserve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slotId: selectedSlotId,
+            sessionType: selectedSession.sessionType,
+            assistantId: isAsystaSession ? (selectedOperatorForSlot?.id ?? null) : null,
+            paymentMethod: 'stripe_pending',
+          }),
+        });
+        const reserveData = await reserveRes.json();
+        if (reserveRes.status === 401) { router.push('/login' as any); return; }
+        if (!reserveData.booking_id) {
+          alert(reserveData.error || 'Ten termin nie jest już dostępny. Wybierz inny.');
+          setLoading(false);
+          return;
+        }
+
+        // 2. Stripe checkout with booking_id (not slot_id)
+        const checkoutRes = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            priceId: selectedSession.priceId,
+            mode: 'payment',
+            locale,
+            ...(paymentMode !== 'full' && { amountOverride: payAmount * 100 }),
+            metadata: {
+              type: 'individual',
+              session_type: selectedSession.sessionType,
+              booking_id: reserveData.booking_id,
+              want_acceleration: 'false',
+              payment_mode: paymentMode,
+              total_amount: String(totalAmount * 100),
+              installment_number: paymentMode === 'installments' ? '1' : undefined,
+              installments_total: paymentMode === 'installments' ? String(installmentsCount) : undefined,
+              ...(isGift && giftEmail && { gift_for_email: giftEmail.trim().toLowerCase() }),
+              ...(isGift && giftMessage.trim() && { gift_message: giftMessage.trim() }),
+            },
+          }),
+        });
+        const checkoutData = await checkoutRes.json();
+        if (checkoutData.url) window.location.href = checkoutData.url;
+      } catch (err) {
+        console.error('Stripe slot checkout error:', err);
+        alert('Wystąpił błąd. Spróbuj ponownie.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Stripe — Path B: acceleration (no slot) → direct Stripe checkout
     if (!selectedSession.priceId) return;
     setLoading(true);
     try {
@@ -343,7 +356,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
           metadata: {
             type: 'individual',
             session_type: selectedSession.sessionType,
-            slot_id: selectedSlotId || '',
+            slot_id: '',
             want_acceleration: wantAcceleration ? 'true' : 'false',
             payment_mode: paymentMode,
             total_amount: String(totalAmount * 100),
@@ -366,8 +379,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
 
   function selectGroup(group: 'solo' | 'asysta' | 'para') {
     setSelectedGroup(group);
-    setSelectedAssistant(null);
     setSelectedSlotId(null);
+    setSelectedOperatorForSlot(null);
+    setOperatorPickerSlotId(null);
     setCalendarOpen(false);
     setWantAcceleration(false);
     setPaymentMode('full');
@@ -375,10 +389,25 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
     setProofFile(null);
   }
 
-  function selectAssistant(slug: string) {
-    setSelectedAssistant(slug);
-    setSelectedSlotId(null);
+  function handleSlotSelect(slotId: string) {
+    const slot = slots.find(s => s.id === slotId);
+    if (!slot) return;
+    setSelectedSlotId(slotId);
     setCalendarOpen(false);
+
+    // Per-slot operator picker for asysta sessions
+    if (slot.available_operators && slot.available_operators.length > 0) {
+      if (slot.available_operators.length === 1) {
+        setSelectedOperatorForSlot(slot.available_operators[0]);
+        setOperatorPickerSlotId(null);
+      } else {
+        setSelectedOperatorForSlot(null);
+        setOperatorPickerSlotId(slotId);
+      }
+    } else {
+      setSelectedOperatorForSlot(null);
+      setOperatorPickerSlotId(null);
+    }
   }
 
   return (
@@ -413,16 +442,16 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
         )}
 
         {/* Sesja z Asystą */}
-        {assistantSessions.length > 0 && (
-          <div
-            className={`relative text-left p-6 rounded-xl border-2 transition-all cursor-pointer ${
+        {asystaSingleProduct && (
+          <button
+            onClick={() => selectGroup('asysta')}
+            className={`relative text-left p-6 rounded-xl border-2 transition-all ${
               selectedGroup === 'asysta'
                 ? 'border-htg-sage bg-htg-sage/5 ring-2 ring-htg-sage/20'
                 : 'border-htg-card-border bg-htg-card hover:border-htg-sage/40'
             }`}
-            onClick={() => selectGroup('asysta')}
           >
-            {selectedGroup === 'asysta' && selectedAssistant && (
+            {selectedGroup === 'asysta' && (
               <div className="absolute top-3 right-3 w-6 h-6 bg-htg-sage rounded-full flex items-center justify-center">
                 <Check className="w-4 h-4 text-white" />
               </div>
@@ -431,39 +460,10 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             <h3 className="font-serif font-semibold text-htg-fg mb-1">{ti('session_with_interpreter_name')}</h3>
             <p className="text-xs text-htg-fg-muted mb-4">{ti('session_with_interpreter_subtitle')}</p>
             <p className="text-2xl font-bold text-htg-fg">
-              {formatPrice(assistantPrice, assistantSessions[0]?.currency || 'pln', locale)}
+              {formatPrice(asystaSingleProduct.amount, asystaSingleProduct.currency, locale)}
             </p>
-            <p className="text-xs text-htg-fg-muted mb-4">{labels.per_session}</p>
-
-            {/* Assistant sub-picker — shown when this group is selected */}
-            {selectedGroup === 'asysta' && (
-              <div
-                className="mt-4 pt-4 border-t border-htg-card-border space-y-2"
-                onClick={e => e.stopPropagation()}
-              >
-                <p className="text-xs font-medium text-htg-fg-muted mb-2">{locale === 'pl' ? ti('choose_assistant') : ti('session_with_interpreter_subtitle')}</p>
-                <div className="flex gap-2">
-                  {assistantSessions.map(a => {
-                    const assistantName = a.sessionType === 'natalia_agata' ? 'Agata' : 'Justyna';
-                    const isActive = selectedAssistant === a.slug;
-                    return (
-                      <button
-                        key={a.slug}
-                        onClick={() => selectAssistant(a.slug)}
-                        className={`flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
-                          isActive
-                            ? 'border-htg-sage bg-htg-sage text-white'
-                            : 'border-htg-card-border text-htg-fg hover:border-htg-sage/60'
-                        }`}
-                      >
-                        {assistantName}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+            <p className="text-xs text-htg-fg-muted">{labels.per_session}</p>
+          </button>
         )}
 
         {/* Sesja dla par */}
@@ -522,7 +522,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                 {/* Earliest available */}
                 {earliestSlot && !selectedSlotId && (
                   <button
-                    onClick={() => setSelectedSlotId(earliestSlot.id)}
+                    onClick={() => handleSlotSelect(earliestSlot.id)}
                     className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-htg-sage/30 bg-htg-sage/5 hover:bg-htg-sage/10 transition-colors mb-3"
                   >
                     <div className="flex items-center gap-3">
@@ -542,24 +542,51 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
 
                 {/* Selected slot */}
                 {selectedSlotId && selectedSlot && (
-                  <div className="flex items-center justify-between p-4 rounded-xl border-2 border-htg-sage bg-htg-sage/10 mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-htg-sage flex items-center justify-center">
-                        <Check className="w-5 h-5 text-white" />
+                  <div className="mb-3 space-y-2">
+                    <div className="flex items-center justify-between p-4 rounded-xl border-2 border-htg-sage bg-htg-sage/10">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-htg-sage flex items-center justify-center">
+                          <Check className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-htg-fg">Wybrany termin</p>
+                          <p className="text-htg-sage font-bold">
+                            {formatDate(selectedSlot.slot_date)} · {selectedSlot.start_time.slice(0, 5)}–{(selectedSlot.effective_end_time || selectedSlot.end_time).slice(0, 5)}
+                          </p>
+                          {selectedOperatorForSlot && (
+                            <p className="text-xs text-htg-fg-muted mt-0.5">Asystent: {selectedOperatorForSlot.name}</p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-htg-fg">Wybrany termin</p>
-                        <p className="text-htg-sage font-bold">
-                          {formatDate(selectedSlot.slot_date)} · {selectedSlot.start_time.slice(0, 5)}–{selectedSlot.end_time.slice(0, 5)}
-                        </p>
-                      </div>
+                      <button
+                        onClick={() => { setSelectedSlotId(null); setSelectedOperatorForSlot(null); setOperatorPickerSlotId(null); setCalendarOpen(true); }}
+                        className="text-xs text-htg-fg-muted hover:text-htg-fg transition-colors"
+                      >
+                        Zmień
+                      </button>
                     </div>
-                    <button
-                      onClick={() => { setSelectedSlotId(null); setCalendarOpen(true); }}
-                      className="text-xs text-htg-fg-muted hover:text-htg-fg transition-colors"
-                    >
-                      Zmień
-                    </button>
+
+                    {/* Per-slot operator picker — shown when slot has multiple operators */}
+                    {operatorPickerSlotId === selectedSlotId && selectedSlot.available_operators && selectedSlot.available_operators.length > 1 && (
+                      <div className="bg-htg-surface rounded-xl p-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <p className="text-sm font-medium text-htg-fg mb-3">Wybierz asystenta:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedSlot.available_operators.map(op => (
+                            <button
+                              key={op.id}
+                              onClick={() => { setSelectedOperatorForSlot(op); setOperatorPickerSlotId(null); }}
+                              className={`px-4 py-2 rounded-lg text-sm border-2 transition-all ${
+                                selectedOperatorForSlot?.id === op.id
+                                  ? 'border-htg-sage bg-htg-sage/10 text-htg-fg font-medium'
+                                  : 'border-htg-card-border hover:border-htg-sage/40 text-htg-fg'
+                              }`}
+                            >
+                              {op.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -635,7 +662,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
                                   {daySlots.map(slot => (
                                     <button
                                       key={slot.id}
-                                      onClick={() => { setSelectedSlotId(slot.id); setCalendarOpen(false); }}
+                                      onClick={() => handleSlotSelect(slot.id)}
                                       className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 ${
                                         selectedSlotId === slot.id
                                           ? 'bg-htg-sage text-white'
@@ -861,7 +888,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration) || (paymentMethod === 'stripe' && !selectedSession?.priceId) || (paymentMethod === 'transfer' && (!proofFile || !selectedSlotId)) || (isGift && !giftEmail.trim())}
+              disabled={loading || (!selectedSlotId && !wantAcceleration) || (paymentMethod === 'stripe' && !selectedSession?.priceId) || (paymentMethod === 'transfer' && (!proofFile || !selectedSlotId)) || (isGift && !giftEmail.trim()) || (isWithAssistant && !!selectedSlotId && !selectedOperatorForSlot)}
               className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -883,6 +910,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
 
             {!selectedSlotId && !wantAcceleration && slots.length > 0 && selectedSession?.priceId && (
               <p className="text-xs text-htg-warm text-center mt-2">{ti('choose_date_title')}</p>
+            )}
+            {isWithAssistant && !!selectedSlotId && !selectedOperatorForSlot && (
+              <p className="text-xs text-htg-warm text-center mt-2">Wybierz asystenta dla wybranego terminu</p>
             )}
             {isGift && !giftEmail.trim() && (
               <p className="text-xs text-htg-warm text-center mt-2">Podaj email obdarowanej osoby</p>

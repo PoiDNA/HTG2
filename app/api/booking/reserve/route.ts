@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { sendBookingConfirmation, sendTranslatorBookingNotification } from '@/lib/email/resend';
-import { SESSION_CONFIG } from '@/lib/booking/constants';
+import {
+  sendBookingConfirmation,
+  sendTranslatorBookingNotification,
+  sendAssistantBookingNotification,
+} from '@/lib/email/resend';
+import { SESSION_CONFIG, slotEndTime } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
 export async function POST(request: NextRequest) {
@@ -14,13 +18,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { slotId, topics, paymentMethod, proofPath, proofFilename } = await request.json();
+    const {
+      slotId,
+      topics,
+      paymentMethod,
+      proofPath,
+      proofFilename,
+      sessionType,
+      assistantId,
+    } = await request.json();
 
     if (!slotId) {
       return NextResponse.json({ error: 'slotId required' }, { status: 400 });
     }
 
-    // Validate bank transfer params
+    // Validate bank transfer params (stripe_pending and default don't need proof)
     if (paymentMethod === 'transfer') {
       if (!proofPath || !proofFilename) {
         return NextResponse.json({ error: 'proofPath and proofFilename required for bank transfer' }, { status: 400 });
@@ -32,19 +44,91 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Compute end_time server-side (never trust client for duration)
+    const db = createSupabaseServiceRole();
+    let endTime: string | null = null;
+    if (sessionType) {
+      const { data: slotRow } = await db
+        .from('booking_slots')
+        .select('start_time')
+        .eq('id', slotId)
+        .single();
+      if (slotRow?.start_time) {
+        endTime = slotEndTime(slotRow.start_time, sessionType as SessionType);
+      }
+    }
+
     const { data, error } = await supabase.rpc('reserve_slot', {
-      p_slot_id: slotId,
-      p_user_id: user.id,
-      p_topics: topics || null,
+      p_slot_id:       slotId,
+      p_user_id:       user.id,
+      p_topics:        topics || null,
+      p_session_type:  sessionType || null,
+      p_assistant_id:  assistantId || null,
+      p_translator_id: null,
+      p_end_time:      endTime,
     });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // For bank transfer: update booking with proof and extend expiry via service role
+    // Extract booking_id — PostgREST RETURNS TABLE gives [{success, message, booking_id}]
+    const bookingId: string | null = Array.isArray(data)
+      ? (data[0]?.booking_id ?? null)
+      : ((data as any)?.booking_id ?? data ?? null);
+
+    if (!bookingId) {
+      // RPC returned success=false — extract message
+      const msg = Array.isArray(data) ? data[0]?.message : (data as any)?.message;
+      return NextResponse.json({ error: msg || 'Slot unavailable' }, { status: 409 });
+    }
+
+    // Notify assistant BEFORE paymentMethod-specific early returns
+    // (assistant needs to know about upcoming session regardless of payment method)
+    if (assistantId) {
+      try {
+        const { data: assistant } = await db
+          .from('staff_members')
+          .select('name, email')
+          .eq('id', assistantId)
+          .single();
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name, email')
+          .eq('id', user.id)
+          .single();
+
+        if (assistant?.email) {
+          const sessionLabel = sessionType
+            ? (SESSION_CONFIG[sessionType as SessionType]?.label || sessionType)
+            : 'Sesja z asystą';
+          const { data: slotInfo } = await db
+            .from('booking_slots')
+            .select('slot_date, start_time')
+            .eq('id', slotId)
+            .single();
+          const dateFormatted = slotInfo
+            ? new Date(slotInfo.slot_date + 'T00:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+            : '';
+          const timeFormatted = slotInfo?.start_time?.slice(0, 5) || '';
+          const clientName = profile?.display_name || profile?.email?.split('@')[0] || 'Klient';
+
+          await sendAssistantBookingNotification(assistant.email, {
+            assistantName: assistant.name,
+            clientName,
+            sessionType: sessionLabel,
+            date: dateFormatted,
+            time: timeFormatted,
+            pendingPayment: paymentMethod === 'transfer',
+          });
+        }
+      } catch (notifyErr) {
+        console.error('Assistant booking notification failed:', notifyErr);
+      }
+    }
+
+    // For bank transfer: update booking with proof and extend expiry
     if (paymentMethod === 'transfer') {
-      const db = createSupabaseServiceRole();
       const sevenDays = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
       await db.from('bookings')
@@ -54,21 +138,24 @@ export async function POST(request: NextRequest) {
           transfer_proof_filename: proofFilename,
           expires_at: sevenDays,
         })
-        .eq('id', data);
+        .eq('id', bookingId);
 
       await db.from('booking_slots')
         .update({ held_until: sevenDays })
         .eq('id', slotId);
 
-      // TODO: notify admin via email when sendAdminNotification is available
-      console.log(`[TRANSFER] New bank transfer booking ${data} — pending verification`);
-
-      return NextResponse.json({ success: true, booking_id: data, paymentMethod: 'transfer' });
+      console.log(`[TRANSFER] New bank transfer booking ${bookingId} — pending verification`);
+      return NextResponse.json({ success: true, booking_id: bookingId, paymentMethod: 'transfer' });
     }
 
-    // Send booking confirmation email (non-blocking) — Stripe flow
+    // For stripe_pending: hold slot, return booking_id — no confirmation email yet
+    // (email sent after checkout.session.completed webhook confirms payment)
+    if (paymentMethod === 'stripe_pending') {
+      return NextResponse.json({ success: true, booking_id: bookingId });
+    }
+
+    // Default path (direct confirm, no Stripe): send confirmation email
     try {
-      const db = createSupabaseServiceRole();
       const { data: slot } = await db
         .from('booking_slots')
         .select('slot_date, start_time, end_time, session_type, translator_id, translator:staff_members!booking_slots_translator_id_fkey(id, name, email)')
@@ -110,7 +197,7 @@ export async function POST(request: NextRequest) {
       console.error('Booking confirmation email failed:', emailErr);
     }
 
-    return NextResponse.json({ success: true, booking_id: data });
+    return NextResponse.json({ success: true, booking_id: bookingId });
   } catch (error: any) {
     console.error('Reserve error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

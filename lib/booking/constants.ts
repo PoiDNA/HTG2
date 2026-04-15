@@ -55,7 +55,7 @@ export const SESSION_CONFIG: Record<SessionType, {
     labelShort: 'Z Asystą',
     durationMinutes: 90,
     pricePln: 1600,
-    requiredStaff: ['natalia'],
+    requiredStaff: ['natalia', 'assistant'],
     color: 'bg-amber-600',
   },
   pre_session: {
@@ -117,6 +117,7 @@ export const PRODUCT_SLUGS = {
   SINGLE_SESSION:      'sesja-pojedyncza',
   SESSION_1ON1:        'sesja-natalia',
   SESSION_AGATA:       'sesja-natalia-agata',
+  SESSION_ASYSTA:      'sesja-natalia-agata',  // alias: reuses Agata product (same price)
   SESSION_JUSTYNA:     'sesja-natalia-justyna',
   SESSION_PARA:        'sesja-natalia-para',
   SESSION_INTERPRETER: 'sesja-natalia-tlumacz',

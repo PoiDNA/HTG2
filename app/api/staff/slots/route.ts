@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
     session_type,
     private_for_email,
     solo_locked,
+    translator_locked,
     assistant_id: reqAssistantId,
     translator_id: reqTranslatorId,
   } = await request.json();
@@ -144,6 +145,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // translator_locked=true is only valid for PL slots without a translator
+  // (matches DB CHECK: translator_locked=false OR (translator_id IS NULL AND locale='pl')).
+  // Explicit guard for a friendlier error than a constraint violation.
+  if (translator_locked && (slotLocale !== 'pl' || finalTranslatorId)) {
+    return NextResponse.json(
+      { error: 'translator_locked=true requires locale=pl and no translator_id' },
+      { status: 400 },
+    );
+  }
+
   const endTime = slotEndTime(start_time, finalType);
 
   // Check Natalia conflict
@@ -196,6 +207,7 @@ export async function POST(request: NextRequest) {
       assistant_id: finalAssistantId,
       translator_id: finalTranslatorId,
       solo_locked: solo_locked ?? false,
+      translator_locked: translator_locked ?? false,
       locale: slotLocale,
     })
     .select()
@@ -235,15 +247,51 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Tylko prowadząca może zmieniać asystentki' }, { status: 403 });
   }
 
-  const { slot_id, assistant_id } = await request.json();
+  const body = await request.json();
+  const { slot_id, assistant_id } = body;
+  const has_translator_locked = Object.prototype.hasOwnProperty.call(body, 'translator_locked');
+  const has_solo_locked = Object.prototype.hasOwnProperty.call(body, 'solo_locked');
+  const translator_locked: boolean | undefined = body.translator_locked;
+  const solo_locked: boolean | undefined = body.solo_locked;
 
   if (!slot_id) {
     return NextResponse.json({ error: 'slot_id required' }, { status: 400 });
   }
 
-  // Determine new session type
+  // Get current slot (needed for validation + end_time recompute)
+  const { data: slot } = await supabase
+    .from('booking_slots')
+    .select('start_time, locale, translator_id')
+    .eq('id', slot_id)
+    .single();
+
+  if (!slot) {
+    return NextResponse.json({ error: 'Slot nie znaleziony' }, { status: 404 });
+  }
+
+  // Guard translator_locked=true (matches DB CHECK)
+  if (has_translator_locked && translator_locked === true) {
+    if (slot.locale !== 'pl' || slot.translator_id) {
+      return NextResponse.json(
+        { error: 'translator_locked=true requires locale=pl and no translator_id' },
+        { status: 400 },
+      );
+    }
+  }
+
+  // If PATCH only toggles lock fields (no assistant_id change), apply and return early
+  const isLockOnlyPatch = (has_translator_locked || has_solo_locked) && !Object.prototype.hasOwnProperty.call(body, 'assistant_id');
+  if (isLockOnlyPatch) {
+    const updates: Record<string, unknown> = {};
+    if (has_translator_locked) updates.translator_locked = !!translator_locked;
+    if (has_solo_locked) updates.solo_locked = !!solo_locked;
+    const { error } = await supabase.from('booking_slots').update(updates).eq('id', slot_id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
+  // Determine new session type from assistant_id
   let newSessionType: SessionType = 'natalia_solo';
-  let newEndTime: string | null = null;
 
   if (assistant_id) {
     // Look up assistant's slug
@@ -263,26 +311,19 @@ export async function PATCH(request: NextRequest) {
     else return NextResponse.json({ error: 'Nieznana operatorka' }, { status: 400 });
   }
 
-  // Get current slot to compute new end time
-  const { data: slot } = await supabase
-    .from('booking_slots')
-    .select('start_time')
-    .eq('id', slot_id)
-    .single();
+  const newEndTime = slotEndTime(slot.start_time, newSessionType);
 
-  if (!slot) {
-    return NextResponse.json({ error: 'Slot nie znaleziony' }, { status: 404 });
-  }
-
-  newEndTime = slotEndTime(slot.start_time, newSessionType);
+  const updates: Record<string, unknown> = {
+    assistant_id: assistant_id || null,
+    session_type: newSessionType,
+    end_time: newEndTime,
+  };
+  if (has_translator_locked) updates.translator_locked = !!translator_locked;
+  if (has_solo_locked) updates.solo_locked = !!solo_locked;
 
   const { error } = await supabase
     .from('booking_slots')
-    .update({
-      assistant_id: assistant_id || null,
-      session_type: newSessionType,
-      end_time: newEndTime,
-    })
+    .update(updates)
     .eq('id', slot_id);
 
   if (error) {

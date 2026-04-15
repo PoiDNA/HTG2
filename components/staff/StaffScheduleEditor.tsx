@@ -118,12 +118,20 @@ function PractitionerEditor() {
   };
 
   // ── Specific date slot ──
+  // "1:1" mode locks both operator join (solo_locked) AND translator join
+  // (translator_locked). "Otwarta" leaves both unlocked — asystentki i tłumaczki
+  // mogą się dopinać zgodnie z normalnym flow.
   const addSpecificSlot = async () => {
     if (!specDate) return;
     const res = await fetch('/api/staff/slots', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: specDate, start_time: specStart, solo_locked: specSoloOnly }),
+      body: JSON.stringify({
+        date: specDate,
+        start_time: specStart,
+        solo_locked: specSoloOnly,
+        translator_locked: specSoloOnly,
+      }),
     });
     if (res.ok) { setSpecDate(''); setSpecSoloOnly(false); fetchData(); }
   };

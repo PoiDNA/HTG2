@@ -209,7 +209,7 @@ export default function RemainingSessionsClient({ months, prices }: Props) {
               <button
                 ref={(el) => { if (el) headerRefs.current.set(month.monthLabel, el); else headerRefs.current.delete(month.monthLabel); }}
                 onClick={() => toggleSection(month.monthLabel)}
-                className="group w-full flex items-center justify-between px-4 py-8 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
+                className="group w-full flex items-center justify-between px-4 py-[2.7rem] hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
               >
                 {month.coverImageUrl && (
                   <div

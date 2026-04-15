@@ -122,7 +122,7 @@ export default async function StaffDashboard({
             {staffMember ? `Witaj, ${staffMember.name}` : 'Panel prowadzącego'}
           </h1>
           <p className="text-htg-fg-muted text-sm mt-1">
-            {staffMember?.role === 'practitioner' ? 'Prowadząca' : 'Asystentka'} · {todayStr}
+            {staffMember?.role === 'practitioner' ? 'Prowadząca' : 'Operatorka'} · {todayStr}
           </p>
         </div>
         <InitiateCallModal locale={locale} />

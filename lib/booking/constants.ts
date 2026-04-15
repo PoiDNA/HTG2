@@ -55,7 +55,7 @@ export const SESSION_CONFIG: Record<SessionType, {
     labelShort: 'Z Asystą',
     durationMinutes: 90,
     pricePln: 1600,
-    requiredStaff: ['natalia', 'assistant'],
+    requiredStaff: ['natalia', 'operator'],
     color: 'bg-amber-600',
   },
   pre_session: {

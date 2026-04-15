@@ -7,7 +7,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-auto">
+    <footer className="mt-auto pt-[110px]">
       <div className="mx-auto max-w-6xl px-6 py-3 md:py-4">
         {/* Top row: brand left, links right (desktop) / stacked (mobile) */}
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-x-6">

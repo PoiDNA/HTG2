@@ -34,7 +34,7 @@ export default async function StaffLayout({
   const displayName = viewAsName ?? staffMember?.name ?? user.email ?? '';
   const displayRole = staffMember?.role === 'practitioner'
     ? t('role_practitioner')
-    : staffMember?.role === 'assistant'
+    : staffMember?.role === 'operator'
       ? t('role_assistant')
       : t('role_admin');
 

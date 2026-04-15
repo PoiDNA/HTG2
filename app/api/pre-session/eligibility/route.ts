@@ -6,8 +6,8 @@ import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 export async function GET() {
   const { user, staffMember } = await getEffectiveStaffMember();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!staffMember || staffMember.role !== 'assistant') {
-    return NextResponse.json({ error: 'Not an assistant' }, { status: 403 });
+  if (!staffMember || staffMember.role !== 'operator') {
+    return NextResponse.json({ error: 'Not an operator' }, { status: 403 });
   }
 
   const db = createSupabaseServiceRole();
@@ -37,8 +37,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const { user, staffMember } = await getEffectiveStaffMember();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!staffMember || staffMember.role !== 'assistant') {
-    return NextResponse.json({ error: 'Not an assistant' }, { status: 403 });
+  if (!staffMember || staffMember.role !== 'operator') {
+    return NextResponse.json({ error: 'Not an operator' }, { status: 403 });
   }
 
   const db = createSupabaseServiceRole();
@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const { user, staffMember } = await getEffectiveStaffMember();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!staffMember || staffMember.role !== 'assistant') {
-    return NextResponse.json({ error: 'Not an assistant' }, { status: 403 });
+  if (!staffMember || staffMember.role !== 'operator') {
+    return NextResponse.json({ error: 'Not an operator' }, { status: 403 });
   }
 
   const db = createSupabaseServiceRole();

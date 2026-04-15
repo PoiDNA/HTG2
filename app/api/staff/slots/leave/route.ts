@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No staff member record' }, { status: 400 });
   }
 
-  if (staffMember.role !== 'assistant') {
-    return NextResponse.json({ error: 'Tylko asystentki mogą opuszczać terminy' }, { status: 403 });
+  if (staffMember.role !== 'operator') {
+    return NextResponse.json({ error: 'Tylko operatorki mogą opuszczać terminy' }, { status: 403 });
   }
 
   const { slotId } = await request.json();

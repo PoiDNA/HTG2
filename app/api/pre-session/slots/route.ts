@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   const db = createSupabaseServiceRole();
 
-  const isAssistant = staffMember?.role === 'assistant';
+  const isOperator = staffMember?.role === 'operator';
 
   let query = db
     .from('booking_slots')
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     .order('slot_date', { ascending: true })
     .order('start_time', { ascending: true });
 
-  if (isAssistant) {
+  if (isOperator) {
     // Staff sees their own pre-session slots
     query = query.eq('assistant_id', staffMember!.id);
   } else {
@@ -65,8 +65,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const { user, staffMember } = await getEffectiveStaffMember();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!staffMember || staffMember.role !== 'assistant') {
-    return NextResponse.json({ error: 'Not an assistant' }, { status: 403 });
+  if (!staffMember || staffMember.role !== 'operator') {
+    return NextResponse.json({ error: 'Not an operator' }, { status: 403 });
   }
 
   const db = createSupabaseServiceRole();
@@ -120,8 +120,8 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const { user, staffMember } = await getEffectiveStaffMember();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!staffMember || staffMember.role !== 'assistant') {
-    return NextResponse.json({ error: 'Not an assistant' }, { status: 403 });
+  if (!staffMember || staffMember.role !== 'operator') {
+    return NextResponse.json({ error: 'Not an operator' }, { status: 403 });
   }
 
   const db = createSupabaseServiceRole();

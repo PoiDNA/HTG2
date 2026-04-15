@@ -248,8 +248,8 @@ export async function PATCH(request: NextRequest) {
       .eq('is_active', true)
       .single();
 
-    if (!assistant || assistant.role !== 'assistant') {
-      return NextResponse.json({ error: 'Nie znaleziono asystentki' }, { status: 404 });
+    if (!assistant || assistant.role !== 'operator') {
+      return NextResponse.json({ error: 'Nie znaleziono operatorki' }, { status: 404 });
     }
 
     if (assistant.slug === 'agata') newSessionType = 'natalia_agata';

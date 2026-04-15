@@ -94,7 +94,7 @@ async function getValidatedRecording(
   return recording as RecordingMeta;
 }
 
-function actorRoleForAudit(scope: PlaybackScope): 'admin' | 'practitioner' | 'assistant' {
+function actorRoleForAudit(scope: PlaybackScope): 'admin' | 'practitioner' | 'operator' {
   return scope.role;
 }
 

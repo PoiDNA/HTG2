@@ -1,67 +1,41 @@
 'use client';
 
-// DesertCanvas — Wariant A1b: "Rozpad iluzji — koło" (dissolution vortex)
-// Jeden kierunek obrotu, 3× wolniej, 3× więcej ziaren, 5× zagęszczenie na zewnątrz.
-// Spiralny wir jednostronny, głęboko medytacyjny przepływ.
+// DesertCanvas — Wariant A1: "Oddech światła" (breath of light)
+// Kilka dużych, bardzo miękkich kul światła. Dryfują jak świece w bezwietrznym powietrzu.
+// Ciepłe złoto + blady różowy. Efekt: obecność, ciepło, bezpieczeństwo.
 
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useDesignVariant } from '@/lib/design-variant-context';
 
-// ─── Paleta — rozpad iluzji na poziomie energetycznym ────────────────────────
-// Zewnątrz (forma/ciepło) → centrum (pustka/eter)
-// Złoto i bursztyn = świat formy → blady fiolet i biel = rozproszenie w eter
-const S = [
-  'rgba(212,168,64,',   // złoty — materia, forma, ciepło
-  'rgba(196,140,80,',   // bursztyn — ostatni ślad fizyczności
-  'rgba(180,130,200,',  // blady fiolet — subtelna energia
-  'rgba(160,170,230,',  // błękitno-liliowy — rozproszenie
-  'rgba(210,190,255,',  // prawie biały liliowy — granica pustki
-  'rgba(230,220,255,',  // eteryczna biel — czysty potencjał
+// ─── Paleta — tylko ciepło i spokój ─────────────────────────────────────────
+const COLORS = [
+  { r: 222, g: 174, b:  68 },  // ciepłe złoto     (--color-htg-warm)
+  { r: 230, g: 190, b:  90 },  // jasne złoto       (świetlistość)
+  { r: 216, g: 168, b: 130 },  // brzoskwiniowo-złoty
+  { r: 210, g: 150, b: 155 },  // blady różowy      (--color-htg-lavender)
+  { r: 225, g: 165, b: 145 },  // ciepły łosoś
+  { r: 235, g: 200, b: 160 },  // kremowa poświata
 ] as const;
 
-// Pre-obliczone stringi fillStyle — 6 kolorów × 32 poziomy opacity.
-const OPACITY_LEVELS = 32;
-const COLOR_TABLE: string[][] = (S as readonly string[]).map(c =>
-  Array.from({ length: OPACITY_LEVELS }, (_, i) =>
-    c + ((i + 1) / OPACITY_LEVELS).toFixed(2) + ')'
-  )
-);
-
-function colorStr(ci: number, opacity: number): string {
-  const idx = Math.max(0, Math.min(OPACITY_LEVELS - 1, Math.floor(opacity * OPACITY_LEVELS)));
-  return COLOR_TABLE[ci][idx];
+interface Candle {
+  x:           number;   // pozycja X (px)
+  y:           number;   // pozycja Y (px)
+  vx:          number;   // bardzo wolny dryf X
+  vy:          number;   // bardzo wolny dryf Y
+  baseR:       number;   // promień bazowy (200–400 px)
+  breathAmp:   number;   // amplituda oddechu — ułamek promienia
+  breathSpeed: number;   // tempo oddechu (rad/ms) — jeden cykl ~30–50 s
+  breathPhase: number;   // faza startowa — każda świeca oddycha inaczej
+  wobbleAmp:   number;   // mikro-chwianie (jak płomień świecy)
+  wobbleSpeed: number;
+  wobblePhase: number;
+  ci:          number;   // indeks koloru
+  maxOpacity:  number;   // peak opacity (0.09–0.18)
 }
 
-// ─── Value noise 1D ──────────────────────────────────────────────────────────
-function noise1d(x: number): number {
-  const i = Math.floor(x);
-  const f = x - i;
-  const u = f * f * (3 - 2 * f);
-  const a = Math.sin(i * 127.1 + 311.7) * 43758.5453;
-  const b = Math.sin((i + 1) * 127.1 + 311.7) * 43758.5453;
-  return (a - Math.floor(a)) * (1 - u) + (b - Math.floor(b)) * u;
-}
-
-// ─── Typ ziarna ───────────────────────────────────────────────────────────────
-// Ziarno porusza się Z ZEWNĄTRZ DO CENTRUM — rozpad formy w pustkę
-interface Grain {
-  angle:      number;  // kąt [0, 2π]
-  r:          number;  // odległość od centrum (maleje — wciągana do środka)
-  speed:      number;  // prędkość radialna (px/klatkę) — medytacyjna
-  angDrift:   number;  // dryf kątowy — spiralny wir wciągający
-  maxSize:    number;  // rozmiar przy krawędzi ekranu
-  maxOpacity: number;  // opacity przy krawędzi
-  ci:         number;  // indeks koloru — ziarna cieplejsze vs. eteryczne
-}
-
-// ─── Liczba ziaren wg rozdzielczości (3× więcej niż bazowy A1) ──────────────
-function grainCount(w: number): number {
-  if (w >= 1280) return 66000;
-  if (w >= 1024) return 42000;
-  if (w >= 640)  return 18000;
-  return 6000;
-}
+// Jedno wspólne tempo oddechu dla wszystkich kul — ~40 sekund pełny cykl
+const BREATH_SPEED = 0.000085;  // rad/ms → 2π / 0.000085 ≈ 73 000 ms ≈ 40 s
 
 // ─── Komponent ───────────────────────────────────────────────────────────────
 export default function DesertCanvas() {
@@ -69,8 +43,8 @@ export default function DesertCanvas() {
   const variant = useDesignVariant();
   const [mounted, setMounted] = useState(false);
 
-  const bgRef  = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef    = useRef<number>(0);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -79,124 +53,110 @@ export default function DesertCanvas() {
   useEffect(() => {
     if (!active) return;
 
-    const bgCanvas = bgRef.current!;
-    const bgCtx    = bgCanvas.getContext('2d')!;
+    const canvas = canvasRef.current!;
+    const ctx    = canvas.getContext('2d')!;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    let W = 0, H = 0, CX = 0, CY = 0, MAX_R = 0;
+    let W = 0, H = 0;
 
     function resize() {
       W = window.innerWidth;
       H = window.innerHeight;
-      CX = W / 2;
-      CY = H / 2;
-      MAX_R = Math.hypot(CX, CY) + 20;
-
-      bgCanvas.width        = Math.round(W * dpr);
-      bgCanvas.height       = Math.round(H * dpr);
-      bgCanvas.style.width  = `${W}px`;
-      bgCanvas.style.height = `${H}px`;
-
-      bgCtx.setTransform(1, 0, 0, 1, 0, 0);
-      bgCtx.scale(dpr, dpr);
+      canvas.width        = Math.round(W * dpr);
+      canvas.height       = Math.round(H * dpr);
+      canvas.style.width  = `${W}px`;
+      canvas.style.height = `${H}px`;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
     }
     resize();
 
-    let grains: Grain[] = [];
-
-    function makeGrain(spreadFull: boolean): Grain {
-      // Ciepłe kolory (złoto/bursztyn) dla ziaren zewnętrznych — "forma"
-      // Eteryczne kolory (fiolet/biel) dla ziaren bliskich centrum — "pustka"
-      // Proporcja: 40% ciepłe, 60% eteryczne — w połowie drogi do rozpadu
-      const warm = Math.random() < 0.40;
-      const ci = warm
-        ? Math.floor(Math.random() * 2)        // 0–1: złoty, bursztyn
-        : 2 + Math.floor(Math.random() * 4);   // 2–5: fiolet → biel
-
+    // ─── Tworzenie świec ──────────────────────────────────────────────────────
+    function makeCandle(i: number, total: number): Candle {
+      // Rozmieść równomiernie po ekranie z losowym przesunięciem
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const cols = 3;
+      const rows = Math.ceil(total / cols);
       return {
-        angle:      Math.random() * Math.PI * 2,
-        // Rozkład r: Math.pow(u, 0.3) skupia 5× więcej ziaren przy zewnętrznej krawędzi
-        // (PDF przy r=MAX_R jest ~5× większe niż przy r=MAX_R/2)
-        r:          spreadFull
-                      ? MAX_R * Math.pow(Math.random(), 0.3)
-                      : MAX_R * (0.75 + Math.random() * 0.25),
-        // 3× wolniej niż A1 bazowy — głęboko medytacyjny przepływ
-        speed:      0.01 + Math.random() * 0.03,
-        // Jeden kierunek kręcenia — czyste koło, nie chaos
-        angDrift:   0.0008 + Math.random() * 0.0018,
-        maxSize:    warm
-                      ? 1.8 + Math.random() * 1.8   // większe przy krawędzi (forma)
-                      : 0.8 + Math.random() * 1.2,  // mniejsze eteryczne
-        maxOpacity: warm
-                      ? 0.55 + Math.random() * 0.35  // wyraźne złoto
-                      : 0.35 + Math.random() * 0.45, // delikatny eter
-        ci,
+        x:           (col + 0.2 + Math.random() * 0.6) * (W / cols),
+        y:           (row + 0.2 + Math.random() * 0.6) * (H / rows),
+        // Jak świeca w bezwietrznym powietrzu — minimalny ruch
+        vx:          (Math.random() - 0.5) * 0.06,
+        vy:          (Math.random() - 0.5) * 0.06,
+        baseR:       200 + Math.random() * 200,    // 200–400 px
+        breathAmp:   0.06 + Math.random() * 0.08,  // ±6–14% promienia
+        breathSpeed: BREATH_SPEED,                 // identyczne tempo dla wszystkich
+        breathPhase: (i / total) * Math.PI * 2,   // równomiernie rozłożone fazy — jak zegar
+        wobbleAmp:   0.015 + Math.random() * 0.01, // mikro-drganie płomienia
+        wobbleSpeed: 0.003 + Math.random() * 0.004,
+        wobblePhase: Math.random() * Math.PI * 2,
+        ci:          i % COLORS.length,
+        maxOpacity:  0.10 + Math.random() * 0.08,  // 0.10–0.18
       };
     }
 
-    function initGrains() {
-      if (reducedMotion) { grains = []; return; }
-      const N = grainCount(W);
-      grains = Array.from({ length: N }, () => makeGrain(true));
-      grains.sort((a, b) => a.ci - b.ci);
-    }
-    initGrains();
+    const COUNT = 9;  // 9 świec — 3×3 siatka pokrywająca ekran
+    let candles: Candle[] = Array.from({ length: COUNT }, (_, i) => makeCandle(i, COUNT));
 
     let resizeTimer: ReturnType<typeof setTimeout>;
     const ro = new ResizeObserver(() => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => { resize(); initGrains(); }, 200);
+      resizeTimer = setTimeout(() => {
+        resize();
+        candles = Array.from({ length: COUNT }, (_, i) => makeCandle(i, COUNT));
+      }, 200);
     });
     ro.observe(document.documentElement);
 
-    // ─── Główna pętla ────────────────────────────────────────────────────────
+    // ─── Pętla animacji ───────────────────────────────────────────────────────
     function frame(t: number) {
       rafRef.current = requestAnimationFrame(frame);
+      ctx.clearRect(0, 0, W, H);
 
-      bgCtx.clearRect(0, 0, W, H);
-      if (!reducedMotion) {
-        const tSlow = t * 0.000018;  // wolniejszy szum niż poprzednio
+      if (reducedMotion) return;
 
-        let lastStyle = '';
+      for (const c of candles) {
+        // Oddech — spokojny, głęboki
+        const breathR = c.baseR * (1 + c.breathAmp * Math.sin(t * c.breathSpeed + c.breathPhase));
 
-        for (const g of grains) {
-          // t01: 1.0 przy krawędzi, 0.0 przy centrum — reprezentuje "ilość formy"
-          const t01 = Math.min(g.r / MAX_R, 1.0);
+        // Chwianie jak płomień — mikro-przesunięcie centrum
+        const wx = c.wobbleAmp * breathR * Math.sin(t * c.wobbleSpeed + c.wobblePhase);
+        const wy = c.wobbleAmp * breathR * Math.cos(t * c.wobbleSpeed * 0.7 + c.wobblePhase);
 
-          // Ruch do centrum — lekko przyspiesza przy zbliżaniu (grawitacja pustki)
-          g.r -= g.speed * (0.5 + (1.0 - t01) * 0.5);
+        // Dryf — ledwie wyczuwalny
+        c.x += c.vx;
+        c.y += c.vy;
 
-          // Spiralny dryf — wir pochłaniający
-          g.angle += g.angDrift + noise1d(g.r * 0.012 + g.ci * 2.3 + tSlow) * 0.0002;
+        // Miękkie granice — świeca obraca się gdy zbliży do krawędzi
+        const margin = breathR * 0.4;
+        if (c.x < margin)        c.vx =  Math.abs(c.vx);
+        if (c.x > W - margin)    c.vx = -Math.abs(c.vx);
+        if (c.y < margin)        c.vy =  Math.abs(c.vy);
+        if (c.y > H - margin)    c.vy = -Math.abs(c.vy);
 
-          // Odrodzenie przy krawędzi gdy ziarno dotrze do centrum
-          if (g.r <= 1.5) {
-            g.r     = MAX_R * (0.85 + Math.random() * 0.15);
-            g.angle = Math.random() * Math.PI * 2;
-            continue;
-          }
+        const cx = c.x + wx;
+        const cy = c.y + wy;
 
-          // Projekcja biegunowa → ekranowa
-          const x = CX + Math.cos(g.angle) * g.r;
-          const y = CY + Math.sin(g.angle) * g.r;
-          if (x < -2 || x > W + 2 || y < -2 || y > H + 2) continue;
+        // Oddech opacity — to samo tempo co rozmiar, inne fazy → różne momenty cyklu
+        const breathFactor = 0.75 + 0.25 * Math.sin(t * BREATH_SPEED + c.breathPhase);
+        const opacity = c.maxOpacity * breathFactor;
 
-          // Opacity maleje w kierunku centrum — rozpuszczanie formy
-          // Ciepłe ziarna (ci 0–1) bardziej wyraźne przy krawędzi
-          // Eteryczne (ci 2–5) subtelniejsze przez całą drogę
-          const opacity = g.maxOpacity * t01;
-          if (opacity < 0.03) continue;
+        const { r, g, b } = COLORS[c.ci];
 
-          // Rozmiar maleje w kierunku centrum — materia rozrzedza się
-          const size = g.maxSize * (0.1 + t01 * 0.9);
+        // Miękka poświata: gradient 3-stopniowy — centrum jaśniejsze, krawędź zanika
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, breathR);
+        grad.addColorStop(0,    `rgba(${r},${g},${b},${(opacity * 0.9).toFixed(3)})`);
+        grad.addColorStop(0.35, `rgba(${r},${g},${b},${(opacity * 0.55).toFixed(3)})`);
+        grad.addColorStop(0.70, `rgba(${r},${g},${b},${(opacity * 0.18).toFixed(3)})`);
+        grad.addColorStop(1,    `rgba(${r},${g},${b},0)`);
 
-          const style = colorStr(g.ci, opacity);
-          if (style !== lastStyle) { bgCtx.fillStyle = style; lastStyle = style; }
-          const half = size * 0.5;
-          bgCtx.fillRect(x - half, y - half, size, size);
-        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, breathR, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
@@ -213,9 +173,8 @@ export default function DesertCanvas() {
   if (!active) return null;
 
   return (
-    // Jeden canvas — brak FG (rozpad nie osiada, nie opada)
     <canvas
-      ref={bgRef}
+      ref={canvasRef}
       aria-hidden="true"
       style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', display: 'block' }}
     />

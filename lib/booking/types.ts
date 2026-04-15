@@ -11,7 +11,7 @@ export type SessionType =
   | 'natalia_interpreter_asysta'   // new 180 min (requires assistant_id)
   | 'natalia_interpreter_para';    // new 180 min (maxClients=2)
 export type PaymentStatus = 'confirmed_paid' | 'installments' | 'partial_payment' | 'pending_verification';
-export type StaffRole = 'practitioner' | 'assistant' | 'translator';
+export type StaffRole = 'practitioner' | 'operator' | 'editor' | 'translator';
 export type TranslatorLocale = 'en' | 'de' | 'pt';
 export type SlotStatus = 'available' | 'held' | 'booked' | 'completed' | 'cancelled';
 export type BookingStatus = 'pending_confirmation' | 'confirmed' | 'completed' | 'cancelled' | 'transferred';

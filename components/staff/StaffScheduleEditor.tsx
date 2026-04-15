@@ -72,7 +72,7 @@ function PractitionerEditor() {
     setRules(rulesRes.rules ?? []);
     setExceptions(exRes.exceptions ?? []);
     setSlots(slotsRes.slots ?? []);
-    setAssistants((staffRes.staff ?? []).filter((s: StaffMember) => s.role === 'assistant' && s.is_active));
+    setAssistants((staffRes.staff ?? []).filter((s: StaffMember) => s.role === 'operator' && s.is_active));
     setLoading(false);
   }, []);
 

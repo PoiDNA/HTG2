@@ -221,11 +221,11 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      // 2. Fetch all active assistants
+      // 2. Fetch all active operators
       const { data: assistantsData } = await db
         .from('staff_members')
         .select('id, name, slug')
-        .eq('role', 'assistant')
+        .eq('role', 'operator')
         .eq('is_active', true);
 
       const assistants = assistantsData ?? [];
@@ -344,11 +344,11 @@ export async function GET(request: NextRequest) {
 
     // natalia_interpreter_asysta: operator optional → return available_operators[] per slot
     if (sessionType === 'natalia_interpreter_asysta') {
-      // Fetch all active assistants
+      // Fetch all active operators
       const { data: assistantsData } = await db
         .from('staff_members')
         .select('id, name, slug')
-        .eq('role', 'assistant')
+        .eq('role', 'operator')
         .eq('is_active', true);
       const assistants = assistantsData ?? [];
 
@@ -575,8 +575,8 @@ export async function GET(request: NextRequest) {
         .eq('slug', slugToFind)
         .eq('is_active', true)
         .single();
-      if (!asst || asst.role !== 'assistant') {
-        return NextResponse.json({ error: `Assistant '${slugToFind}' not found` }, { status: 404 });
+      if (!asst || asst.role !== 'operator') {
+        return NextResponse.json({ error: `Operator '${slugToFind}' not found` }, { status: 404 });
       }
       assistantId = asst.id;
       assistantName = asst.name;

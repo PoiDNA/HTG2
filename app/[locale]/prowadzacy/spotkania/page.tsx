@@ -18,7 +18,7 @@ export default async function SpotkaniaPrzedSesjaPage({
 
   const { staffMember, user } = await getEffectiveStaffMember();
 
-  if (!staffMember || staffMember.role !== 'assistant') {
+  if (!staffMember || staffMember.role !== 'operator') {
     return redirect({href: '/prowadzacy', locale});
   }
 

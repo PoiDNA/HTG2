@@ -1,7 +1,16 @@
-# HTG2 — Wytyczne dla agentów AI
+# HTG2 — Wytyczne deweloperskie
 
 ## Stack
 Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS 4, Supabase (PostgreSQL + RLS + Auth), Stripe, Bunny Stream (HLS), LiveKit Cloud (WebRTC), Resend, Vercel.
+
+## Środowiska
+
+| Środowisko | Branch | Vercel |
+|---|---|---|
+| **Production** | `main` | Current — htgcyou.com |
+| **Preview** | każdy PR branch | automatyczny deploy per branch |
+
+Zmiany wchodzą na produkcję wyłącznie przez squash merge do `main`.
 
 ## Krok 0 każdej sesji
 - `git worktree list` → zamknij/usuń worktrees, nad którymi nie pracujesz
@@ -11,8 +20,8 @@ Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS 4, Supabase (Postgre
 
 ### Tworzenie brancha
 - **Zawsze nowy branch z aktualnego `origin/main`**
-- Nazewnictwo: `ai/<owner>/<narzędzie>/<YYYY-MM-DD>-<cel>` (cel max 3 słowa)
-  - Przykład: `ai/lk/claude/2026-04-01-auth-fix`
+- Nazewnictwo: `ai/<owner>/<YYYY-MM-DD>-<cel>` (cel max 3 słowa)
+  - Przykład: `ai/lk/2026-04-01-auth-fix`
 - Starego brancha nigdy nie reanimuj
 
 ### Zakazy

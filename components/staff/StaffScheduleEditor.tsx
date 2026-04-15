@@ -199,7 +199,7 @@ function PractitionerEditor() {
           {t('weekly_schedule')}
         </h3>
         <p className="text-sm text-htg-fg-muted mb-4">
-          Max 4 sesje dziennie. Wybierz godzinę i typ: <span className="text-htg-warm font-medium">1:1</span> = tylko Natalia, <span className="text-htg-sage font-medium">Otwarta</span> = asystentka może dołączyć.
+          Max 4 sesje dziennie. Wybierz godzinę i typ: <span className="text-htg-warm font-medium">1:1</span> = tylko Natalia, <span className="text-htg-sage font-medium">Otwarta</span> = operatorka może dołączyć.
         </p>
         <div className="space-y-3">
           {[1, 2, 3, 4, 5, 6, 0].map(dayIdx => {
@@ -467,10 +467,10 @@ function PractitionerEditor() {
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
         <h3 className="text-lg font-serif font-bold text-htg-fg mb-2 flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-htg-indigo" />
-          Zarządzanie asystentkami
+          Zarządzanie operatorkami
         </h3>
         <p className="text-sm text-htg-fg-muted mb-4">
-          Przypisz lub zmień asystentkę na nadchodzących terminach.
+          Przypisz lub zmień operatorkę na nadchodzących terminach.
         </p>
 
         {slots.length === 0 ? (
@@ -484,7 +484,7 @@ function PractitionerEditor() {
                   <th className="text-left py-2 px-3">Godzina</th>
                   <th className="text-left py-2 px-3">Typ</th>
                   <th className="text-left py-2 px-3">Status</th>
-                  <th className="text-left py-2 px-3">Asystentka</th>
+                  <th className="text-left py-2 px-3">Operatorka</th>
                 </tr>
               </thead>
               <tbody>

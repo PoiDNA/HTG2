@@ -58,10 +58,18 @@ export default async function AdminDashboard({
   const [usersRes, entsRes, staffRes] = await Promise.all([
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('entitlements').select('id', { count: 'exact', head: true }).eq('is_active', true),
-    supabase.from('staff_members').select('id, name, slug, role, session_types, email').eq('is_active', true),
+    supabase.from('staff_members').select('id, name, slug, role, session_types, email, locale').eq('is_active', true),
   ]);
 
   const staffMembers = staffRes.data ?? [];
+
+  function staffRoleLabel(role: string, locale?: string | null) {
+    if (role === 'practitioner') return 'Prowadząca';
+    if (role === 'translator') return locale ? `Tłumaczka ${locale.toUpperCase()}` : 'Tłumaczka';
+    if (role === 'operator') return 'Operatorka';
+    if (role === 'editor') return 'Edytorka';
+    return role;
+  }
 
   const quickLinks = [
     { href: '/konto/admin/uzytkownicy' as const, label: 'Użytkownicy', icon: Users },
@@ -149,7 +157,7 @@ export default async function AdminDashboard({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-htg-fg text-sm">{s.name}</p>
-                    <p className="text-xs text-htg-fg-muted">{isPractitioner ? 'Prowadząca' : 'Asystentka'}</p>
+                    <p className="text-xs text-htg-fg-muted">{staffRoleLabel(s.role, (s as any).locale)}</p>
                   </div>
                   <ExternalLink className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-htg-warm' : 'text-htg-fg-muted'}`} />
                 </button>
@@ -199,7 +207,7 @@ export default async function AdminDashboard({
                 </div>
                 <div>
                   <p className="font-medium text-htg-fg">{member.name}</p>
-                  <p className="text-xs text-htg-fg-muted">{member.role === 'practitioner' ? 'Prowadząca' : 'Asystentka'}</p>
+                  <p className="text-xs text-htg-fg-muted">{staffRoleLabel(member.role, (member as any).locale)}</p>
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-1">

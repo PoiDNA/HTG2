@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
     .eq('is_active', true)
     .single();
 
-  if (!newAssistant || newAssistant.role !== 'assistant') {
-    return NextResponse.json({ error: 'Nie znaleziono asystentki' }, { status: 404 });
+  if (!newAssistant || newAssistant.role !== 'operator') {
+    return NextResponse.json({ error: 'Nie znaleziono operatorki' }, { status: 404 });
   }
 
   // Determine new session type

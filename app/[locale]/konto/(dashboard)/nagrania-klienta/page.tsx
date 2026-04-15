@@ -56,7 +56,7 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
 
   // Resolve the viewer's staff_members row (for role + assistant_id lookups).
   // Use `user.id` (the real session user), not userId (which could be impersonated).
-  let viewerStaffRole: 'practitioner' | 'assistant' | null = null;
+  let viewerStaffRole: 'practitioner' | 'operator' | null = null;
   let viewerStaffId: string | null = null;
   if (staff && user && !admin_user) {
     const { data: staffRow } = await admin
@@ -66,7 +66,7 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
       .eq('is_active', true)
       .maybeSingle();
     if (staffRow) {
-      viewerStaffRole = staffRow.role as 'practitioner' | 'assistant';
+      viewerStaffRole = staffRow.role as 'practitioner' | 'operator';
       viewerStaffId = staffRow.id;
     }
   }
@@ -86,7 +86,7 @@ export default async function ClientRecordingsPage({ params }: { params: Promise
       recordings = data || [];
     }
     // ─── Assistant: filter by slot.assistant_id ───────────────────────────
-    else if (viewerStaffRole === 'assistant' && viewerStaffId) {
+    else if (viewerStaffRole === 'operator' && viewerStaffId) {
       // Two-step fetch because Supabase PostgREST doesn't support filtering
       // on nested joined columns in a single query reliably. Step 1: find all
       // bookings where this assistant was assigned. Step 2: fetch recordings

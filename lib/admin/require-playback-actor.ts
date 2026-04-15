@@ -14,7 +14,7 @@ import { isAdminEmail } from '@/lib/roles';
 export type PlaybackScope =
   | { role: 'admin' }
   | { role: 'practitioner' }
-  | { role: 'assistant'; sessionTypes: string[] };
+  | { role: 'operator'; sessionTypes: string[] };
 
 /**
  * Rezolwuje role i scope odtwarzania/przydzielania nagrań dla aktualnego usera.
@@ -26,7 +26,7 @@ export type PlaybackScope =
  *   2. Lookup `staff_members` najpierw po `user_id` (primary), fallback po `email`.
  *      Odporniejsze niż sam email — user_id zlinkowany trzymamy za preferencję.
  *   3. `staff_members.role === 'practitioner'` → { role: 'practitioner' }
- *   4. Inny aktywny staff → { role: 'assistant', sessionTypes: staff.session_types || [] }
+ *   4. Inny aktywny staff → { role: 'operator', sessionTypes: staff.session_types || [] }
  *   5. Brak → null
  *
  * Parametr `db` = klient service role (caller przekazuje swoje instance,
@@ -66,7 +66,7 @@ export async function resolveStaffPlaybackScope(
 
   if (staff.role === 'practitioner') return { role: 'practitioner' };
 
-  return { role: 'assistant', sessionTypes: staff.session_types || [] };
+  return { role: 'operator', sessionTypes: staff.session_types || [] };
 }
 
 /**

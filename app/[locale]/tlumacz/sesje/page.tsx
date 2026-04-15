@@ -50,15 +50,24 @@ export default async function TranslatorSessionsPage({
   }
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const { data: rawBookings } = await db
-    .from('bookings')
-    .select(`
-      id, session_type, status, topics, live_session_id, user_id, payment_status,
-      slot:booking_slots!inner(slot_date, start_time, end_time)
-    `)
-    .in('status', ['confirmed', 'completed', 'pending_confirmation'])
-    .order('slot_date', { referencedTable: 'booking_slots', ascending: false })
-    .limit(500);
+  // Step 1: slot IDs belonging to this translator
+  const { data: mySlotRows } = translatorId
+    ? await db.from('booking_slots').select('id').eq('translator_id', translatorId)
+    : { data: [] };
+  const mySlotIds = (mySlotRows || []).map((s: any) => s.id);
+
+  const { data: rawBookings } = mySlotIds.length > 0
+    ? await db
+        .from('bookings')
+        .select(`
+          id, session_type, status, topics, live_session_id, user_id, payment_status,
+          slot:booking_slots!inner(slot_date, start_time, end_time)
+        `)
+        .in('slot_id', mySlotIds)
+        .in('status', ['confirmed', 'completed', 'pending_confirmation'])
+        .order('slot_date', { referencedTable: 'booking_slots', ascending: false })
+        .limit(500)
+    : { data: [] };
 
   const userIds = [...new Set((rawBookings || []).map((b: any) => b.user_id).filter(Boolean))];
   const { data: profiles } = userIds.length > 0

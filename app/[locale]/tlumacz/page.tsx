@@ -3,6 +3,7 @@ import { locales, Link } from '@/i18n-config';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isTranslatorEmail, TRANSLATOR_LOCALE } from '@/lib/roles';
+import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
 import { Calendar, Clock, Users, Languages, Send, CheckCircle, ArrowRight } from 'lucide-react';
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
@@ -26,17 +27,33 @@ export default async function TranslatorDashboard({
   const db = createSupabaseServiceRole();
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Upcoming sessions (all — translator covers all)
-  const { data: rawBookings } = await db
-    .from('bookings')
-    .select(`
-      id, session_type, status, topics, live_session_id, user_id,
-      slot:booking_slots!inner(slot_date, start_time, end_time)
-    `)
-    .in('status', ['confirmed', 'pending_confirmation'])
-    .gte('slot.slot_date', todayStr)
-    .order('slot_date', { referencedTable: 'booking_slots', ascending: true })
-    .limit(200);
+  // Get translator's staff member for filtering
+  const { staffMember } = await getEffectiveStaffMember();
+  const translatorId = staffMember?.id ?? null;
+
+  // Step 1: upcoming slot IDs for this translator
+  const { data: mySlotRows } = translatorId
+    ? await db
+        .from('booking_slots')
+        .select('id')
+        .eq('translator_id', translatorId)
+        .gte('slot_date', todayStr)
+    : { data: [] };
+  const mySlotIds = (mySlotRows || []).map((s: any) => s.id);
+
+  // Step 2: bookings for those slots only
+  const { data: rawBookings } = mySlotIds.length > 0
+    ? await db
+        .from('bookings')
+        .select(`
+          id, session_type, status, topics, live_session_id, user_id,
+          slot:booking_slots!inner(slot_date, start_time, end_time)
+        `)
+        .in('slot_id', mySlotIds)
+        .in('status', ['confirmed', 'pending_confirmation'])
+        .order('slot_date', { referencedTable: 'booking_slots', ascending: true })
+        .limit(200)
+    : { data: [] };
 
   const userIds = [...new Set((rawBookings || []).map((b: any) => b.user_id).filter(Boolean))];
   const { data: profiles } = userIds.length > 0

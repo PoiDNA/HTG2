@@ -1,24 +1,26 @@
 'use client';
 
+// DesertCanvas — Wariant A1: "Rozpad iluzji" (dissolution)
+// Ziarna z zewnątrz → centrum. Forma (złoto) rozpuszcza się w pustkę (biel/fiolet).
+// Spiralny wir, medytacyjne tempo, brak akumulacji.
+
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useDesignVariant } from '@/lib/design-variant-context';
 
-// ─── Paleta — ciepłe pastele spójne z design systemu HTG2 ───────────────────
-// Bazuje na: --color-htg-warm (#D4A840), --color-htg-lavender (#C8949E),
-//            --color-htg-indigo-light (#B06278), cream (#FDF5F0)
-// Format: 'rgba(r,g,b,' — domykamy: + opacity.toFixed(2) + ')'
+// ─── Paleta — rozpad iluzji na poziomie energetycznym ────────────────────────
+// Zewnątrz (forma/ciepło) → centrum (pustka/eter)
+// Złoto i bursztyn = świat formy → blady fiolet i biel = rozproszenie w eter
 const S = [
-  'rgba(212,168,64,',   // złoty piasek   (--color-htg-warm)
-  'rgba(200,148,158,',  // blady różowy   (--color-htg-lavender)
-  'rgba(196,140,80,',   // ciepły brąz-złoty
-  'rgba(176,98,120,',   // ciemniejszy różowy (--color-htg-indigo-light)
-  'rgba(232,188,100,',  // jasny złoty-brzoskwiniowy
-  'rgba(210,160,140,',  // ciepły łosoś/peach
+  'rgba(212,168,64,',   // złoty — materia, forma, ciepło
+  'rgba(196,140,80,',   // bursztyn — ostatni ślad fizyczności
+  'rgba(180,130,200,',  // blady fiolet — subtelna energia
+  'rgba(160,170,230,',  // błękitno-liliowy — rozproszenie
+  'rgba(210,190,255,',  // prawie biały liliowy — granica pustki
+  'rgba(230,220,255,',  // eteryczna biel — czysty potencjał
 ] as const;
 
 // Pre-obliczone stringi fillStyle — 6 kolorów × 32 poziomy opacity.
-// Eliminuje alokację stringów w hot loopie i minimalizuje zmiany stanu canvas.
 const OPACITY_LEVELS = 32;
 const COLOR_TABLE: string[][] = (S as readonly string[]).map(c =>
   Array.from({ length: OPACITY_LEVELS }, (_, i) =>
@@ -31,7 +33,7 @@ function colorStr(ci: number, opacity: number): string {
   return COLOR_TABLE[ci][idx];
 }
 
-// ─── Value noise 1D — bez dependencji ───────────────────────────────────────
+// ─── Value noise 1D ──────────────────────────────────────────────────────────
 function noise1d(x: number): number {
   const i = Math.floor(x);
   const f = x - i;
@@ -41,28 +43,16 @@ function noise1d(x: number): number {
   return (a - Math.floor(a)) * (1 - u) + (b - Math.floor(b)) * u;
 }
 
-// ─── Typy ────────────────────────────────────────────────────────────────────
-
-// Ziarno w układzie biegunowym — porusza się od środka ekranu na zewnątrz
-// symulując efekt głębi (piasek wyłaniający się z perspektywy ku użytkownikowi)
+// ─── Typ ziarna ───────────────────────────────────────────────────────────────
+// Ziarno porusza się Z ZEWNĄTRZ DO CENTRUM — rozpad formy w pustkę
 interface Grain {
-  angle:      number;  // kąt [0, 2π] — kierunek od środka
-  r:          number;  // odległość od środka ekranu (px)
-  speed:      number;  // prędkość radialna (px/klatkę) — bardzo mała
-  angDrift:   number;  // wolny dryf kątowy (spiralny ruch)
-  maxSize:    number;  // rozmiar przy pełnym r (0.4–1.8 px)
-  maxOpacity: number;  // opacity przy pełnym r
-  ci:         number;  // indeks koloru w S[]
-}
-
-// Ziarna opadające z krawędzi elementów (pierwszoplanowa warstwa FG)
-interface Faller {
-  x: number; y: number;
-  vx: number; vy: number;
-  size: number;
-  opacity: number;
-  ci: number;
-  life: number;  // 1 → 0
+  angle:      number;  // kąt [0, 2π]
+  r:          number;  // odległość od centrum (maleje — wciągana do środka)
+  speed:      number;  // prędkość radialna (px/klatkę) — medytacyjna
+  angDrift:   number;  // dryf kątowy — spiralny wir wciągający
+  maxSize:    number;  // rozmiar przy krawędzi ekranu
+  maxOpacity: number;  // opacity przy krawędzi
+  ci:         number;  // indeks koloru — ziarna cieplejsze vs. eteryczne
 }
 
 // ─── Liczba ziaren wg rozdzielczości ────────────────────────────────────────
@@ -73,9 +63,6 @@ function grainCount(w: number): number {
   return 2000;
 }
 
-const MAX_PILE    = 8;     // px — maks. wysokość hałdy na krawędzi elementu
-const MAX_FALLERS = 2000;  // limit aktywnych opadających ziaren
-
 // ─── Komponent ───────────────────────────────────────────────────────────────
 export default function DesertCanvas() {
   const { resolvedTheme } = useTheme();
@@ -83,27 +70,21 @@ export default function DesertCanvas() {
   const [mounted, setMounted] = useState(false);
 
   const bgRef  = useRef<HTMLCanvasElement>(null);
-  const fgRef  = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
 
-  // Montaż po stronie klienta — guard SSR/hydration
   useEffect(() => { setMounted(true); }, []);
 
-  // Guard MUSI być po wszystkich hookach — nie zmienia ich liczby między renderami
   const active = mounted && resolvedTheme !== 'dark' && variant === 'v1';
 
   useEffect(() => {
     if (!active) return;
 
     const bgCanvas = bgRef.current!;
-    const fgCanvas = fgRef.current!;
     const bgCtx    = bgCanvas.getContext('2d')!;
-    const fgCtx    = fgCanvas.getContext('2d')!;
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
-    // Geometria ekranu + punkt znikania (środek)
     let W = 0, H = 0, CX = 0, CY = 0, MAX_R = 0;
 
     function resize() {
@@ -111,38 +92,47 @@ export default function DesertCanvas() {
       H = window.innerHeight;
       CX = W / 2;
       CY = H / 2;
-      MAX_R = Math.hypot(CX, CY) + 20;  // przekątna od środka do rogu + margines
+      MAX_R = Math.hypot(CX, CY) + 20;
 
-      for (const c of [bgCanvas, fgCanvas]) {
-        c.width        = Math.round(W * dpr);
-        c.height       = Math.round(H * dpr);
-        c.style.width  = `${W}px`;
-        c.style.height = `${H}px`;
-      }
-      // Reset transformacji — bez tego scale akumuluje się przy kolejnych resize
-      bgCtx.setTransform(1, 0, 0, 1, 0, 0); bgCtx.scale(dpr, dpr);
-      fgCtx.setTransform(1, 0, 0, 1, 0, 0); fgCtx.scale(dpr, dpr);
+      bgCanvas.width        = Math.round(W * dpr);
+      bgCanvas.height       = Math.round(H * dpr);
+      bgCanvas.style.width  = `${W}px`;
+      bgCanvas.style.height = `${H}px`;
+
+      bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+      bgCtx.scale(dpr, dpr);
     }
     resize();
 
-    // ─── Stan ────────────────────────────────────────────────────────────────
-    let grains:    Grain[]        = [];
-    let fallers:   Faller[]       = [];
-    let edgeRects: DOMRect[]      = [];
-    let piles:     Float32Array[] = [];  // piles[ri][xi] = wys. hałdy w kolumnie xi
+    let grains: Grain[] = [];
 
     function makeGrain(spreadFull: boolean): Grain {
-      const tiny = Math.random() < 0.55;
+      // Ciepłe kolory (złoto/bursztyn) dla ziaren zewnętrznych — "forma"
+      // Eteryczne kolory (fiolet/biel) dla ziaren bliskich centrum — "pustka"
+      // Proporcja: 40% ciepłe, 60% eteryczne — w połowie drogi do rozpadu
+      const warm = Math.random() < 0.40;
+      const ci = warm
+        ? Math.floor(Math.random() * 2)        // 0–1: złoty, bursztyn
+        : 2 + Math.floor(Math.random() * 4);   // 2–5: fiolet → biel
+
       return {
         angle:      Math.random() * Math.PI * 2,
-        r:          spreadFull ? Math.random() * MAX_R : Math.random() * MAX_R * 0.15,
-        speed:      0.06 + Math.random() * 0.28,
-        angDrift:   (Math.random() - 0.5) * 0.0006,
-        // Duże, wyraźne ziarna — widoczne na jasnym tle
-        maxSize:    tiny ? 1.2 + Math.random() * 1.0 : 2.0 + Math.random() * 2.0,
-        // Wysoka opacity — nikt nie powie że "nie widać"
-        maxOpacity: 0.55 + Math.random() * 0.40,
-        ci:         Math.floor(Math.random() * S.length),
+        // Ziarna startują przy krawędzi — wciągane do centrum
+        r:          spreadFull
+                      ? MAX_R * (0.15 + Math.random() * 0.85)
+                      : MAX_R * (0.70 + Math.random() * 0.30),
+        // Medytacyjnie wolny ruch
+        speed:      0.03 + Math.random() * 0.12,
+        // Silna spirala — wir pochłaniający
+        // Większość kręci w tę samą stronę = efekt wiru
+        angDrift:   (Math.random() < 0.75 ? 1 : -1) * (0.0008 + Math.random() * 0.002),
+        maxSize:    warm
+                      ? 1.8 + Math.random() * 1.8   // większe przy krawędzi (forma)
+                      : 0.8 + Math.random() * 1.2,  // mniejsze eteryczne
+        maxOpacity: warm
+                      ? 0.55 + Math.random() * 0.35  // wyraźne złoto
+                      : 0.35 + Math.random() * 0.45, // delikatny eter
+        ci,
       };
     }
 
@@ -150,105 +140,40 @@ export default function DesertCanvas() {
       if (reducedMotion) { grains = []; return; }
       const N = grainCount(W);
       grains = Array.from({ length: N }, () => makeGrain(true));
-      // Sortuj po ci — minimalizuje zmiany fillStyle w hot loopie (6 zmian na 22 000 ziaren)
       grains.sort((a, b) => a.ci - b.ci);
     }
     initGrains();
 
-    // ─── Krawędzie elementów DOM ─────────────────────────────────────────────
-    function refreshEdges() {
-      const els      = document.querySelectorAll('[data-sand-edge]');
-      const newRects = Array.from(els).map(el => el.getBoundingClientRect());
-      if (newRects.length !== edgeRects.length) {
-        piles = newRects.map(r => new Float32Array(Math.ceil(r.width) + 1));
-      }
-      edgeRects = newRects;
-    }
-    refreshEdges();
-    window.addEventListener('scroll', refreshEdges, { passive: true });
-
     let resizeTimer: ReturnType<typeof setTimeout>;
     const ro = new ResizeObserver(() => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        resize();
-        initGrains();
-        refreshEdges();
-      }, 200);
+      resizeTimer = setTimeout(() => { resize(); initGrains(); }, 200);
     });
     ro.observe(document.documentElement);
 
-    // ─── Rysowanie hałd piasku na krawędziach elementów ─────────────────────
-    function drawPiles() {
-      for (let ri = 0; ri < piles.length; ri++) {
-        const pile = piles[ri];
-        const rect = edgeRects[ri];
-        if (!pile || !rect) continue;
-        for (let xi = 0; xi < pile.length; xi++) {
-          const h = pile[xi];
-          if (h < 0.3) continue;
-          const ci = (xi * 3 + ri * 7) % S.length;
-          bgCtx.fillStyle = COLOR_TABLE[ci][Math.floor(0.82 * OPACITY_LEVELS)];
-          bgCtx.fillRect(rect.left + xi, rect.top - h, 1, h + 0.5);
-        }
-      }
-    }
-
     // ─── Główna pętla ────────────────────────────────────────────────────────
-    let edgeFrame = 0;
-
     function frame(t: number) {
       rafRef.current = requestAnimationFrame(frame);
-      edgeFrame++;
-      if (edgeFrame % 90 === 0) refreshEdges();
 
-      // ── BG canvas ─────────────────────────────────────────────────────────
-      // Canvas jest transparentny — tło body przebija przez canvas (z-index:0)
       bgCtx.clearRect(0, 0, W, H);
-
       if (!reducedMotion) {
-        const tSlow = t * 0.000028;
+        const tSlow = t * 0.000018;  // wolniejszy szum niż poprzednio
 
-        // ── Hałdy: erozja + spawn fallerów przy przepełnieniu ───────────────
-        for (let ri = 0; ri < piles.length; ri++) {
-          const pile = piles[ri];
-          const rect = edgeRects[ri];
-          if (!pile || !rect) continue;
-          for (let xi = 0; xi < pile.length; xi++) {
-            if (pile[xi] < 0.1) continue;
-            pile[xi] *= 0.9994;
-            if (pile[xi] > MAX_PILE && fallers.length < MAX_FALLERS) {
-              pile[xi] = MAX_PILE;
-              const n = 1 + (Math.random() < 0.4 ? 1 : 0);
-              for (let k = 0; k < n; k++) {
-                fallers.push({
-                  x:       rect.left + xi + (Math.random() - 0.5) * 2,
-                  y:       rect.top + 0.5,
-                  vx:      (Math.random() - 0.5) * 0.6,
-                  vy:      0.15 + Math.random() * 0.35,
-                  size:    0.2 + Math.random() * 0.5,
-                  opacity: 0.5 + Math.random() * 0.4,
-                  ci:      Math.floor(Math.random() * S.length),
-                  life:    1,
-                });
-              }
-            }
-          }
-        }
-
-        // ── Fizyka i rendering ziaren ────────────────────────────────────────
-        // Ziarna posortowane po ci → fillStyle zmienia się tylko 5-6 razy na frame
         let lastStyle = '';
 
         for (const g of grains) {
-          // Ruch radialny — lekkie przyspieszenie z odległością (perspektywa)
-          const t01   = Math.min(g.r / MAX_R, 1.0);
-          g.r        += g.speed * (0.55 + t01 * 0.55);
-          g.angle    += g.angDrift + noise1d(g.r * 0.015 + g.ci * 3.7 + tSlow) * 0.00025;
+          // t01: 1.0 przy krawędzi, 0.0 przy centrum — reprezentuje "ilość formy"
+          const t01 = Math.min(g.r / MAX_R, 1.0);
 
-          // Reset do centrum gdy wychodzi poza krawędź ekranu
-          if (g.r >= MAX_R + 8) {
-            g.r     = Math.random() * MAX_R * 0.06;
+          // Ruch do centrum — lekko przyspiesza przy zbliżaniu (grawitacja pustki)
+          g.r -= g.speed * (0.5 + (1.0 - t01) * 0.5);
+
+          // Spiralny dryf — wir pochłaniający
+          g.angle += g.angDrift + noise1d(g.r * 0.012 + g.ci * 2.3 + tSlow) * 0.0002;
+
+          // Odrodzenie przy krawędzi gdy ziarno dotrze do centrum
+          if (g.r <= 1.5) {
+            g.r     = MAX_R * (0.85 + Math.random() * 0.15);
             g.angle = Math.random() * Math.PI * 2;
             continue;
           }
@@ -258,56 +183,19 @@ export default function DesertCanvas() {
           const y = CY + Math.sin(g.angle) * g.r;
           if (x < -2 || x > W + 2 || y < -2 || y > H + 2) continue;
 
-          // Perspektywa: opacity rośnie liniowo (nie kwadratowo jak poprzednio).
-          // Ziarna są widoczne już w połowie drogi — nie dopiero przy krawędzi.
-          // Minimum opacity = 0.25 od samego centrum — ziarna widoczne od razu
-          const opacity = g.maxOpacity * Math.max(0.25, t01);
-          if (opacity < 0.05) continue;
-          const size = g.maxSize * (0.3 + t01 * 0.7);
+          // Opacity maleje w kierunku centrum — rozpuszczanie formy
+          // Ciepłe ziarna (ci 0–1) bardziej wyraźne przy krawędzi
+          // Eteryczne (ci 2–5) subtelniejsze przez całą drogę
+          const opacity = g.maxOpacity * t01;
+          if (opacity < 0.03) continue;
 
-          // Detekcja krawędzi DOM → akumulacja w hałdzie
-          let caught = false;
-          for (let ri = 0; ri < edgeRects.length; ri++) {
-            const rect = edgeRects[ri];
-            if (x >= rect.left - 1 && x <= rect.right + 1 &&
-                y >= rect.top - 5  && y <= rect.top + 3) {
-              const col = Math.max(0, Math.min(piles[ri].length - 1, Math.floor(x - rect.left)));
-              piles[ri][col] = Math.min(piles[ri][col] + size * 1.1, MAX_PILE * 1.6);
-              g.r     = Math.random() * MAX_R * 0.06;
-              g.angle = Math.random() * Math.PI * 2;
-              caught  = true;
-              break;
-            }
-          }
-          if (caught) continue;
+          // Rozmiar maleje w kierunku centrum — materia rozrzedza się
+          const size = g.maxSize * (0.1 + t01 * 0.9);
 
-          // Render — fillRect szybszy niż arc dla sub-pikselowych ziaren.
-          // fillStyle setujemy tylko gdy faktycznie się zmienił.
           const style = colorStr(g.ci, opacity);
           if (style !== lastStyle) { bgCtx.fillStyle = style; lastStyle = style; }
           const half = size * 0.5;
           bgCtx.fillRect(x - half, y - half, size, size);
-        }
-
-        drawPiles();
-      }
-
-      // ── FG canvas — opadający piasek z krawędzi elementów ────────────────
-      fgCtx.clearRect(0, 0, W, H);
-      if (!reducedMotion) {
-        fallers = fallers.filter(f => f.life > 0.01 && f.y < H + 40);
-
-        let lastFgStyle = '';
-        for (const f of fallers) {
-          f.vy  = Math.min(f.vy + 0.20, 7);
-          f.vx += (Math.random() - 0.5) * 0.04;
-          f.x  += f.vx;
-          f.y  += f.vy;
-          f.life *= 0.9935;
-
-          const style = colorStr(f.ci, f.opacity * f.life);
-          if (style !== lastFgStyle) { fgCtx.fillStyle = style; lastFgStyle = style; }
-          fgCtx.fillRect(f.x, f.y, f.size * 1.6, f.size * 0.9);
         }
       }
     }
@@ -318,7 +206,6 @@ export default function DesertCanvas() {
       cancelAnimationFrame(rafRef.current);
       ro.disconnect();
       clearTimeout(resizeTimer);
-      window.removeEventListener('scroll', refreshEdges);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
@@ -326,20 +213,11 @@ export default function DesertCanvas() {
   if (!active) return null;
 
   return (
-    <>
-      {/* BG: transparentny canvas z ziarnami piasku — z-index:0, nad tłem body,
-           pod treścią strony (treść ma position:relative, maluje się po canvasie w source order) */}
-      <canvas
-        ref={bgRef}
-        aria-hidden="true"
-        style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', display: 'block' }}
-      />
-      {/* FG: opadający piasek z krawędzi elementów (z-index: 49, przed treścią, za headerem z-50) */}
-      <canvas
-        ref={fgRef}
-        aria-hidden="true"
-        style={{ position: 'fixed', inset: 0, zIndex: 49, pointerEvents: 'none', display: 'block' }}
-      />
-    </>
+    // Jeden canvas — brak FG (rozpad nie osiada, nie opada)
+    <canvas
+      ref={bgRef}
+      aria-hidden="true"
+      style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', display: 'block' }}
+    />
   );
 }

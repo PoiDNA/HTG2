@@ -1,15 +1,36 @@
-export const ADMIN_EMAILS = ['htg@htg.cyou'];
-export const STAFF_EMAILS = ['natalia@htg.cyou', 'agata@htg.cyou', 'justyna@htg.cyou', 'przemek@htg.cyou'];
-export const TRANSLATOR_EMAILS = ['melania@htg.cyou', 'bernadetta@htg.cyou', 'edytap@htg.cyou', 'milena@htg.cyou'];
+import { STAFF } from '@/lib/staff-config';
+
+// ─── Derived email lists (source of truth: lib/staff-config.ts) ─────────────
+
+export const ADMIN_EMAILS = STAFF
+  .filter(s => s.role === 'admin')
+  .map(s => s.email);
+
+/** Staff with session-management access (practitioner + operators) */
+export const STAFF_EMAILS = STAFF
+  .filter(s => s.role === 'practitioner' || s.role === 'operator')
+  .map(s => s.email);
+
+export const EDITOR_EMAILS = STAFF
+  .filter(s => s.role === 'editor')
+  .map(s => s.email);
+
+export const TRANSLATOR_EMAILS = STAFF
+  .filter(s => s.role === 'translator')
+  .map(s => s.email);
+
+/** Translator email → assigned locale */
+export const TRANSLATOR_LOCALE: Record<string, string> = Object.fromEntries(
+  STAFF
+    .filter(s => s.role === 'translator' && s.locale)
+    .map(s => [s.email, s.locale!]),
+);
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type UserRole = 'user' | 'moderator' | 'admin' | 'publikacja' | 'translator';
 
-/** Translator email → assigned locale */
-export const TRANSLATOR_LOCALE: Record<string, string> = {
-  'melania@htg.cyou': 'en',
-  'bernadetta@htg.cyou': 'de',
-  'edytap@htg.cyou': 'pt',
-};
+// ─── Role resolution ─────────────────────────────────────────────────────────
 
 /**
  * Determine the expected profile role based on email.
@@ -19,6 +40,7 @@ export function getRoleForEmail(email: string): UserRole | null {
   const lower = email.toLowerCase();
   if (ADMIN_EMAILS.includes(lower)) return 'admin';
   if (STAFF_EMAILS.includes(lower)) return 'moderator';
+  if (EDITOR_EMAILS.includes(lower)) return 'publikacja';
   if (TRANSLATOR_EMAILS.includes(lower)) return 'translator';
   return null;
 }
@@ -51,9 +73,8 @@ export function isTranslatorEmail(email: string): boolean {
  * practitioner) is the only staff member added here because she needs to read
  * client transcripts and AI-extracted insights to provide therapy support.
  *
- * Other staff members (Agata, Justyna, Przemek) are deliberately NOT included
- * — they are practitioners who run their own sessions but do not need
- * cross-client access to transcripts (RODO data minimization principle).
+ * Other staff members (operatorki, edytorki) are deliberately NOT included
+ * — RODO data minimization principle.
  *
  * If you need to add another viewer in the future, append their email here.
  * Every read of `session_client_insights` is audited via

@@ -95,9 +95,9 @@ export const STAFF = [
 
   // ─── Tłumacze ───────────────────────────────────────────────────────────────
   {
-    email: 'milena@htg.cyou',
-    name: 'Milena',
-    slug: 'milena',
+    email: 'melania@htg.cyou',
+    name: 'Melania',
+    slug: 'melania',
     role: 'translator' as const,
     locale: 'en' as const,
     description: 'Tłumaczka EN',

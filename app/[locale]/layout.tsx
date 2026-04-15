@@ -195,6 +195,12 @@ export default async function LocaleLayout({
                 d.style.setProperty('--color-htg-indigo','#B8860B');
                 d.style.setProperty('--color-htg-indigo-light','#D4A840');
               }
+              // Font size — default 1 (A+ = 120%) if no preference saved
+              var fSizes=[100,120,140,160];
+              var fSaved=localStorage.getItem('htg-font-level');
+              var fIdx=fSaved!==null?parseInt(fSaved):1;
+              if(fIdx>=0&&fIdx<fSizes.length){d.style.fontSize=fSizes[fIdx]+'%';}
+              else{d.style.fontSize='120%';}
             }catch(e){}
           })();
         `}} />

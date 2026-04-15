@@ -310,7 +310,7 @@ function AccordionMonth({
       <button
         ref={buttonRef}
         onClick={onToggle}
-        className="group w-full flex items-center justify-between px-4 py-11 hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
+        className="group w-full flex items-center justify-between px-4 py-[3.7rem] hover:bg-htg-surface/50 transition-colors text-left relative overflow-hidden"
       >
         {backgroundImage && (
           <div

@@ -1198,4 +1198,254 @@ Kolumny `title_i18n`, `description_i18n` (JSONB DEFAULT '{}') na:
 
 ---
 
-*Ostatnia aktualizacja: 2026-04-14*
+*Ostatnia aktualizacja: 2026-04-15*
+
+---
+
+## Procedura importu nagrań zewnętrznych (Zoom / inne źródła)
+
+Procedura stosowana gdy nagrania sesji powstały poza systemem LiveKit (np. Zoom) i muszą być ręcznie wprowadzone do HTG2.
+
+### Wymagania wstępne
+
+- `ffmpeg` zainstalowany lokalnie (`brew install ffmpeg`)
+- Dostęp do `.env.local` z kluczami Supabase i Bunny
+- Pliki źródłowe — MP4 z nagraniami Zoom (pełna sesja, po edycji)
+
+---
+
+### Krok 1 — Konwersja do M4V
+
+Pliki Zoom (`.mp4`) konwertujemy do `.m4v` (ten sam kontener MPEG-4, bez re-encodingu):
+
+```bash
+ffmpeg -i "Sesja ... .mp4" -c copy "2026-04-14 email@domain.com.m4v"
+```
+
+**Format nazwy pliku docelowego:** `YYYY-MM-DD email@domain.com.m4v`
+
+- Data = data sesji (z nazwy folderu lub metadanych)
+- Email = adres klienta (z nazwy folderu, **nie** z nazwy pliku MP4 — Zoom może obcinać domenę, np. `@o2` zamiast `@o2.pl`)
+- Rozszerzenie `.m4v` — wymagane dla spójności z archiwum historycznym
+
+**Przykłady:**
+```
+Sesja 1-1 z Natalią : 20260414 Dominika ... dominikaszczeplik@gmail.com.mp4
+  → 2026-04-14 dominikaszczeplik@gmail.com.m4v
+
+Sesja Natalii z Agatą : 20260415 Kasia katarzyna-stasiak83@o2.mp4   ← ucięty email!
+  → 2026-04-15 katarzyna-stasiak83@o2.pl.m4v                         ← poprawiony z folderu
+```
+
+---
+
+### Krok 2 — Upload do Bunny Storage (strefa htg2, folder HTG Sessions)
+
+```bash
+ZONE="htg2"
+HOST="storage.bunnycdn.com"
+KEY="$BUNNY_STORAGE_API_KEY"
+
+curl -X PUT \
+  "https://$HOST/$ZONE/HTG%20Sessions/$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "2026-04-14 email@domain.com.m4v")" \
+  -H "AccessKey: $KEY" \
+  -H "Content-Type: application/octet-stream" \
+  --upload-file "2026-04-14 email@domain.com.m4v"
+# Oczekiwana odpowiedź: HTTP 201
+```
+
+**Folder docelowy:** `HTG Sessions/` w strefie `htg2`
+- URL CDN: `https://htg2-cdn.b-cdn.net/HTG%20Sessions/...`
+- `source_url` w DB: `HTG Sessions/2026-04-14 email@domain.com.m4v` (relatywna ścieżka)
+
+> Folder `HTG Sessions` jest na liście `FOLDER_ALLOWLIST` w `lib/recording-import.ts` — scan-bunny widzi te pliki automatycznie.
+
+---
+
+### Krok 3 — Import do bazy (konta + nagrania + dostęp)
+
+Używamy skryptu `scripts/upload-april-recordings.ts` jako szablonu. Skrypt:
+
+1. **Sprawdza duplikaty** — pomija pliki z istniejącym `source_url` w `booking_recordings`
+2. **Tworzy konto** — `supabase.auth.admin.createUser(email, email_confirm: true)` gdy email nie istnieje w `auth.users`
+3. **Szuka bookingu** — opcjonalnie łączy z `bookings` (±7 dni od daty sesji)
+4. **Wstawia `booking_recordings`**:
+   - `source = 'import'`
+   - `status = 'ready'`
+   - `recording_phase = 'sesja'` ← **krytyczne** — tylko ta faza jest widoczna klientowi
+   - `import_confidence = 'exact_email'`
+   - `expires_at = NULL` ← retencja wyłączona, pliki trzymamy na zawsze
+5. **Wstawia `booking_recording_access`**:
+   - `granted_reason = 'booking_client'` jeśli znaleziono booking
+   - `granted_reason = 'import_match'` jeśli brak bookingu w systemie
+6. **Audit log** — `booking_recording_audit` z `action = 'import_matched'`
+
+```bash
+# Dry-run — bez żadnych zmian w DB
+cd /Users/lk/work/HTG2
+env $(grep -v '^#' .env.local | grep '=' | xargs) \
+  npx tsx scripts/upload-april-recordings.ts --dry-run
+
+# Live
+env $(grep -v '^#' .env.local | grep '=' | xargs) \
+  npx tsx scripts/upload-april-recordings.ts
+```
+
+Raport zapisywany do `upload-april-report.json`.
+
+---
+
+### Efekt dla klienta
+
+Nagrania pojawiają się pod adresem `/konto/nagrania-sesji` jako **"Nagrania z Twoich sesji"**. Odtwarzanie przez `<audio>` tag z podpisanym URL (HMAC-SHA256, TTL 4h) z Pull Zone `htg2-cdn.b-cdn.net`.
+
+---
+
+### Typy sesji (session_type) — mapowanie z nazwy sesji Zoom
+
+| Fragment nazwy folderu/pliku | `session_type` w DB |
+|------------------------------|---------------------|
+| `1-1 z Natalią` / `solo` | `natalia_solo` |
+| `Natalii z Agatą` / `Natalii i Agaty` | `natalia_agata` |
+| `Natalii z Justyną` | `natalia_justyna` |
+| `Natalii z Przemkiem` | `natalia_asysta` |
+| `para` | `natalia_para` |
+
+---
+
+### Krok 4 — Weryfikacja po imporcie (OBOWIĄZKOWA)
+
+Po każdym imporcie uruchom poniższe zapytania i potwierdź każdy punkt. Weryfikacja chroni przed sytuacją gdy konto istnieje w `auth.users` ale brakuje profilu, lub nagranie istnieje ale bez wiersza dostępu.
+
+#### 4a. Konta użytkowników
+
+```sql
+-- Sprawdź czy każdy email ma konto w auth.users i profil z uzupełnionym emailem
+SELECT
+  u.email,
+  u.id,
+  u.created_at,
+  p.email   AS profile_email,
+  p.role
+FROM auth.users u
+LEFT JOIN public.profiles p ON p.id = u.id
+WHERE u.email IN (
+  'danakarol59@gmail.com',
+  'aleksandrawroblewska7@gmail.com',
+  'dominikaszczeplik@gmail.com',
+  'magdalena.witecka@icloud.com',
+  'katarzyna-stasiak83@o2.pl',
+  'wiesiopilarz200@wp.pl'
+)
+ORDER BY u.email;
+```
+
+**Oczekiwany wynik:** każdy email ma wiersz, `profile_email` = email (nie NULL). Jeśli `profile_email` jest NULL — uzupełnij ręcznie:
+
+```sql
+UPDATE public.profiles
+SET email = u.email
+FROM auth.users u
+WHERE profiles.id = u.id
+  AND profiles.email IS NULL
+  AND u.email IN ('email1@...', 'email2@...');
+```
+
+#### 4b. Nagrania i dostęp
+
+```sql
+-- Sprawdź czy każde nagranie ma rekord i wiersz dostępu dla właściwego usera
+SELECT
+  r.session_date,
+  r.session_type,
+  r.recording_phase,
+  r.status,
+  r.source_url,
+  u.email        AS owner_email,
+  a.granted_reason
+FROM public.booking_recordings r
+JOIN public.booking_recording_access a ON a.recording_id = r.id
+JOIN auth.users u ON u.id = a.user_id
+WHERE r.source_url LIKE 'HTG Sessions/%'
+ORDER BY r.session_date, u.email;
+```
+
+**Oczekiwany wynik:** każdy plik z `HTG Sessions/` ma dokładnie jeden wiersz z `recording_phase = 'sesja'`, `status = 'ready'`, oraz `owner_email` odpowiadający emailowi w nazwie pliku.
+
+**Czerwone flagi:**
+- `recording_phase` ≠ `'sesja'` → klient nie zobaczy nagrania
+- `status` ≠ `'ready'` → nagranie nie jest dostępne
+- brak wiersza w `booking_recording_access` → klient nie ma dostępu mimo że rekord istnieje
+- `owner_email` niezgodny z emailem w nazwie pliku → błędne przypisanie
+
+#### 4c. Szybki skrypt weryfikacyjny (Node.js)
+
+```bash
+cd /Users/lk/work/HTG2
+env $(grep -v '^#' .env.local | grep '=' | xargs) node -e "
+const { createClient } = require('@supabase/supabase-js');
+const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+const EMAILS = [
+  'danakarol59@gmail.com',
+  'aleksandrawroblewska7@gmail.com',
+  'dominikaszczeplik@gmail.com',
+  'magdalena.witecka@icloud.com',
+  'katarzyna-stasiak83@o2.pl',
+  'wiesiopilarz200@wp.pl',
+];
+
+async function run() {
+  // 1. Konta
+  const { data: { users } } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  const found = users.filter(u => EMAILS.includes(u.email));
+  console.log('=== Konta auth.users ===');
+  for (const email of EMAILS) {
+    const u = found.find(u => u.email === email);
+    console.log(u ? '  ✓ ' + email : '  ✗ BRAK: ' + email);
+  }
+
+  // 2. Profile email
+  const { data: profiles } = await sb.from('profiles').select('id, email').in('id', found.map(u => u.id));
+  console.log('\n=== Profile (email) ===');
+  for (const u of found) {
+    const p = profiles?.find(p => p.id === u.id);
+    console.log(p?.email ? '  ✓ ' + u.email : '  ✗ profile.email NULL: ' + u.email);
+  }
+
+  // 3. Nagrania + dostęp
+  const { data: recs } = await sb
+    .from('booking_recordings')
+    .select('id, session_date, session_type, recording_phase, status, source_url, booking_recording_access(user_id, granted_reason)')
+    .like('source_url', 'HTG Sessions/%');
+
+  console.log('\n=== Nagrania + dostęp ===');
+  for (const r of recs ?? []) {
+    const access = r.booking_recording_access?.[0];
+    const owner = found.find(u => u.id === access?.user_id);
+    const ok = r.recording_phase === 'sesja' && r.status === 'ready' && access && owner;
+    console.log((ok ? '  ✓ ' : '  ✗ ') + r.source_url.split('/').pop());
+    if (!ok) {
+      if (r.recording_phase !== 'sesja') console.log('      BŁĄD: recording_phase=' + r.recording_phase);
+      if (r.status !== 'ready')          console.log('      BŁĄD: status=' + r.status);
+      if (!access)                       console.log('      BŁĄD: brak booking_recording_access');
+      if (access && !owner)              console.log('      BŁĄD: user_id nie pasuje do żadnego emaila');
+    }
+  }
+}
+run().catch(console.error);
+"
+```
+
+---
+
+### Pułapki
+
+| Problem | Rozwiązanie |
+|---------|-------------|
+| Email ucięty przez Zoom w nazwie pliku (`@o2` zamiast `@o2.pl`) | Zawsze sprawdzaj email w **nazwie folderu**, nie pliku |
+| `profiles.email` NULL po `createUser` | Trigger nie zawsze uzupełnia — sprawdź Krok 4a i wykonaj UPDATE ręcznie |
+| `recording_phase` ≠ `sesja` | Klient nie zobaczy nagrania (3 warstwy ochrony) |
+| Upload bez URL-encoding spacji w `HTG Sessions` | Użyj `HTG%20Sessions` w URL |
+| Duplikat `source_url` | Supabase zwraca `23505` — skrypt pomija, nie duplikuje |
+| Nowe konto bez hasła | User dostaje magic link przy pierwszym logowaniu (email OTP) |

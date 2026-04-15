@@ -1313,11 +1313,138 @@ Nagrania pojawiają się pod adresem `/konto/nagrania-sesji` jako **"Nagrania z 
 
 ---
 
+### Krok 4 — Weryfikacja po imporcie (OBOWIĄZKOWA)
+
+Po każdym imporcie uruchom poniższe zapytania i potwierdź każdy punkt. Weryfikacja chroni przed sytuacją gdy konto istnieje w `auth.users` ale brakuje profilu, lub nagranie istnieje ale bez wiersza dostępu.
+
+#### 4a. Konta użytkowników
+
+```sql
+-- Sprawdź czy każdy email ma konto w auth.users i profil z uzupełnionym emailem
+SELECT
+  u.email,
+  u.id,
+  u.created_at,
+  p.email   AS profile_email,
+  p.role
+FROM auth.users u
+LEFT JOIN public.profiles p ON p.id = u.id
+WHERE u.email IN (
+  'danakarol59@gmail.com',
+  'aleksandrawroblewska7@gmail.com',
+  'dominikaszczeplik@gmail.com',
+  'magdalena.witecka@icloud.com',
+  'katarzyna-stasiak83@o2.pl',
+  'wiesiopilarz200@wp.pl'
+)
+ORDER BY u.email;
+```
+
+**Oczekiwany wynik:** każdy email ma wiersz, `profile_email` = email (nie NULL). Jeśli `profile_email` jest NULL — uzupełnij ręcznie:
+
+```sql
+UPDATE public.profiles
+SET email = u.email
+FROM auth.users u
+WHERE profiles.id = u.id
+  AND profiles.email IS NULL
+  AND u.email IN ('email1@...', 'email2@...');
+```
+
+#### 4b. Nagrania i dostęp
+
+```sql
+-- Sprawdź czy każde nagranie ma rekord i wiersz dostępu dla właściwego usera
+SELECT
+  r.session_date,
+  r.session_type,
+  r.recording_phase,
+  r.status,
+  r.source_url,
+  u.email        AS owner_email,
+  a.granted_reason
+FROM public.booking_recordings r
+JOIN public.booking_recording_access a ON a.recording_id = r.id
+JOIN auth.users u ON u.id = a.user_id
+WHERE r.source_url LIKE 'HTG Sessions/%'
+ORDER BY r.session_date, u.email;
+```
+
+**Oczekiwany wynik:** każdy plik z `HTG Sessions/` ma dokładnie jeden wiersz z `recording_phase = 'sesja'`, `status = 'ready'`, oraz `owner_email` odpowiadający emailowi w nazwie pliku.
+
+**Czerwone flagi:**
+- `recording_phase` ≠ `'sesja'` → klient nie zobaczy nagrania
+- `status` ≠ `'ready'` → nagranie nie jest dostępne
+- brak wiersza w `booking_recording_access` → klient nie ma dostępu mimo że rekord istnieje
+- `owner_email` niezgodny z emailem w nazwie pliku → błędne przypisanie
+
+#### 4c. Szybki skrypt weryfikacyjny (Node.js)
+
+```bash
+cd /Users/lk/work/HTG2
+env $(grep -v '^#' .env.local | grep '=' | xargs) node -e "
+const { createClient } = require('@supabase/supabase-js');
+const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+const EMAILS = [
+  'danakarol59@gmail.com',
+  'aleksandrawroblewska7@gmail.com',
+  'dominikaszczeplik@gmail.com',
+  'magdalena.witecka@icloud.com',
+  'katarzyna-stasiak83@o2.pl',
+  'wiesiopilarz200@wp.pl',
+];
+
+async function run() {
+  // 1. Konta
+  const { data: { users } } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  const found = users.filter(u => EMAILS.includes(u.email));
+  console.log('=== Konta auth.users ===');
+  for (const email of EMAILS) {
+    const u = found.find(u => u.email === email);
+    console.log(u ? '  ✓ ' + email : '  ✗ BRAK: ' + email);
+  }
+
+  // 2. Profile email
+  const { data: profiles } = await sb.from('profiles').select('id, email').in('id', found.map(u => u.id));
+  console.log('\n=== Profile (email) ===');
+  for (const u of found) {
+    const p = profiles?.find(p => p.id === u.id);
+    console.log(p?.email ? '  ✓ ' + u.email : '  ✗ profile.email NULL: ' + u.email);
+  }
+
+  // 3. Nagrania + dostęp
+  const { data: recs } = await sb
+    .from('booking_recordings')
+    .select('id, session_date, session_type, recording_phase, status, source_url, booking_recording_access(user_id, granted_reason)')
+    .like('source_url', 'HTG Sessions/%');
+
+  console.log('\n=== Nagrania + dostęp ===');
+  for (const r of recs ?? []) {
+    const access = r.booking_recording_access?.[0];
+    const owner = found.find(u => u.id === access?.user_id);
+    const ok = r.recording_phase === 'sesja' && r.status === 'ready' && access && owner;
+    console.log((ok ? '  ✓ ' : '  ✗ ') + r.source_url.split('/').pop());
+    if (!ok) {
+      if (r.recording_phase !== 'sesja') console.log('      BŁĄD: recording_phase=' + r.recording_phase);
+      if (r.status !== 'ready')          console.log('      BŁĄD: status=' + r.status);
+      if (!access)                       console.log('      BŁĄD: brak booking_recording_access');
+      if (access && !owner)              console.log('      BŁĄD: user_id nie pasuje do żadnego emaila');
+    }
+  }
+}
+run().catch(console.error);
+"
+```
+
+---
+
 ### Pułapki
 
 | Problem | Rozwiązanie |
 |---------|-------------|
 | Email ucięty przez Zoom w nazwie pliku (`@o2` zamiast `@o2.pl`) | Zawsze sprawdzaj email w **nazwie folderu**, nie pliku |
+| `profiles.email` NULL po `createUser` | Trigger nie zawsze uzupełnia — sprawdź Krok 4a i wykonaj UPDATE ręcznie |
 | `recording_phase` ≠ `sesja` | Klient nie zobaczy nagrania (3 warstwy ochrony) |
 | Upload bez URL-encoding spacji w `HTG Sessions` | Użyj `HTG%20Sessions` w URL |
 | Duplikat `source_url` | Supabase zwraca `23505` — skrypt pomija, nie duplikuje |

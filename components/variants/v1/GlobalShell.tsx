@@ -14,7 +14,7 @@ export default function GlobalShellV1({
   return (
     <>
       {!isNagrania && (
-        <header className="bg-htg-card border-b border-htg-card-border sticky top-0 z-50 transition-colors duration-300">
+        <header data-sand-edge="header" className="bg-htg-card border-b border-htg-card-border sticky top-0 z-50 transition-colors duration-300">
           <div className="mx-auto max-w-6xl px-6 py-4 grid grid-cols-[auto_1fr_auto] items-center gap-4 relative">
             <Link href="/" className="flex items-center" aria-label="Strona główna HTG">
               <HeaderLogo />
@@ -27,7 +27,7 @@ export default function GlobalShellV1({
         </header>
       )}
 
-      <main id="main-content" className="flex-grow w-full">
+      <main id="main-content" data-sand-edge="main" className="flex-grow w-full">
         {children}
       </main>
 

@@ -49,6 +49,13 @@
   }
 }
 
+/* Canvas texture — light mode only, fixed overlay */
+html:not(.dark) body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='canvas-tex'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.48 0.52' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23canvas-tex)' opacity='0.055'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+  background-size: 250px 250px;
+}
+
 /* Hide footer on login page */
 body.hide-footer footer {
   display: none;

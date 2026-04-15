@@ -174,6 +174,7 @@ export async function GET(request: NextRequest) {
         .select('id, slot_date, start_time, end_time, session_type, assistant_id, translator_id, is_extra')
         .eq('session_type', sessionType)
         .eq('status', 'available')
+        .eq('locale', 'pl')
         .gte('slot_date', from)
         .lte('slot_date', to)
         .order('slot_date')
@@ -199,13 +200,14 @@ export async function GET(request: NextRequest) {
 
     // ── natalia_asysta (PL): natalia_solo base slots × available assistants ──
     if (sessionType === 'natalia_asysta') {
-      // 1. Fetch Natalia's available solo slots (not solo_locked)
+      // 1. Fetch Natalia's available solo slots (not solo_locked, PL only)
       const { data: baseSlotsData } = await db
         .from('booking_slots')
         .select('id, slot_date, start_time, end_time, session_type, is_extra')
         .eq('session_type', 'natalia_solo')
         .eq('status', 'available')
         .eq('solo_locked', false)
+        .eq('locale', 'pl')
         .gte('slot_date', from)
         .lte('slot_date', to)
         .order('slot_date')
@@ -380,6 +382,7 @@ export async function GET(request: NextRequest) {
           .eq('status', 'available')
           .eq('session_type', 'natalia_interpreter_asysta')
           .eq('solo_locked', false)
+          .eq('locale', locale)
           .gte('slot_date', from)
           .lte('slot_date', to),
       ]);
@@ -607,6 +610,7 @@ export async function GET(request: NextRequest) {
         .select('id, slot_date, start_time, end_time, session_type, assistant_id, translator_id, is_extra')
         .eq('status', 'available')
         .eq('session_type', sessionType)
+        .eq('locale', needsTranslator ? locale : 'pl')
         .gte('slot_date', from)
         .lte('slot_date', to),
     ]);

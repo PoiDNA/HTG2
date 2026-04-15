@@ -4,15 +4,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useDesignVariant } from '@/lib/design-variant-context';
 
-// ─── Paleta ziaren — 6 kolorów, 3 złote + 3 śnieżnobiałe ───────────────────
-// Format: 'rgba(r,g,b,' — domykamy: + alpha.toFixed(2) + ')'
+// ─── Paleta — ciepłe pastele spójne z design systemu HTG2 ───────────────────
+// Bazuje na: --color-htg-warm (#D4A840), --color-htg-lavender (#C8949E),
+//            --color-htg-indigo-light (#B06278), cream (#FDF5F0)
+// Format: 'rgba(r,g,b,' — domykamy: + opacity.toFixed(2) + ')'
 const S = [
-  'rgba(212,168,64,',   // złoty
-  'rgba(255,255,255,',  // śnieżna biel
-  'rgba(196,150,74,',   // ciepły brąz
-  'rgba(255,255,255,',  // śnieżna biel
-  'rgba(232,188,82,',   // jasny złoty
-  'rgba(255,255,255,',  // śnieżna biel
+  'rgba(212,168,64,',   // złoty piasek   (--color-htg-warm)
+  'rgba(200,148,158,',  // blady różowy   (--color-htg-lavender)
+  'rgba(196,140,80,',   // ciepły brąz-złoty
+  'rgba(176,98,120,',   // ciemniejszy różowy (--color-htg-indigo-light)
+  'rgba(232,188,100,',  // jasny złoty-brzoskwiniowy
+  'rgba(210,160,140,',  // ciepły łosoś/peach
 ] as const;
 
 // Pre-obliczone stringi fillStyle — 6 kolorów × 32 poziomy opacity.
@@ -136,8 +138,10 @@ export default function DesertCanvas() {
         r:          spreadFull ? Math.random() * MAX_R : Math.random() * MAX_R * 0.15,
         speed:      0.06 + Math.random() * 0.28,  // bardzo wolny ruch radialny
         angDrift:   (Math.random() - 0.5) * 0.0006,
-        maxSize:    tiny ? 0.35 + Math.random() * 0.4 : 0.7 + Math.random() * 1.1,
-        maxOpacity: 0.12 + Math.random() * 0.55,
+        // Rozmiary podbite: było 0.35–1.5, teraz 0.6–2.2 px
+        maxSize:    tiny ? 0.6 + Math.random() * 0.6 : 1.0 + Math.random() * 1.2,
+        // Opacity podbita: było 0.12–0.67, teraz 0.35–0.90
+        maxOpacity: 0.35 + Math.random() * 0.55,
         ci:         Math.floor(Math.random() * S.length),
       };
     }
@@ -260,12 +264,10 @@ export default function DesertCanvas() {
           const y = CY + Math.sin(g.angle) * g.r;
           if (x < -2 || x > W + 2 || y < -2 || y > H + 2) continue;
 
-          // Perspektywa: opacity i size rosną kwadratowo z odległością od centrum.
-          // Efekt: piasek "wyłania się z głębi" — niewidoczny przy centrum,
-          // coraz bardziej widoczny i większy gdy zbliża się do krawędzi ekranu.
-          const t01sq  = t01 * t01;
-          const opacity = g.maxOpacity * t01sq;
-          if (opacity < 0.012) continue;
+          // Perspektywa: opacity rośnie liniowo (nie kwadratowo jak poprzednio).
+          // Ziarna są widoczne już w połowie drogi — nie dopiero przy krawędzi.
+          const opacity = g.maxOpacity * t01;
+          if (opacity < 0.02) continue;
           const size = g.maxSize * (0.15 + t01 * 0.85);
 
           // Detekcja krawędzi DOM → akumulacja w hałdzie

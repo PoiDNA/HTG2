@@ -67,6 +67,12 @@ export async function POST(req: NextRequest) {
   }
   // Admin may create interpreter slot without translator (assign later) — interpreterLocale stays NULL.
 
+  // Derive slot locale from translator (if any) or default to PL
+  const slotLocale: 'pl' | 'en' | 'de' | 'pt' =
+    interpreterLocale === 'en' || interpreterLocale === 'de' || interpreterLocale === 'pt'
+      ? interpreterLocale
+      : 'pl';
+
   // Create booking_slot (is_extra=true: manual admin override)
   const { data: slot, error: slotErr } = await db
     .from('booking_slots')
@@ -79,6 +85,7 @@ export async function POST(req: NextRequest) {
       is_extra: true,
       assistant_id: assistantId || null,
       translator_id: resolvedTranslatorId,
+      locale: slotLocale,
     })
     .select('id')
     .single();

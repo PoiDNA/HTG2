@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Interpreter session types require a translator_id
+  let slotLocale: 'pl' | 'en' | 'de' | 'pt' = 'pl';
   if (isInterpreterSessionType(finalType)) {
     if (!finalTranslatorId) {
       return NextResponse.json(
@@ -125,6 +126,10 @@ export async function POST(request: NextRequest) {
     if (!t || t.role !== 'translator' || !t.is_active) {
       return NextResponse.json({ error: 'Invalid translator' }, { status: 400 });
     }
+    if (t.locale !== 'en' && t.locale !== 'de' && t.locale !== 'pt') {
+      return NextResponse.json({ error: 'Translator has invalid locale' }, { status: 400 });
+    }
+    slotLocale = t.locale;
     if (finalType === 'natalia_interpreter_asysta' && !finalAssistantId) {
       return NextResponse.json(
         { error: 'assistant_id required for natalia_interpreter_asysta' },
@@ -191,6 +196,7 @@ export async function POST(request: NextRequest) {
       assistant_id: finalAssistantId,
       translator_id: finalTranslatorId,
       solo_locked: solo_locked ?? false,
+      locale: slotLocale,
     })
     .select()
     .single();

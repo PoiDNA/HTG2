@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createClient } from '@supabase/supabase-js';
+import { translators } from '@/lib/staff-config';
 
 /**
  * POST /api/admin/create-translator-accounts
@@ -24,11 +25,8 @@ export async function POST(req: NextRequest) {
 
   const db = createSupabaseServiceRole();
 
-  const TRANSLATORS = [
-    { email: 'melania@htg.cyou', name: 'Melania', locale: 'en' },
-    { email: 'bernadetta@htg.cyou', name: 'Bernadetta', locale: 'de' },
-    { email: 'edytap@htg.cyou', name: 'Edyta', locale: 'pt' },
-  ];
+  // Source of truth: lib/staff-config.ts
+  const TRANSLATORS = translators.map(t => ({ email: t.email, name: t.name, locale: t.locale }));
 
   const results: Array<{ email: string; status: string; userId?: string }> = [];
 

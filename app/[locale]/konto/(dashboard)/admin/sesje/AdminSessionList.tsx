@@ -55,12 +55,13 @@ const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
 
 const INTERPRETER_TYPES = new Set(['natalia_interpreter_solo', 'natalia_interpreter_asysta', 'natalia_interpreter_para']);
 
-// Translator slugs → label (seeded by migration 074)
-const TRANSLATORS = [
-  { slug: 'melania',    name: 'Melania (EN)',    locale: 'en' },
-  { slug: 'bernadetta', name: 'Bernadetta (DE)', locale: 'de' },
-  { slug: 'edytap',     name: 'Edyta (PT)',      locale: 'pt' },
-] as const;
+import { translators } from '@/lib/staff-config';
+// Translator slugs → label (source of truth: lib/staff-config.ts)
+const TRANSLATORS = translators.map(t => ({
+  slug: t.slug,
+  name: `${t.name} (${t.locale.toUpperCase()})`,
+  locale: t.locale,
+}));
 
 const DAY_NAMES_SHORT = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
 function getDayShort(dateStr: string): string {

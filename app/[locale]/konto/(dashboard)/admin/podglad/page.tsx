@@ -9,25 +9,18 @@ import { IMPERSONATE_COOKIE } from '@/lib/admin/impersonate-const';
 import { startImpersonation, startUserImpersonation } from '@/lib/admin/impersonate';
 import { Eye, ExternalLink, Calendar, Users, Presentation, Languages, AlertCircle } from 'lucide-react';
 import CreateTranslatorAccountsButton from '@/components/admin/CreateTranslatorAccountsButton';
+import { STAFF, translators } from '@/lib/staff-config';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
-const STAFF_LIST = [
-  { email: 'natalia@htg.cyou',  label: 'Natalia',  description: 'Prowadząca sesje',   color: 'bg-htg-indigo' },
-  { email: 'agata@htg.cyou',   label: 'Agata',    description: 'Asystentka',           color: 'bg-htg-sage' },
-  { email: 'justyna@htg.cyou', label: 'Justyna',  description: 'Asystentka',           color: 'bg-htg-sage' },
-  { email: 'marta@htg.cyou',   label: 'Marta',    description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
-  { email: 'ania@htg.cyou',    label: 'Ania',     description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
-  { email: 'dominika@htg.cyou',label: 'Dominika', description: 'Publikacja / edycja',  color: 'bg-htg-warm' },
-];
+const STAFF_LIST = STAFF
+  .filter(s => s.role !== 'admin' && s.role !== 'translator')
+  .map(s => ({ email: s.email, label: s.name, description: s.description, color: s.color ?? '' }));
 
-const TRANSLATOR_LIST = [
-  { email: 'melania@htg.cyou',     label: 'Melania',     description: 'Tłumaczka EN', locale: 'en', color: 'bg-htg-lavender' },
-  { email: 'bernadetta@htg.cyou',  label: 'Bernadetta',  description: 'Tłumaczka DE', locale: 'de', color: 'bg-htg-lavender' },
-  { email: 'edytap@htg.cyou',      label: 'Edyta',       description: 'Tłumaczka PT', locale: 'pt', color: 'bg-htg-lavender' },
-];
+const TRANSLATOR_LIST = translators
+  .map(t => ({ email: t.email, label: t.name, description: t.description, locale: t.locale, color: t.color ?? '' }));
 
 export default async function AdminPreviewPage({
   params,
@@ -146,7 +139,7 @@ export default async function AdminPreviewPage({
                 <div className="bg-htg-surface rounded-lg py-2">
                   <p className="text-xs text-htg-fg-muted">Rola</p>
                   <p className="text-[10px] font-medium text-htg-fg">
-                    {s.member.role === 'practitioner' ? 'prowad.' : 'asyst.'}
+                    {s.member.role === 'practitioner' ? 'prowad.' : s.member.role === 'operator' ? 'oper.' : 'edyt.'}
                   </p>
                 </div>
                 <div className="bg-htg-surface rounded-lg py-2">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useDesignVariant } from '@/lib/design-variant-context';
 
@@ -57,15 +57,21 @@ const DUNE_AMPS  = [0.35, 0.28, 0.22, 0.18]; // amplitudy (jako % wys. viewportu
 export default function DesertCanvas() {
   const { resolvedTheme } = useTheme();
   const variant = useDesignVariant();
+  const [mounted, setMounted] = useState(false);
 
   const bgRef = useRef<HTMLCanvasElement>(null);
   const fgRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
 
-  // Nie renderuj w dark mode ani poza V1
-  if (resolvedTheme === 'dark' || variant !== 'v1') return null;
+  useEffect(() => { setMounted(true); }, []);
+
+  // Guard: SSR/pre-hydration, dark mode i non-V1 nie renderują canvasu.
+  // UWAGA: guard musi być po wszystkich hookach, żeby nie zmieniać ich liczby
+  // między renderami (inaczej React rzuci "Rendered fewer hooks than expected").
+  const active = mounted && resolvedTheme !== 'dark' && variant === 'v1';
 
   useEffect(() => {
+    if (!active) return;
     const bgCanvas = bgRef.current;
     const fgCanvas = fgRef.current;
     if (!bgCanvas || !fgCanvas) return;
@@ -90,6 +96,10 @@ export default function DesertCanvas() {
         c.style.width  = `${W}px`;
         c.style.height = `${H}px`;
       }
+      // Reset transform przed skalowaniem — bez tego scale akumuluje się przy
+      // każdym resize i wydmy/piasek rosną wykładniczo (dpr^n).
+      bgCtx!.setTransform(1, 0, 0, 1, 0, 0);
+      fgCtx!.setTransform(1, 0, 0, 1, 0, 0);
       bgCtx!.scale(dpr, dpr);
       fgCtx!.scale(dpr, dpr);
     }
@@ -210,6 +220,18 @@ export default function DesertCanvas() {
       if (!reducedMotion) {
         const windX = 0.8 + Math.sin(t / 4000) * 0.3;
 
+        // Spatial hash zakumulowanych cząsteczek — bucket 4×3 px, odpowiada
+        // progowi sprawdzania gęstości (|dx|<4, |dy|<3). Dzięki temu lookup
+        // gęstości jest O(1) zamiast O(N) filter'a ⇒ cała detekcja O(N)
+        // zamiast O(N²). Przy N=600 oszczędzamy ~360k porównań/klatkę.
+        const densityBuckets = new Map<number, number>();
+        const BX = 4, BY = 3;
+        for (const q of particles) {
+          if (!q.accumulated) continue;
+          const key = (Math.floor(q.x / BX) << 16) | (Math.floor(q.y / BY) & 0xffff);
+          densityBuckets.set(key, (densityBuckets.get(key) ?? 0) + 1);
+        }
+
         for (const p of particles) {
           if (p.accumulated) continue;
 
@@ -235,10 +257,11 @@ export default function DesertCanvas() {
               p.y = rect.top - p.size / 2;
               p.vx = 0; p.vy = 0;
 
-              // Gęstość akumulacji — co 4px może być 1 cząsteczka
-              const density = particles.filter(
-                q => q.accumulated && Math.abs(q.y - p.y) < 3 && Math.abs(q.x - p.x) < 4
-              ).length;
+              // Gęstość akumulacji — co 4px może być 1 cząsteczka.
+              // Lookup w spatial hash (zbudowanym raz przed pętlą) zamiast
+              // O(N) filter'a per cząsteczka.
+              const key = (Math.floor(p.x / BX) << 16) | (Math.floor(p.y / BY) & 0xffff);
+              const density = densityBuckets.get(key) ?? 0;
               if (density > 2) {
                 // Overflow → spada jako faller
                 p.accumulated = false;
@@ -308,7 +331,9 @@ export default function DesertCanvas() {
       clearTimeout(resizeTimer);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedTheme, variant]);
+  }, [active]);
+
+  if (!active) return null;
 
   return (
     <>

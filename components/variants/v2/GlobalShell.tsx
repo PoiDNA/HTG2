@@ -21,12 +21,12 @@ export default function GlobalShellV2({
       {!isNagrania && (
         <ScrollHeader bgClassName="bg-htg-card/60 backdrop-blur-lg border-b border-htg-card-border/50">
           <div className="mx-auto max-w-7xl px-8 py-5 flex items-center justify-between gap-6">
-            <div className="transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none">
+            <div className="transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none group-data-[scroll-state=hidden]:opacity-0 group-data-[scroll-state=hidden]:pointer-events-none">
               <Link href="/" className="flex items-center" aria-label="Strona główna HTG">
                 <HeaderLogo />
               </Link>
             </div>
-            <div className="flex-1 flex justify-center transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none">
+            <div className="flex-1 flex justify-center transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none group-data-[scroll-state=hidden]:opacity-0 group-data-[scroll-state=hidden]:pointer-events-none">
               <NavLinks />
             </div>
             <SiteNav />

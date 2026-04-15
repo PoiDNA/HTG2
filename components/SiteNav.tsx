@@ -70,7 +70,7 @@ export default function SiteNav() {
       {/* Desktop */}
       <div className="hidden md:flex items-center gap-2">
         {/* Utilities — fade when scrolling up, return on top */}
-        <div className="flex items-center gap-2 transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none">
+        <div className="flex items-center gap-2 transition-opacity duration-500 group-data-[scroll-state=visible]:opacity-0 group-data-[scroll-state=visible]:pointer-events-none group-data-[scroll-state=hidden]:opacity-0 group-data-[scroll-state=hidden]:pointer-events-none">
           <LocaleSwitcher />
           <FontSizeToggle />
           <ThemeToggle />

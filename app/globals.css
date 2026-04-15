@@ -56,16 +56,6 @@ html:not(.dark) body {
   background-size: 250px 250px;
 }
 
-/* DesertCanvas (variant V1, light mode): canvas jest na z-index:-1 więc musi
-   być pod body — body transparent, background przeniesiony na html.
-   Reguła niezawarstwiona bije Tailwind @layer utilities (bg-htg-bg). */
-html {
-  background-color: var(--color-htg-bg);
-}
-html:not(.dark) body.desert-active {
-  background-color: transparent;
-}
-
 /* Hide footer on login page */
 body.hide-footer footer {
   display: none;

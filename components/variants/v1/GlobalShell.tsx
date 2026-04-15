@@ -12,7 +12,10 @@ export default function GlobalShellV1({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    // position:relative bez z-index — nie tworzy nowego stacking context.
+    // Wrapper jest elementem pozycjonowanym malowanym w source order PO canvasie z-index:0,
+    // więc treść strony pojawia się nad piaskiem. Header z-50 (sticky) bije FG canvas z-49 w root SC.
+    <div className="relative flex flex-col flex-1">
       {!isNagrania && (
         <header data-sand-edge="header" className="bg-htg-card border-b border-htg-card-border sticky top-0 z-50 transition-colors duration-300">
           <div className="mx-auto max-w-6xl px-6 py-4 grid grid-cols-[auto_1fr_auto] items-center gap-4 relative">
@@ -32,6 +35,6 @@ export default function GlobalShellV1({
       </main>
 
       {!isNagrania && <Footer />}
-    </>
+    </div>
   );
 }

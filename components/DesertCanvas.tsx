@@ -203,14 +203,8 @@ export default function DesertCanvas() {
       if (edgeFrame % 90 === 0) refreshEdges();
 
       // ── BG canvas ─────────────────────────────────────────────────────────
+      // Canvas jest transparentny — tło body przebija przez canvas (z-index:0)
       bgCtx.clearRect(0, 0, W, H);
-
-      // Jasne tło cream — bez wydm, bez ciemnego gradientu
-      const bgGrad = bgCtx.createLinearGradient(0, 0, 0, H);
-      bgGrad.addColorStop(0, '#FDF5F0');
-      bgGrad.addColorStop(1, '#FAF0E2');
-      bgCtx.fillStyle = bgGrad;
-      bgCtx.fillRect(0, 0, W, H);
 
       if (!reducedMotion) {
         const tSlow = t * 0.000028;
@@ -332,11 +326,12 @@ export default function DesertCanvas() {
 
   return (
     <>
-      {/* BG: jasne tło cream + ziarna piasku z efektem głębi (z-index: -1) */}
+      {/* BG: transparentny canvas z ziarnami piasku — z-index:0, nad tłem body,
+           pod treścią strony (treść ma position:relative, maluje się po canvasie w source order) */}
       <canvas
         ref={bgRef}
         aria-hidden="true"
-        style={{ position: 'fixed', inset: 0, zIndex: -1, pointerEvents: 'none', display: 'block' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', display: 'block' }}
       />
       {/* FG: opadający piasek z krawędzi elementów (z-index: 49, przed treścią, za headerem z-50) */}
       <canvas

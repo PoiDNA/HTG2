@@ -294,10 +294,18 @@ export async function POST(
           })
           .eq('id', sessionId);
 
-        // 7.5 Room-side consent re-check: listRoomParticipants + removeParticipant
-        //     for users without valid consent. Protects composite audio.
-        const roomPartsForCheck = await listRoomParticipants(session.room_name);
-        for (const rp of roomPartsForCheck) {
+        // 7.5 + 8 (v9 H4): Single listRoomParticipants snapshot before 7.5.
+        //     Previous code called listRoomParticipants twice (7.5 + step 8), which
+        //     opened a race window where a late joiner appearing between the two
+        //     calls would get a track egress in step 8 without going through the
+        //     room-side consent re-check in 7.5. Track identities removed in 7.5
+        //     via removedIdentities Set → step 8 filters them out.
+        const roomParticipants = await listRoomParticipants(session.room_name);
+        const removedIdentities = new Set<string>();
+
+        // 7.5 Room-side consent re-check: removeParticipant for users without
+        //     valid consent. Protects composite audio.
+        for (const rp of roomParticipants) {
           if (rp.identity.startsWith('__obs__')) continue;
           const firstColon = rp.identity.indexOf(':');
           const rpUserId = firstColon > 0 ? rp.identity.slice(0, firstColon) : rp.identity;
@@ -324,6 +332,7 @@ export async function POST(
 
             try {
               await removeParticipant(session.room_name, rp.identity);
+              removedIdentities.add(rp.identity);
               await auditHtgRecording(db, null, null, 'removed_no_consent', {
                 user_id: rpUserId,
                 reason: 'room_side_consent_check_at_start',
@@ -335,8 +344,8 @@ export async function POST(
         }
 
         // 8. Per-track egresses — two-phase commit, observer filter, UUID regex, 23505 race.
-        const roomParticipants = await listRoomParticipants(session.room_name);
         for (const p of roomParticipants) {
+          if (removedIdentities.has(p.identity)) continue;
           if (p.identity.startsWith('__obs__')) continue;
 
           const firstColon = p.identity.indexOf(':');

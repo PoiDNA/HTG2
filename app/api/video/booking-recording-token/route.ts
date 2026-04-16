@@ -249,6 +249,7 @@ export async function POST(request: NextRequest) {
         user_id: effectiveUserId,
         device_id: deviceId,
         booking_recording_id: recordingId,
+        stream_context: 'recording',
         last_heartbeat: new Date().toISOString(),
       }, { onConflict: 'user_id,device_id' });
 

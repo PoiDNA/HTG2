@@ -18,6 +18,9 @@ export const RATE_LIMIT_CONFIG: Record<RateLimitAction, RateLimitActionConfig> =
   // that caps mass signed-URL minting (the biggest residual DoS surface from
   // PR #267 — flagged as follow-up #13 in binary-leaping-eagle.md).
   booking_recording_token:  { max: 60,  windowMinutes: 60 },
+  // Fragment token: lighter than recording (no retention/para checks) but can
+  // fire rapidly in radio mode. 120/h allows ~2/min sustained radio use.
+  fragment_token:           { max: 120, windowMinutes: 60 },
 };
 
 /**

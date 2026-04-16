@@ -4,7 +4,8 @@ export type RateLimitAction =
   | 'recordings_assign_single'
   | 'recordings_assign_bulk'
   | 'recordings_remove_access'
-  | 'booking_recording_token';
+  | 'booking_recording_token'
+  | 'fragment_token';
 
 export interface RateLimitActionConfig {
   /** Max requests allowed in the window. */

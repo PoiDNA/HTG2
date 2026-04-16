@@ -228,6 +228,7 @@ export const routing = defineRouting({
     '/konto/admin/spolecznosc': '/konto/admin/spolecznosc',
     '/konto/admin/subskrypcje': '/konto/admin/subskrypcje',
     '/konto/admin/tlumaczenia': '/konto/admin/tlumaczenia',
+    '/konto/admin/sesje-i18n': '/konto/admin/sesje-i18n',
     '/konto/admin/uzytkownicy': '/konto/admin/uzytkownicy',
     '/konto/admin/uzytkownicy/[id]': '/konto/admin/uzytkownicy/[id]',
     '/konto/admin/zestawy': '/konto/admin/zestawy',

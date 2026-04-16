@@ -20,20 +20,25 @@ export default function OperatorTermsBanner() {
     const supabase = createSupabaseBrowser();
 
     async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        if (!cancelled) setState('accepted'); // hide if not logged in
-        return;
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          if (!cancelled) setState('accepted'); // hide if not logged in
+          return;
+        }
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('operator_terms_accepted_at')
+          .eq('id', user.id)
+          .single();
+        if (cancelled) return;
+        setState(profile?.operator_terms_accepted_at ? 'accepted' : 'needs-accept');
+      } catch {
+        // Błąd sieci lub nieoczekiwany — schowaj baner, nie blokuj renderowania
+        if (!cancelled) setState('accepted');
       }
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('operator_terms_accepted_at')
-        .eq('id', user.id)
-        .single();
-      if (cancelled) return;
-      setState(profile?.operator_terms_accepted_at ? 'accepted' : 'needs-accept');
     }
 
     load();

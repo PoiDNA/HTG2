@@ -36,8 +36,8 @@ export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: Post
 
   // Toast on error
   useEffect(() => {
-    if (error) toast.error('Nie udało się załadować postów');
-  }, [error]);
+    if (error) toast.error(t('error_load_posts'));
+  }, [error, t]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -65,11 +65,11 @@ export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: Post
 
     if (!res.ok) {
       const data = await res.json();
-      throw new Error(data.error || 'Nie udało się opublikować');
+      throw new Error(data.error || t('error_publish'));
     }
 
-    toast.success('Post opublikowany');
-  }, [groupId]);
+    toast.success(t('post_published'));
+  }, [groupId, t]);
 
   return (
     <div className="space-y-4">
@@ -105,10 +105,10 @@ export function PostFeed({ groupId, currentUserId, canWrite, canModerate }: Post
         <div className="text-center py-12">
           <p className="text-htg-fg-muted">
             {debouncedSearch
-              ? `Brak wyników dla "${debouncedSearch}"`
+              ? t('no_search_results', { query: debouncedSearch })
               : canWrite
-              ? 'Brak postów. Bądź pierwszy i napisz coś!'
-              : 'Brak postów w tej grupie.'}
+              ? t('no_posts')
+              : t('no_posts_in_group')}
           </p>
         </div>
       )}

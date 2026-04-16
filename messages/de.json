@@ -834,7 +834,22 @@
     "poll_question_placeholder": "Frage stellen...",
     "add_photo": "Foto hinzufügen",
     "notif_new_comments": "Neue Kommentare",
-    "notif_reactions": "Reaktionen"
+    "notif_reactions": "Reaktionen",
+    "error_load_posts": "Beiträge konnten nicht geladen werden",
+    "error_publish": "Veröffentlichung fehlgeschlagen",
+    "post_published": "Beitrag veröffentlicht",
+    "no_search_results": "Keine Ergebnisse für \"{query}\"",
+    "no_posts_in_group": "Noch keine Beiträge in dieser Gruppe.",
+    "post_deleted": "Beitrag gelöscht",
+    "error_delete_post": "Beitrag konnte nicht gelöscht werden",
+    "error_pin_post": "Beitrag konnte nicht angeheftet werden",
+    "anonymous": "Anonym",
+    "delete": "Löschen",
+    "pin": "Anheften",
+    "unpin": "Loslösen",
+    "comment_button": "Kommentieren",
+    "error_add_comment": "Kommentar konnte nicht hinzugefügt werden",
+    "loading": "Laden..."
   },
   "YouTubeBanner": {
     "new_video": "Neue Sitzung auf YT",

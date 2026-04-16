@@ -18,7 +18,7 @@ export default async function SluchajPage({
   setRequestLocale(locale);
 
   const { userId, supabase } = await getEffectiveUser();
-  const library = await buildVodLibrary(supabase, userId);
+  const library = await buildVodLibrary(supabase, userId, locale);
 
   // Fetch user email for player watermark (same pattern as watch/[sessionId]/page.tsx)
   const db = createSupabaseServiceRole();

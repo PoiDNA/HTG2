@@ -19,7 +19,7 @@ import { getDesignVariant } from '@/lib/design-variant';
 export default async function VodLibrarySection({ locale }: { locale: string }) {
   const t = await getTranslations({ locale, namespace: 'Account' });
   const { userId, supabase } = await getEffectiveUser();
-  const library = await buildVodLibrary(supabase, userId);
+  const library = await buildVodLibrary(supabase, userId, locale);
 
   // Fetch userEmail for watermark + listened/bookmarked session IDs
   const db = createSupabaseServiceRole();

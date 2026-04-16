@@ -2,6 +2,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Link } from '@/i18n-config';
 import { Film, ArrowRight } from 'lucide-react';
 import { formatSesjeMonthPl } from '@/lib/booking/constants';
+import { pickLocale } from '@/lib/utils/pick-locale';
 
 interface Props {
   userId: string;
@@ -26,7 +27,7 @@ export default async function LibrarySuggestSection({ userId, locale }: Props) {
   const { data: sets } = await db
     .from('monthly_sets')
     .select(`
-      id, title, description, month_label, cover_image_url,
+      id, title, title_i18n, description, description_i18n, month_label, cover_image_url,
       product:products (
         id,
         prices (stripe_price_id, amount, currency, interval, is_active)
@@ -92,11 +93,11 @@ export default async function LibrarySuggestSection({ userId, locale }: Props) {
                   </span>
                 )}
                 <h3 className="text-base font-serif font-semibold text-htg-fg leading-snug">
-                  {set.title}
+                  {pickLocale((set as any).title_i18n, locale, set.title)}
                 </h3>
                 {set.description && (
                   <p className="text-sm text-htg-fg-muted line-clamp-2">
-                    {set.description}
+                    {pickLocale((set as any).description_i18n, locale, set.description)}
                   </p>
                 )}
                 <div className="flex items-center justify-between mt-auto pt-3">

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatSesjeMonthPl } from '@/lib/booking/constants';
+import { pickLocale } from '@/lib/utils/pick-locale';
 
 export type VodSession = {
   id: string;
@@ -24,7 +25,8 @@ export type VodLibraryData = {
 
 export async function buildVodLibrary(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  locale = 'pl'
 ): Promise<VodLibraryData> {
   // 1. Fetch active entitlements
   const { data: rawEntitlements } = await supabase
@@ -55,11 +57,12 @@ export async function buildVodLibrary(
     const { data } = await supabase
       .from('monthly_sets')
       .select(`
-        id, title, month_label, cover_image_url,
+        id, title, title_i18n, month_label, cover_image_url,
         set_sessions (
           sort_order,
           session:session_templates (
-            id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id
+            id, slug, title, title_i18n, description, description_i18n,
+            duration_minutes, bunny_video_id, bunny_library_id
           )
         )
       `)
@@ -78,11 +81,12 @@ export async function buildVodLibrary(
     const { data } = await supabase
       .from('monthly_sets')
       .select(`
-        id, title, month_label, cover_image_url,
+        id, title, title_i18n, month_label, cover_image_url,
         set_sessions (
           sort_order,
           session:session_templates (
-            id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id
+            id, slug, title, title_i18n, description, description_i18n,
+            duration_minutes, bunny_video_id, bunny_library_id
           )
         )
       `)
@@ -104,7 +108,7 @@ export async function buildVodLibrary(
   if (uniqueSingleIds.length > 0) {
     const { data } = await supabase
       .from('session_templates')
-      .select('id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id')
+      .select('id, slug, title, title_i18n, description, description_i18n, duration_minutes, bunny_video_id, bunny_library_id')
       .in('id', uniqueSingleIds)
       .not('bunny_video_id', 'is', null);
     rawSingleSessions = data || [];
@@ -118,18 +122,18 @@ export async function buildVodLibrary(
       .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
       .map((ss: any) => ss.session)
       .filter((s: any) => s && s.bunny_video_id);
-    
+
     // Deduplicate only WITHIN the section
     const unique = [...new Map(sessions.map((s: any) => [s.id, s])).values()] as any[];
     if (unique.length > 0) {
       sections.push({
-        title: set.title,
+        title: pickLocale(set.title_i18n, locale, set.title),
         monthLabel: set.month_label,
         coverImageUrl: set.cover_image_url || null,
         sessions: unique.map(s => ({
           id: s.id,
-          title: s.title,
-          description: s.description,
+          title: pickLocale(s.title_i18n, locale, s.title),
+          description: pickLocale(s.description_i18n, locale, s.description) || null,
           durationMinutes: s.duration_minutes,
           isPlayable: !!s.bunny_video_id
         }))
@@ -160,8 +164,8 @@ export async function buildVodLibrary(
     sections,
     singleSessions: rawSingleSessions.map(s => ({
       id: s.id,
-      title: s.title,
-      description: s.description,
+      title: pickLocale(s.title_i18n, locale, s.title),
+      description: pickLocale(s.description_i18n, locale, s.description) || null,
       durationMinutes: s.duration_minutes,
       isPlayable: !!s.bunny_video_id
     })),

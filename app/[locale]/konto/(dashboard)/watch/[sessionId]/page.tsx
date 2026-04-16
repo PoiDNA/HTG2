@@ -4,6 +4,7 @@ import { getEffectiveUser } from '@/lib/admin/effective-user';
 import { redirect } from 'next/navigation';
 import { ArrowLeft, Lock } from 'lucide-react';
 import SessionReviewPlayer from '@/components/session-review/SessionReviewPlayer';
+import { pickLocale } from '@/lib/utils/pick-locale';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -34,7 +35,7 @@ export default async function WatchPage({
   // Fetch session template
   const { data: session } = await supabase
     .from('session_templates')
-    .select('id, slug, title, description, duration_minutes, bunny_video_id, bunny_library_id')
+    .select('id, slug, title, title_i18n, description, description_i18n, duration_minutes, bunny_video_id, bunny_library_id')
     .eq('id', sessionId)
     .single();
 
@@ -114,12 +115,13 @@ export default async function WatchPage({
   // Fetch monthly set info if session belongs to one
   const { data: setSession } = await supabase
     .from('set_sessions')
-    .select('monthly_set:monthly_sets ( title )')
+    .select('monthly_set:monthly_sets ( title, title_i18n )')
     .eq('session_id', sessionId)
     .limit(1)
     .single();
 
-  const setTitle = (setSession as any)?.monthly_set?.title || null;
+  const rawSet = (setSession as any)?.monthly_set;
+  const setTitle = rawSet ? pickLocale(rawSet.title_i18n, locale, rawSet.title) : null;
 
   return (
     <div>
@@ -136,10 +138,10 @@ export default async function WatchPage({
           <p className="text-sm text-htg-sage font-medium mb-1">{setTitle}</p>
         )}
         <h2 className="text-2xl font-serif font-bold text-htg-fg">
-          {session.title}
+          {pickLocale((session as any).title_i18n, locale, session.title)}
         </h2>
         {session.description && (
-          <p className="text-htg-fg-muted mt-2">{session.description}</p>
+          <p className="text-htg-fg-muted mt-2">{pickLocale((session as any).description_i18n, locale, session.description)}</p>
         )}
         {session.duration_minutes && (
           <p className="text-sm text-htg-fg-muted mt-1">

@@ -22,7 +22,7 @@ export default function VodGrid({ sections, singleSessions, listenedSessionIds, 
   const [statusFilter, setStatusFilter] = useState<'all' | 'unlistened' | 'bookmarked'>('all');
   const [listened] = useState<Set<string>>(() => new Set(listenedSessionIds));
   const [bookmarked] = useState<Set<string>>(() => new Set(bookmarkedSessionIds));
-  const { startPlayback, activeSession } = usePlayer();
+  const { startSessionPlayback: startPlayback, activeSession } = usePlayer();
 
   const allSessions = [
     ...sections.flatMap(s => s.sessions),

@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
           user_id: effectiveUserId,
           device_id: deviceId,
           session_id: sessionId,
+          stream_context: 'vod',
           last_heartbeat: new Date().toISOString(),
         }, { onConflict: 'user_id,device_id' });
     }

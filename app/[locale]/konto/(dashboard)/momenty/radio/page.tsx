@@ -4,7 +4,7 @@ import RadioPlayer from '@/components/fragments/RadioPlayer';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Radio fragmentów — HTG',
+  title: 'Radio Momentów — HTG',
 };
 
 type Props = { params: Promise<{ locale: string }> };

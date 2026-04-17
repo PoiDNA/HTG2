@@ -13,7 +13,7 @@ type MenuItem =
 const menuItems: MenuItem[] = [
   { href: '/konto', label: 'Nagrania', spiritIcon: 'portal' },
   { href: '/konto/sesje-indywidualne', label: 'Spotkania', spiritIcon: 'eye' },
-  { href: '/konto/fragmenty', label: 'Fragmenty', icon: Bookmark },
+  { href: '/konto/momenty', label: 'Momenty', icon: Bookmark },
   { href: '/spolecznosc', label: 'Społeczność', spiritIcon: 'vesica' },
   { href: '/konto/wiadomosci', label: 'Wiadomości', spiritIcon: 'feather' },
   { href: '/konto/polubieni', label: 'Znajomi', spiritIcon: 'bond' },

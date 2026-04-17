@@ -7,7 +7,7 @@ import { Bookmark } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Moje fragmenty — HTG',
+  title: 'Moje Momenty — HTG',
 };
 
 type Props = { params: Promise<{ locale: string }> };
@@ -87,9 +87,9 @@ export default async function FragmentyPage({ params }: Props) {
           <Bookmark className="w-5 h-5 text-htg-sage" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-htg-fg">Moje fragmenty</h1>
+          <h1 className="text-xl font-semibold text-htg-fg">Moje Momenty</h1>
           <p className="text-sm text-htg-fg-muted">
-            Zapisane momenty z sesji i nagrań
+            Zapisane chwile z sesji i nagrań
           </p>
         </div>
       </div>

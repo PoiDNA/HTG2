@@ -211,9 +211,9 @@ export default function RadioPlayer({ scope, scopeId, scopeLabel }: Props) {
           <Radio className="w-6 h-6 text-htg-sage" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-htg-fg">Radio fragmentów</h2>
+          <h2 className="text-lg font-semibold text-htg-fg">Radio Momentów</h2>
           <p className="text-sm text-htg-fg-muted">
-            {scopeLabel ?? (scope === 'all' ? 'Wszystkie fragmenty' : scope === 'favorites' ? '⭐ Ulubione' : 'Wybrane')}
+            {scopeLabel ?? (scope === 'all' ? 'Wszystkie Momenty' : scope === 'favorites' ? '⭐ Ulubione' : 'Wybrane')}
           </p>
         </div>
       </div>
@@ -307,7 +307,7 @@ export default function RadioPlayer({ scope, scopeId, scopeLabel }: Props) {
       {/* Non-repeat indicator */}
       {radio.excludeIds.length > 0 && (
         <p className="text-center text-xs text-htg-fg-muted/50 mt-4">
-          Ostatnie {radio.excludeIds.length} {radio.excludeIds.length === 1 ? 'fragment' : 'fragmenty'} nie powtórzy się
+          Ostatnie {radio.excludeIds.length} {radio.excludeIds.length === 1 ? 'Moment' : 'Momenty'} nie powtórzy się
         </p>
       )}
     </div>

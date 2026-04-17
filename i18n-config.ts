@@ -214,6 +214,28 @@ export const routing = defineRouting({
       pt: '/conta/consentimentos',
     },
 
+    // ─── /konto/momenty (user Moments / Fragments feature) ───────
+    '/konto/momenty': {
+      pl: '/konto/momenty',
+      en: '/account/moments',
+      de: '/konto/momente',
+      pt: '/conta/momentos',
+    },
+    '/konto/momenty/radio': {
+      pl: '/konto/momenty/radio',
+      en: '/account/moments/radio',
+      de: '/konto/momente/radio',
+      pt: '/conta/momentos/radio',
+    },
+
+    // ─── /momenty share (public landing, no locale prefix in slug) ─
+    '/momenty/share/[token]': {
+      pl: '/momenty/share/[token]',
+      en: '/moments/share/[token]',
+      de: '/momente/share/[token]',
+      pt: '/momentos/share/[token]',
+    },
+
     // ─── /konto/admin (internal, no translation) ─────────────────
     '/konto/admin': '/konto/admin',
     '/konto/admin/kalendarz': '/konto/admin/kalendarz',
@@ -231,6 +253,8 @@ export const routing = defineRouting({
     '/konto/admin/sesje-i18n': '/konto/admin/sesje-i18n',
     '/konto/admin/uzytkownicy': '/konto/admin/uzytkownicy',
     '/konto/admin/uzytkownicy/[id]': '/konto/admin/uzytkownicy/[id]',
+    '/konto/admin/momenty': '/konto/admin/momenty',
+    '/konto/admin/momenty/[sessionId]': '/konto/admin/momenty/[sessionId]',
     '/konto/admin/zestawy': '/konto/admin/zestawy',
     '/konto/admin/zgloszenia': '/konto/admin/zgloszenia',
 

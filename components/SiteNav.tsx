@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Link, usePathname, useRouter } from '@/i18n-config';
 import { useUserRole } from '@/lib/useUserRole';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail, User, Library, Globe, Presentation, Languages } from 'lucide-react';
+import { Menu, X, LogOut, CalendarDays, Users, Gift, RefreshCw, Mail, User, Library, Globe, Presentation, Languages, Bookmark } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import FontSizeToggle from './FontSizeToggle';
 import HeaderAuthButton from './HeaderAuthButton';
@@ -22,6 +22,7 @@ const accountMenuItems = [
 const userMenuItems = [
   { href: '/konto', label: 'Nagrania', icon: Library },
   { href: '/konto/sesje-indywidualne', label: 'Umów sesję', icon: CalendarDays },
+  { href: '/konto/momenty', label: 'Momenty', icon: Bookmark },
   { href: '/spolecznosc', label: 'Społeczność', icon: Globe },
   { href: '/konto/polubieni', label: 'Twoi Znajomi', icon: Users },
   { href: '/konto/podarowane-sesje', label: 'Podarowane Sesje', icon: Gift },

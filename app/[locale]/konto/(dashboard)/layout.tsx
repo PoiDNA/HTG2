@@ -19,7 +19,7 @@ import {
   Film, CreditCard, CalendarDays, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, BarChart2,
-  MessagesSquare, ClipboardCheck, RefreshCw, Headphones, Globe,
+  MessagesSquare, ClipboardCheck, RefreshCw, Headphones, Globe, Bookmark,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -138,6 +138,7 @@ export default async function AccountLayout({
     { href: '/konto/admin/subskrypcje', label: tPanel('admin_subscriptions'), icon: CreditCard },
     { href: '/konto/admin/nagrania-klientow', label: 'Nagrania klientów', icon: Headphones },
     { href: '/konto/admin/sesje-i18n', label: 'Tłumaczenia sesji', icon: Globe },
+    { href: '/konto/admin/momenty', label: 'Momenty sesji', icon: Bookmark },
   ] as const;
 
   const piaskownicaItems = [
@@ -172,6 +173,7 @@ export default async function AccountLayout({
   const userItems = [
     { href: '/konto', label: 'Biblioteka sesji', spiritIcon: 'portal' as const },
     { href: '/konto/sesje-indywidualne', label: 'Sesje z Natalią', spiritIcon: 'eye' as const },
+    { href: '/konto/momenty', label: 'Momenty', spiritIcon: 'moment' as const },
     { href: '/spolecznosc', label: 'Społeczność', spiritIcon: 'vesica' as const },
     { href: '/konto/wiadomosci', label: 'Centrum Kontaktu', spiritIcon: 'feather' as const },
     { href: '/konto/polubieni', label: 'Twoi Znajomi', spiritIcon: 'bond' as const },

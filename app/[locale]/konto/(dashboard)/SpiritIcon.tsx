@@ -6,7 +6,8 @@ export type SpiritIconType =
   | 'crystal'     // Twoje Aktywacje
   | 'bond'        // Twoi Znajomi
   | 'offering'    // Podarowane sesje
-  | 'spiral';     // Aktualizacja
+  | 'spiral'      // Aktualizacja
+  | 'moment';     // Momenty
 
 const dotColor: Record<SpiritIconType, string> = {
   portal:   'bg-rose-500    dark:bg-rose-400',
@@ -17,6 +18,7 @@ const dotColor: Record<SpiritIconType, string> = {
   bond:     'bg-orange-400  dark:bg-orange-300',
   offering: 'bg-pink-400    dark:bg-pink-300',
   spiral:   'bg-sky-500     dark:bg-sky-400',
+  moment:   'bg-htg-sage    dark:bg-htg-sage',    // Momenty — sage green
 };
 
 interface SpiritIconProps {

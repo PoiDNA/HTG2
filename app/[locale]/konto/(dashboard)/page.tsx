@@ -16,6 +16,7 @@ import RemainingSessionsSection from './_sections/RemainingSessionsSection';
 import SanctuaryHero from './_sections/SanctuaryHero';
 import ContinueCard from './_sections/ContinueCard';
 import SluchajButton from '@/components/konto/SluchajButton';
+import RadioWidget from '@/components/fragments/RadioWidget';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -102,6 +103,8 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <VodLibrarySection locale={locale} />
         </Suspense>
 
+        <RadioWidget />
+
         <Suspense fallback={<SectionSkeleton title="Pozostałe Sesje" />}>
           <RemainingSessionsSection locale={locale} />
         </Suspense>
@@ -143,6 +146,8 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <VodLibrarySection locale={locale} />
         </Suspense>
 
+        <RadioWidget />
+
         <Suspense fallback={<SectionSkeleton title="Pozostałe Sesje" />}>
           <RemainingSessionsSection locale={locale} />
         </Suspense>
@@ -177,6 +182,8 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />
       </Suspense>
+
+      <RadioWidget />
 
       <Suspense fallback={<SectionSkeleton title="Pozostałe Sesje" />}>
         <RemainingSessionsSection locale={locale} />

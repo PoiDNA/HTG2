@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Star, Trash2, Play, Lock, Bookmark, Zap,
-  Mic, Music, Loader2, Plus,
+  Mic, Music, Loader2, Plus, Radio,
 } from 'lucide-react';
+import { Link } from '@/i18n-config';
 import { usePlayer } from '@/lib/player-context';
 import type { FragmentPlayback, RecordingFragmentPlayback, ImpulsePlayback } from '@/lib/player-context';
 
@@ -444,6 +445,16 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
       {/* ── Sidebar nav ───────────────────────────────────────────────────── */}
       <nav className="lg:w-56 shrink-0">
         <div className="sticky top-6 space-y-1">
+          {/* Radio Momentów link */}
+          <Link
+            href="/konto/momenty/radio"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-htg-fg-muted hover:text-htg-sage hover:bg-htg-sage/5 transition-colors mb-1"
+          >
+            <Radio className="w-3.5 h-3.5 shrink-0" />
+            <span>Radio Momentów</span>
+          </Link>
+          <div className="h-px bg-htg-card-border mb-1" />
+
           {navItems.map(item => (
             <button
               key={item.id}

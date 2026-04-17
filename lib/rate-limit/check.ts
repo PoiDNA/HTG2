@@ -21,6 +21,8 @@ export const RATE_LIMIT_CONFIG: Record<RateLimitAction, RateLimitActionConfig> =
   // Fragment token: lighter than recording (no retention/para checks) but can
   // fire rapidly in radio mode. 120/h allows ~2/min sustained radio use.
   fragment_token:           { max: 120, windowMinutes: 60 },
+  // Share token lookup: 10/min anti-enumeration ceiling.
+  share_token_lookup:       { max: 10,  windowMinutes: 1 },
 };
 
 /**

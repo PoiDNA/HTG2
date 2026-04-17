@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useMemo } from 'react';
 import { AudioEngine, type AudioEngineHandle } from '@/components/session-review/AudioEngine';
 import { usePlayer, playbackToEngineProps, playbackToAnalyticsContext, playbackToRange } from '@/lib/player-context';
 
@@ -10,8 +10,8 @@ import { usePlayer, playbackToEngineProps, playbackToAnalyticsContext, playbackT
  * Hidden from view — the StickyPlayer provides the visible UI.
  *
  * Uses `activePlayback` (tagged union) to derive engine props, playbackRange,
- * and analyticsContext. Falls back to legacy `activeSession` shape for the
- * AudioEngine props until AudioEngine itself is updated in PR 6.
+ * analyticsContext, and tokenRequestBuilder. Disables play-position resume
+ * for fragment variants (meaningless for sub-clips).
  */
 export default function GlobalPlayer() {
   const { activePlayback, setPlayerState, setEngineHandle } = usePlayer();
@@ -22,7 +22,15 @@ export default function GlobalPlayer() {
 
   // Derive a stable key from the active playback (resets autoplay on change)
   const playbackKey = activePlayback
-    ? `${activePlayback.kind}:${'saveId' in activePlayback ? activePlayback.saveId : 'sessionFragmentId' in activePlayback ? activePlayback.sessionFragmentId : 'sessionId' in activePlayback ? activePlayback.sessionId : (activePlayback as { recordingId: string }).recordingId}`
+    ? `${activePlayback.kind}:${
+        'saveId' in activePlayback
+          ? activePlayback.saveId
+          : 'sessionFragmentId' in activePlayback
+          ? activePlayback.sessionFragmentId
+          : 'sessionId' in activePlayback
+          ? activePlayback.sessionId
+          : (activePlayback as { recordingId: string }).recordingId
+      }`
     : null;
 
   useEffect(() => {
@@ -32,15 +40,17 @@ export default function GlobalPlayer() {
     }
   }, [playbackKey]);
 
-  const handleStateChange = useCallback((state: import('@/components/session-review/AudioEngine').PlayerState) => {
-    setPlayerState(state);
-
-    // Autoplay when first loaded
-    if (!autoplayAttemptedRef.current && state.status === 'paused' && engineRef.current) {
-      autoplayAttemptedRef.current = true;
-      setTimeout(() => engineRef.current?.play(), 300);
-    }
-  }, [setPlayerState]);
+  const handleStateChange = useCallback(
+    (state: import('@/components/session-review/AudioEngine').PlayerState) => {
+      setPlayerState(state);
+      // Autoplay when first loaded
+      if (!autoplayAttemptedRef.current && state.status === 'paused' && engineRef.current) {
+        autoplayAttemptedRef.current = true;
+        setTimeout(() => engineRef.current?.play(), 300);
+      }
+    },
+    [setPlayerState],
+  );
 
   // Expose engine handle to context
   useEffect(() => {
@@ -48,13 +58,25 @@ export default function GlobalPlayer() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engineRef.current, setEngineHandle]);
 
+  // Token request body override for fragment_radio (needs `radio: true`)
+  const tokenRequestBuilder = useMemo(() => {
+    if (!activePlayback || activePlayback.kind !== 'fragment_radio') return undefined;
+    const saveId = activePlayback.saveId;
+    return (deviceId: string) => ({ saveId, deviceId, radio: true });
+  }, [activePlayback]);
+
   if (!activePlayback) return null;
 
   const engineProps = playbackToEngineProps(activePlayback);
-  // playbackRange and analyticsContext are forwarded to AudioEngine in PR 6
-  // (after AudioEngine props are extended). Computed here for future use.
-  // const range = playbackToRange(activePlayback);
-  // const analyticsContext = playbackToAnalyticsContext(activePlayback);
+  const range = playbackToRange(activePlayback);
+  const analyticsCtx = playbackToAnalyticsContext(activePlayback);
+
+  // Fragment playback disables play-position resume (meaningless for clips)
+  const isFragment =
+    activePlayback.kind === 'fragment_review' ||
+    activePlayback.kind === 'fragment_radio' ||
+    activePlayback.kind === 'fragment_recording_review' ||
+    activePlayback.kind === 'impulse';
 
   return (
     <div ref={containerRef} className="sr-only" aria-hidden="true">
@@ -65,6 +87,10 @@ export default function GlobalPlayer() {
         tokenEndpoint={engineProps.tokenEndpoint}
         onStateChange={handleStateChange}
         containerEl={containerRef.current}
+        playbackRange={range ?? undefined}
+        analyticsContext={analyticsCtx}
+        endpoints={isFragment ? { playPosition: null } : undefined}
+        tokenRequestBuilder={tokenRequestBuilder}
       />
     </div>
   );

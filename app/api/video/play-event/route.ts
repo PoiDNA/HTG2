@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
+// ── Fragment session types — excluded from all abuse heuristics ──────────────
+// Fragment plays are retained in play_events for audit but do NOT count toward
+// ip_diversity, high_frequency, mass_play, or concurrent_countries detection.
+// Intensive fragment radio use (20+ plays/min) is normal behaviour, not abuse.
+const FRAGMENT_SESSION_TYPES = ['fragment_review', 'fragment_radio', 'fragment_recording_review'];
+
 // ── Violation thresholds ─────────────────────────────────────────────────────
 
 const THRESHOLDS = {
@@ -47,7 +53,8 @@ async function detectViolations(
       .select('ip_address')
       .eq('user_id', userId)
       .gte('started_at', hoursAgo(2))
-      .not('ip_address', 'is', null);
+      .not('ip_address', 'is', null)
+      .not('session_type', 'in', `(${FRAGMENT_SESSION_TYPES.join(',')})`);
 
     const ips = [...new Set((recentPlays || []).map((p: any) => p.ip_address))];
     if (ips.length >= THRESHOLDS.IP_DIVERSITY_CRITICAL) {
@@ -71,7 +78,8 @@ async function detectViolations(
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('session_id', sessionId)
-    .gte('started_at', daysAgo(7));
+    .gte('started_at', daysAgo(7))
+    .not('session_type', 'in', `(${FRAGMENT_SESSION_TYPES.join(',')})`);
 
   if ((sessionPlayCount ?? 0) > THRESHOLDS.HIGH_FREQUENCY) {
     flags.push({
@@ -88,7 +96,8 @@ async function detectViolations(
       .select('country_code')
       .eq('user_id', userId)
       .gte('started_at', minutesAgo(THRESHOLDS.CONCURRENT_WINDOW_MIN))
-      .not('country_code', 'is', null);
+      .not('country_code', 'is', null)
+      .not('session_type', 'in', `(${FRAGMENT_SESSION_TYPES.join(',')})`);
 
     const countries = [...new Set((recentCountryPlays || []).map((p: any) => p.country_code))];
     if (countries.length >= 2) {
@@ -107,7 +116,8 @@ async function detectViolations(
     .from('play_events')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
-    .gte('started_at', todayStart.toISOString());
+    .gte('started_at', todayStart.toISOString())
+    .not('session_type', 'in', `(${FRAGMENT_SESSION_TYPES.join(',')})`);
 
   if ((todayCount ?? 0) >= THRESHOLDS.MASS_PLAY_DAY) {
     flags.push({

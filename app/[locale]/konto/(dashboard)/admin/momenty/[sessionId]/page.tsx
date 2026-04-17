@@ -42,13 +42,15 @@ export default async function AdminFragmentEditorPage({ params }: Params) {
     title: string;
     title_i18n?: Record<string, string>;
     description_i18n?: Record<string, string>;
+    is_impulse?: boolean;
+    impulse_order?: number | null;
   }[] = [];
 
   let migrationsNeeded = false;
 
   const { data: fragsData, error: fragsError } = await db
     .from('session_fragments')
-    .select('id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n')
+    .select('id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n, is_impulse, impulse_order')
     .eq('session_template_id', sessionId)
     .order('ordinal', { ascending: true });
 
@@ -61,6 +63,8 @@ export default async function AdminFragmentEditorPage({ params }: Params) {
       end_sec: Number(f.end_sec),
       title_i18n: (f.title_i18n as Record<string, string>) ?? undefined,
       description_i18n: (f.description_i18n as Record<string, string>) ?? undefined,
+      is_impulse: f.is_impulse ?? false,
+      impulse_order: (f.impulse_order as number | null) ?? null,
     }));
   }
 

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import {
   Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown,
-  AlertTriangle, CheckCircle,
+  AlertTriangle, CheckCircle, Zap,
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -16,6 +16,9 @@ interface Fragment {
   title: string;
   title_i18n?: Record<string, string>;
   description_i18n?: Record<string, string>;
+  /** Admin-curated impulse — appears in 🔥 Impuls for all users */
+  is_impulse?: boolean;
+  impulse_order?: number | null;
 }
 
 interface Props {
@@ -131,6 +134,7 @@ function FragmentTimeline({
           const left = frag.start_sec * PX_PER_SEC;
           const width = Math.max((frag.end_sec - frag.start_sec) * PX_PER_SEC, 4);
           const isSelected = idx === selectedIdx;
+          const isImpulse = !!frag.is_impulse;
           return (
             <div
               key={frag.id ?? `new-${idx}`}
@@ -142,7 +146,7 @@ function FragmentTimeline({
               }}
               className={[
                 'absolute top-8 h-10 rounded cursor-pointer transition-all',
-                'bg-htg-sage/70 hover:bg-htg-sage/90',
+                isImpulse ? 'bg-htg-lavender/70 hover:bg-htg-lavender/90' : 'bg-htg-sage/70 hover:bg-htg-sage/90',
                 isSelected ? 'ring-2 ring-htg-sage ring-offset-1 ring-offset-htg-surface' : '',
               ].join(' ')}
               style={{ left, width }}
@@ -516,6 +520,23 @@ function FragmentRow({
           </div>
         </div>
 
+        {/* Impulse toggle */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onUpdate({ is_impulse: !frag.is_impulse });
+          }}
+          title={frag.is_impulse ? 'Usuń z Impuls' : 'Oznacz jako Impuls 🔥'}
+          className={[
+            'p-1.5 rounded-lg transition-colors shrink-0',
+            frag.is_impulse
+              ? 'text-htg-lavender bg-htg-lavender/10 hover:bg-htg-lavender/20'
+              : 'text-htg-fg-muted/40 hover:text-htg-lavender hover:bg-htg-lavender/10',
+          ].join(' ')}
+        >
+          <Zap className="w-4 h-4" />
+        </button>
+
         {/* Delete */}
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -526,9 +547,18 @@ function FragmentRow({
         </button>
       </div>
 
-      {/* New badge */}
-      {isNew && (
-        <p className="text-xs text-htg-sage mt-2 ml-8">Nowy — zostanie zapisany po kliknięciu &quot;Zapisz wszystko&quot;</p>
+      {/* New / impulse badges */}
+      {(isNew || frag.is_impulse) && (
+        <div className="flex gap-2 mt-2 ml-8">
+          {isNew && (
+            <p className="text-xs text-htg-sage">Nowy — zostanie zapisany po kliknięciu &quot;Zapisz wszystko&quot;</p>
+          )}
+          {frag.is_impulse && (
+            <p className="text-xs text-htg-lavender flex items-center gap-1">
+              <Zap className="w-3 h-3" /> Impuls — widoczny w sekcji 🔥 dla wszystkich
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

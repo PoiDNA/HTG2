@@ -7,10 +7,11 @@ import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n-config';
 import {
   ArrowLeft, User, Mail, Calendar, CreditCard, BookOpen, Package,
-  Crown, Shield, ExternalLink, Clock,
+  Crown, Shield, ExternalLink, Clock, Bookmark,
 } from 'lucide-react';
 import { PAYMENT_STATUS_LABELS, SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
+import GrantFragmentAccessButton from '@/components/admin/GrantFragmentAccessButton';
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
@@ -60,6 +61,24 @@ export default async function AdminUserDetailPage({
   }
 
   if (!profile) notFound();
+
+  // Feature entitlement for Fragments (migration 091 adds feature_key column;
+  // graceful fallback if column doesn't exist yet)
+  let fragEntResult = await db
+    .from('entitlements')
+    .select('id, feature_key, valid_until, is_active, created_at')
+    .eq('user_id', id)
+    .eq('type', 'feature')
+    .eq('feature_key', 'fragments')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (fragEntResult.error?.code === '42703') {
+    // feature_key column not yet in production — migration pending
+    fragEntResult = { data: null, error: null } as typeof fragEntResult;
+  }
+  const fragmentEntitlement = fragEntResult.data ?? null;
 
   // Load all user data in parallel
   const [
@@ -232,6 +251,27 @@ export default async function AdminUserDetailPage({
         initialPhone={profile.phone || ''}
         initialSecondEmail={(profile as { second_email?: string }).second_email || ''}
       />
+
+      {/* Fragment access */}
+      <div className="bg-htg-card border border-htg-card-border rounded-2xl p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <h3 className="text-base font-semibold text-htg-fg flex items-center gap-2">
+            <Bookmark className="w-4 h-4 text-htg-sage" />
+            Dostęp do Momentów sesji
+          </h3>
+          <Link
+            href={{ pathname: '/konto/admin/momenty' }}
+            className="text-xs text-htg-fg-muted hover:text-htg-sage transition-colors shrink-0"
+          >
+            Zarządzaj sesjami →
+          </Link>
+        </div>
+        <GrantFragmentAccessButton
+          userId={id}
+          userEmail={profile.email || ''}
+          existing={fragmentEntitlement}
+        />
+      </div>
 
       {/* Upcoming bookings */}
       {upcomingBookings.length > 0 && (

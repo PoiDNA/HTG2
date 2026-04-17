@@ -7,7 +7,7 @@ import { Bookmark, Lock, Music, ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Udostępnione fragmenty — HTG',
+  title: 'Udostępnione Momenty — HTG',
 };
 
 type Props = { params: Promise<{ locale: string; token: string }> };
@@ -29,7 +29,7 @@ export default async function ShareTokenPage({ params }: Props) {
 
   // Login required — redirect to login with return URL
   if (!user) {
-    redirect(`/${locale}/logowanie?next=/${locale}/fragmenty/share/${token}`);
+    redirect(`/${locale}/logowanie?next=/${locale}/momenty/share/${token}`);
   }
 
   const db = createSupabaseServiceRole();
@@ -149,15 +149,15 @@ export default async function ShareTokenPage({ params }: Props) {
           <Bookmark className="w-5 h-5" style={{ color: category?.color ?? undefined }} />
         </div>
         <div>
-          <p className="text-xs text-htg-fg-muted uppercase tracking-wide">Udostępnione fragmenty</p>
-          <h1 className="text-xl font-semibold text-htg-fg">{category?.name ?? 'Fragmenty'}</h1>
+          <p className="text-xs text-htg-fg-muted uppercase tracking-wide">Udostępnione Momenty</p>
+          <h1 className="text-xl font-semibold text-htg-fg">{category?.name ?? 'Momenty'}</h1>
         </div>
       </div>
 
       {/* Resave note */}
       {share.can_resave && (
         <p className="text-xs text-htg-fg-muted bg-htg-surface border border-htg-card-border rounded-lg px-4 py-2 mb-6">
-          Możesz zapisać te fragmenty do swojej biblioteki.
+          Możesz zapisać te Momenty do swojej biblioteki.
         </p>
       )}
 

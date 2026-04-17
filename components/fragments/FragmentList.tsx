@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Star, Trash2, Play, Lock, Bookmark, Zap,
-  Mic, Music, Loader2, Plus, Radio,
+  Mic, Music, Loader2, Plus, Radio, Share2, Copy, Check, X,
 } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import { usePlayer } from '@/lib/player-context';
@@ -271,6 +271,134 @@ function ImpulseCard({ impulse, onPlay }: ImpulseCardProps) {
 }
 
 // ---------------------------------------------------------------------------
+// CategorySharePanel
+// ---------------------------------------------------------------------------
+
+interface CategorySharePanelProps {
+  categoryId: string;
+  hasRecordingSaves: boolean;
+  onClose: () => void;
+}
+
+function CategorySharePanel({ categoryId, hasRecordingSaves, onClose }: CategorySharePanelProps) {
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const shareUrl = shareToken
+    ? `${window.location.href.split('/konto')[0]}/momenty/share/${shareToken}`
+    : null;
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/fragments/shares', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category_id: categoryId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message ?? 'Nie udało się wygenerować linku.');
+      } else {
+        setShareToken(data.share.share_token);
+        setShareId(data.share.id);
+      }
+    } catch {
+      setError('Błąd sieci.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleRevoke = async () => {
+    if (!shareId) return;
+    setRevoking(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/fragments/shares/${shareId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setShareToken(null);
+        setShareId(null);
+      } else {
+        setError('Nie udało się usunąć linku.');
+      }
+    } catch {
+      setError('Błąd sieci.');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="mt-1 mx-1 mb-1 px-3 py-2.5 bg-htg-surface border border-htg-card-border rounded-lg text-xs">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-htg-fg-muted font-medium">Udostępnij kategorię</span>
+        <button
+          onClick={onClose}
+          className="text-htg-fg-muted/60 hover:text-htg-fg-muted transition-colors"
+          aria-label="Zamknij"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {hasRecordingSaves ? (
+        <p className="text-htg-fg-muted/70 text-[11px] leading-4">
+          Kategoria zawiera nagrania własnych sesji — nie można udostępnić.
+        </p>
+      ) : shareUrl ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 bg-htg-card border border-htg-card-border rounded px-2 py-1.5">
+            <span className="flex-1 truncate text-htg-fg-muted text-[10px] font-mono">{shareUrl}</span>
+            <button
+              onClick={handleCopy}
+              className="shrink-0 text-htg-fg-muted hover:text-htg-sage transition-colors"
+              title="Kopiuj link"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-htg-sage" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+          <button
+            onClick={handleRevoke}
+            disabled={revoking}
+            className="text-red-400/80 hover:text-red-400 transition-colors disabled:opacity-50 flex items-center gap-1"
+          >
+            {revoking && <Loader2 className="w-3 h-3 animate-spin" />}
+            Usuń link
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-htg-sage/10 text-htg-sage rounded-lg
+                     hover:bg-htg-sage/20 transition-colors disabled:opacity-50 font-medium"
+        >
+          {generating && <Loader2 className="w-3 h-3 animate-spin" />}
+          Generuj link
+        </button>
+      )}
+
+      {error && (
+        <p className="mt-1.5 text-red-400 text-[11px]">{error}</p>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main FragmentList
 // ---------------------------------------------------------------------------
 
@@ -287,6 +415,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
   const [impulses, setImpulses] = useState<ImpulseFragment[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>(VIRTUAL_ALL);
   const [loadingImpulses, setLoadingImpulses] = useState(false);
+  const [openSharePanel, setOpenSharePanel] = useState<string | null>(null);
   const accessSet = new Set(accessibleIds);
 
   // ── Category management ───────────────────────────────────────────────────
@@ -455,23 +584,56 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
           </Link>
           <div className="h-px bg-htg-card-border mb-1" />
 
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveCategory(item.id)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between
-                         ${activeCategory === item.id
-                           ? 'bg-htg-sage/10 text-htg-sage font-medium'
-                           : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'}`}
-            >
-              <span className="truncate">{item.label}</span>
-              {item.count > 0 && (
-                <span className={`text-xs ml-2 shrink-0 ${activeCategory === item.id ? 'text-htg-sage/70' : 'text-htg-fg-muted/50'}`}>
-                  {item.count}
-                </span>
-              )}
-            </button>
-          ))}
+          {navItems.map(item => {
+            const isUserCat = !item.id.startsWith('__');
+            const catSaves = isUserCat ? saves.filter(s => s.category_id === item.id) : [];
+            const hasRecordingSaves = catSaves.some(s => s.booking_recording_id !== null);
+            const isShareOpen = openSharePanel === item.id;
+
+            return (
+              <div key={item.id}>
+                <div className={`group/cat flex items-center rounded-lg transition-colors
+                                ${activeCategory === item.id
+                                  ? 'bg-htg-sage/10'
+                                  : 'hover:bg-htg-surface'}`}>
+                  <button
+                    onClick={() => setActiveCategory(item.id)}
+                    className={`flex-1 text-left px-3 py-2 text-sm transition-colors flex items-center justify-between min-w-0
+                               ${activeCategory === item.id
+                                 ? 'text-htg-sage font-medium'
+                                 : 'text-htg-fg-muted hover:text-htg-fg'}`}
+                  >
+                    <span className="truncate">{item.label}</span>
+                    {item.count > 0 && (
+                      <span className={`text-xs ml-2 shrink-0 ${activeCategory === item.id ? 'text-htg-sage/70' : 'text-htg-fg-muted/50'}`}>
+                        {item.count}
+                      </span>
+                    )}
+                  </button>
+                  {isUserCat && (
+                    <button
+                      onClick={() => setOpenSharePanel(isShareOpen ? null : item.id)}
+                      className={`shrink-0 w-7 h-7 flex items-center justify-center rounded-lg mr-1
+                                  transition-colors opacity-0 group-hover/cat:opacity-100 focus:opacity-100
+                                  ${isShareOpen
+                                    ? 'text-htg-sage opacity-100'
+                                    : 'text-htg-fg-muted/60 hover:text-htg-sage hover:bg-htg-sage/10'}`}
+                      title="Udostępnij kategorię"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                {isUserCat && isShareOpen && (
+                  <CategorySharePanel
+                    categoryId={item.id}
+                    hasRecordingSaves={hasRecordingSaves}
+                    onClose={() => setOpenSharePanel(null)}
+                  />
+                )}
+              </div>
+            );
+          })}
 
           {/* Create category */}
           <div className="pt-2 mt-1 border-t border-htg-card-border">

@@ -176,7 +176,7 @@ function SaveFragmentModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <h2 className="text-white font-semibold text-base flex items-center gap-2">
             <Bookmark className="w-4 h-4 text-htg-sage" />
-            Zapisz fragment
+            Zapisz Moment
           </h2>
           <button
             onClick={onClose}
@@ -205,7 +205,7 @@ function SaveFragmentModal({
                            transition-colors flex items-center justify-center gap-2"
               >
                 {savingPredefined && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Zapisz ten fragment
+                Zapisz ten Moment
               </button>
             </div>
           )}
@@ -213,7 +213,7 @@ function SaveFragmentModal({
           {/* Custom range (Typ B) */}
           <div>
             <p className="text-xs text-white/50 uppercase tracking-wide font-medium mb-3">
-              {activePredefined ? 'Lub zaznacz własny' : 'Własny fragment'}
+              {activePredefined ? 'Lub zaznacz własny' : 'Własny Moment'}
             </p>
 
             {/* Time range inputs */}
@@ -328,7 +328,7 @@ function SaveFragmentModal({
                        transition-colors flex items-center justify-center gap-2"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {activePredefined ? 'Zapisz jako własny' : 'Zapisz fragment'}
+            {activePredefined ? 'Zapisz jako własny' : 'Zapisz Moment'}
           </button>
         </div>
       </div>
@@ -407,14 +407,14 @@ export default function SaveFragmentButton({
                       ? 'bg-htg-sage/20 text-htg-sage border border-htg-sage/30'
                       : 'bg-black/30 text-white/70 border border-white/10 hover:bg-black/50 hover:text-white'}
                     ${className}`}
-        title="Zapisz fragment"
+        title="Zapisz Moment"
       >
         {hasSaved
           ? <BookmarkCheck className="w-3.5 h-3.5" />
           : <Bookmark className="w-3.5 h-3.5" />}
         {activePredefined
           ? <span className="hidden sm:inline">{activePredefined.title}</span>
-          : <span className="hidden sm:inline">Zapisz fragment</span>}
+          : <span className="hidden sm:inline">Zapisz Moment</span>}
       </button>
 
       {isOpen && (

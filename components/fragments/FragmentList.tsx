@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Star, Trash2, Play, Lock, Bookmark, Zap,
-  Mic, Music, ChevronRight, Loader2,
+  Mic, Music, Loader2,
 } from 'lucide-react';
 import { usePlayer } from '@/lib/player-context';
 import type { FragmentPlayback, RecordingFragmentPlayback, ImpulsePlayback } from '@/lib/player-context';
@@ -120,6 +120,7 @@ function getSaveSourceTitle(save: FragmentSave): string {
 // Virtual category IDs
 // ---------------------------------------------------------------------------
 
+const VIRTUAL_ALL = '__all__';
 const VIRTUAL_FAVORITES = '__favorites__';
 const VIRTUAL_RECORDINGS = '__recordings__';
 const VIRTUAL_IMPULSES = '__impulses__';
@@ -283,7 +284,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
   const { startPlayback } = usePlayer();
   const [saves, setSaves] = useState<FragmentSave[]>(initialSaves);
   const [impulses, setImpulses] = useState<ImpulseFragment[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>(VIRTUAL_FAVORITES);
+  const [activeCategory, setActiveCategory] = useState<string>(VIRTUAL_ALL);
   const [loadingImpulses, setLoadingImpulses] = useState(false);
   const accessSet = new Set(accessibleIds);
 
@@ -301,6 +302,8 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
 
   const filteredSaves = (() => {
     switch (activeCategory) {
+      case VIRTUAL_ALL:
+        return saves;
       case VIRTUAL_FAVORITES:
         return saves.filter(s => s.is_favorite);
       case VIRTUAL_RECORDINGS:
@@ -386,14 +389,15 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
 
   // ── Nav items ─────────────────────────────────────────────────────────────
 
+  const allSavesCount = saves.length;
+
   const navItems = [
+    { id: VIRTUAL_ALL, label: 'Wszystkie', count: allSavesCount },
     { id: VIRTUAL_FAVORITES, label: '⭐ Ulubione', count: totalByCategory[VIRTUAL_FAVORITES] },
     { id: VIRTUAL_RECORDINGS, label: '🎙 Twoje Nagrania Sesji', count: totalByCategory[VIRTUAL_RECORDINGS] },
     { id: VIRTUAL_IMPULSES, label: '🔥 Impuls', count: totalByCategory[VIRTUAL_IMPULSES] },
     ...categories.map(cat => ({ id: cat.id, label: cat.name, count: totalByCategory[cat.id] ?? 0 })),
   ];
-
-  const allSavesCount = saves.length;
 
   // ── Empty state ───────────────────────────────────────────────────────────
 
@@ -406,22 +410,6 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
       {/* ── Sidebar nav ───────────────────────────────────────────────────── */}
       <nav className="lg:w-56 shrink-0">
         <div className="sticky top-6 space-y-1">
-          {/* "Wszystkie" shortcut */}
-          <button
-            onClick={() => {
-              // Show all — navigate to first non-empty category or favorites
-              setActiveCategory(VIRTUAL_FAVORITES);
-            }}
-            className="w-full text-left px-3 py-2 rounded-lg text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors flex items-center justify-between"
-          >
-            <span className="flex items-center gap-2">
-              <Bookmark className="w-3.5 h-3.5" />
-              Wszystkie ({allSavesCount})
-            </span>
-          </button>
-
-          <div className="h-px bg-htg-card-border my-2" />
-
           {navItems.map(item => (
             <button
               key={item.id}
@@ -447,7 +435,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
         {/* Active category header */}
         <div className="flex items-center gap-2 mb-4">
           <h2 className="text-base font-medium text-htg-fg">
-            {navItems.find(n => n.id === activeCategory)?.label ?? 'Fragmenty'}
+            {navItems.find(n => n.id === activeCategory)?.label ?? 'Momenty'}
           </h2>
           {activeCategory === VIRTUAL_IMPULSES && loadingImpulses && (
             <Loader2 className="w-4 h-4 text-htg-fg-muted animate-spin" />
@@ -495,16 +483,22 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
                 <Zap className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
                 <p className="text-sm">Brak impulsów. Administrator jeszcze ich nie dodał.</p>
               </>
+            ) : activeCategory === VIRTUAL_ALL ? (
+              <>
+                <Bookmark className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
+                <p className="text-sm">Nie masz jeszcze żadnych Momentów.</p>
+                <p className="text-xs mt-1">Zapisz fragment sesji podczas odtwarzania, używając przycisku Zapisz Moment.</p>
+              </>
             ) : activeCategory === VIRTUAL_FAVORITES ? (
               <>
                 <Star className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
-                <p className="text-sm">Brak ulubionych fragmentów.</p>
-                <p className="text-xs mt-1">Oznacz fragment ⭐ podczas odtwarzania.</p>
+                <p className="text-sm">Brak ulubionych Momentów.</p>
+                <p className="text-xs mt-1">Oznacz Moment ⭐ podczas zapisywania lub na tej liście.</p>
               </>
             ) : activeCategory === VIRTUAL_RECORDINGS ? (
               <>
                 <Mic className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
-                <p className="text-sm">Brak zapisanych fragmentów Twoich nagrań.</p>
+                <p className="text-sm">Brak zapisanych Momentów z Twoich nagrań sesji.</p>
               </>
             ) : (
               <>

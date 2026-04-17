@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback } from 'react';
-import type { AudioEngineHandle, PlayerState } from '@/components/session-review/AudioEngine';
+import type { AudioEngineHandle, PlayerState, AnalyticsContext } from '@/components/session-review/AudioEngine';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ActivePlayback — tagged union replacing the old flat ActiveSession interface.
@@ -121,7 +121,7 @@ export function playbackToEngineProps(p: ActivePlayback): ActiveSession {
 }
 
 /** Derive the analytics context for AudioEngine from any ActivePlayback variant */
-export function playbackToAnalyticsContext(p: ActivePlayback): string {
+export function playbackToAnalyticsContext(p: ActivePlayback): AnalyticsContext {
   switch (p.kind) {
     case 'vod':           return 'vod';
     case 'recording':     return 'recording';

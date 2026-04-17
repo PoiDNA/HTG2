@@ -8,6 +8,12 @@
 // concurrent streams, cleanup. Audio analysis graph is best-effort optional.
 //
 // Exposes an imperative handle (no raw DOM) + discriminated PlayerState.
+//
+// PR 6 extensions (all optional / backward-compatible):
+//   endpoints            — override individual API URLs; playPosition: null disables
+//   tokenRequestBuilder  — override token request body
+//   playbackRange        — seek to startSec on load, stop at endSec
+//   analyticsContext     — session_type for play-events
 // ---------------------------------------------------------------------------
 
 import { useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
@@ -36,6 +42,29 @@ export interface AudioSnapshot {
   muted: boolean;
 }
 
+export type AnalyticsContext =
+  | 'vod'
+  | 'recording'
+  | 'live'
+  | 'fragment_review'
+  | 'fragment_radio'
+  | 'fragment_recording_review';
+
+export interface AudioEngineEndpoints {
+  /** Override heartbeat URL (default: '/api/video/heartbeat') */
+  heartbeat?: string;
+  /** Override stop URL (default: '/api/video/stop') */
+  stop?: string;
+  /** Override play-event URL (default: '/api/video/play-event') */
+  playEvent?: string;
+  /**
+   * Override play-position URL (default: '/api/video/play-position').
+   * Set to null to DISABLE resume fetch AND position heartbeat writes
+   * (used for fragment playback where position resume is meaningless).
+   */
+  playPosition?: string | null;
+}
+
 export interface AudioEngineHandle {
   play(): void;
   pause(): void;
@@ -51,6 +80,21 @@ export interface AudioEngineHandle {
   /** Request fullscreen on the player container */
   requestFullscreen(): void;
   exitFullscreen(): void;
+  // ── PR 6 additions ────────────────────────────────────────────────────────
+  /** Update playback range without remounting the engine (used by radio player). */
+  setPlaybackRange(range: { startSec: number; endSec: number } | null): void;
+  /**
+   * Ramp volume from 0 → current volume over durationMs.
+   * Saves the target volume before fade starts; restores it on completion.
+   */
+  fadeIn(durationMs: number): void;
+  /**
+   * Ramp volume from current → 0 over durationMs, then pause.
+   * Does NOT emit state change — caller manages next action.
+   */
+  fadeOut(durationMs: number): void;
+  /** Subscribe to fragment-end boundary (currentTime >= endSec). */
+  subscribeToFragment(cb: () => void): () => void;
 }
 
 interface AudioEngineProps {
@@ -60,6 +104,24 @@ interface AudioEngineProps {
   onStateChange: (state: PlayerState) => void;
   /** Container element for fullscreen API */
   containerEl?: HTMLElement | null;
+  // ── PR 6 additions ────────────────────────────────────────────────────────
+  /** Override individual API endpoint URLs. */
+  endpoints?: AudioEngineEndpoints;
+  /**
+   * Override token request body builder. Called with deviceId.
+   * Default: `{ [idFieldName]: playbackId, deviceId }`.
+   */
+  tokenRequestBuilder?: (deviceId: string) => object;
+  /**
+   * Constrain playback to a sub-range of the source media.
+   * On source ready → seek to startSec. On timeupdate → pause+notify at endSec.
+   */
+  playbackRange?: { startSec: number; endSec: number } | null;
+  /**
+   * session_type for play-event analytics.
+   * Default: `idFieldName === 'recordingId' ? 'recording' : 'vod'`.
+   */
+  analyticsContext?: AnalyticsContext;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +148,20 @@ function normalizeDuration(d: number): number | null {
 // ---------------------------------------------------------------------------
 
 export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
-  function AudioEngine({ playbackId, idFieldName, tokenEndpoint, onStateChange, containerEl }, ref) {
+  function AudioEngine(
+    {
+      playbackId,
+      idFieldName,
+      tokenEndpoint,
+      onStateChange,
+      containerEl,
+      endpoints,
+      tokenRequestBuilder,
+      playbackRange,
+      analyticsContext,
+    },
+    ref,
+  ) {
     const audioRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const graphRef = useRef<PlaybackAudioGraph | null>(null);
@@ -105,6 +180,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     // Subscription sets
     const timeListeners = useRef(new Set<(t: number) => void>());
     const durationListeners = useRef(new Set<(d: number | null) => void>());
+    const fragmentListeners = useRef(new Set<() => void>());
 
     // Capability detection
     const canSetVolumeRef = useRef(true);
@@ -119,6 +195,25 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     const errorHandlerRef = useRef<(() => void) | null>(null);
     const retryCountRef = useRef(0);
     const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // ── PR 6: mutable prop refs (sync every render, avoids re-mount on change) ──
+    // Assigning directly in render body is safe because: (1) React renders synchronously,
+    // (2) closures created in useCallback/useEffect read .current at call time, not capture time.
+    const endpointsRef = useRef(endpoints);
+    endpointsRef.current = endpoints;
+
+    const tokenRequestBuilderRef = useRef(tokenRequestBuilder);
+    tokenRequestBuilderRef.current = tokenRequestBuilder;
+
+    const analyticsContextRef = useRef(analyticsContext);
+    analyticsContextRef.current = analyticsContext;
+
+    const playbackRangeRef = useRef(playbackRange ?? null);
+    playbackRangeRef.current = playbackRange ?? null;
+
+    // Fade state
+    const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const preFadeVolumeRef = useRef(1); // volume before fade started
 
     // Sync container ref from prop
     useEffect(() => {
@@ -142,12 +237,34 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
     }, []);
 
     // -----------------------------------------------------------------------
+    // Endpoint helpers (reads from ref so closures always see current value)
+    // -----------------------------------------------------------------------
+    const getHeartbeatUrl = useCallback(
+      () => endpointsRef.current?.heartbeat ?? '/api/video/heartbeat',
+      [],
+    );
+    const getStopUrl = useCallback(
+      () => endpointsRef.current?.stop ?? '/api/video/stop',
+      [],
+    );
+    const getPlayEventUrl = useCallback(
+      () => endpointsRef.current?.playEvent ?? '/api/video/play-event',
+      [],
+    );
+    const getPlayPositionUrl = useCallback((): string | null => {
+      const v = endpointsRef.current?.playPosition;
+      // undefined → use default; null → disabled; string → custom
+      if (v === undefined) return '/api/video/play-position';
+      return v; // null or custom string
+    }, []);
+
+    // -----------------------------------------------------------------------
     // Stop stream (cleanup)
     // -----------------------------------------------------------------------
     const stopPlayEvent = useCallback(() => {
       if (playEventIdRef.current) {
         const duration = Math.floor((Date.now() - playStartRef.current) / 1000);
-        fetch('/api/video/play-event', {
+        fetch(getPlayEventUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -158,19 +275,19 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         }).catch(() => {});
         playEventIdRef.current = null;
       }
-    }, []);
+    }, [getPlayEventUrl]);
 
     const stopStream = useCallback(() => {
       const deviceId = deviceIdRef.current;
       if (!deviceId) return;
       try {
-        fetch('/api/video/stop', {
+        fetch(getStopUrl(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ deviceId }),
         });
       } catch {}
-    }, []);
+    }, [getStopUrl]);
 
     // -----------------------------------------------------------------------
     // Try to create audio graph (best-effort, after user gesture)
@@ -283,12 +400,13 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         }, 15000);
       }
 
-      // Fetch resume position (only on first load, not refresh/retry)
-      if (!isRefresh && !isRetry && !resumeFetchedRef.current) {
+      // Fetch resume position (only on first load, not refresh/retry, and only if enabled)
+      const playPositionUrl = getPlayPositionUrl();
+      if (!isRefresh && !isRetry && !resumeFetchedRef.current && playPositionUrl !== null) {
         resumeFetchedRef.current = true;
         try {
           const resumeRes = await fetch(
-            `/api/video/play-position?${idFieldName}=${encodeURIComponent(playbackId)}`,
+            `${playPositionUrl}?${idFieldName}=${encodeURIComponent(playbackId)}`,
             { signal: abortRef.current.signal },
           );
           if (!isStale()) {
@@ -300,13 +418,21 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         } catch {
           // Non-blocking — resume is best-effort
         }
+      } else if (!isRefresh && !isRetry && !resumeFetchedRef.current && playPositionUrl === null) {
+        // Mark as fetched so we never try (disabled)
+        resumeFetchedRef.current = true;
       }
 
       try {
+        // Build token request body (custom builder or default)
+        const requestBody = tokenRequestBuilderRef.current
+          ? tokenRequestBuilderRef.current(deviceId)
+          : { [idFieldName]: playbackId, deviceId };
+
         const res = await fetch(tokenEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [idFieldName]: playbackId, deviceId }),
+          body: JSON.stringify(requestBody),
           signal: abortRef.current.signal,
         });
 
@@ -352,7 +478,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           hlsRef.current.destroy();
           hlsRef.current = null;
         }
-        
+
         // Clear native source and any <source> children to stop ongoing downloads
         audio.removeAttribute('src');
         while (audio.firstChild) audio.removeChild(audio.firstChild);
@@ -371,7 +497,11 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
           // If AudioContext is suspended (no user gesture yet), audio is silenced.
           // Graph creation is deferred to play() which runs inside a user gesture.
           emitDuration();
+
+          const range = playbackRangeRef.current;
+
           if (snapshot) {
+            // Token refresh: restore position from snapshot
             audio.currentTime = snapshot.currentTime;
             audio.volume = snapshot.volume;
             audio.muted = snapshot.muted;
@@ -382,8 +512,12 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
               });
               return;
             }
+          } else if (range) {
+            // Fragment playback: seek to startSec, ignore resume position
+            audio.currentTime = range.startSec;
+            emitTime(range.startSec);
           } else if (resumePositionRef.current && resumePositionRef.current > 0) {
-            // Resume from last saved position (first load only)
+            // Full session resume from last saved position (first load only)
             audio.currentTime = resumePositionRef.current;
             emitTime(resumePositionRef.current);
             resumePositionRef.current = null; // Only apply once
@@ -470,7 +604,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         if (err?.name === 'AbortError' || isStale()) return;
         triggerRetry('Nie udało się załadować nagrania.');
       }
-    }, [playbackId, idFieldName, tokenEndpoint, emitState, emitTime, emitDuration, clearLoadingGuard, enterTerminalError]);
+    }, [playbackId, idFieldName, tokenEndpoint, emitState, emitTime, emitDuration, clearLoadingGuard, enterTerminalError, getPlayPositionUrl]);
 
     // -----------------------------------------------------------------------
     // Audio event handlers
@@ -495,7 +629,7 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         try {
           const deviceId = deviceIdRef.current;
           // 1. Concurrent stream check
-          const hbRes = await fetch('/api/video/heartbeat', {
+          const hbRes = await fetch(getHeartbeatUrl(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ deviceId }),
@@ -507,9 +641,10 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
             return;
           }
 
-          // 2. Play position heartbeat
-          if (!audio.paused && audio.currentTime > 0) {
-            fetch('/api/video/play-position', {
+          // 2. Play position heartbeat (disabled when playPosition endpoint is null)
+          const posUrl = getPlayPositionUrl();
+          if (posUrl !== null && !audio.paused && audio.currentTime > 0) {
+            fetch(posUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -527,16 +662,21 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         clearLoadingGuard();
         emitState({ status: 'playing' });
 
-        // Play-event: otwórz nowy event jeśli nie istnieje
+        // Play-event: open new event if none exists
         if (!playEventIdRef.current) {
           playStartRef.current = Date.now();
-          fetch('/api/video/play-event', {
+          // Derive session_type: explicit analyticsContext > fallback from idFieldName
+          const sessionType: AnalyticsContext =
+            analyticsContextRef.current ??
+            (idFieldName === 'recordingId' ? 'recording' : 'vod');
+
+          fetch(getPlayEventUrl(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               action: 'start',
-              [idFieldName]: playbackId,
-              sessionType: idFieldName === 'recordingId' ? 'booking_recording' : 'vod',
+              sessionId: playbackId,
+              sessionType,
               deviceId: deviceIdRef.current,
             }),
           })
@@ -545,22 +685,37 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
             .catch(() => {});
         }
 
-        // Heartbeat: clear stary, start nowy
+        // Heartbeat: clear old, start new
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);
         heartbeatRef.current = setInterval(heartbeatFn, 30000);
       };
+
       const onPause = () => {
         if (stateRef.current.status === 'blocked') return;
         if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
-        stopPlayEvent(); // Zamknij play-event na pauzie
+        stopPlayEvent(); // Close play-event on pause
         emitState({ status: 'paused' });
       };
+
       const onEnded = () => {
         if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
-        stopPlayEvent(); // Zamknij play-event na końcu
+        stopPlayEvent(); // Close play-event on end
         emitState({ status: 'ended' });
       };
-      const onTimeUpdate = () => emitTime(audio.currentTime);
+
+      const onTimeUpdate = () => {
+        const t = audio.currentTime;
+        emitTime(t);
+
+        // Fragment boundary check
+        const range = playbackRangeRef.current;
+        if (range && t >= range.endSec) {
+          audio.pause();
+          // Notify fragment subscribers (radio → trigger next fragment)
+          fragmentListeners.current.forEach(cb => cb());
+        }
+      };
+
       const onDurationChange = () => emitDuration();
 
       audio.addEventListener('playing', onPlaying);
@@ -587,12 +742,13 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         clearLoadingGuard();
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);
         if (refreshRef.current) clearTimeout(refreshRef.current);
+        if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
         if (hlsRef.current) hlsRef.current.destroy();
         if (graphRef.current) graphRef.current.cleanup();
         stopPlayEvent();
         stopStream();
       };
-    }, [loadAudio, emitState, emitTime, emitDuration, stopPlayEvent, stopStream, clearLoadingGuard, enterTerminalError, idFieldName, playbackId]);
+    }, [loadAudio, emitState, emitTime, emitDuration, stopPlayEvent, stopStream, clearLoadingGuard, enterTerminalError, idFieldName, playbackId, getHeartbeatUrl, getPlayPositionUrl, getPlayEventUrl]);
 
     // -----------------------------------------------------------------------
     // Imperative handle
@@ -676,6 +832,69 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         // Immediate emit
         if (audioRef.current) cb(normalizeDuration(audioRef.current.duration));
         return () => { durationListeners.current.delete(cb); };
+      },
+      // ── PR 6 additions ──────────────────────────────────────────────────────
+      setPlaybackRange(range: { startSec: number; endSec: number } | null) {
+        playbackRangeRef.current = range;
+        // If a new range is set imperatively, seek to its startSec immediately
+        if (range && audioRef.current) {
+          audioRef.current.currentTime = range.startSec;
+          emitTime(range.startSec);
+        }
+      },
+      fadeIn(durationMs: number) {
+        const audio = audioRef.current;
+        if (!audio) return;
+        // Clear any in-flight fade
+        if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+        const targetVolume = preFadeVolumeRef.current;
+        audio.volume = 0;
+        const steps = Math.max(1, Math.round(durationMs / 50));
+        const stepSize = targetVolume / steps;
+        let step = 0;
+        fadeIntervalRef.current = setInterval(() => {
+          step++;
+          if (!audioRef.current) {
+            clearInterval(fadeIntervalRef.current!);
+            fadeIntervalRef.current = null;
+            return;
+          }
+          audioRef.current.volume = Math.min(targetVolume, stepSize * step);
+          if (step >= steps) {
+            clearInterval(fadeIntervalRef.current!);
+            fadeIntervalRef.current = null;
+          }
+        }, 50);
+      },
+      fadeOut(durationMs: number) {
+        const audio = audioRef.current;
+        if (!audio) return;
+        // Save current volume as the target for any subsequent fadeIn
+        preFadeVolumeRef.current = audio.volume;
+        // Clear any in-flight fade
+        if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+        const startVolume = audio.volume;
+        const steps = Math.max(1, Math.round(durationMs / 50));
+        const stepSize = startVolume / steps;
+        let step = 0;
+        fadeIntervalRef.current = setInterval(() => {
+          step++;
+          if (!audioRef.current) {
+            clearInterval(fadeIntervalRef.current!);
+            fadeIntervalRef.current = null;
+            return;
+          }
+          audioRef.current.volume = Math.max(0, startVolume - stepSize * step);
+          if (step >= steps) {
+            clearInterval(fadeIntervalRef.current!);
+            fadeIntervalRef.current = null;
+            audioRef.current?.pause();
+          }
+        }, 50);
+      },
+      subscribeToFragment(cb: () => void) {
+        fragmentListeners.current.add(cb);
+        return () => { fragmentListeners.current.delete(cb); };
       },
     }), [emitTime, tryCreateGraph]);
 

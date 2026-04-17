@@ -3,8 +3,10 @@
 import { useState, useCallback } from 'react';
 import {
   Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown,
-  AlertTriangle, CheckCircle, GripVertical,
+  AlertTriangle, CheckCircle,
 } from 'lucide-react';
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface Fragment {
   id?: string;
@@ -19,7 +21,10 @@ interface Fragment {
 interface Props {
   sessionId: string;
   initialFragments: Fragment[];
+  totalDurationSec?: number;
 }
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function fmtSec(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -40,13 +45,138 @@ function parseSec(str: string): number | null {
   return isNaN(v) ? null : v;
 }
 
-export default function FragmentEditorClient({ sessionId, initialFragments }: Props) {
+/** Format seconds as "m:ss" label (no decimal) for the ruler. */
+function fmtLabel(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60)
+    .toString()
+    .padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+// ── FragmentTimeline ───────────────────────────────────────────────────────────
+
+const PX_PER_SEC = 2;
+const MINOR_TICK_EVERY = 30;   // seconds
+const MAJOR_TICK_EVERY = 300;  // 5 minutes
+
+interface FragmentTimelineProps {
+  fragments: Fragment[];
+  totalDurationSec: number;
+  onClickTime: (sec: number) => void;
+  selectedIdx: number | null;
+  onSelectFragment: (idx: number) => void;
+}
+
+function FragmentTimeline({
+  fragments,
+  totalDurationSec,
+  onClickTime,
+  selectedIdx,
+  onSelectFragment,
+}: FragmentTimelineProps) {
+  const totalSec = Math.max(totalDurationSec, 600);
+  const totalWidth = totalSec * PX_PER_SEC;
+
+  // Build tick marks
+  const ticks: { sec: number; major: boolean }[] = [];
+  for (let sec = 0; sec <= totalSec; sec += MINOR_TICK_EVERY) {
+    ticks.push({ sec, major: sec % MAJOR_TICK_EVERY === 0 });
+  }
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Ignore clicks that land on a fragment bar
+    if ((e.target as HTMLElement).dataset.fragBar) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    // getBoundingClientRect returns visible area; we need offset within the scroll container
+    const scrollLeft = e.currentTarget.scrollLeft;
+    const clickX = e.clientX - rect.left + scrollLeft;
+    const sec = clickX / PX_PER_SEC;
+    onClickTime(Math.max(0, sec));
+  };
+
+  return (
+    <div
+      className="h-24 overflow-x-auto relative bg-htg-surface rounded-xl border border-htg-card-border cursor-crosshair select-none"
+      onClick={handleContainerClick}
+    >
+      {/* Inner ruler — fixed width proportional to duration */}
+      <div className="relative h-full" style={{ width: totalWidth }}>
+
+        {/* Tick marks */}
+        {ticks.map(({ sec, major }) => {
+          const x = sec * PX_PER_SEC;
+          return (
+            <div key={sec} className="absolute top-0" style={{ left: x }}>
+              {/* Vertical line */}
+              <div
+                className={major ? 'w-px bg-htg-card-border/80' : 'w-px bg-htg-card-border/40'}
+                style={{ height: major ? 8 : 4, marginTop: major ? 0 : 2 }}
+              />
+              {/* Label — only for major ticks, skip 0:00 */}
+              {major && sec > 0 && (
+                <span
+                  className="absolute top-2 text-[9px] leading-none text-htg-fg-muted font-mono"
+                  style={{ left: 3, whiteSpace: 'nowrap' }}
+                >
+                  {fmtLabel(sec)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Fragment bars */}
+        {fragments.map((frag, idx) => {
+          const left = frag.start_sec * PX_PER_SEC;
+          const width = Math.max((frag.end_sec - frag.start_sec) * PX_PER_SEC, 4);
+          const isSelected = idx === selectedIdx;
+          return (
+            <div
+              key={frag.id ?? `new-${idx}`}
+              data-frag-bar="1"
+              title={frag.title || `Moment ${frag.ordinal}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectFragment(idx);
+              }}
+              className={[
+                'absolute top-8 h-10 rounded cursor-pointer transition-all',
+                'bg-htg-sage/70 hover:bg-htg-sage/90',
+                isSelected ? 'ring-2 ring-htg-sage ring-offset-1 ring-offset-htg-surface' : '',
+              ].join(' ')}
+              style={{ left, width }}
+            >
+              {/* Title label — only shown if bar is wide enough */}
+              {width > 40 && (
+                <span className="absolute inset-0 flex items-center px-1.5 overflow-hidden">
+                  <span className="text-[10px] leading-tight text-white/90 font-medium truncate">
+                    {frag.title || `Moment ${frag.ordinal}`}
+                  </span>
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── FragmentEditorClient ───────────────────────────────────────────────────────
+
+export default function FragmentEditorClient({
+  sessionId,
+  initialFragments,
+  totalDurationSec = 0,
+}: Props) {
   const [fragments, setFragments] = useState<Fragment[]>(
     [...initialFragments].sort((a, b) => a.ordinal - b.ordinal)
   );
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'success' | 'error'; msg: string } | null>(null);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
   const updateFragment = useCallback((idx: number, patch: Partial<Fragment>) => {
     setFragments(prev => {
@@ -57,15 +187,16 @@ export default function FragmentEditorClient({ sessionId, initialFragments }: Pr
     setStatus(null);
   }, []);
 
-  const addFragment = () => {
+  const addFragment = (startSec?: number) => {
     const maxOrdinal = fragments.reduce((m, f) => Math.max(m, f.ordinal), 0);
     const lastEnd = fragments.reduce((m, f) => Math.max(m, f.end_sec), 0);
+    const start = startSec !== undefined ? startSec : lastEnd;
     setFragments(prev => [
       ...prev,
       {
         ordinal: maxOrdinal + 1,
-        start_sec: lastEnd,
-        end_sec: lastEnd + 60,
+        start_sec: start,
+        end_sec: start + 60,
         title: '',
       },
     ]);
@@ -82,6 +213,7 @@ export default function FragmentEditorClient({ sessionId, initialFragments }: Pr
       // Resequence ordinals
       return next.map((f, i) => ({ ...f, ordinal: i + 1 }));
     });
+    if (selectedIdx === idx) setSelectedIdx(null);
     setStatus(null);
   };
 
@@ -104,6 +236,22 @@ export default function FragmentEditorClient({ sessionId, initialFragments }: Pr
     });
     setStatus(null);
   };
+
+  const handleSelectFragment = (idx: number) => {
+    setSelectedIdx(idx);
+    // Scroll the corresponding card into view
+    document
+      .querySelector(`[data-fragment-idx="${idx}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  const handleTimelineClick = (sec: number) => {
+    addFragment(sec);
+  };
+
+  // Compute effective total duration for the timeline
+  const maxFragEnd = fragments.reduce((m, f) => Math.max(m, f.end_sec), 0);
+  const effectiveDuration = Math.max(totalDurationSec, maxFragEnd, 600);
 
   const handleSave = async () => {
     // Basic validation
@@ -140,7 +288,7 @@ export default function FragmentEditorClient({ sessionId, initialFragments }: Pr
       }
       setDeletedIds(new Set());
       setStatus({ kind: 'success', msg: `Zapisano ${fragments.length} Momentów` });
-    } catch (err) {
+    } catch {
       setStatus({ kind: 'error', msg: 'Błąd połączenia' });
     } finally {
       setSaving(false);
@@ -170,7 +318,7 @@ export default function FragmentEditorClient({ sessionId, initialFragments }: Pr
         </p>
         <div className="flex gap-2">
           <button
-            onClick={addFragment}
+            onClick={() => addFragment()}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/20 hover:bg-htg-sage/30 text-htg-sage rounded-lg text-xs font-medium transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -187,24 +335,36 @@ export default function FragmentEditorClient({ sessionId, initialFragments }: Pr
         </div>
       </div>
 
+      {/* Visual timeline ruler */}
+      <FragmentTimeline
+        fragments={fragments}
+        totalDurationSec={effectiveDuration}
+        onClickTime={handleTimelineClick}
+        selectedIdx={selectedIdx}
+        onSelectFragment={handleSelectFragment}
+      />
+
       {/* Fragment rows */}
       {fragments.length === 0 ? (
         <div className="bg-htg-card border border-htg-card-border rounded-2xl px-6 py-12 text-center">
-          <p className="text-htg-fg-muted text-sm">Brak Momentów — dodaj pierwszy klikając powyżej</p>
+          <p className="text-htg-fg-muted text-sm">Brak Momentów — dodaj pierwszy klikając powyżej lub kliknij na osi czasu</p>
         </div>
       ) : (
         <div className="space-y-2">
           {fragments.map((frag, idx) => (
-            <FragmentRow
-              key={frag.id ?? `new-${idx}`}
-              frag={frag}
-              idx={idx}
-              total={fragments.length}
-              onUpdate={(patch) => updateFragment(idx, patch)}
-              onMoveUp={() => moveUp(idx)}
-              onMoveDown={() => moveDown(idx)}
-              onRemove={() => removeFragment(idx)}
-            />
+            <div key={frag.id ?? `new-${idx}`} data-fragment-idx={idx}>
+              <FragmentRow
+                frag={frag}
+                idx={idx}
+                total={fragments.length}
+                isSelected={idx === selectedIdx}
+                onUpdate={(patch) => updateFragment(idx, patch)}
+                onMoveUp={() => moveUp(idx)}
+                onMoveDown={() => moveDown(idx)}
+                onRemove={() => removeFragment(idx)}
+                onSelect={() => setSelectedIdx(idx)}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -232,13 +392,18 @@ interface RowProps {
   frag: Fragment;
   idx: number;
   total: number;
+  isSelected: boolean;
   onUpdate: (patch: Partial<Fragment>) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
+  onSelect: () => void;
 }
 
-function FragmentRow({ frag, idx, total, onUpdate, onMoveUp, onMoveDown, onRemove }: RowProps) {
+function FragmentRow({
+  frag, idx, total, isSelected,
+  onUpdate, onMoveUp, onMoveDown, onRemove, onSelect,
+}: RowProps) {
   const [startRaw, setStartRaw] = useState(fmtSec(frag.start_sec));
   const [endRaw, setEndRaw] = useState(fmtSec(frag.end_sec));
 
@@ -266,12 +431,19 @@ function FragmentRow({ frag, idx, total, onUpdate, onMoveUp, onMoveDown, onRemov
   const isNew = !frag.id;
 
   return (
-    <div className={`bg-htg-card border rounded-xl p-4 ${isNew ? 'border-htg-sage/40' : 'border-htg-card-border'}`}>
+    <div
+      className={[
+        'bg-htg-card border rounded-xl p-4 transition-colors cursor-pointer',
+        isNew ? 'border-htg-sage/40' : 'border-htg-card-border',
+        isSelected ? 'ring-2 ring-htg-sage/50' : '',
+      ].join(' ')}
+      onClick={onSelect}
+    >
       <div className="flex items-start gap-3">
         {/* Ordinal + reorder */}
         <div className="flex flex-col items-center gap-0.5 pt-1 shrink-0">
           <button
-            onClick={onMoveUp}
+            onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
             disabled={idx === 0}
             className="w-5 h-5 flex items-center justify-center text-htg-fg-muted hover:text-htg-fg disabled:opacity-20 transition-colors"
           >
@@ -279,7 +451,7 @@ function FragmentRow({ frag, idx, total, onUpdate, onMoveUp, onMoveDown, onRemov
           </button>
           <span className="text-xs font-bold text-htg-fg-muted w-5 text-center">{frag.ordinal}</span>
           <button
-            onClick={onMoveDown}
+            onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
             disabled={idx === total - 1}
             className="w-5 h-5 flex items-center justify-center text-htg-fg-muted hover:text-htg-fg disabled:opacity-20 transition-colors"
           >
@@ -296,6 +468,7 @@ function FragmentRow({ frag, idx, total, onUpdate, onMoveUp, onMoveDown, onRemov
               type="text"
               value={frag.title}
               onChange={(e) => onUpdate({ title: e.target.value })}
+              onClick={(e) => e.stopPropagation()}
               placeholder="np. Wstęp – oddychanie"
               className="w-full px-3 py-1.5 text-sm bg-htg-surface border border-htg-card-border rounded-lg text-htg-fg placeholder:text-htg-fg-muted/40 focus:outline-none focus:border-htg-sage"
             />
@@ -309,6 +482,7 @@ function FragmentRow({ frag, idx, total, onUpdate, onMoveUp, onMoveDown, onRemov
               value={startRaw}
               onChange={(e) => setStartRaw(e.target.value)}
               onBlur={commitStart}
+              onClick={(e) => e.stopPropagation()}
               className="w-full px-3 py-1.5 text-sm bg-htg-surface border border-htg-card-border rounded-lg text-htg-fg font-mono focus:outline-none focus:border-htg-sage"
             />
           </div>
@@ -321,6 +495,7 @@ function FragmentRow({ frag, idx, total, onUpdate, onMoveUp, onMoveDown, onRemov
               value={endRaw}
               onChange={(e) => setEndRaw(e.target.value)}
               onBlur={commitEnd}
+              onClick={(e) => e.stopPropagation()}
               className={`w-full px-3 py-1.5 text-sm bg-htg-surface border rounded-lg text-htg-fg font-mono focus:outline-none focus:border-htg-sage ${
                 frag.end_sec <= frag.start_sec
                   ? 'border-red-500/50 text-red-400'
@@ -343,7 +518,7 @@ function FragmentRow({ frag, idx, total, onUpdate, onMoveUp, onMoveDown, onRemov
 
         {/* Delete */}
         <button
-          onClick={onRemove}
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
           className="p-1.5 text-htg-fg-muted hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10 shrink-0"
           title="Usuń Moment"
         >

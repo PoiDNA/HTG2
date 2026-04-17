@@ -437,6 +437,11 @@ export default function SaveFragmentButton({
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const hasFetched = useRef(false);
 
+  // Retro toast state
+  const [toastFragment, setToastFragment] = useState<SessionFragment | null>(null);
+  const dismissedToastIds = useRef<Set<string>>(new Set());
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Subscribe to audio time/duration
   useEffect(() => {
     if (!engineHandle) return;
@@ -463,8 +468,27 @@ export default function SaveFragmentButton({
   // Track whether the button is visible at all (only when audio is ready)
   const isReady = !!engineHandle;
 
+  // Retro toast: show after 5s inside a predefined fragment (if not saved/dismissed)
+  useEffect(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastFragment(null);
+
+    if (!activePredefined) return;
+    if (savedIds.has(activePredefined.id) || dismissedToastIds.current.has(activePredefined.id)) return;
+
+    toastTimerRef.current = setTimeout(() => {
+      setToastFragment(current => (current?.id === activePredefined.id ? current : activePredefined));
+    }, 5000);
+
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePredefined?.id, savedIds]);
+
   const handleSaved = useCallback((saveId: string) => {
     setSavedIds(prev => new Set([...prev, saveId]));
+    setToastFragment(null);
   }, []);
 
   const hasSaved = savedIds.size > 0;
@@ -501,6 +525,38 @@ export default function SaveFragmentButton({
           duration={duration}
           onSaved={handleSaved}
         />
+      )}
+
+      {toastFragment && !savedIds.has(toastFragment.id) && createPortal(
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-right-4 duration-300">
+          <div className="bg-htg-card border border-htg-sage/30 rounded-xl shadow-lg shadow-black/20 p-4 max-w-xs">
+            <div className="flex items-start gap-3">
+              <Bookmark className="w-4 h-4 text-htg-sage mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-htg-fg">Zapisz ten Moment?</p>
+                <p className="text-xs text-htg-fg-muted truncate">
+                  {toastFragment.title} ({formatTime(toastFragment.start_sec)} – {formatTime(toastFragment.end_sec)})
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  dismissedToastIds.current.add(toastFragment.id);
+                  setToastFragment(null);
+                }}
+                className="text-htg-fg-muted hover:text-htg-fg rounded shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              onClick={() => { setToastFragment(null); setIsOpen(true); }}
+              className="mt-3 w-full py-1.5 text-xs font-medium bg-htg-sage text-white rounded-lg hover:bg-htg-sage/90 transition-colors"
+            >
+              Zapisz
+            </button>
+          </div>
+        </div>,
+        document.body,
       )}
     </>
   );

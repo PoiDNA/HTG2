@@ -183,7 +183,7 @@ describe('GET /api/admin/fragments/sessions/[sessionId]', () => {
     mockIsAdmin = false;
     const { GET } = await import('../route');
     const [req, ctx] = makeGetRequest('sess-1');
-    const res = await GET(req, ctx);
+    const res = (await GET(req, ctx)) as Response;
     expect(res.status).toBe(403);
   });
 
@@ -197,7 +197,7 @@ describe('GET /api/admin/fragments/sessions/[sessionId]', () => {
     ];
     const { GET } = await import('../route');
     const [req, ctx] = makeGetRequest('sess-1');
-    const res = await GET(req, ctx);
+    const res = (await GET(req, ctx)) as Response;
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.fragments).toHaveLength(2);
@@ -219,14 +219,14 @@ describe('POST /api/admin/fragments/sessions/[sessionId]', () => {
     mockIsAdmin = false;
     const { POST } = await import('../route');
     const [req, ctx] = makePostRequest('sess-1', { fragments: [] });
-    const res = await POST(req, ctx);
+    const res = (await POST(req, ctx)) as Response;
     expect(res.status).toBe(403);
   });
 
   it('returns 400 when fragments array is missing', async () => {
     const { POST } = await import('../route');
     const [req, ctx] = makePostRequest('sess-1', { not_fragments: [] });
-    const res = await POST(req, ctx);
+    const res = (await POST(req, ctx)) as Response;
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toMatch(/fragments array/);
@@ -237,7 +237,7 @@ describe('POST /api/admin/fragments/sessions/[sessionId]', () => {
     const [req, ctx] = makePostRequest('sess-1', {
       fragments: [{ ordinal: 1, start_sec: 0, end_sec: 60 }],
     });
-    const res = await POST(req, ctx);
+    const res = (await POST(req, ctx)) as Response;
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toMatch(/title/);
@@ -248,7 +248,7 @@ describe('POST /api/admin/fragments/sessions/[sessionId]', () => {
     const [req, ctx] = makePostRequest('sess-1', {
       fragments: [{ ordinal: 1, start_sec: 60, end_sec: 60, title: 'Bad range' }],
     });
-    const res = await POST(req, ctx);
+    const res = (await POST(req, ctx)) as Response;
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toMatch(/start_sec < end_sec/);
@@ -263,7 +263,7 @@ describe('POST /api/admin/fragments/sessions/[sessionId]', () => {
     ];
     const { POST } = await import('../route');
     const [req, ctx] = makePostRequest('sess-1', { fragments: [] });
-    const res = await POST(req, ctx);
+    const res = (await POST(req, ctx)) as Response;
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.fragments).toEqual([]);
@@ -283,7 +283,7 @@ describe('POST /api/admin/fragments/sessions/[sessionId]', () => {
     const [req, ctx] = makePostRequest('sess-1', {
       fragments: [{ ordinal: 1, start_sec: 0, end_sec: 30, title: 'New Fragment' }],
     });
-    const res = await POST(req, ctx);
+    const res = (await POST(req, ctx)) as Response;
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.fragments).toHaveLength(1);
@@ -301,7 +301,7 @@ describe('POST /api/admin/fragments/sessions/[sessionId]', () => {
     const [req, ctx] = makePostRequest('sess-1', {
       fragments: [{ ordinal: 1, start_sec: 0, end_sec: 60, title: 'Overlapping' }],
     });
-    const res = await POST(req, ctx);
+    const res = (await POST(req, ctx)) as Response;
     expect(res.status).toBe(422);
     const json = await res.json();
     expect(json.error).toMatch(/no_overlap/);
@@ -323,7 +323,7 @@ describe('POST /api/admin/fragments/sessions/[sessionId]', () => {
         { id: 'stable-frag-id', ordinal: 1, start_sec: 0, end_sec: 45, title: 'Updated Title' },
       ],
     });
-    const res = await POST(req, ctx);
+    const res = (await POST(req, ctx)) as Response;
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.fragments).toHaveLength(1);

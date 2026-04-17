@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Bookmark, BookmarkCheck, X, Star, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bookmark, BookmarkCheck, X, Star, Loader2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import type { AudioEngineHandle } from '@/components/session-review/AudioEngine';
 
 // ---------------------------------------------------------------------------
@@ -84,6 +84,11 @@ function SaveFragmentModal({
   const [savingPredefined, setSavingPredefined] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Category creation
+  const [creatingCat, setCreatingCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatLoading, setNewCatLoading] = useState(false);
+
   // Load user categories
   useEffect(() => {
     fetch('/api/fragments/categories')
@@ -91,6 +96,28 @@ function SaveFragmentModal({
       .then(d => { if (d.categories) setCategories(d.categories); })
       .catch(() => {});
   }, []);
+
+  const handleCreateCategory = async () => {
+    const name = newCatName.trim();
+    if (!name) return;
+    setNewCatLoading(true);
+    try {
+      const res = await fetch('/api/fragments/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (res.ok && data.category) {
+        setCategories(prev => [...prev, data.category]);
+        setCategoryId(data.category.id);
+        setCreatingCat(false);
+        setNewCatName('');
+      }
+    } finally {
+      setNewCatLoading(false);
+    }
+  };
 
   const handleSavePredefined = async () => {
     if (!activePredefined || !sessionTemplateId) return;
@@ -259,34 +286,81 @@ function SaveFragmentModal({
           </div>
 
           {/* Category + favorite */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <label className="text-xs text-white/40 block mb-1">Kategoria</label>
-              <select
-                value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2
-                           text-white text-sm focus:outline-none focus:border-htg-sage/60
-                           transition-colors appearance-none"
-              >
-                <option value="">Brak kategorii</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-white/40 block mb-1">Kategoria</label>
+                <select
+                  value={categoryId}
+                  onChange={e => setCategoryId(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2
+                             text-white text-sm focus:outline-none focus:border-htg-sage/60
+                             transition-colors appearance-none"
+                >
+                  <option value="">Brak kategorii</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="shrink-0 pt-5">
+                <button
+                  onClick={() => setIsFavorite(f => !f)}
+                  className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-colors
+                             ${isFavorite
+                               ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
+                               : 'bg-white/5 border-white/10 text-white/30 hover:text-white/60'}`}
+                  title={isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+                >
+                  <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-400' : ''}`} />
+                </button>
+              </div>
             </div>
-            <div className="shrink-0 pt-5">
+
+            {/* Inline category creation */}
+            {!creatingCat ? (
               <button
-                onClick={() => setIsFavorite(f => !f)}
-                className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-colors
-                           ${isFavorite
-                             ? 'bg-amber-500/20 border-amber-500/50 text-amber-400'
-                             : 'bg-white/5 border-white/10 text-white/30 hover:text-white/60'}`}
-                title={isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+                type="button"
+                onClick={() => setCreatingCat(true)}
+                className="flex items-center gap-1.5 text-xs text-htg-sage/60 hover:text-htg-sage transition-colors"
               >
-                <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-400' : ''}`} />
+                <Plus className="w-3 h-3" />
+                Nowa kategoria
               </button>
-            </div>
+            ) : (
+              <div className="flex gap-2 items-center">
+                <input
+                  autoFocus
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory(); }
+                    if (e.key === 'Escape') { setCreatingCat(false); setNewCatName(''); }
+                  }}
+                  placeholder="Nazwa kategorii"
+                  maxLength={100}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5
+                             text-white text-xs focus:outline-none focus:border-htg-sage/60
+                             placeholder-white/20"
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateCategory}
+                  disabled={newCatLoading || !newCatName.trim()}
+                  className="px-2.5 py-1.5 text-xs bg-htg-sage text-white rounded-lg
+                             disabled:opacity-50 transition-opacity flex items-center gap-1"
+                >
+                  {newCatLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Utwórz'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCreatingCat(false); setNewCatName(''); }}
+                  className="text-white/30 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Note (collapsible) */}

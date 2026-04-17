@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Star, Trash2, Play, Lock, Bookmark, Zap,
-  Mic, Music, Loader2,
+  Mic, Music, Loader2, Plus,
 } from 'lucide-react';
 import { usePlayer } from '@/lib/player-context';
 import type { FragmentPlayback, RecordingFragmentPlayback, ImpulsePlayback } from '@/lib/player-context';
@@ -288,6 +288,40 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
   const [loadingImpulses, setLoadingImpulses] = useState(false);
   const accessSet = new Set(accessibleIds);
 
+  // ── Category management ───────────────────────────────────────────────────
+  const [catList, setCatList] = useState<Category[]>(categories);
+  const [creatingCat, setCreatingCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatLoading, setNewCatLoading] = useState(false);
+  const newCatInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (creatingCat) newCatInputRef.current?.focus();
+  }, [creatingCat]);
+
+  const handleCreateCategory = useCallback(async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const name = newCatName.trim();
+    if (!name) return;
+    setNewCatLoading(true);
+    try {
+      const res = await fetch('/api/fragments/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (res.ok && data.category) {
+        setCatList(prev => [...prev, data.category]);
+        setActiveCategory(data.category.id);
+        setNewCatName('');
+        setCreatingCat(false);
+      }
+    } finally {
+      setNewCatLoading(false);
+    }
+  }, [newCatName]);
+
   // Load impulses on mount
   useEffect(() => {
     setLoadingImpulses(true);
@@ -321,7 +355,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
     [VIRTUAL_IMPULSES]: impulses.length,
   } as Record<string, number>;
 
-  for (const cat of categories) {
+  for (const cat of catList) {
     totalByCategory[cat.id] = saves.filter(s => s.category_id === cat.id).length;
   }
 
@@ -396,7 +430,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
     { id: VIRTUAL_FAVORITES, label: '⭐ Ulubione', count: totalByCategory[VIRTUAL_FAVORITES] },
     { id: VIRTUAL_RECORDINGS, label: '🎙 Twoje Nagrania Sesji', count: totalByCategory[VIRTUAL_RECORDINGS] },
     { id: VIRTUAL_IMPULSES, label: '🔥 Impuls', count: totalByCategory[VIRTUAL_IMPULSES] },
-    ...categories.map(cat => ({ id: cat.id, label: cat.name, count: totalByCategory[cat.id] ?? 0 })),
+    ...catList.map(cat => ({ id: cat.id, label: cat.name, count: totalByCategory[cat.id] ?? 0 })),
   ];
 
   // ── Empty state ───────────────────────────────────────────────────────────
@@ -427,6 +461,47 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
               )}
             </button>
           ))}
+
+          {/* Create category */}
+          <div className="pt-2 mt-1 border-t border-htg-card-border">
+            {!creatingCat ? (
+              <button
+                onClick={() => setCreatingCat(true)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface rounded-lg transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Nowa kategoria
+              </button>
+            ) : (
+              <form onSubmit={handleCreateCategory} className="px-2 pt-1">
+                <input
+                  ref={newCatInputRef}
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') { setCreatingCat(false); setNewCatName(''); } }}
+                  placeholder="Nazwa kategorii"
+                  maxLength={100}
+                  className="w-full text-sm px-2 py-1.5 bg-htg-surface border border-htg-card-border rounded-lg text-htg-fg placeholder:text-htg-fg-muted/60 focus:outline-none focus:border-htg-sage/60"
+                />
+                <div className="flex gap-1.5 mt-1.5">
+                  <button
+                    type="submit"
+                    disabled={newCatLoading || !newCatName.trim()}
+                    className="flex-1 py-1 text-xs font-medium bg-htg-sage text-white rounded-lg disabled:opacity-50 transition-opacity"
+                  >
+                    {newCatLoading ? '...' : 'Utwórz'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setCreatingCat(false); setNewCatName(''); }}
+                    className="px-2 py-1 text-xs text-htg-fg-muted hover:text-htg-fg rounded-lg hover:bg-htg-surface transition-colors"
+                  >
+                    Anuluj
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       </nav>
 

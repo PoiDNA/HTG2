@@ -99,7 +99,7 @@ export default function RadioPlayer({
   scopeId,
   scopeLabel,
   compact = false,
-  bumperUrl = '/audio/radio-bumper.mp3',
+  bumperUrl = 'https://htg2-cdn.b-cdn.net/audio/radio-bumper.mp3',
 }: Props) {
   const { activePlayback, playerState, engineHandle, startPlayback, stopPlayback } = usePlayer();
   const [radio, setRadio] = useState<RadioState>({

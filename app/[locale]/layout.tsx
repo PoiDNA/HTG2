@@ -22,6 +22,7 @@ import DesignVariantSwitcher from "@/components/DesignVariantSwitcher";
 import { PlayerProvider } from "@/lib/player-context";
 import GlobalPlayer from "@/components/player/GlobalPlayer";
 import StickyPlayer from "@/components/variants/v3/StickyPlayer";
+import FragmentMiniPlayer from "@/components/fragments/FragmentMiniPlayer";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -219,6 +220,7 @@ export default async function LocaleLayout({
                 </Shell>
                 {variant === 'v3' && <GlobalPlayer />}
                 {variant === 'v3' && <StickyPlayer />}
+                {variant === 'v3' && <FragmentMiniPlayer />}
                 {showSwitcher && <DesignVariantSwitcher currentVariant={variant} locale={locale} />}
               </PlayerProvider>
             </DesignVariantProvider>

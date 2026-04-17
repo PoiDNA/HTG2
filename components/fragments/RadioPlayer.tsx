@@ -90,7 +90,7 @@ interface Props {
   scopeLabel?: string;
   /** Compact mode — horizontal card for embedding in widgets/sidebars */
   compact?: boolean;
-  /** URL of the bumper audio played between moments. Provide /audio/radio-bumper.mp3. */
+  /** URL of the bumper audio played between moments. */
   bumperUrl?: string;
 }
 
@@ -99,7 +99,7 @@ export default function RadioPlayer({
   scopeId,
   scopeLabel,
   compact = false,
-  bumperUrl = '/audio/radio-bumper.mp3',
+  bumperUrl = 'https://htg2-cdn.b-cdn.net/audio/radio-bumper.mp3',
 }: Props) {
   const { activePlayback, playerState, engineHandle, startPlayback, stopPlayback } = usePlayer();
   const [radio, setRadio] = useState<RadioState>({

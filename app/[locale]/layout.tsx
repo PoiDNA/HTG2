@@ -218,9 +218,11 @@ export default async function LocaleLayout({
                 <Shell isNagrania={isNagrania}>
                   {children}
                 </Shell>
-                {variant === 'v3' && <GlobalPlayer />}
+                {/* GlobalPlayer + FragmentMiniPlayer: all variants (audio engine + mini bar) */}
+                <GlobalPlayer />
+                <FragmentMiniPlayer />
+                {/* StickyPlayer: v3 only (full persistent bottom bar) */}
                 {variant === 'v3' && <StickyPlayer />}
-                {variant === 'v3' && <FragmentMiniPlayer />}
                 {showSwitcher && <DesignVariantSwitcher currentVariant={variant} locale={locale} />}
               </PlayerProvider>
             </DesignVariantProvider>

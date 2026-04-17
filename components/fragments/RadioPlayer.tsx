@@ -264,6 +264,10 @@ export default function RadioPlayer({
     // 4. Start next moment + simultaneously fade bumper out (3s overlap)
     if (nextSave) {
       playSave(nextSave, excludeIds);
+      // AudioEngine reuses the same <audio> element across fragments (no key remount
+      // in GlobalPlayer), so volume stays at 0 after fadeOut.  Fade it back in
+      // over the same window as the bumper fade-out → smooth crossfade.
+      engineHandle?.fadeIn(BUMPER_FADE_OUT_MS);
     } else {
       setRadio(prev => ({ ...prev, status: 'error', error: 'Brak Momentów do odtworzenia.' }));
     }
@@ -304,7 +308,12 @@ export default function RadioPlayer({
     const b = bumperRef.current;
     if (b && !b.paused) { b.pause(); b.currentTime = 0; }
     engineHandle?.fadeOut(300);
-    setTimeout(() => fetchNext(radio.excludeIds), 350);
+    setTimeout(() => {
+      fetchNext(radio.excludeIds);
+      // Restore volume — AudioEngine reuses same <audio> element, so volume
+      // stays at 0 after fadeOut unless we explicitly ramp it back up.
+      engineHandle?.fadeIn(300);
+    }, 350);
   }, [engineHandle, radio.excludeIds, fetchNext]);
 
   const handleStop = useCallback(() => {

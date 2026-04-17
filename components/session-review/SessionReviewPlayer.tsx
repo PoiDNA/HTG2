@@ -12,6 +12,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { Loader2, AlertCircle, ShieldAlert, Play, Pause, X } from 'lucide-react';
 import { AudioEngine, type AudioEngineHandle, type PlayerState } from './AudioEngine';
 import PlayerControls from './PlayerControls';
+import SaveFragmentButton from '@/components/fragments/SaveFragmentButton';
 
 const CONTROLS_HIDE_DELAY = 4000; // ms after last interaction
 const VIDEO_BG_URL = 'https://htg2-cdn.b-cdn.net/HTG%20CYOU%20-%20Loop%20Canvas%200-3M.mp4';
@@ -320,6 +321,20 @@ export default function SessionReviewPlayer({
           controlsVisible={controlsVisible}
           onInteraction={handleInteraction}
         />
+        </div>
+      )}
+
+      {/* Save fragment button — bottom-left overlay, fades with controls */}
+      {showControls && isRevealed && (
+        <div
+          className="absolute bottom-[4.5rem] left-4 z-30 transition-opacity duration-300"
+          style={{ opacity: controlsVisible ? 1 : 0 }}
+        >
+          <SaveFragmentButton
+            engineHandle={engineRef.current}
+            sessionTemplateId={idFieldName === 'sessionId' ? playbackId : undefined}
+            bookingRecordingId={idFieldName === 'recordingId' ? playbackId : undefined}
+          />
         </div>
       )}
 

@@ -49,7 +49,11 @@ function getSaveTitle(save: RadioSave): string {
 }
 
 /**
- * Linear volume ramp using requestAnimationFrame.
+ * Linear volume ramp using setInterval (background-tab safe).
+ * requestAnimationFrame is suspended when the tab is hidden, which would stall
+ * the bumper sequence indefinitely.  setInterval is throttled to ~1 s in the
+ * background but still fires, so we also fast-path when the document is hidden:
+ * jump straight to the target volume and resolve immediately.
  * Resolves when done or when isCancelled() returns true.
  */
 function rampVolume(
@@ -60,16 +64,29 @@ function rampVolume(
   isCancelled: () => boolean,
 ): Promise<void> {
   return new Promise(resolve => {
-    const start = performance.now();
     el.volume = Math.max(0, Math.min(1, from));
-    const step = () => {
-      if (isCancelled()) { resolve(); return; }
+
+    // Background tab fast-path — skip the ramp, jump straight to target
+    if (typeof document !== 'undefined' && document.hidden) {
+      el.volume = Math.max(0, Math.min(1, to));
+      resolve();
+      return;
+    }
+
+    const start = performance.now();
+    const interval = setInterval(() => {
+      if (isCancelled()) {
+        clearInterval(interval);
+        resolve();
+        return;
+      }
       const t = Math.min((performance.now() - start) / durationMs, 1);
       el.volume = Math.max(0, Math.min(1, from + (to - from) * t));
-      if (t < 1) requestAnimationFrame(step);
-      else resolve();
-    };
-    requestAnimationFrame(step);
+      if (t >= 1) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 16); // ~60 fps when foregrounded; throttled to ~1 s in background
   });
 }
 
@@ -207,25 +224,25 @@ export default function RadioPlayer({
 
   // ── Bumper sequence between moments ──────────────────────────────────────
   //
-  // Timeline (from fragment end):
-  //   0 ms  — main player fades out (400ms)
-  //   400ms — bumper starts (vol 0→1 over 3s), next save fetched concurrently
-  //   3400ms — bumper at full volume; hold 9s
-  //   12400ms — startPlayback(nextSave) + bumper fades out (vol 1→0 over 3s)
-  //   15400ms — bumper audio stops; total ~15s bumper
+  // Timeline (from fragment end — audio already paused by AudioEngine):
+  //   0 ms    — bumper starts (vol 0→1 over 3s), next save fetched concurrently
+  //   3000ms  — bumper at full volume; hold 9s
+  //   12000ms — startPlayback(nextSave); bumper fades out (vol 1→0 over 3s)
+  //   15000ms — bumper audio stops
+  //
+  // NOTE: We intentionally do NOT call engineHandle.fadeOut() here.
+  // AudioEngine already calls audio.pause() before firing fragmentListeners,
+  // so by the time this callback runs the main audio is already silent.
+  // Calling fadeOut would destructively zero the <audio> volume, breaking the
+  // next moment's playback (AudioEngine reuses the same element).
 
   const playBumperThenNext = useCallback(async (excludeIds: string[]) => {
     const gen = ++bumperGenRef.current;
     const cancelled = () => bumperGenRef.current !== gen;
 
-    // 1. Fade out main player
-    engineHandle?.fadeOut(400);
-    await new Promise<void>(r => setTimeout(r, 450));
-    if (cancelled()) return;
-
     const bumper = bumperRef.current;
 
-    // 2. Fetch next save + start bumper concurrently
+    // 1. Fetch next save + start bumper concurrently
     const fetchPromise = fetchNextSave(excludeIds);
 
     let bumperPlaying = false;
@@ -252,7 +269,7 @@ export default function RadioPlayer({
       return;
     }
 
-    // 3. Hold bumper at full volume for 9s
+    // 2. Hold bumper at full volume for 9s
     if (bumperPlaying) {
       await new Promise<void>(r => setTimeout(r, BUMPER_HOLD_MS));
     }
@@ -261,24 +278,24 @@ export default function RadioPlayer({
       return;
     }
 
-    // 4. Start next moment + simultaneously fade bumper out (3s overlap)
+    // 3. Start next moment; fade bumper out simultaneously (3s overlap)
     if (nextSave) {
       playSave(nextSave, excludeIds);
-      // AudioEngine reuses the same <audio> element across fragments (no key remount
-      // in GlobalPlayer), so volume stays at 0 after fadeOut.  Fade it back in
-      // over the same window as the bumper fade-out → smooth crossfade.
-      engineHandle?.fadeIn(BUMPER_FADE_OUT_MS);
+      // Do NOT call engineHandle.fadeIn() — AudioEngine's volume was never
+      // touched (we skipped fadeOut), so the <audio> element is already at
+      // full user volume.  GlobalPlayer's autoplay handler fires from
+      // handleStateChange when status transitions to 'paused' (first load of
+      // the new source), so playback starts automatically at normal volume.
     } else {
       setRadio(prev => ({ ...prev, status: 'error', error: 'Brak Momentów do odtworzenia.' }));
     }
 
     if (bumperPlaying && bumper) {
       rampVolume(bumper, 1, 0, BUMPER_FADE_OUT_MS, cancelled).then(() => {
-        bumper.pause();
-        bumper.currentTime = 0;
+        if (!cancelled()) { bumper.pause(); bumper.currentTime = 0; }
       });
     }
-  }, [engineHandle, fetchNextSave, playSave]);
+  }, [fetchNextSave, playSave]);
 
   // ── Auto-advance on fragment end ─────────────────────────────────────────
 
@@ -289,6 +306,32 @@ export default function RadioPlayer({
     });
     return unsub;
   }, [engineHandle, isRadioActive, radio.excludeIds, playBumperThenNext]);
+
+  // ── Background-tab recovery ───────────────────────────────────────────────
+  // When the tab comes back to the foreground, the bumper sequence may have
+  // completed (setInterval fires sparsely in the background) but the main
+  // player may still be in a stalled state.  We nudge it back to playing if
+  // everything looks correct.
+
+  useEffect(() => {
+    if (!isRadioActive) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) return;
+      // Tab just became visible.  If radio is in "playing" state but the engine
+      // reports "paused" (audio element stalled), try to resume.
+      if (
+        radio.status === 'playing' &&
+        playerState.status === 'paused' &&
+        engineHandle
+      ) {
+        engineHandle.play();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRadioActive, radio.status, playerState.status, engineHandle]);
 
   // ── Controls ──────────────────────────────────────────────────────────────
 
@@ -307,14 +350,10 @@ export default function RadioPlayer({
     bumperGenRef.current++;
     const b = bumperRef.current;
     if (b && !b.paused) { b.pause(); b.currentTime = 0; }
-    engineHandle?.fadeOut(300);
-    setTimeout(() => {
-      fetchNext(radio.excludeIds);
-      // Restore volume — AudioEngine reuses same <audio> element, so volume
-      // stays at 0 after fadeOut unless we explicitly ramp it back up.
-      engineHandle?.fadeIn(300);
-    }, 350);
-  }, [engineHandle, radio.excludeIds, fetchNext]);
+    // Fetch + start next moment immediately — no volume manipulation needed.
+    // AudioEngine volume is untouched; new moment plays at normal level.
+    fetchNext(radio.excludeIds);
+  }, [radio.excludeIds, fetchNext]);
 
   const handleStop = useCallback(() => {
     // Cancel in-progress bumper

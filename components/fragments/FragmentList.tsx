@@ -1,0 +1,520 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Star, Trash2, Play, Lock, Bookmark, Zap,
+  Mic, Music, ChevronRight, Loader2,
+} from 'lucide-react';
+import { usePlayer } from '@/lib/player-context';
+import type { FragmentPlayback, RecordingFragmentPlayback, ImpulsePlayback } from '@/lib/player-context';
+
+// ---------------------------------------------------------------------------
+// Types (subset of what the API returns)
+// ---------------------------------------------------------------------------
+
+interface SessionFragment {
+  id: string;
+  ordinal: number;
+  start_sec: number;
+  end_sec: number;
+  title: string;
+  title_i18n: Record<string, string>;
+  is_impulse: boolean;
+}
+
+interface SessionTemplate {
+  id: string;
+  title: string;
+  slug: string;
+  thumbnail_url: string | null;
+}
+
+interface UserCategory {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+interface FragmentSave {
+  id: string;
+  user_id: string;
+  session_template_id: string | null;
+  booking_recording_id: string | null;
+  fragment_type: 'predefined' | 'custom';
+  session_fragment_id: string | null;
+  custom_start_sec: number | null;
+  custom_end_sec: number | null;
+  custom_title: string | null;
+  fallback_start_sec: number | null;
+  fallback_end_sec: number | null;
+  note: string | null;
+  category_id: string | null;
+  is_favorite: boolean;
+  last_played_at: string | null;
+  play_count: number;
+  created_at: string;
+  updated_at: string;
+  session_fragments: SessionFragment | null;
+  session_templates: SessionTemplate | null;
+  user_categories: UserCategory | null;
+}
+
+interface ImpulseFragment {
+  id: string;
+  ordinal: number;
+  start_sec: number;
+  end_sec: number;
+  title: string;
+  title_i18n: Record<string, string>;
+  impulse_order: number | null;
+  session_template_id: string;
+  session_templates: SessionTemplate;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  color: string | null;
+  parent_id: string | null;
+  sort_order: number;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatTime(sec: number): string {
+  const s = Math.floor(Math.max(0, sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`;
+  return `${m}:${ss.toString().padStart(2, '0')}`;
+}
+
+function getSaveRange(save: FragmentSave): { startSec: number; endSec: number } {
+  if (save.fragment_type === 'predefined') {
+    return {
+      startSec: save.fallback_start_sec ?? 0,
+      endSec: save.fallback_end_sec ?? 0,
+    };
+  }
+  return {
+    startSec: save.custom_start_sec ?? 0,
+    endSec: save.custom_end_sec ?? 0,
+  };
+}
+
+function getSaveTitle(save: FragmentSave): string {
+  if (save.custom_title) return save.custom_title;
+  if (save.session_fragments?.title) return save.session_fragments.title;
+  const { startSec, endSec } = getSaveRange(save);
+  return `${formatTime(startSec)} – ${formatTime(endSec)}`;
+}
+
+function getSaveSourceTitle(save: FragmentSave): string {
+  return save.session_templates?.title ?? 'Nagranie sesji';
+}
+
+// ---------------------------------------------------------------------------
+// Virtual category IDs
+// ---------------------------------------------------------------------------
+
+const VIRTUAL_FAVORITES = '__favorites__';
+const VIRTUAL_RECORDINGS = '__recordings__';
+const VIRTUAL_IMPULSES = '__impulses__';
+
+// ---------------------------------------------------------------------------
+// FragmentCard
+// ---------------------------------------------------------------------------
+
+interface CardProps {
+  save: FragmentSave;
+  accessible: boolean;
+  onPlay: () => void;
+  onToggleFavorite: () => void;
+  onDelete: () => void;
+}
+
+function FragmentCard({ save, accessible, onPlay, onToggleFavorite, onDelete }: CardProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isRecording = !!save.booking_recording_id;
+  const { startSec, endSec } = getSaveRange(save);
+  const duration = endSec - startSec;
+
+  const handleDelete = async () => {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setDeleting(true);
+    await fetch(`/api/fragments/saves/${save.id}`, { method: 'DELETE' }).catch(() => {});
+    onDelete();
+  };
+
+  return (
+    <div className={`group relative bg-htg-card border rounded-xl p-4 transition-all
+                    ${accessible ? 'border-htg-card-border hover:border-htg-sage/30' : 'border-htg-card-border opacity-60'}`}>
+      {/* Source label */}
+      <div className="flex items-center gap-1.5 text-xs text-htg-fg-muted mb-1.5">
+        {isRecording ? (
+          <><Mic className="w-3 h-3 text-htg-lavender" /> Nagranie sesji</>
+        ) : (
+          <><Music className="w-3 h-3 text-htg-sage" /> {getSaveSourceTitle(save)}</>
+        )}
+        {!accessible && <Lock className="w-3 h-3 ml-auto text-htg-fg-muted" />}
+      </div>
+
+      {/* Title + range */}
+      <p className="text-htg-fg font-medium text-sm mb-0.5 truncate">{getSaveTitle(save)}</p>
+      <p className="text-xs text-htg-fg-muted">
+        {formatTime(startSec)} – {formatTime(endSec)}
+        <span className="ml-2 text-htg-fg-muted/60">({formatTime(duration)})</span>
+      </p>
+
+      {/* Note */}
+      {save.note && (
+        <p className="text-xs text-htg-fg-muted/70 mt-2 line-clamp-2 italic">{save.note}</p>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 mt-3">
+        {/* Play */}
+        <button
+          onClick={onPlay}
+          disabled={!accessible}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+                     ${accessible
+                       ? 'bg-htg-sage text-white hover:bg-htg-sage/90'
+                       : 'bg-htg-surface text-htg-fg-muted cursor-not-allowed'}`}
+        >
+          {accessible ? <Play className="w-3 h-3 fill-white" /> : <Lock className="w-3 h-3" />}
+          {accessible ? 'Odtwórz' : 'Brak dostępu'}
+        </button>
+
+        {/* Favorite toggle */}
+        <button
+          onClick={onToggleFavorite}
+          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors
+                     ${save.is_favorite
+                       ? 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+                       : 'text-htg-fg-muted hover:text-amber-400 hover:bg-amber-500/10'}`}
+          title={save.is_favorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+        >
+          <Star className={`w-3.5 h-3.5 ${save.is_favorite ? 'fill-amber-400' : ''}`} />
+        </button>
+
+        {/* Delete */}
+        {confirmDelete ? (
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-2 py-1 rounded text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Tak, usuń'}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-2 py-1 rounded text-xs text-htg-fg-muted hover:bg-htg-surface transition-colors"
+            >
+              Anuluj
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleDelete}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-htg-fg-muted/40
+                       hover:text-red-400 hover:bg-red-500/10 transition-colors ml-auto"
+            title="Usuń fragment"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ImpulseCard
+// ---------------------------------------------------------------------------
+
+interface ImpulseCardProps {
+  impulse: ImpulseFragment;
+  onPlay: () => void;
+}
+
+function ImpulseCard({ impulse, onPlay }: ImpulseCardProps) {
+  const duration = impulse.end_sec - impulse.start_sec;
+  return (
+    <div className="group bg-htg-card border border-htg-card-border hover:border-htg-sage/30 rounded-xl p-4 transition-all">
+      <div className="flex items-center gap-1.5 text-xs text-htg-fg-muted mb-1.5">
+        <Zap className="w-3 h-3 text-amber-400" />
+        {impulse.session_templates.title}
+      </div>
+      <p className="text-htg-fg font-medium text-sm mb-0.5 truncate">{impulse.title}</p>
+      <p className="text-xs text-htg-fg-muted">
+        {formatTime(impulse.start_sec)} – {formatTime(impulse.end_sec)}
+        <span className="ml-2 text-htg-fg-muted/60">({formatTime(duration)})</span>
+      </p>
+      <button
+        onClick={onPlay}
+        className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                   bg-htg-sage text-white hover:bg-htg-sage/90 transition-colors"
+      >
+        <Play className="w-3 h-3 fill-white" />
+        Odtwórz impuls
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main FragmentList
+// ---------------------------------------------------------------------------
+
+interface Props {
+  initialSaves: FragmentSave[];
+  categories: Category[];
+  accessibleIds: string[];
+  userId: string;
+}
+
+export default function FragmentList({ initialSaves, categories, accessibleIds, userId }: Props) {
+  const { startPlayback } = usePlayer();
+  const [saves, setSaves] = useState<FragmentSave[]>(initialSaves);
+  const [impulses, setImpulses] = useState<ImpulseFragment[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>(VIRTUAL_FAVORITES);
+  const [loadingImpulses, setLoadingImpulses] = useState(false);
+  const accessSet = new Set(accessibleIds);
+
+  // Load impulses on mount
+  useEffect(() => {
+    setLoadingImpulses(true);
+    fetch('/api/fragments/impulses')
+      .then(r => r.json())
+      .then(d => { if (d.impulses) setImpulses(d.impulses); })
+      .catch(() => {})
+      .finally(() => setLoadingImpulses(false));
+  }, []);
+
+  // ── Filtered views ────────────────────────────────────────────────────────
+
+  const filteredSaves = (() => {
+    switch (activeCategory) {
+      case VIRTUAL_FAVORITES:
+        return saves.filter(s => s.is_favorite);
+      case VIRTUAL_RECORDINGS:
+        return saves.filter(s => s.booking_recording_id);
+      case VIRTUAL_IMPULSES:
+        return []; // impulses shown separately
+      default:
+        return saves.filter(s => s.category_id === activeCategory);
+    }
+  })();
+
+  const totalByCategory = {
+    [VIRTUAL_FAVORITES]: saves.filter(s => s.is_favorite).length,
+    [VIRTUAL_RECORDINGS]: saves.filter(s => s.booking_recording_id).length,
+    [VIRTUAL_IMPULSES]: impulses.length,
+  } as Record<string, number>;
+
+  for (const cat of categories) {
+    totalByCategory[cat.id] = saves.filter(s => s.category_id === cat.id).length;
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+
+  const handlePlay = useCallback((save: FragmentSave) => {
+    const { startSec, endSec } = getSaveRange(save);
+    const title = getSaveSourceTitle(save);
+    const fragmentTitle = getSaveTitle(save);
+
+    if (save.booking_recording_id) {
+      const playback: RecordingFragmentPlayback = {
+        kind: 'fragment_recording_review',
+        saveId: save.id,
+        recordingId: save.booking_recording_id,
+        title,
+        fragmentTitle,
+        startSec,
+        endSec,
+      };
+      startPlayback(playback);
+    } else if (save.session_template_id) {
+      const playback: FragmentPlayback = {
+        kind: 'fragment_review',
+        saveId: save.id,
+        sessionId: save.session_template_id,
+        title,
+        fragmentTitle,
+        startSec,
+        endSec,
+      };
+      startPlayback(playback);
+    }
+  }, [startPlayback]);
+
+  const handlePlayImpulse = useCallback((impulse: ImpulseFragment) => {
+    const playback: ImpulsePlayback = {
+      kind: 'impulse',
+      sessionFragmentId: impulse.id,
+      sessionId: impulse.session_template_id,
+      title: impulse.session_templates.title,
+      fragmentTitle: impulse.title,
+      startSec: impulse.start_sec,
+      endSec: impulse.end_sec,
+    };
+    startPlayback(playback);
+  }, [startPlayback]);
+
+  const handleToggleFavorite = useCallback(async (save: FragmentSave) => {
+    const newVal = !save.is_favorite;
+    setSaves(prev => prev.map(s => s.id === save.id ? { ...s, is_favorite: newVal } : s));
+    await fetch(`/api/fragments/saves/${save.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_favorite: newVal }),
+    }).catch(() => {
+      // Revert on failure
+      setSaves(prev => prev.map(s => s.id === save.id ? { ...s, is_favorite: !newVal } : s));
+    });
+  }, []);
+
+  const handleDelete = useCallback((saveId: string) => {
+    setSaves(prev => prev.filter(s => s.id !== saveId));
+  }, []);
+
+  // ── Nav items ─────────────────────────────────────────────────────────────
+
+  const navItems = [
+    { id: VIRTUAL_FAVORITES, label: '⭐ Ulubione', count: totalByCategory[VIRTUAL_FAVORITES] },
+    { id: VIRTUAL_RECORDINGS, label: '🎙 Twoje Nagrania Sesji', count: totalByCategory[VIRTUAL_RECORDINGS] },
+    { id: VIRTUAL_IMPULSES, label: '🔥 Impuls', count: totalByCategory[VIRTUAL_IMPULSES] },
+    ...categories.map(cat => ({ id: cat.id, label: cat.name, count: totalByCategory[cat.id] ?? 0 })),
+  ];
+
+  const allSavesCount = saves.length;
+
+  // ── Empty state ───────────────────────────────────────────────────────────
+
+  const isEmpty = activeCategory === VIRTUAL_IMPULSES
+    ? impulses.length === 0
+    : filteredSaves.length === 0;
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-6">
+      {/* ── Sidebar nav ───────────────────────────────────────────────────── */}
+      <nav className="lg:w-56 shrink-0">
+        <div className="sticky top-6 space-y-1">
+          {/* "Wszystkie" shortcut */}
+          <button
+            onClick={() => {
+              // Show all — navigate to first non-empty category or favorites
+              setActiveCategory(VIRTUAL_FAVORITES);
+            }}
+            className="w-full text-left px-3 py-2 rounded-lg text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors flex items-center justify-between"
+          >
+            <span className="flex items-center gap-2">
+              <Bookmark className="w-3.5 h-3.5" />
+              Wszystkie ({allSavesCount})
+            </span>
+          </button>
+
+          <div className="h-px bg-htg-card-border my-2" />
+
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveCategory(item.id)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between
+                         ${activeCategory === item.id
+                           ? 'bg-htg-sage/10 text-htg-sage font-medium'
+                           : 'text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface'}`}
+            >
+              <span className="truncate">{item.label}</span>
+              {item.count > 0 && (
+                <span className={`text-xs ml-2 shrink-0 ${activeCategory === item.id ? 'text-htg-sage/70' : 'text-htg-fg-muted/50'}`}>
+                  {item.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* ── Content ────────────────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0">
+        {/* Active category header */}
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="text-base font-medium text-htg-fg">
+            {navItems.find(n => n.id === activeCategory)?.label ?? 'Fragmenty'}
+          </h2>
+          {activeCategory === VIRTUAL_IMPULSES && loadingImpulses && (
+            <Loader2 className="w-4 h-4 text-htg-fg-muted animate-spin" />
+          )}
+        </div>
+
+        {/* Impulse grid */}
+        {activeCategory === VIRTUAL_IMPULSES && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {impulses.map(impulse => (
+              <ImpulseCard
+                key={impulse.id}
+                impulse={impulse}
+                onPlay={() => handlePlayImpulse(impulse)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Saves grid */}
+        {activeCategory !== VIRTUAL_IMPULSES && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {filteredSaves.map(save => {
+              const sourceId = save.session_template_id ?? save.booking_recording_id ?? '';
+              const accessible = accessSet.has(sourceId);
+              return (
+                <FragmentCard
+                  key={save.id}
+                  save={save}
+                  accessible={accessible}
+                  onPlay={() => handlePlay(save)}
+                  onToggleFavorite={() => handleToggleFavorite(save)}
+                  onDelete={() => handleDelete(save.id)}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {isEmpty && !loadingImpulses && (
+          <div className="text-center py-16 text-htg-fg-muted">
+            {activeCategory === VIRTUAL_IMPULSES ? (
+              <>
+                <Zap className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
+                <p className="text-sm">Brak impulsów. Administrator jeszcze ich nie dodał.</p>
+              </>
+            ) : activeCategory === VIRTUAL_FAVORITES ? (
+              <>
+                <Star className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
+                <p className="text-sm">Brak ulubionych fragmentów.</p>
+                <p className="text-xs mt-1">Oznacz fragment ⭐ podczas odtwarzania.</p>
+              </>
+            ) : activeCategory === VIRTUAL_RECORDINGS ? (
+              <>
+                <Mic className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
+                <p className="text-sm">Brak zapisanych fragmentów Twoich nagrań.</p>
+              </>
+            ) : (
+              <>
+                <Bookmark className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
+                <p className="text-sm">Ta kategoria jest pusta.</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

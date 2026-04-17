@@ -89,7 +89,11 @@ export default function GlobalPlayer() {
         containerEl={containerRef.current}
         playbackRange={range ?? undefined}
         analyticsContext={analyticsCtx}
-        endpoints={isFragment ? { playPosition: null } : undefined}
+        endpoints={isFragment ? {
+          playPosition: null,
+          heartbeat: '/api/video/fragment-heartbeat',
+          stop: '/api/video/fragment-stop',
+        } : undefined}
         tokenRequestBuilder={tokenRequestBuilder}
       />
     </div>

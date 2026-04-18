@@ -3,7 +3,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Radio, Play, Pause, SkipForward, X, Loader2, Music } from 'lucide-react';
 import { usePlayer } from '@/lib/player-context';
-import type { FragmentPlayback } from '@/lib/player-context';
+import {
+  FragmentRadioEngine,
+  type FragmentRadioEngineHandle,
+  type FragmentRadioSave as EngineFragmentSave,
+} from './FragmentRadioEngine';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RadioPlayer
+//
+// Orchestrates Radio Momentów: fetches next save from /api/fragments/radio/next,
+// plays the fragment via the dedicated FragmentRadioEngine (NOT AudioEngine —
+// see FragmentRadioEngine.tsx for rationale), crossfades into a bumper between
+// fragments.
+//
+// Radio is intentionally page-local: navigating away stops playback. This
+// eliminates the cross-page persistence complexity that produced the 30s
+// heartbeat bug. For "continue listening on other pages", use the standard
+// mini-player for single fragments (fragment_review context), not radio.
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,13 +40,7 @@ interface RadioSave {
 }
 
 type RadioScope = 'all' | 'favorites' | 'category' | 'session';
-
-interface RadioState {
-  status: 'idle' | 'loading' | 'playing' | 'paused' | 'error';
-  current: RadioSave | null;
-  excludeIds: string[];
-  error: string | null;
-}
+type RadioStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,13 +60,23 @@ function getSaveTitle(save: RadioSave): string {
   return `${fmt(startSec)} – ${fmt(endSec)}`;
 }
 
+function toEngineSave(save: RadioSave): EngineFragmentSave {
+  const { startSec, endSec } = getSaveRange(save);
+  return {
+    saveId: save.id,
+    startSec,
+    endSec,
+    sessionTitle: save.session_templates.title,
+    fragmentTitle: getSaveTitle(save),
+  };
+}
+
 /**
  * Linear volume ramp using setInterval (background-tab safe).
  * requestAnimationFrame is suspended when the tab is hidden, which would stall
- * the bumper sequence indefinitely.  setInterval is throttled to ~1 s in the
- * background but still fires, so we also fast-path when the document is hidden:
+ * the bumper sequence indefinitely. setInterval is throttled to ~1 s in the
+ * background but still fires; we also fast-path when the document is hidden:
  * jump straight to the target volume and resolve immediately.
- * Resolves when done or when isCancelled() returns true.
  */
 function rampVolume(
   el: HTMLAudioElement,
@@ -66,7 +88,6 @@ function rampVolume(
   return new Promise(resolve => {
     el.volume = Math.max(0, Math.min(1, from));
 
-    // Background tab fast-path — skip the ramp, jump straight to target
     if (typeof document !== 'undefined' && document.hidden) {
       el.volume = Math.max(0, Math.min(1, to));
       resolve();
@@ -86,7 +107,7 @@ function rampVolume(
         clearInterval(interval);
         resolve();
       }
-    }, 16); // ~60 fps when foregrounded; throttled to ~1 s in background
+    }, 16);
   });
 }
 
@@ -98,16 +119,14 @@ const BUMPER_HOLD_MS     = 9_000;
 const BUMPER_FADE_OUT_MS = 3_000;
 
 // ---------------------------------------------------------------------------
-// RadioPlayer
+// Component
 // ---------------------------------------------------------------------------
 
 interface Props {
   scope: RadioScope;
   scopeId?: string;
   scopeLabel?: string;
-  /** Compact mode — horizontal card for embedding in widgets/sidebars */
   compact?: boolean;
-  /** URL of the bumper audio played between moments. Provide /audio/radio-bumper.mp3. */
   bumperUrl?: string;
 }
 
@@ -118,18 +137,24 @@ export default function RadioPlayer({
   compact = false,
   bumperUrl = 'https://htg2-cdn.b-cdn.net/audio/radio-bumper.mp3',
 }: Props) {
-  const { activePlayback, playerState, engineHandle, startPlayback, stopPlayback } = usePlayer();
-  const [radio, setRadio] = useState<RadioState>({
-    status: 'idle',
-    current: null,
-    excludeIds: [],
-    error: null,
-  });
+  // Only used to stop any ambient VOD / recording playback the user might
+  // have running in GlobalPlayer. Radio runs on its own engine (below).
+  const { stopPlayback: stopGlobalPlayback } = usePlayer();
+
+  const [status, setStatus] = useState<RadioStatus>('idle');
+  const [current, setCurrent] = useState<RadioSave | null>(null);
+  const [excludeIds, setExcludeIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+
+  const excludeIdsRef = useRef<string[]>([]);
+  useEffect(() => { excludeIdsRef.current = excludeIds; }, [excludeIds]);
+
+  const engineRef = useRef<FragmentRadioEngineHandle>(null);
+  const bumperRef = useRef<HTMLAudioElement | null>(null);
   const isFetchingRef = useRef(false);
-  const bumperRef     = useRef<HTMLAudioElement | null>(null);
   /** Increment to cancel any in-progress bumper sequence. */
-  const bumperGenRef  = useRef(0);
+  const bumperGenRef = useRef(0);
 
   // Reset when scope/scopeId changes
   const prevScopeKey = useRef(`${scope}:${scopeId}`);
@@ -140,37 +165,29 @@ export default function RadioPlayer({
       bumperGenRef.current++;
       const b = bumperRef.current;
       if (b && !b.paused) { b.pause(); b.currentTime = 0; }
-      stopPlayback();
-      setRadio({ status: 'idle', current: null, excludeIds: [], error: null });
+      setStatus('idle');
+      setCurrent(null);
+      setExcludeIds([]);
+      setError(null);
       setCurrentTime(0);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, scopeId]);
 
-  const isRadioActive =
-    activePlayback?.kind === 'fragment_radio' ||
-    activePlayback?.kind === 'fragment_review';
-  const isPlaying = playerState.status === 'playing' && isRadioActive;
-  const isLoading = radio.status === 'loading' || (playerState.status === 'loading' && isRadioActive);
+  const isActive = status !== 'idle';
+  const isPlaying = status === 'playing';
+  const isLoading = status === 'loading';
 
-  // Subscribe to time for progress bar
-  useEffect(() => {
-    if (!engineHandle || !isRadioActive) return;
-    const unsub = engineHandle.subscribeToTime(setCurrentTime);
-    return () => { unsub(); };
-  }, [engineHandle, isRadioActive]);
-
-  // ── Fetch just save metadata (no playback) ────────────────────────────────
+  // ── Fetch next save metadata ──────────────────────────────────────────────
 
   const fetchNextSave = useCallback(async (
-    excludeIds: string[],
+    exclude: string[],
     retry = false,
   ): Promise<RadioSave | null> => {
     try {
       const res = await fetch('/api/fragments/radio/next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scope, scopeId, excludeIds }),
+        body: JSON.stringify({ scope, scopeId, excludeIds: exclude }),
       });
       const data = await res.json();
       if (!res.ok) return null;
@@ -184,66 +201,59 @@ export default function RadioPlayer({
     }
   }, [scope, scopeId]);
 
-  // ── Start playback for a fetched save ────────────────────────────────────
+  // ── Start playback of a fetched save ──────────────────────────────────────
 
   const playSave = useCallback((save: RadioSave, fromExcludes: string[]) => {
     const newExcludes = [...fromExcludes, save.id].slice(-NON_REPEAT_WINDOW);
-    setRadio(prev => ({ ...prev, status: 'playing', current: save, excludeIds: newExcludes }));
-    const { startSec, endSec } = getSaveRange(save);
-    const playback: FragmentPlayback = {
-      kind: 'fragment_radio',
-      saveId: save.id,
-      sessionId: save.session_template_id,
-      title: save.session_templates.title,
-      fragmentTitle: getSaveTitle(save),
-      startSec,
-      endSec,
-    };
-    startPlayback(playback);
-  }, [startPlayback]);
+    setCurrent(save);
+    setExcludeIds(newExcludes);
+    setStatus('loading');
+    setError(null);
+    setCurrentTime(0);
+    // FragmentRadioEngine reacts to `save` prop change: token fetch + play
+    // happens inside the engine; no imperative call needed here.
+  }, []);
 
-  // ── Fetch + play immediately (initial start / skip) ───────────────────────
+  // ── Initial / skip: fetch + play immediately ──────────────────────────────
 
-  const fetchNext = useCallback(async (excludeIds: string[]) => {
+  const fetchNext = useCallback(async (exclude: string[]) => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
-    setRadio(prev => ({ ...prev, status: 'loading', error: null }));
+    // Kill any ambient GlobalPlayer audio (VOD session review, recording)
+    // before starting radio — avoids dual playback.
+    stopGlobalPlayback();
+    setStatus('loading');
+    setError(null);
     try {
-      const save = await fetchNextSave(excludeIds);
+      const save = await fetchNextSave(exclude);
       if (!save) {
-        setRadio(prev => ({ ...prev, status: 'error', error: 'Brak Momentów do odtworzenia.' }));
+        setStatus('error');
+        setError('Brak Momentów do odtworzenia.');
         return;
       }
-      playSave(save, excludeIds);
+      playSave(save, exclude);
     } catch {
-      setRadio(prev => ({ ...prev, status: 'error', error: 'Błąd połączenia.' }));
+      setStatus('error');
+      setError('Błąd połączenia.');
     } finally {
       isFetchingRef.current = false;
     }
-  }, [fetchNextSave, playSave]);
+  }, [fetchNextSave, playSave, stopGlobalPlayback]);
 
-  // ── Bumper sequence between moments ──────────────────────────────────────
+  // ── Bumper sequence between fragments ─────────────────────────────────────
   //
-  // Timeline (from fragment end — audio already paused by AudioEngine):
-  //   0 ms    — bumper starts (vol 0→1 over 3s), next save fetched concurrently
-  //   3000ms  — bumper at full volume; hold 9s
-  //   12000ms — startPlayback(nextSave); bumper fades out (vol 1→0 over 3s)
-  //   15000ms — bumper audio stops
-  //
-  // NOTE: We intentionally do NOT call engineHandle.fadeOut() here.
-  // AudioEngine already calls audio.pause() before firing fragmentListeners,
-  // so by the time this callback runs the main audio is already silent.
-  // Calling fadeOut would destructively zero the <audio> volume, breaking the
-  // next moment's playback (AudioEngine reuses the same element).
+  // Triggered by FragmentRadioEngine's `onEnded` callback (natural audio end
+  // OR currentTime >= endSec). By the time this runs the engine has already
+  // paused its <audio> element.
 
-  const playBumperThenNext = useCallback(async (excludeIds: string[]) => {
+  const playBumperThenNext = useCallback(async () => {
     const gen = ++bumperGenRef.current;
     const cancelled = () => bumperGenRef.current !== gen;
 
     const bumper = bumperRef.current;
+    const exclude = excludeIdsRef.current;
 
-    // 1. Fetch next save + start bumper concurrently
-    const fetchPromise = fetchNextSave(excludeIds);
+    const fetchPromise = fetchNextSave(exclude);
 
     let bumperPlaying = false;
     if (bumper) {
@@ -252,9 +262,7 @@ export default function RadioPlayer({
       try {
         await bumper.play();
         bumperPlaying = true;
-      } catch {
-        // File unavailable — graceful degradation: skip bumper, just transition
-      }
+      } catch { /* graceful — skip bumper if audio fails */ }
     }
 
     const [nextSave] = await Promise.all([
@@ -269,7 +277,6 @@ export default function RadioPlayer({
       return;
     }
 
-    // 2. Hold bumper at full volume for 9s
     if (bumperPlaying) {
       await new Promise<void>(r => setTimeout(r, BUMPER_HOLD_MS));
     }
@@ -278,16 +285,11 @@ export default function RadioPlayer({
       return;
     }
 
-    // 3. Start next moment; fade bumper out simultaneously (3s overlap)
     if (nextSave) {
-      playSave(nextSave, excludeIds);
-      // Do NOT call engineHandle.fadeIn() — AudioEngine's volume was never
-      // touched (we skipped fadeOut), so the <audio> element is already at
-      // full user volume.  GlobalPlayer's autoplay handler fires from
-      // handleStateChange when status transitions to 'paused' (first load of
-      // the new source), so playback starts automatically at normal volume.
+      playSave(nextSave, exclude);
     } else {
-      setRadio(prev => ({ ...prev, status: 'error', error: 'Brak Momentów do odtworzenia.' }));
+      setStatus('error');
+      setError('Brak Momentów do odtworzenia.');
     }
 
     if (bumperPlaying && bumper) {
@@ -297,85 +299,69 @@ export default function RadioPlayer({
     }
   }, [fetchNextSave, playSave]);
 
-  // ── Auto-advance on fragment end ─────────────────────────────────────────
+  // ── Engine callbacks ──────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (!engineHandle || !isRadioActive) return;
-    const unsub = engineHandle.subscribeToFragment(() => {
-      playBumperThenNext(radio.excludeIds);
-    });
-    return unsub;
-  }, [engineHandle, isRadioActive, radio.excludeIds, playBumperThenNext]);
-
-  // ── Background-tab recovery ───────────────────────────────────────────────
-  // When the tab comes back to the foreground, the bumper sequence may have
-  // completed (setInterval fires sparsely in the background) but the main
-  // player may still be in a stalled state.  We nudge it back to playing if
-  // everything looks correct.
-
-  useEffect(() => {
-    if (!isRadioActive) return;
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) return;
-      // Tab just became visible.  If radio is in "playing" state but the engine
-      // reports "paused" (audio element stalled), try to resume.
-      if (
-        radio.status === 'playing' &&
-        playerState.status === 'paused' &&
-        engineHandle
-      ) {
-        engineHandle.play();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isRadioActive, radio.status, playerState.status, engineHandle]);
+  const handlePlaying = useCallback(() => setStatus('playing'), []);
+  const handlePause = useCallback(() => {
+    // Don't overwrite 'loading' (teardown fires pause synthetically between
+    // fragment swaps — we don't want the UI to flicker to 'paused').
+    setStatus(prev => (prev === 'loading' ? 'loading' : 'paused'));
+  }, []);
+  const handleEnded = useCallback(() => { playBumperThenNext(); }, [playBumperThenNext]);
+  const handleError = useCallback((msg: string) => {
+    setStatus('error');
+    setError(msg);
+  }, []);
+  const handleTimeUpdate = useCallback((t: number) => { setCurrentTime(t); }, []);
 
   // ── Controls ──────────────────────────────────────────────────────────────
 
-  const handleStart = useCallback(
-    () => fetchNext(radio.excludeIds),
-    [fetchNext, radio.excludeIds],
-  );
+  const handleStart = useCallback(() => fetchNext(excludeIds), [fetchNext, excludeIds]);
 
   const handlePlayPause = useCallback(() => {
-    if (!engineHandle) return;
-    if (isPlaying) engineHandle.pause(); else engineHandle.play();
-  }, [engineHandle, isPlaying]);
+    if (!engineRef.current) return;
+    if (isPlaying) engineRef.current.pause();
+    else engineRef.current.play();
+  }, [isPlaying]);
 
   const handleSkip = useCallback(() => {
-    // Cancel in-progress bumper
     bumperGenRef.current++;
     const b = bumperRef.current;
     if (b && !b.paused) { b.pause(); b.currentTime = 0; }
-    // Fetch + start next moment immediately — no volume manipulation needed.
-    // AudioEngine volume is untouched; new moment plays at normal level.
-    fetchNext(radio.excludeIds);
-  }, [radio.excludeIds, fetchNext]);
+    fetchNext(excludeIdsRef.current);
+  }, [fetchNext]);
 
   const handleStop = useCallback(() => {
-    // Cancel in-progress bumper
     bumperGenRef.current++;
     const b = bumperRef.current;
     if (b && !b.paused) { b.pause(); b.currentTime = 0; }
-    stopPlayback();
-    setRadio({ status: 'idle', current: null, excludeIds: [], error: null });
+    engineRef.current?.stop();
+    setStatus('idle');
+    setCurrent(null);
+    setExcludeIds([]);
+    setError(null);
     setCurrentTime(0);
-  }, [stopPlayback]);
+  }, []);
 
-  // ── Progress ──────────────────────────────────────────────────────────────
+  // Stop on unmount (navigation away from radio page)
+  useEffect(() => {
+    return () => {
+      bumperGenRef.current++;
+      engineRef.current?.stop();
+    };
+  }, []);
 
-  const current    = radio.current;
-  const rangeStart = current ? getSaveRange(current).startSec : 0;
-  const rangeEnd   = current ? getSaveRange(current).endSec   : 0;
-  const fragDur    = rangeEnd - rangeStart;
-  const elapsed    = Math.max(0, Math.min(currentTime - rangeStart, fragDur));
-  const progress   = fragDur > 0 ? (elapsed / fragDur) * 100 : 0;
+  // ── Progress bar data ─────────────────────────────────────────────────────
+
+  const range = current ? getSaveRange(current) : null;
+  const rangeStart = range?.startSec ?? 0;
+  const rangeEnd = range?.endSec ?? 0;
+  const fragDur = rangeEnd - rangeStart;
+  const elapsed = current
+    ? Math.max(0, Math.min(currentTime - rangeStart, fragDur))
+    : 0;
+  const progress = fragDur > 0 ? (elapsed / fragDur) * 100 : 0;
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-
-  const isActive = radio.status !== 'idle';
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -385,8 +371,18 @@ export default function RadioPlayer({
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio ref={bumperRef} src={bumperUrl} preload="auto" style={{ display: 'none' }} />
 
+      {/* Dedicated fragment engine — no Web Audio, no heartbeat */}
+      <FragmentRadioEngine
+        ref={engineRef}
+        save={current && isActive ? toEngineSave(current) : null}
+        onPlaying={handlePlaying}
+        onPause={handlePause}
+        onEnded={handleEnded}
+        onError={handleError}
+        onTimeUpdate={handleTimeUpdate}
+      />
+
       {compact ? (
-        // ── Compact mode ──────────────────────────────────────────────────────
         <div className="bg-htg-card border border-htg-card-border rounded-2xl overflow-hidden">
           <div className="h-0.5 bg-htg-surface">
             <div className="h-full bg-htg-sage transition-[width] duration-500" style={{ width: `${progress}%` }} />
@@ -404,7 +400,7 @@ export default function RadioPlayer({
                 </>
               ) : (
                 <p className="text-xs text-htg-fg-muted">
-                  {radio.status === 'error' ? radio.error : 'Radio Momentów'}
+                  {status === 'error' ? error : 'Radio Momentów'}
                 </p>
               )}
             </div>
@@ -426,7 +422,7 @@ export default function RadioPlayer({
             )}
 
             <button
-              onClick={!isActive || radio.status === 'error' ? handleStart : handlePlayPause}
+              onClick={!isActive || status === 'error' ? handleStart : handlePlayPause}
               disabled={isLoading}
               aria-label={isPlaying ? 'Pauza' : 'Odtwórz radio'}
               className="w-9 h-9 flex items-center justify-center rounded-full bg-htg-sage text-white hover:bg-htg-sage/90 disabled:opacity-50 shadow-sm shadow-htg-sage/20 transition-all shrink-0"
@@ -451,7 +447,6 @@ export default function RadioPlayer({
           </div>
         </div>
       ) : (
-        // ── Full mode ─────────────────────────────────────────────────────────
         <div className="max-w-lg mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 bg-htg-sage/10 rounded-2xl flex items-center justify-center">
@@ -486,7 +481,7 @@ export default function RadioPlayer({
                     <Radio className="w-7 h-7 text-htg-fg-muted" />
                   </div>
                   <p className="text-htg-fg-muted text-sm">
-                    {radio.status === 'error' ? radio.error : 'Naciśnij ▶ aby rozpocząć radio'}
+                    {status === 'error' ? error : 'Naciśnij ▶ aby rozpocząć radio'}
                   </p>
                 </div>
               )}
@@ -503,7 +498,7 @@ export default function RadioPlayer({
                 )}
 
                 <button
-                  onClick={!isActive || radio.status === 'error' ? handleStart : handlePlayPause}
+                  onClick={!isActive || status === 'error' ? handleStart : handlePlayPause}
                   disabled={isLoading}
                   aria-label={isPlaying ? 'Pauza' : 'Odtwórz'}
                   className="w-16 h-16 flex items-center justify-center rounded-full bg-htg-sage text-white hover:bg-htg-sage/90 disabled:opacity-50 shadow-lg shadow-htg-sage/20 transition-all"
@@ -529,9 +524,9 @@ export default function RadioPlayer({
             </div>
           </div>
 
-          {radio.excludeIds.length > 0 && (
+          {excludeIds.length > 0 && (
             <p className="text-center text-xs text-htg-fg-muted/50 mt-4">
-              Ostatnie {radio.excludeIds.length} {radio.excludeIds.length === 1 ? 'Moment' : 'Momenty'} nie powtórzy się
+              Ostatnie {excludeIds.length} {excludeIds.length === 1 ? 'Moment' : 'Momenty'} nie powtórzy się
             </p>
           )}
         </div>

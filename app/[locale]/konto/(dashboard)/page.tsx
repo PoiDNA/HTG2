@@ -10,12 +10,12 @@ import { getDesignVariant } from '@/lib/design-variant';
 import ActiveCallsWidget from '@/components/quick-call/ActiveCallsWidget';
 import LatestYouTubeBanner from '@/components/konto/LatestYouTubeBanner';
 import { getLatestYoutubeVideo } from '@/lib/services/latest-youtube-video';
-import NextSessionSection from './_sections/NextSessionSection';
 import VodLibrarySection from './_sections/VodLibrarySection';
 import RemainingSessionsSection from './_sections/RemainingSessionsSection';
 import SanctuaryHero from './_sections/SanctuaryHero';
 import ContinueCard from './_sections/ContinueCard';
-import SluchajButton from '@/components/konto/SluchajButton';
+import MomentsButton from '@/components/konto/MomentsButton';
+import SesjeButton from '@/components/konto/SesjeButton';
 import RadioWidget from '@/components/fragments/RadioWidget';
 
 export function generateStaticParams() {
@@ -61,10 +61,9 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
   const variant = getDesignVariant(cookieStore);
   const latestVideo = await getLatestYoutubeVideo(locale);
 
-  const ytBanner = latestVideo ? (
+  const ytCard = latestVideo ? (
     <LatestYouTubeBanner
       youtubeId={latestVideo.youtube_id}
-      title={latestVideo.title}
       thumbnailUrl={latestVideo.thumbnail_url}
     />
   ) : null;
@@ -76,28 +75,16 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         {/* ActiveCalls only as critical exception */}
         <ActiveCallsWidget locale={locale} />
 
-        {/* Mobile: Słuchaj na samej górze */}
-        <div className="sm:hidden mb-4">
-          <SluchajButton />
-        </div>
-
         <Suspense fallback={<SectionSkeleton title="Następna sesja" />}>
           <SanctuaryHero locale={locale} />
         </Suspense>
 
-        {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right — Słuchaj keeps 1/3 width even without YT */}
-        <div className="hidden sm:flex gap-4 mb-6 items-stretch min-h-[180px]">
-          {ytBanner ? (
-            <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>
-          ) : (
-            <div className="flex-[2]" aria-hidden />
-          )}
-          <div className="flex-1">
-            <SluchajButton />
-          </div>
+        {/* YT / Momenty / Sesje */}
+        <div className={`grid grid-cols-1 ${ytCard ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-6`}>
+          {ytCard}
+          <MomentsButton />
+          <SesjeButton />
         </div>
-        {/* Mobile: banner pod hero */}
-        {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}
 
         <Suspense fallback={<SectionSkeleton title="Biblioteka audio" />}>
           <VodLibrarySection locale={locale} />
@@ -119,28 +106,16 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         {/* ActiveCalls only as critical exception */}
         <ActiveCallsWidget locale={locale} />
 
-        {/* Mobile: Słuchaj na samej górze */}
-        <div className="sm:hidden mb-4">
-          <SluchajButton />
-        </div>
-
         <Suspense fallback={<SectionSkeleton title="Kontynuuj" />}>
           <ContinueCard locale={locale} />
         </Suspense>
 
-        {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right — Słuchaj keeps 1/3 width even without YT */}
-        <div className="hidden sm:flex gap-4 mb-6 items-stretch min-h-[180px]">
-          {ytBanner ? (
-            <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>
-          ) : (
-            <div className="flex-[2]" aria-hidden />
-          )}
-          <div className="flex-1">
-            <SluchajButton />
-          </div>
+        {/* YT / Momenty / Sesje */}
+        <div className={`grid grid-cols-1 ${ytCard ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-6`}>
+          {ytCard}
+          <MomentsButton />
+          <SesjeButton />
         </div>
-        {/* Mobile: banner pod hero */}
-        {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}
 
         <Suspense fallback={<SectionSkeleton title="Nagrania z sesji" />}>
           <VodLibrarySection locale={locale} />
@@ -160,24 +135,12 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
     <div>
       <ActiveCallsWidget locale={locale} />
 
-      {/* Mobile: Słuchaj na samej górze */}
-      <div className="sm:hidden mb-4">
-        <SluchajButton />
+      {/* YT / Momenty / Sesje */}
+      <div className={`grid grid-cols-1 ${ytCard ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-6`}>
+        {ytCard}
+        <MomentsButton />
+        <SesjeButton />
       </div>
-
-      {/* Desktop: YT banner 2/3 left + Słuchaj 1/3 right — Słuchaj keeps 1/3 width even without YT */}
-      <div className="hidden sm:flex gap-4 mb-6 items-stretch min-h-[180px]">
-        {ytBanner ? (
-          <div className="flex-[2] min-w-0 [&>*]:mb-0">{ytBanner}</div>
-        ) : (
-          <div className="flex-[2]" aria-hidden />
-        )}
-        <div className="flex-1">
-          <SluchajButton />
-        </div>
-      </div>
-      {/* Mobile: banner pod Słuchaj */}
-      {ytBanner && <div className="sm:hidden mb-6">{ytBanner}</div>}
 
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>
         <VodLibrarySection locale={locale} />

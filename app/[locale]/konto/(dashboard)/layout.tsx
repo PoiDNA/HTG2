@@ -19,7 +19,7 @@ import {
   Film, CreditCard, CalendarDays, Gift, Mail,
   LayoutDashboard, Calendar, Presentation, Users, Clock, BookOpen, Package,
   ListMusic, Archive, PlusCircle, Eye, ShieldAlert, MonitorPlay, BarChart2,
-  MessagesSquare, ClipboardCheck, RefreshCw, Headphones, Globe, Bookmark,
+  MessagesSquare, ClipboardCheck, RefreshCw, Headphones, Globe, Bookmark, HelpCircle,
 } from 'lucide-react';
 
 export function generateStaticParams() {
@@ -181,6 +181,8 @@ export default async function AccountLayout({
     { href: '/konto/aktualizacja', label: 'Aktualizacja', spiritIcon: 'spiral' as const },
   ] as const;
 
+  const pytaniaItem = { href: '/konto/pytania', label: 'Pytania badawcze', icon: HelpCircle } as const;
+
   const profileItem = { href: '/konto/aktualizacja', label: 'Aktualizacja', icon: RefreshCw } as const;
 
   // Helper to render a nav section with lucide icons
@@ -215,7 +217,8 @@ export default async function AccountLayout({
       {/* ADMIN role: ADMIN + PUBLIKACJA + Piaskownica + Widok użytkownika + Profil */}
       {isAdmin && !viewAsUserEmail && (
         <>
-          {renderSection('Admin', adminItems)}
+          {renderSection('Admin', [...adminItems, pytaniaItem])}
+
           {showPublikacja && renderSection('Publikacja', publikacjaItems)}
           {renderSection('Piaskownica', piaskownicaItems)}
           {renderUserSection('Widok użytkownika')}
@@ -228,6 +231,7 @@ export default async function AccountLayout({
       {isStaff && !isAdmin && (
         <>
           {renderSection('Panel prowadzącego', staffItems)}
+          {renderSection('Pytania', [pytaniaItem])}
           {renderSection('Profil', [profileItem])}
         </>
       )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Menu, X, Bookmark } from 'lucide-react';
+import { Menu, X, Bookmark, HelpCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n-config';
 import SpiritIcon from '@/app/[locale]/konto/(dashboard)/SpiritIcon';
@@ -19,6 +19,7 @@ const menuItems: MenuItem[] = [
   { href: '/konto/polubieni', label: 'Znajomi', spiritIcon: 'bond' },
   { href: '/konto/podarowane-sesje', label: 'Podarowane sesje', spiritIcon: 'offering' },
   { href: '/konto/aktualizacja', label: 'Aktualizacja', spiritIcon: 'spiral' },
+  { href: '/konto/pytania', label: 'Pytania badawcze', icon: HelpCircle },
 ];
 
 /**

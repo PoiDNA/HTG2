@@ -123,6 +123,18 @@ export const routing = defineRouting({
       de: '/konto/favoriten',
       pt: '/conta/favoritos',
     },
+    '/konto/pytania': {
+      pl: '/konto/pytania',
+      en: '/account/questions',
+      de: '/konto/fragen',
+      pt: '/conta/perguntas',
+    },
+    '/konto/pytania/[id]': {
+      pl: '/konto/pytania/[id]',
+      en: '/account/questions/[id]',
+      de: '/konto/fragen/[id]',
+      pt: '/conta/perguntas/[id]',
+    },
     '/konto/sesja-panel': {
       pl: '/konto/sesja-panel',
       en: '/account/session-panel',

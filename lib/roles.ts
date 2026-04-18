@@ -85,3 +85,19 @@ export const CLIENT_RECORDINGS_VIEWERS = ['htg@htg.cyou', 'natalia@htg.cyou'];
 export function canViewClientRecordings(email: string): boolean {
   return CLIENT_RECORDINGS_VIEWERS.includes(email.toLowerCase());
 }
+
+// ─── "Po sesji" access ───────────────────────────────────────────────
+// Dynamiczna rola: user ma dostęp do Pytań do sesji badawczych jeśli ma
+// wpisany termin sesji (booking confirmed/completed) LUB był uczestnikiem
+// grupowej sesji htg_meeting_sessions. Archiwalne nagrania nie są wymagane.
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+export async function hasPoSesjiAccess(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('has_po_sesji_access', { uid: userId });
+  if (error) return false;
+  return data === true;
+}

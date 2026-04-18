@@ -118,6 +118,27 @@ const BUMPER_FADE_IN_MS  = 3_000;
 const BUMPER_HOLD_MS     = 9_000;
 const BUMPER_FADE_OUT_MS = 3_000;
 
+// ── Bumper file pool ──────────────────────────────────────────────────────────
+// 23 pause files served from CDN. We pick at random while avoiding recent
+// repeats within a window of BUMPER_NON_REPEAT_WINDOW to keep the radio
+// feeling varied (window ≈ 1/3 of pool size).
+const BUMPER_BASE_URL        = 'https://htg2-cdn.b-cdn.net/momentum-pause';
+const BUMPER_COUNT           = 23;
+const BUMPER_NON_REPEAT_WINDOW = 7;
+
+/**
+ * Pick a bumper index (1–BUMPER_COUNT) that is NOT in the last
+ * BUMPER_NON_REPEAT_WINDOW indices played. Falls back to full pool if the
+ * window happens to cover everything (shouldn't happen at current counts).
+ */
+function pickBumperIndex(recentlyUsed: number[]): number {
+  const recent = recentlyUsed.slice(-BUMPER_NON_REPEAT_WINDOW);
+  const pool = Array.from({ length: BUMPER_COUNT }, (_, i) => i + 1)
+    .filter(i => !recent.includes(i));
+  const candidates = pool.length > 0 ? pool : Array.from({ length: BUMPER_COUNT }, (_, i) => i + 1);
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -127,7 +148,6 @@ interface Props {
   scopeId?: string;
   scopeLabel?: string;
   compact?: boolean;
-  bumperUrl?: string;
 }
 
 export default function RadioPlayer({
@@ -135,7 +155,6 @@ export default function RadioPlayer({
   scopeId,
   scopeLabel,
   compact = false,
-  bumperUrl = 'https://htg2-cdn.b-cdn.net/audio/radio-bumper.mp3',
 }: Props) {
   // Only used to stop any ambient VOD / recording playback the user might
   // have running in GlobalPlayer. Radio runs on its own engine (below).
@@ -153,8 +172,25 @@ export default function RadioPlayer({
   const engineRef = useRef<FragmentRadioEngineHandle>(null);
   const bumperRef = useRef<HTMLAudioElement | null>(null);
   const isFetchingRef = useRef(false);
+  /** Tracks recently played bumper indices for non-repeat selection. */
+  const usedBumperIndicesRef = useRef<number[]>([]);
   /** Increment to cancel any in-progress bumper sequence. */
   const bumperGenRef = useRef(0);
+  /**
+   * Set in handleNearEnd when we start the bumper fade-in 3 s before the
+   * fragment ends. handleEnded reads this to know whether to start a fresh
+   * bumper sequence or just continue (hold + playSave + fade-out).
+   */
+  const nearEndActiveRef = useRef(false);
+  /**
+   * Pre-fetch started in handleNearEnd, consumed in handleEnded.
+   * Stored as a Promise so handleEnded can await it (it may already be
+   * resolved by the time handleEnded fires, 3 s later).
+   */
+  const prefetchRef = useRef<{
+    promise: Promise<RadioSave | null>;
+    exclude: string[];
+  } | null>(null);
 
   // Reset when scope/scopeId changes
   const prevScopeKey = useRef(`${scope}:${scopeId}`);
@@ -162,6 +198,8 @@ export default function RadioPlayer({
     const key = `${scope}:${scopeId}`;
     if (key !== prevScopeKey.current) {
       prevScopeKey.current = key;
+      nearEndActiveRef.current = false;
+      prefetchRef.current = null;
       bumperGenRef.current++;
       const b = bumperRef.current;
       if (b && !b.paused) { b.pause(); b.currentTime = 0; }
@@ -204,6 +242,9 @@ export default function RadioPlayer({
   // ── Start playback of a fetched save ──────────────────────────────────────
 
   const playSave = useCallback((save: RadioSave, fromExcludes: string[]) => {
+    // Reset per-fragment bumper state so the NEXT fragment starts fresh.
+    nearEndActiveRef.current = false;
+    prefetchRef.current = null;
     const newExcludes = [...fromExcludes, save.id].slice(-NON_REPEAT_WINDOW);
     setCurrent(save);
     setExcludeIds(newExcludes);
@@ -240,64 +281,150 @@ export default function RadioPlayer({
     }
   }, [fetchNextSave, playSave, stopGlobalPlayback]);
 
-  // ── Bumper sequence between fragments ─────────────────────────────────────
+  // ── Bumper crossfade sequence ─────────────────────────────────────────────
   //
-  // Triggered by FragmentRadioEngine's `onEnded` callback (natural audio end
-  // OR currentTime >= endSec). By the time this runs the engine has already
-  // paused its <audio> element.
+  // Two-phase design for seamless crossfades:
+  //
+  // Phase 1 — handleNearEnd (3 s before fragment end):
+  //   • Bumper audio starts at volume=0, fades to 1 over 3 s.
+  //   • Next fragment is pre-fetched in parallel.
+  //   • By the time the fragment ends the bumper is at full volume.
+  //
+  // Phase 2 — handleEnded (at fragment end):
+  //   • Bumper is already playing at full volume (phase 1 complete).
+  //   • Hold for BUMPER_HOLD_MS (bumper content plays).
+  //   • Start next fragment (engine reload).
+  //   • Fade bumper out over 3 s while the next fragment plays.
+  //
+  // Fallback: very short fragments where handleNearEnd fires immediately or
+  //   not at all — handleEnded falls back to the old sequential behaviour
+  //   (start bumper, fade in, hold, playSave, fade out).
 
-  const playBumperThenNext = useCallback(async () => {
+  /**
+   * Pick next bumper file, assign it to the element, and return true on
+   * success. Centralises the src-swap + usedBumperIndices update in one
+   * place so both normal (nearEnd) and fallback (ended) paths are consistent.
+   */
+  const assignBumperSrc = useCallback((bumper: HTMLAudioElement): void => {
+    const idx = pickBumperIndex(usedBumperIndicesRef.current);
+    usedBumperIndicesRef.current = [...usedBumperIndicesRef.current, idx]
+      .slice(-BUMPER_NON_REPEAT_WINDOW);
+    bumper.src = `${BUMPER_BASE_URL}/m-pause-${idx}.mp3`;
+    bumper.load(); // resets currentTime and starts buffering the new file
+  }, []);
+
+  /** Phase 1: start bumper fade-in + pre-fetch, 3 s before fragment end. */
+  const handleNearEnd = useCallback(async () => {
+    // Guard: engine fires onNearEnd at most once per save, but React may
+    // call this via a stale closure. nearEndActiveRef is the truth.
+    if (nearEndActiveRef.current) return;
+    nearEndActiveRef.current = true;
+
     const gen = ++bumperGenRef.current;
     const cancelled = () => bumperGenRef.current !== gen;
-
-    const bumper = bumperRef.current;
     const exclude = excludeIdsRef.current;
 
-    const fetchPromise = fetchNextSave(exclude);
+    // Start pre-fetch immediately — runs in parallel with the 3 s fade-in.
+    // By the time handleEnded fires (3 s later) the fetch is likely done.
+    prefetchRef.current = { promise: fetchNextSave(exclude), exclude };
 
-    let bumperPlaying = false;
-    if (bumper) {
-      bumper.currentTime = 0;
-      bumper.volume = 0;
-      try {
-        await bumper.play();
-        bumperPlaying = true;
-      } catch { /* graceful — skip bumper if audio fails */ }
-    }
-
-    const [nextSave] = await Promise.all([
-      fetchPromise,
-      bumperPlaying
-        ? rampVolume(bumper!, 0, 1, BUMPER_FADE_IN_MS, cancelled)
-        : Promise.resolve(),
-    ]);
-
-    if (cancelled()) {
-      if (bumperPlaying && bumper) { bumper.pause(); bumper.currentTime = 0; }
+    const bumper = bumperRef.current;
+    if (!bumper) return;
+    // Pick a fresh bumper file (non-repeating), load it, start silent.
+    assignBumperSrc(bumper);
+    bumper.volume = 0;
+    try {
+      await bumper.play();
+    } catch {
+      // Bumper blocked by browser — crossfade skipped, handleEnded fallback.
       return;
     }
+    if (!cancelled()) {
+      // Non-blocking ramp: reaches vol=1 in exactly 3 s — same duration as
+      // the remaining fragment playback. Bumper is at full volume when ended fires.
+      rampVolume(bumper, 0, 1, BUMPER_FADE_IN_MS, cancelled);
+    }
+  }, [assignBumperSrc, fetchNextSave]);
 
+  /** Phase 2: hold bumper + start next fragment + fade bumper out. */
+  const handleEnded = useCallback(async () => {
+    const hadNearEnd = nearEndActiveRef.current;
+    nearEndActiveRef.current = false;
+
+    const bumper = bumperRef.current;
+    let gen: number;
+    let bumperPlaying: boolean;
+    let fetchPromise: Promise<RadioSave | null>;
+    let exclude: string[];
+
+    if (hadNearEnd && prefetchRef.current) {
+      // ── Normal path: bumper was started 3 s ago ────────────────────────
+      // Reuse the same cancellation gen set in handleNearEnd so that any
+      // in-progress rampVolume or skip/stop cancels this phase too.
+      gen = bumperGenRef.current;
+      bumperPlaying = !!(bumper && !bumper.paused);
+      ({ promise: fetchPromise, exclude } = prefetchRef.current);
+      prefetchRef.current = null;
+    } else {
+      // ── Fallback path: very short fragment / nearEnd missed ────────────
+      // Pick a fresh bumper file and start the sequence from scratch.
+      exclude = excludeIdsRef.current;
+      gen = ++bumperGenRef.current;
+      prefetchRef.current = null;
+      const fetchP = fetchNextSave(exclude);
+      fetchPromise = fetchP;
+      bumperPlaying = false;
+      if (bumper) {
+        assignBumperSrc(bumper);
+        bumper.volume = 0;
+        try { await bumper.play(); bumperPlaying = true; } catch { /* graceful */ }
+      }
+      // Fade in + await fetch in parallel (same as old playBumperThenNext).
+      await Promise.all([
+        fetchP,
+        bumperPlaying
+          ? rampVolume(bumper!, 0, 1, BUMPER_FADE_IN_MS, () => bumperGenRef.current !== gen)
+          : Promise.resolve(),
+      ]);
+      if (bumperGenRef.current !== gen) {
+        if (bumperPlaying && bumper) { bumper.pause(); bumper.currentTime = 0; }
+        return;
+      }
+    }
+
+    const cancelled = () => bumperGenRef.current !== gen;
+
+    // Hold — bumper plays at full volume (or silence if bumper was blocked).
     if (bumperPlaying) {
       await new Promise<void>(r => setTimeout(r, BUMPER_HOLD_MS));
+      if (cancelled()) {
+        bumper!.pause(); bumper!.currentTime = 0;
+        return;
+      }
     }
+
+    // Await next-save fetch (likely already resolved from the 3 s pre-fetch).
+    const nextSave = await fetchPromise;
     if (cancelled()) {
       if (bumperPlaying && bumper) { bumper.pause(); bumper.currentTime = 0; }
       return;
     }
 
     if (nextSave) {
+      // Start the next fragment — engine reloads while bumper is still audible.
       playSave(nextSave, exclude);
+      // Fade bumper out over 3 s, overlapping the start of the next fragment.
+      if (bumperPlaying && bumper) {
+        rampVolume(bumper, 1, 0, BUMPER_FADE_OUT_MS, cancelled).then(() => {
+          if (!cancelled()) { bumper.pause(); bumper.currentTime = 0; }
+        });
+      }
     } else {
       setStatus('error');
       setError('Brak Momentów do odtworzenia.');
+      if (bumperPlaying && bumper) { bumper.pause(); bumper.currentTime = 0; }
     }
-
-    if (bumperPlaying && bumper) {
-      rampVolume(bumper, 1, 0, BUMPER_FADE_OUT_MS, cancelled).then(() => {
-        if (!cancelled()) { bumper.pause(); bumper.currentTime = 0; }
-      });
-    }
-  }, [fetchNextSave, playSave]);
+  }, [assignBumperSrc, fetchNextSave, playSave]);
 
   // ── Engine callbacks ──────────────────────────────────────────────────────
 
@@ -315,7 +442,6 @@ export default function RadioPlayer({
     //   • 'paused'    — idempotent (no-op) but avoids needless render.
     setStatus(prev => (prev === 'playing' ? 'paused' : prev));
   }, []);
-  const handleEnded = useCallback(() => { playBumperThenNext(); }, [playBumperThenNext]);
   const handleError = useCallback((msg: string) => {
     setStatus('error');
     setError(msg);
@@ -342,6 +468,8 @@ export default function RadioPlayer({
   }, [isPlaying]);
 
   const handleSkip = useCallback(() => {
+    nearEndActiveRef.current = false;
+    prefetchRef.current = null;
     bumperGenRef.current++;
     const b = bumperRef.current;
     if (b && !b.paused) { b.pause(); b.currentTime = 0; }
@@ -349,6 +477,8 @@ export default function RadioPlayer({
   }, [fetchNext]);
 
   const handleStop = useCallback(() => {
+    nearEndActiveRef.current = false;
+    prefetchRef.current = null;
     bumperGenRef.current++;
     const b = bumperRef.current;
     if (b && !b.paused) { b.pause(); b.currentTime = 0; }
@@ -384,9 +514,10 @@ export default function RadioPlayer({
 
   return (
     <>
-      {/* Hidden bumper audio — preloaded so playback starts instantly */}
+      {/* Hidden bumper audio — src is assigned dynamically before each play
+          from the m-pause-{1-23} pool so we never preload a fixed file. */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <audio ref={bumperRef} src={bumperUrl} preload="auto" style={{ display: 'none' }} />
+      <audio ref={bumperRef} preload="none" style={{ display: 'none' }} />
 
       {/* Dedicated fragment engine — no Web Audio, no heartbeat */}
       <FragmentRadioEngine
@@ -394,6 +525,7 @@ export default function RadioPlayer({
         save={current && isActive ? toEngineSave(current) : null}
         onPlaying={handlePlaying}
         onPause={handlePause}
+        onNearEnd={handleNearEnd}
         onEnded={handleEnded}
         onError={handleError}
         onTimeUpdate={handleTimeUpdate}

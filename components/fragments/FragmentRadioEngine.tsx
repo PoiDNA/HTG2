@@ -56,6 +56,12 @@ export interface FragmentRadioEngineProps {
   /** Called on 'pause' event (user paused or stream pause). */
   onPause?: () => void;
   /**
+   * Called ~3 s before the fragment reaches endSec. Use this to start a
+   * crossfade bumper so it reaches full volume exactly when the fragment ends.
+   * Fires at most once per save; reset on teardown.
+   */
+  onNearEnd?: () => void;
+  /**
    * Called when the fragment reaches endSec (via timeupdate boundary check
    * OR natural 'ended' event — whichever fires first). The engine auto-pauses
    * the audio element before firing this; the parent should orchestrate the
@@ -114,7 +120,7 @@ export const FragmentRadioEngine = forwardRef<
   FragmentRadioEngineHandle,
   FragmentRadioEngineProps
 >(function FragmentRadioEngine(
-  { save, volume = 1, onReady, onPlaying, onPause, onEnded, onError, onTimeUpdate },
+  { save, volume = 1, onReady, onPlaying, onPause, onNearEnd, onEnded, onError, onTimeUpdate },
   ref,
 ) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -128,6 +134,8 @@ export const FragmentRadioEngine = forwardRef<
   const rangeRef = useRef<{ startSec: number; endSec: number } | null>(null);
   /** Guards onEnded — fire at most once per save. */
   const endedFiredRef = useRef(false);
+  /** Guards onNearEnd — fire at most once per save (3 s before endSec). */
+  const nearEndFiredRef = useRef(false);
   /**
    * Queued play intent: set by fetchTokenAndAttach (auto-play each new fragment)
    * or by the imperative play() handle when audio isn't ready yet.
@@ -148,9 +156,9 @@ export const FragmentRadioEngine = forwardRef<
   saveRef.current = save;
 
   // Stable callbacks via refs so effect doesn't re-run when parent rerenders
-  const cbRef = useRef({ onReady, onPlaying, onPause, onEnded, onError, onTimeUpdate });
+  const cbRef = useRef({ onReady, onPlaying, onPause, onNearEnd, onEnded, onError, onTimeUpdate });
   useEffect(() => {
-    cbRef.current = { onReady, onPlaying, onPause, onEnded, onError, onTimeUpdate };
+    cbRef.current = { onReady, onPlaying, onPause, onNearEnd, onEnded, onError, onTimeUpdate };
   });
 
   const [, forceRender] = useState(0);
@@ -158,6 +166,8 @@ export const FragmentRadioEngine = forwardRef<
 
   const teardown = useCallback(() => {
     pendingPlayRef.current = false;
+    nearEndFiredRef.current = false;
+    endedFiredRef.current = false;
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     const audio = audioRef.current;
@@ -323,10 +333,21 @@ export const FragmentRadioEngine = forwardRef<
       endedFiredRef.current = true;
       cbRef.current.onEnded?.();
     };
+    // How many seconds before endSec to fire onNearEnd (must match
+    // RadioPlayer's BUMPER_FADE_IN_MS / 1000 so bumper reaches full
+    // volume exactly when the fragment ends).
+    const NEAR_END_OFFSET_SEC = 3;
+
     const onTimeUpdateEvt = () => {
       const r = rangeRef.current;
       const t = audio.currentTime;
       cbRef.current.onTimeUpdate?.(t, audio.duration);
+      // Near-end: fire 3 s before endSec so the parent can start the bumper
+      // fade-in while the fragment is still playing.
+      if (r && !nearEndFiredRef.current && t >= r.endSec - NEAR_END_OFFSET_SEC) {
+        nearEndFiredRef.current = true;
+        cbRef.current.onNearEnd?.();
+      }
       if (r && t >= r.endSec && !endedFiredRef.current) {
         endedFiredRef.current = true;
         try { audio.pause(); } catch { /* ignore */ }

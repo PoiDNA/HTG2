@@ -8,7 +8,7 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
  */
 export async function getLatestYoutubeVideo(locale: string) {
   const db = createSupabaseServiceRole();
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
 
   // 1. Try user's locale first
   const { data } = await db
@@ -16,8 +16,8 @@ export async function getLatestYoutubeVideo(locale: string) {
     .select('youtube_id, title, thumbnail_url')
     .eq('source', 'playlist')
     .eq('content_locale', locale)
-    .gte('discovered_at', threeDaysAgo)
-    .order('discovered_at', { ascending: false })
+    .gte('published_at', fourteenDaysAgo)
+    .order('published_at', { ascending: false })
     .order('youtube_id')
     .limit(1)
     .maybeSingle();
@@ -31,8 +31,8 @@ export async function getLatestYoutubeVideo(locale: string) {
       .select('youtube_id, title, thumbnail_url')
       .eq('source', 'playlist')
       .eq('content_locale', 'pl')
-      .gte('discovered_at', threeDaysAgo)
-      .order('discovered_at', { ascending: false })
+      .gte('published_at', fourteenDaysAgo)
+      .order('published_at', { ascending: false })
       .order('youtube_id')
       .limit(1)
       .maybeSingle();

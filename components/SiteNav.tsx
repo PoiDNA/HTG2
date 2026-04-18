@@ -21,7 +21,7 @@ const accountMenuItems = [
 // User menu: main navigation for every logged-in user
 const userMenuItems = [
   { href: '/konto', label: 'Nagrania', icon: Library },
-  { href: '/konto/sesje-indywidualne', label: 'Umów sesję', icon: CalendarDays },
+  { href: '/konto/sesje-indywidualne', label: 'Sesje', icon: CalendarDays },
   { href: '/konto/momenty', label: 'Momenty', icon: Bookmark },
   { href: '/spolecznosc', label: 'Społeczność', icon: Globe },
   { href: '/konto/polubieni', label: 'Twoi Znajomi', icon: Users },

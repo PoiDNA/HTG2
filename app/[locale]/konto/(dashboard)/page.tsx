@@ -80,9 +80,9 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         </Suspense>
 
         {/* YT po lewej / kręgi po prawej w kolumnie */}
-        <div className="flex flex-col sm:flex-row gap-6 mb-6 items-stretch">
-          {ytCard && <div className="sm:flex-1 min-h-[160px] relative">{ytCard}</div>}
-          <div className="flex flex-col gap-6 sm:shrink-0 sm:ml-auto">
+        <div className="flex items-start gap-6 mb-6">
+          {ytCard && <div className="flex-1 self-stretch min-h-[160px] relative">{ytCard}</div>}
+          <div className="flex flex-col gap-6 shrink-0 ml-auto">
             <MomentsButton />
             <SesjeButton />
           </div>
@@ -113,9 +113,9 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         </Suspense>
 
         {/* YT po lewej / kręgi po prawej w kolumnie */}
-        <div className="flex flex-col sm:flex-row gap-6 mb-6 items-stretch">
-          {ytCard && <div className="sm:flex-1 min-h-[160px] relative">{ytCard}</div>}
-          <div className="flex flex-col gap-6 sm:shrink-0 sm:ml-auto">
+        <div className="flex items-start gap-6 mb-6">
+          {ytCard && <div className="flex-1 self-stretch min-h-[160px] relative">{ytCard}</div>}
+          <div className="flex flex-col gap-6 shrink-0 ml-auto">
             <MomentsButton />
             <SesjeButton />
           </div>

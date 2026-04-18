@@ -744,11 +744,35 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         if (refreshRef.current) clearTimeout(refreshRef.current);
         if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
         if (hlsRef.current) hlsRef.current.destroy();
-        if (graphRef.current) graphRef.current.cleanup();
+        // NOTE: Do NOT cleanup graphRef here. The Web Audio graph is bound to
+        // the <video> element via createMediaElementSource(), which can only be
+        // called ONCE per element in its lifetime. The <video> element persists
+        // across playbackId changes (it's the same DOM node), so the graph must
+        // persist too — otherwise audio output is permanently hijacked to a
+        // closed AudioContext and the user hears silence on subsequent plays.
+        // Graph cleanup happens in the unmount-only effect below.
         stopPlayEvent();
         stopStream();
       };
     }, [loadAudio, emitState, emitTime, emitDuration, stopPlayEvent, stopStream, clearLoadingGuard, enterTerminalError, idFieldName, playbackId, getHeartbeatUrl, getPlayPositionUrl, getPlayEventUrl]);
+
+    // -----------------------------------------------------------------------
+    // Audio graph unmount cleanup
+    // -----------------------------------------------------------------------
+    // The Web Audio graph lives for the entire lifetime of the AudioEngine
+    // component (because createMediaElementSource() is a one-shot operation
+    // that permanently hijacks the <video> element's audio output). We only
+    // destroy the graph when AudioEngine unmounts, at which point the <video>
+    // element is also being torn down.
+    useEffect(() => {
+      return () => {
+        if (graphRef.current) {
+          graphRef.current.cleanup();
+          graphRef.current = null;
+        }
+        graphCreatedRef.current = false;
+      };
+    }, []);
 
     // -----------------------------------------------------------------------
     // Imperative handle

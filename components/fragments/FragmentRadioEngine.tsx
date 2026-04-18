@@ -76,6 +76,14 @@ export interface FragmentRadioEngineHandle {
    * active_streams slot. Called by RadioPlayer on unmount / stop button.
    */
   stop: () => Promise<void>;
+  /**
+   * Call audio.play() synchronously inside a user gesture handler, even
+   * before a source is attached. Registers user activation so that the
+   * deferred play() in onLoadedMetadata succeeds on Safari. The rejection
+   * (no source) is expected and harmless — the side effect is the grant,
+   * not playback.
+   */
+  primePlayback: () => void;
 }
 
 interface TokenResponse {
@@ -289,7 +297,11 @@ export const FragmentRadioEngine = forwardRef<
       if (!pendingPlayRef.current) return;
       pendingPlayRef.current = false;
       audio.play().catch(() => {
-        // Autoplay blocked — RadioPlayer's play button will resume.
+        // Autoplay blocked (or source not actually ready despite event).
+        // Surface as a pause so RadioPlayer flips status 'loading' → 'paused'
+        // and the button re-enables — otherwise the UI sticks in 'loading'
+        // forever with a disabled play button (silent failure).
+        cbRef.current.onPause?.();
       });
     };
 
@@ -396,7 +408,13 @@ export const FragmentRadioEngine = forwardRef<
       if (!audio) return;
       if (audio.readyState >= 2) {
         // Media has enough data — play immediately (e.g. user un-pauses).
-        try { await audio.play(); } catch { /* ignore */ }
+        try {
+          await audio.play();
+        } catch {
+          // Browser refused (autoplay policy, device switch, etc.). Surface
+          // so the UI re-enables the play button instead of hanging.
+          cbRef.current.onPause?.();
+        }
       } else {
         // Not ready yet — queue play intent for loadedmetadata / canplay.
         pendingPlayRef.current = true;
@@ -404,6 +422,19 @@ export const FragmentRadioEngine = forwardRef<
     },
     pause: () => {
       audioRef.current?.pause();
+    },
+    primePlayback: () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      // Fire audio.play() synchronously from the caller's gesture stack.
+      // Expected to reject immediately (no source attached yet) — we ignore
+      // the rejection. The side effect we want is Safari recording this as
+      // a user-activated play call so the follow-up play() after the token
+      // fetch is not blocked by the autoplay policy.
+      const p = audio.play();
+      if (p && typeof (p as Promise<void>).catch === 'function') {
+        (p as Promise<void>).catch(() => { /* expected — no source yet */ });
+      }
     },
     stop: async () => {
       attemptRef.current += 1;

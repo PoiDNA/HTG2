@@ -129,6 +129,16 @@ export const FragmentRadioEngine = forwardRef<
    */
   const pendingPlayRef = useRef(false);
 
+  /**
+   * Mirror of the `save` prop kept in a ref so the save-change effect can
+   * read the latest value without including `save` in its dep array.
+   * Required because RadioPlayer creates a new toEngineSave() object on every
+   * render (due to setCurrentTime on each timeupdate), which would make the
+   * effect re-run and teardown+reload on every progress tick.
+   */
+  const saveRef = useRef<FragmentRadioSave | null>(null);
+  saveRef.current = save;
+
   // Stable callbacks via refs so effect doesn't re-run when parent rerenders
   const cbRef = useRef({ onReady, onPlaying, onPause, onEnded, onError, onTimeUpdate });
   useEffect(() => {
@@ -223,19 +233,26 @@ export const FragmentRadioEngine = forwardRef<
     }
   }, []);
 
-  // Main effect — react to save changes
+  // Main effect — react to save IDENTITY changes (saveId, not object reference).
+  // We use save?.saveId as the dep so that RadioPlayer's frequent re-renders
+  // (caused by setCurrentTime on every timeupdate) don't re-trigger teardown
+  // and token fetch just because toEngineSave() returned a new object.
+  // saveRef.current always holds the latest save value when the effect runs.
+  const saveId = save?.saveId ?? null;
   useEffect(() => {
+    const currentSave = saveRef.current;
     attemptRef.current += 1;
     const myAttempt = attemptRef.current;
     teardown();
 
-    if (!save) return;
+    if (!currentSave) return;
 
-    fetchTokenAndAttach(save, myAttempt);
+    fetchTokenAndAttach(currentSave, myAttempt);
 
     // No cleanup here beyond teardown on next save change — teardown on unmount
     // is handled by the unmount-only effect below so we don't double-destroy.
-  }, [save, teardown, fetchTokenAndAttach]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveId, teardown, fetchTokenAndAttach]);
 
   // Unmount-only cleanup: teardown + release active_streams slot
   useEffect(() => {

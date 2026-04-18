@@ -3,12 +3,15 @@
 import { useState, useTransition } from 'react';
 import { ThumbsUp, MessageSquare, CheckCircle, Clock, ChevronRight, Play } from 'lucide-react';
 import { Link } from '@/i18n-config';
+import { usePlayer } from '@/lib/player-context';
 
 export interface AnswerFragment {
   id: string;
   title: string;
   start_sec: number;
   end_sec: number;
+  session_template_id: string;
+  session_title: string;
 }
 
 export interface QuestionItem {
@@ -35,6 +38,19 @@ export default function QuestionsList({ initialItems, initialSort, initialStatus
   const [sort, setSort] = useState(initialSort);
   const [status, setStatus] = useState(initialStatus);
   const [, startTransition] = useTransition();
+  const { startPlayback } = usePlayer();
+
+  function playFragment(fragment: AnswerFragment, questionTitle: string) {
+    startPlayback({
+      kind: 'impulse',
+      sessionFragmentId: fragment.id,
+      sessionId: fragment.session_template_id,
+      title: fragment.session_title,
+      fragmentTitle: questionTitle,
+      startSec: fragment.start_sec,
+      endSec: fragment.end_sec,
+    });
+  }
 
   async function refetch(newSort: string, newStatus: string) {
     const params = new URLSearchParams({ sort: newSort });
@@ -135,11 +151,11 @@ export default function QuestionsList({ initialItems, initialSort, initialStatus
                 </Link>
               </div>
 
-              {/* Answer fragment — visible when resolved */}
+              {/* Answer fragment — plays inline via global player */}
               {q.status === 'rozpoznane' && q.answer_fragment && (
-                <a
-                  href={`/pl/konto/momenty?fragment=${q.answer_fragment.id}`}
-                  className="mt-3 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 hover:bg-emerald-100 transition-colors group"
+                <button
+                  onClick={() => playFragment(q.answer_fragment!, q.title)}
+                  className="mt-3 w-full flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 hover:bg-emerald-100 transition-colors group text-left"
                 >
                   <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 transition-colors">
                     <Play className="w-4 h-4 text-white fill-white" />
@@ -151,7 +167,7 @@ export default function QuestionsList({ initialItems, initialSort, initialStatus
                   <span className="text-xs text-emerald-600 shrink-0">
                     {Math.floor(q.answer_fragment.start_sec / 60)}:{String(Math.floor(q.answer_fragment.start_sec % 60)).padStart(2, '0')}
                   </span>
-                </a>
+                </button>
               )}
 
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-htg-card-border">

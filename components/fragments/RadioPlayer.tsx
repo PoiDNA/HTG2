@@ -303,9 +303,17 @@ export default function RadioPlayer({
 
   const handlePlaying = useCallback(() => setStatus('playing'), []);
   const handlePause = useCallback(() => {
-    // Don't overwrite 'loading' (teardown fires pause synthetically between
-    // fragment swaps — we don't want the UI to flicker to 'paused').
-    setStatus(prev => (prev === 'loading' ? 'loading' : 'paused'));
+    // Only react to pauses while actively playing. Other states must be
+    // preserved because the engine fires synthetic pause events in scenarios
+    // where the user is NOT pausing real playback:
+    //   • 'loading'   — swapping between fragments (teardown → reload).
+    //   • 'idle'      — handleStop just cleared state; teardown pause would
+    //                   otherwise flip isActive=true with current=null,
+    //                   making the play button route to handlePlayPause
+    //                   (empty element) instead of handleStart.
+    //   • 'error'     — keep the error visible; don't silently change status.
+    //   • 'paused'    — idempotent (no-op) but avoids needless render.
+    setStatus(prev => (prev === 'playing' ? 'paused' : prev));
   }, []);
   const handleEnded = useCallback(() => { playBumperThenNext(); }, [playBumperThenNext]);
   const handleError = useCallback((msg: string) => {
@@ -316,7 +324,16 @@ export default function RadioPlayer({
 
   // ── Controls ──────────────────────────────────────────────────────────────
 
-  const handleStart = useCallback(() => fetchNext(excludeIds), [fetchNext, excludeIds]);
+  const handleStart = useCallback(() => {
+    // Prime the audio element SYNCHRONOUSLY inside the click handler.
+    // Safari requires audio.play() to originate from the user gesture call
+    // stack, not an async continuation after a network fetch. Calling play()
+    // on the still-empty <audio> element reserves the autoplay grant; when
+    // the real source attaches later, the element is already "user-activated"
+    // and the deferred play() in FragmentRadioEngine succeeds.
+    engineRef.current?.primePlayback();
+    fetchNext(excludeIds);
+  }, [fetchNext, excludeIds]);
 
   const handlePlayPause = useCallback(() => {
     if (!engineRef.current) return;

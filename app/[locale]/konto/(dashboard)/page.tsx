@@ -79,11 +79,13 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <SanctuaryHero locale={locale} />
         </Suspense>
 
-        {/* YT / Momenty / Sesje */}
-        <div className={`grid grid-cols-1 ${ytCard ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-6`}>
-          {ytCard}
-          <MomentsButton />
-          <SesjeButton />
+        {/* YT po lewej / kręgi po prawej w kolumnie */}
+        <div className="flex flex-col sm:flex-row gap-6 mb-6 items-center">
+          {ytCard && <div className="w-full sm:flex-1 min-h-[160px] relative">{ytCard}</div>}
+          <div className="flex flex-col gap-6 sm:shrink-0">
+            <MomentsButton />
+            <SesjeButton />
+          </div>
         </div>
 
         <Suspense fallback={<SectionSkeleton title="Biblioteka audio" />}>
@@ -110,11 +112,13 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
           <ContinueCard locale={locale} />
         </Suspense>
 
-        {/* YT / Momenty / Sesje */}
-        <div className={`grid grid-cols-1 ${ytCard ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-6`}>
-          {ytCard}
-          <MomentsButton />
-          <SesjeButton />
+        {/* YT po lewej / kręgi po prawej w kolumnie */}
+        <div className="flex flex-col sm:flex-row gap-6 mb-6 items-center">
+          {ytCard && <div className="w-full sm:flex-1 min-h-[160px] relative">{ytCard}</div>}
+          <div className="flex flex-col gap-6 sm:shrink-0">
+            <MomentsButton />
+            <SesjeButton />
+          </div>
         </div>
 
         <Suspense fallback={<SectionSkeleton title="Nagrania z sesji" />}>

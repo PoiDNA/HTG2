@@ -139,6 +139,7 @@ export default async function AccountLayout({
     { href: '/konto/admin/nagrania-klientow', label: 'Nagrania klientów', icon: Headphones },
     { href: '/konto/admin/sesje-i18n', label: 'Tłumaczenia sesji', icon: Globe },
     { href: '/konto/admin/momenty', label: 'Momenty sesji', icon: Bookmark },
+    { href: '/konto/admin/pytania', label: 'Pytania badawcze', icon: HelpCircle },
   ] as const;
 
   const piaskownicaItems = [

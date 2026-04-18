@@ -14,7 +14,8 @@ import VodLibrarySection from './_sections/VodLibrarySection';
 import RemainingSessionsSection from './_sections/RemainingSessionsSection';
 import SanctuaryHero from './_sections/SanctuaryHero';
 import ContinueCard from './_sections/ContinueCard';
-import MomentsSessionsCta from '@/components/konto/MomentsSessionsCta';
+import MomentsButton from '@/components/konto/MomentsButton';
+import SesjeButton from '@/components/konto/SesjeButton';
 import RadioWidget from '@/components/fragments/RadioWidget';
 
 export function generateStaticParams() {
@@ -81,7 +82,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         {/* YT po lewej / kręgi po prawej w kolumnie */}
         <div className="w-full flex items-start mb-6">
           {ytCard && <div className="grow min-h-[160px] relative mr-6">{ytCard}</div>}
-          <MomentsSessionsCta />
+          <div className="grid gap-6">
+            <MomentsButton />
+            <SesjeButton />
+          </div>
         </div>
 
         <Suspense fallback={<SectionSkeleton title="Biblioteka audio" />}>
@@ -111,7 +115,10 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
         {/* YT po lewej / kręgi po prawej w kolumnie */}
         <div className="w-full flex items-start mb-6">
           {ytCard && <div className="grow min-h-[160px] relative mr-6">{ytCard}</div>}
-          <MomentsSessionsCta />
+          <div className="grid gap-6">
+            <MomentsButton />
+            <SesjeButton />
+          </div>
         </div>
 
         <Suspense fallback={<SectionSkeleton title="Nagrania z sesji" />}>
@@ -132,10 +139,11 @@ export default async function AccountDashboard({ params }: { params: Promise<{ l
     <div>
       <ActiveCallsWidget locale={locale} />
 
-      {/* YT / Momenty+Sesje */}
-      <div className={`grid grid-cols-1 ${ytCard ? 'sm:grid-cols-2' : 'sm:grid-cols-1'} gap-4 mb-6`}>
+      {/* YT / Momenty / Sesje */}
+      <div className={`grid grid-cols-1 ${ytCard ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 mb-6`}>
         {ytCard}
-        <MomentsSessionsCta />
+        <MomentsButton />
+        <SesjeButton />
       </div>
 
       <Suspense fallback={<SectionSkeleton title="Twoja Biblioteka" />}>

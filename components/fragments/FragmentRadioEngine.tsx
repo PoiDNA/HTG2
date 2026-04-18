@@ -343,11 +343,11 @@ export const FragmentRadioEngine = forwardRef<
       endedFiredRef.current = true;
       cbRef.current.onEnded?.();
     };
-    // How many seconds before endSec to fire onNearEnd. Must equal the
-    // baked-in fade-in duration of the bumper files (currently 5 s) so the
-    // bumper's internal volume ramp finishes exactly when the fragment ends.
-    // Keep in sync with BUMPER_FADE_OUT_MS in RadioPlayer.tsx.
-    const NEAR_END_OFFSET_SEC = 5;
+    // How many seconds before endSec to fire onNearEnd. The bumper starts
+    // playing at this point (volume=0) so the JS volume curve can ramp up
+    // across the final 6 s of the fragment. Keep in sync with the bumper
+    // timing constants (BUMPER_HOLD_MS, BUMPER_FADE_OUT_MS) in RadioPlayer.tsx.
+    const NEAR_END_OFFSET_SEC = 6;
 
     const onTimeUpdateEvt = () => {
       const r = rangeRef.current;

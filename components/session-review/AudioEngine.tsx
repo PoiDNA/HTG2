@@ -635,7 +635,12 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
             body: JSON.stringify({ deviceId }),
           });
           const hbData = await hbRes.json().catch(() => ({}));
-          if (!hbData.allowed) {
+          // Only treat explicit `allowed: false` as blocked. Endpoints that
+          // don't enforce concurrent-stream checks (e.g. fragment-heartbeat,
+          // which just updates last_heartbeat and returns `{ok: true}`) must
+          // not be misread as "blocked" — doing so drops the player into a
+          // terminal error state ~30s into every fragment.
+          if (hbData.allowed === false) {
             audio.pause();
             enterTerminalError('blocked', hbData.message || 'Odtwarzasz już nagranie na innym urządzeniu.', hbData.title ?? 'Odtwarzanie na innym urządzeniu');
             return;
@@ -701,6 +706,10 @@ export const AudioEngine = forwardRef<AudioEngineHandle, AudioEngineProps>(
         if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
         stopPlayEvent(); // Close play-event on end
         emitState({ status: 'ended' });
+        // Defensive: also notify fragment subscribers so radio advances even
+        // when the natural 'ended' event fires before timeupdate crosses the
+        // endSec threshold (rounding, throttled timeupdate in bg tabs, etc.).
+        fragmentListeners.current.forEach(cb => cb());
       };
 
       const onTimeUpdate = () => {

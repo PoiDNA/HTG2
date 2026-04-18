@@ -76,7 +76,8 @@ export default function GlobalPlayer() {
     activePlayback.kind === 'fragment_review' ||
     activePlayback.kind === 'fragment_radio' ||
     activePlayback.kind === 'fragment_recording_review' ||
-    activePlayback.kind === 'impulse';
+    activePlayback.kind === 'impulse' ||
+    activePlayback.kind === 'pytania_answer';
 
   return (
     <div ref={containerRef} className="sr-only" aria-hidden="true">

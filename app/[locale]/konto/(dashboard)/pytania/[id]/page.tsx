@@ -4,9 +4,10 @@ import { notFound, redirect } from 'next/navigation';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
-import { ArrowLeft, CheckCircle, Clock, Play } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock } from 'lucide-react';
 import LikeButton from './LikeButton';
 import CommentsSection from './CommentsSection';
+import AnswerFragmentPlayer from './AnswerFragmentPlayer';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -70,14 +71,19 @@ export default async function QuestionDetailPage({
     .maybeSingle();
 
   // Answer fragment
-  let fragment: { id: string; title: string; start_sec: number; end_sec: number; session_template_id: string } | null = null;
+  let fragment: { id: string; title: string; start_sec: number; end_sec: number; session_template_id: string; session_title: string } | null = null;
   if (question.answer_fragment_id) {
     const { data } = await db
       .from('session_fragments')
-      .select('id, title, start_sec, end_sec, session_template_id')
+      .select('id, title, start_sec, end_sec, session_template_id, session_templates(title)')
       .eq('id', question.answer_fragment_id)
       .single();
-    fragment = data ?? null;
+    if (data) {
+      const sessionTitle = Array.isArray(data.session_templates)
+        ? (data.session_templates[0] as { title: string } | undefined)?.title ?? ''
+        : (data.session_templates as { title: string } | null)?.title ?? '';
+      fragment = { id: data.id, title: data.title, start_sec: data.start_sec, end_sec: data.end_sec, session_template_id: data.session_template_id, session_title: sessionTitle };
+    }
   }
 
   const enrichedComments = (comments ?? []).map(c => ({
@@ -125,26 +131,7 @@ export default async function QuestionDetailPage({
 
       {/* Answer fragment */}
       {fragment && isResolved && (
-        <div className="mt-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Odpowiedź w nagraniu</p>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-              <Play className="w-5 h-5 text-emerald-600 fill-emerald-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-emerald-900 truncate">{fragment.title}</p>
-              <p className="text-xs text-emerald-700">
-                {Math.floor(fragment.start_sec / 60)}:{String(Math.floor(fragment.start_sec % 60)).padStart(2, '0')} – {Math.floor(fragment.end_sec / 60)}:{String(Math.floor(fragment.end_sec % 60)).padStart(2, '0')}
-              </p>
-            </div>
-            <a
-              href={`/konto/momenty?fragment=${fragment.id}`}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm hover:bg-emerald-700 transition-colors shrink-0"
-            >
-              Odtwórz
-            </a>
-          </div>
-        </div>
+        <AnswerFragmentPlayer fragment={fragment} questionTitle={question.title} />
       )}
 
       <div className="mt-8 pt-6 border-t border-htg-card-border">

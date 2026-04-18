@@ -72,6 +72,13 @@ export interface FragmentRadioEngineProps {
   onError?: (message: string) => void;
   /** Called with current playback position for progress bar (throttled by audio element). */
   onTimeUpdate?: (currentSec: number, durationSec: number) => void;
+  /**
+   * When false the engine loads the media (token fetch + HLS buffer) but does
+   * NOT start playback automatically. Use this to preload a fragment silently
+   * during the bumper hold phase, then call the imperative play() handle when
+   * you want audio to start. Default: true.
+   */
+  autoPlay?: boolean;
 }
 
 export interface FragmentRadioEngineHandle {
@@ -120,12 +127,15 @@ export const FragmentRadioEngine = forwardRef<
   FragmentRadioEngineHandle,
   FragmentRadioEngineProps
 >(function FragmentRadioEngine(
-  { save, volume = 1, onReady, onPlaying, onPause, onNearEnd, onEnded, onError, onTimeUpdate },
+  { save, volume = 1, onReady, onPlaying, onPause, onNearEnd, onEnded, onError, onTimeUpdate, autoPlay = true },
   ref,
 ) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  /** Mirrors the autoPlay prop — read inside async fetchTokenAndAttach. */
+  const autoPlayRef = useRef(true);
+  useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);
   /** Monotonic attempt counter to ignore late async results from stale saves. */
   const attemptRef = useRef(0);
   /** Last active device id (for fragment-stop). */
@@ -218,12 +228,12 @@ export const FragmentRadioEngine = forwardRef<
 
     rangeRef.current = { startSec: s.startSec, endSec: s.endSec };
     endedFiredRef.current = false;
-    // Queue auto-play for when loadedmetadata fires.
-    // This intent is set from within an async chain that originated from a
-    // user gesture (RadioPlayer play button → fetchNext → playSave → save
-    // prop change → fetchTokenAndAttach). Chrome honours the activation for
-    // several seconds; setting the flag here means loadedmetadata fulfils it.
-    pendingPlayRef.current = true;
+    // Queue auto-play for when loadedmetadata fires — unless autoPlay is false,
+    // in which case RadioPlayer will call play() imperatively after the bumper
+    // hold phase (the fragment preloads silently during hold).
+    if (autoPlayRef.current) {
+      pendingPlayRef.current = true;
+    }
 
     // Attach media — HLS.js for Chromium; native <audio> for Safari/direct.
     const useHls = token.deliveryType === 'hls' && Hls.isSupported();

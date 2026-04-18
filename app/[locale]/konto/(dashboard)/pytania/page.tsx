@@ -71,7 +71,7 @@ export default async function PytaniaPage({
 
   let query = db
     .from('session_questions_ranked')
-    .select('id, title, body, status, likes_count, comments_count, author_id, created_at')
+    .select('id, title, body, status, likes_count, comments_count, author_id, created_at, answer_fragment_id')
     .range(0, 19);
 
   if (safeStatus) query = query.eq('status', safeStatus);
@@ -92,6 +92,20 @@ export default async function PytaniaPage({
     ? await db.from('profiles').select('id, display_name, avatar_url').in('id', authorIds)
     : { data: [] };
   const profileMap = new Map((profiles ?? []).map(p => [p.id, p]));
+
+  // Fetch fragments for resolved questions
+  const fragmentIds = [...new Set(
+    (questions ?? [])
+      .filter(q => q.status === 'rozpoznane' && q.answer_fragment_id)
+      .map(q => q.answer_fragment_id as string)
+  )];
+  const { data: fragments } = fragmentIds.length > 0
+    ? await db
+        .from('session_fragments')
+        .select('id, title, start_sec, end_sec')
+        .in('id', fragmentIds)
+    : { data: [] };
+  const fragmentMap = new Map((fragments ?? []).map(f => [f.id, f]));
 
   // User's likes
   const questionIds = (questions ?? []).map(q => q.id);
@@ -114,6 +128,7 @@ export default async function PytaniaPage({
     user_has_liked: likedSet.has(q.id),
     created_at: q.created_at,
     author: profileMap.get(q.author_id) ?? null,
+    answer_fragment: q.answer_fragment_id ? (fragmentMap.get(q.answer_fragment_id) ?? null) : null,
   }));
 
   return (

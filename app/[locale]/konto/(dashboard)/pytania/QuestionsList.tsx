@@ -1,8 +1,15 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { ThumbsUp, MessageSquare, CheckCircle, Clock, ChevronRight } from 'lucide-react';
+import { ThumbsUp, MessageSquare, CheckCircle, Clock, ChevronRight, Play } from 'lucide-react';
 import { Link } from '@/i18n-config';
+
+export interface AnswerFragment {
+  id: string;
+  title: string;
+  start_sec: number;
+  end_sec: number;
+}
 
 export interface QuestionItem {
   id: string;
@@ -14,6 +21,7 @@ export interface QuestionItem {
   user_has_liked: boolean;
   created_at: string;
   author: { display_name: string | null; avatar_url: string | null } | null;
+  answer_fragment: AnswerFragment | null;
 }
 
 interface Props {
@@ -126,6 +134,26 @@ export default function QuestionsList({ initialItems, initialSort, initialStatus
                   <ChevronRight className="w-5 h-5" />
                 </Link>
               </div>
+
+              {/* Answer fragment — visible when resolved */}
+              {q.status === 'rozpoznane' && q.answer_fragment && (
+                <a
+                  href={`/pl/konto/momenty?fragment=${q.answer_fragment.id}`}
+                  className="mt-3 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 hover:bg-emerald-100 transition-colors group"
+                >
+                  <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 transition-colors">
+                    <Play className="w-4 h-4 text-white fill-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider leading-none mb-0.5">Odpowiedź w nagraniu</p>
+                    <p className="text-sm text-emerald-900 truncate">{q.answer_fragment.title}</p>
+                  </div>
+                  <span className="text-xs text-emerald-600 shrink-0">
+                    {Math.floor(q.answer_fragment.start_sec / 60)}:{String(Math.floor(q.answer_fragment.start_sec % 60)).padStart(2, '0')}
+                  </span>
+                </a>
+              )}
+
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-htg-card-border">
                 <button
                   onClick={() => toggleLike(q.id)}

@@ -136,6 +136,12 @@ export default function RadioPlayer({
   const [excludeIds, setExcludeIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  /**
+   * When false, the engine loads token + HLS but does not auto-play.
+   * Set false before playSave() during bumper hold so the next fragment
+   * buffers silently. Set back to true before calling engine.play().
+   */
+  const [engineAutoPlay, setEngineAutoPlay] = useState(true);
 
   const excludeIdsRef = useRef<string[]>([]);
   useEffect(() => { excludeIdsRef.current = excludeIds; }, [excludeIds]);
@@ -172,6 +178,7 @@ export default function RadioPlayer({
       nearEndActiveRef.current = false;
       prefetchRef.current = null;
       bumperGenRef.current++;
+      setEngineAutoPlay(true);
       const b = bumperRef.current;
       if (b && !b.paused) { b.pause(); b.currentTime = 0; }
       setStatus('idle');
@@ -354,15 +361,6 @@ export default function RadioPlayer({
 
     const cancelled = () => bumperGenRef.current !== gen;
 
-    // Hold — bumper plays through its body.
-    if (bumperPlaying) {
-      await new Promise<void>(r => setTimeout(r, BUMPER_HOLD_MS));
-      if (cancelled()) {
-        bumper!.pause(); bumper!.currentTime = 0;
-        return;
-      }
-    }
-
     // Await next-save fetch (likely already resolved from the 5 s pre-fetch).
     const nextSave = await fetchPromise;
     if (cancelled()) {
@@ -370,20 +368,42 @@ export default function RadioPlayer({
       return;
     }
 
-    if (nextSave) {
-      // Start the next fragment while bumper is still playing its baked-in
-      // fade-out. After BUMPER_FADE_OUT_MS the file has faded naturally — pause.
-      playSave(nextSave, exclude);
-      if (bumperPlaying && bumper) {
-        const b = bumper;
-        setTimeout(() => {
-          if (!cancelled()) { b.pause(); b.currentTime = 0; }
-        }, BUMPER_FADE_OUT_MS);
-      }
-    } else {
+    if (!nextSave) {
       setStatus('error');
       setError('Brak Momentów do odtworzenia.');
       if (bumperPlaying && bumper) { bumper.pause(); bumper.currentTime = 0; }
+      return;
+    }
+
+    // ── Preload next fragment silently during hold ─────────────────────────
+    // Set autoPlay=false BEFORE playSave so the engine loads token + HLS but
+    // does not start playback automatically. The fragment will be fully buffered
+    // by the time the hold phase ends (~9 s is far more than the ~1–2 s needed
+    // for a token fetch + HLS manifest). This eliminates the silence gap that
+    // occurred when loading only started AFTER the hold.
+    setEngineAutoPlay(false);
+    playSave(nextSave, exclude);
+
+    // Hold — bumper plays its body while the next fragment buffers silently.
+    if (bumperPlaying) {
+      await new Promise<void>(r => setTimeout(r, BUMPER_HOLD_MS));
+      if (cancelled()) {
+        bumper!.pause(); bumper!.currentTime = 0;
+        setEngineAutoPlay(true);
+        return;
+      }
+    }
+
+    // Fragment is ready (buffered during hold). Enable autoPlay and start.
+    setEngineAutoPlay(true);
+    engineRef.current?.play();
+
+    // Let bumper's baked-in fade-out finish, then pause the element.
+    if (bumperPlaying && bumper) {
+      const b = bumper;
+      setTimeout(() => {
+        if (!cancelled()) { b.pause(); b.currentTime = 0; }
+      }, BUMPER_FADE_OUT_MS);
     }
   }, [assignBumperSrc, fetchNextSave, playSave]);
 
@@ -431,6 +451,7 @@ export default function RadioPlayer({
   const handleSkip = useCallback(() => {
     nearEndActiveRef.current = false;
     prefetchRef.current = null;
+    setEngineAutoPlay(true);
     bumperGenRef.current++;
     const b = bumperRef.current;
     if (b && !b.paused) { b.pause(); b.currentTime = 0; }
@@ -440,6 +461,7 @@ export default function RadioPlayer({
   const handleStop = useCallback(() => {
     nearEndActiveRef.current = false;
     prefetchRef.current = null;
+    setEngineAutoPlay(true);
     bumperGenRef.current++;
     const b = bumperRef.current;
     if (b && !b.paused) { b.pause(); b.currentTime = 0; }
@@ -484,6 +506,7 @@ export default function RadioPlayer({
       <FragmentRadioEngine
         ref={engineRef}
         save={current && isActive ? toEngineSave(current) : null}
+        autoPlay={engineAutoPlay}
         onPlaying={handlePlaying}
         onPause={handlePause}
         onNearEnd={handleNearEnd}

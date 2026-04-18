@@ -61,12 +61,24 @@ export interface ImpulsePlayback {
   endSec: number;
 }
 
+/** Answer fragment assigned to a pytania question (po_sesji token endpoint) */
+export interface PytaniaAnswerPlayback {
+  kind: 'pytania_answer';
+  sessionFragmentId: string;
+  sessionId: string;          // session_template_id
+  title: string;
+  fragmentTitle?: string;
+  startSec: number;
+  endSec: number;
+}
+
 export type ActivePlayback =
   | VodPlayback
   | RecordingPlayback
   | FragmentPlayback
   | RecordingFragmentPlayback
-  | ImpulsePlayback;
+  | ImpulsePlayback
+  | PytaniaAnswerPlayback;
 
 // ── Legacy alias for call sites that haven't migrated yet ─────────────────
 // VodGrid and StickyPlayer can keep using ActiveSession until they adopt ActivePlayback.
@@ -117,6 +129,13 @@ export function playbackToEngineProps(p: ActivePlayback): ActiveSession {
         tokenEndpoint: '/api/video/fragment-token',
         title: p.fragmentTitle ?? p.title,
       };
+    case 'pytania_answer':
+      return {
+        playbackId: p.sessionFragmentId,
+        idFieldName: 'sessionFragmentId' as 'sessionId',
+        tokenEndpoint: '/api/pytania/answer-token',
+        title: p.fragmentTitle ?? p.title,
+      };
   }
 }
 
@@ -128,7 +147,8 @@ export function playbackToAnalyticsContext(p: ActivePlayback): AnalyticsContext 
     case 'fragment_review':          return 'fragment_review';
     case 'fragment_radio':           return 'fragment_radio';
     case 'fragment_recording_review':return 'fragment_recording_review';
-    case 'impulse':       return 'fragment_review'; // impulse analytics = fragment_review
+    case 'impulse':       return 'fragment_review';
+    case 'pytania_answer': return 'fragment_review';
   }
 }
 
@@ -139,6 +159,7 @@ export function playbackToRange(p: ActivePlayback): { startSec: number; endSec: 
     case 'fragment_radio':
     case 'fragment_recording_review':
     case 'impulse':
+    case 'pytania_answer':
       return { startSec: p.startSec, endSec: p.endSec };
     default:
       return null;

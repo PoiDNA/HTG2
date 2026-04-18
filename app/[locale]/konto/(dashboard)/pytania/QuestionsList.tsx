@@ -42,7 +42,7 @@ export default function QuestionsList({ initialItems, initialSort, initialStatus
 
   function playFragment(fragment: AnswerFragment, questionTitle: string) {
     startPlayback({
-      kind: 'impulse',
+      kind: 'pytania_answer',
       sessionFragmentId: fragment.id,
       sessionId: fragment.session_template_id,
       title: fragment.session_title,

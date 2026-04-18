@@ -62,10 +62,25 @@ export async function GET(req: NextRequest) {
     : { data: [] };
   const likedSet = new Set((userLikes ?? []).map(l => l.question_id));
 
+  // Fetch fragments for resolved questions
+  const fragmentIds = [...new Set(
+    (data ?? [])
+      .filter(q => q.status === 'rozpoznane' && q.answer_fragment_id)
+      .map(q => q.answer_fragment_id as string)
+  )];
+  const { data: fragments } = fragmentIds.length > 0
+    ? await supabase
+        .from('session_fragments')
+        .select('id, title, start_sec, end_sec')
+        .in('id', fragmentIds)
+    : { data: [] };
+  const fragmentMap = new Map((fragments ?? []).map(f => [f.id, f]));
+
   const items = (data ?? []).map(q => ({
     ...q,
     author: profileMap.get(q.author_id) ?? null,
     user_has_liked: likedSet.has(q.id),
+    answer_fragment: q.answer_fragment_id ? (fragmentMap.get(q.answer_fragment_id) ?? null) : null,
   }));
 
   return NextResponse.json({ items, total: items.length });

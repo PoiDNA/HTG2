@@ -120,6 +120,14 @@ export const FragmentRadioEngine = forwardRef<
   const rangeRef = useRef<{ startSec: number; endSec: number } | null>(null);
   /** Guards onEnded — fire at most once per save. */
   const endedFiredRef = useRef(false);
+  /**
+   * Queued play intent: set by fetchTokenAndAttach (auto-play each new fragment)
+   * or by the imperative play() handle when audio isn't ready yet.
+   * Consumed in onLoadedMetadata / canplay — whichever fires first.
+   * This lets play() be called from user-gesture context (RadioPlayer button)
+   * and fulfilled later when media is ready, satisfying autoplay policies.
+   */
+  const pendingPlayRef = useRef(false);
 
   // Stable callbacks via refs so effect doesn't re-run when parent rerenders
   const cbRef = useRef({ onReady, onPlaying, onPause, onEnded, onError, onTimeUpdate });
@@ -131,6 +139,7 @@ export const FragmentRadioEngine = forwardRef<
   void forceRender; // satisfy linter — we only use it via state updates
 
   const teardown = useCallback(() => {
+    pendingPlayRef.current = false;
     if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     const audio = audioRef.current;
@@ -181,6 +190,12 @@ export const FragmentRadioEngine = forwardRef<
 
     rangeRef.current = { startSec: s.startSec, endSec: s.endSec };
     endedFiredRef.current = false;
+    // Queue auto-play for when loadedmetadata fires.
+    // This intent is set from within an async chain that originated from a
+    // user gesture (RadioPlayer play button → fetchNext → playSave → save
+    // prop change → fetchTokenAndAttach). Chrome honours the activation for
+    // several seconds; setting the flag here means loadedmetadata fulfils it.
+    pendingPlayRef.current = true;
 
     // Attach media — HLS.js for Chromium; native <audio> for Safari/direct.
     const useHls = token.deliveryType === 'hls' && Hls.isSupported();
@@ -253,19 +268,21 @@ export const FragmentRadioEngine = forwardRef<
     const audio = audioRef.current;
     if (!audio) return;
 
+    const tryPlay = () => {
+      if (!pendingPlayRef.current) return;
+      pendingPlayRef.current = false;
+      audio.play().catch(() => {
+        // Autoplay blocked — RadioPlayer's play button will resume.
+      });
+    };
+
     const onLoadedMetadata = () => {
       const r = rangeRef.current;
       if (r && isFinite(audio.duration)) {
         try { audio.currentTime = r.startSec; } catch { /* ignore */ }
       }
       cbRef.current.onReady?.();
-      // Try to start playback immediately — if autoplay is blocked the parent
-      // can show a "press play" state via onError path, but in our flow the
-      // first play() is always user-gesture-driven (RadioPlayer start button),
-      // so subsequent token refreshes inherit the same activation.
-      audio.play().catch(() => {
-        // Autoplay blocked. Parent handles — user will click play.
-      });
+      tryPlay();
     };
     const onPlayingEvt = () => {
       cbRef.current.onPlaying?.();
@@ -291,7 +308,12 @@ export const FragmentRadioEngine = forwardRef<
       cbRef.current.onError?.('Błąd audio.');
     };
 
+    // canplay fires on Safari native HLS sometimes before loadedmetadata.
+    // Both handlers call tryPlay() which is guarded by pendingPlayRef.
+    const onCanPlay = () => tryPlay();
+
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    audio.addEventListener('canplay', onCanPlay);
     audio.addEventListener('playing', onPlayingEvt);
     audio.addEventListener('pause', onPauseEvt);
     audio.addEventListener('ended', onEndedEvt);
@@ -300,6 +322,7 @@ export const FragmentRadioEngine = forwardRef<
 
     return () => {
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      audio.removeEventListener('canplay', onCanPlay);
       audio.removeEventListener('playing', onPlayingEvt);
       audio.removeEventListener('pause', onPauseEvt);
       audio.removeEventListener('ended', onEndedEvt);
@@ -354,7 +377,13 @@ export const FragmentRadioEngine = forwardRef<
     play: async () => {
       const audio = audioRef.current;
       if (!audio) return;
-      try { await audio.play(); } catch { /* ignore */ }
+      if (audio.readyState >= 2) {
+        // Media has enough data — play immediately (e.g. user un-pauses).
+        try { await audio.play(); } catch { /* ignore */ }
+      } else {
+        // Not ready yet — queue play intent for loadedmetadata / canplay.
+        pendingPlayRef.current = true;
+      }
     },
     pause: () => {
       audioRef.current?.pause();
@@ -375,15 +404,19 @@ export const FragmentRadioEngine = forwardRef<
     },
   }), [teardown]);
 
-  // Hidden audio element — RadioPlayer provides the visible UI
+  // Hidden audio element — RadioPlayer provides the visible UI.
+  // NOTE: crossOrigin is intentionally absent. We have no Web Audio graph
+  // (no createMediaElementSource), so CORS headers are irrelevant for hls.js
+  // (which uses MSE / blob URLs that are always same-origin). For Safari native
+  // HLS, setting crossOrigin="anonymous" would trigger a CORS preflight on the
+  // Bunny CDN manifest URL — and if the CDN doesn't respond with the right
+  // Access-Control-Allow-Origin, Safari refuses to load the media entirely.
   return (
     // eslint-disable-next-line jsx-a11y/media-has-caption
     <audio
       ref={audioRef}
       preload="auto"
       playsInline
-      // Bunny CDN may serve cross-origin; required for native HLS on Safari
-      crossOrigin="anonymous"
       style={{ display: 'none' }}
     />
   );

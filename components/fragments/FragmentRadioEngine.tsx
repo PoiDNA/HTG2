@@ -336,7 +336,7 @@ export const FragmentRadioEngine = forwardRef<
     // How many seconds before endSec to fire onNearEnd (must match
     // RadioPlayer's BUMPER_FADE_IN_MS / 1000 so bumper reaches full
     // volume exactly when the fragment ends).
-    const NEAR_END_OFFSET_SEC = 3;
+    const NEAR_END_OFFSET_SEC = 5;
 
     const onTimeUpdateEvt = () => {
       const r = rangeRef.current;

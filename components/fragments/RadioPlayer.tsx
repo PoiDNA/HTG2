@@ -114,9 +114,9 @@ function rampVolume(
 const NON_REPEAT_WINDOW = 5;
 
 // Bumper timing constants (total = FADE_IN + HOLD + FADE_OUT = 15s)
-const BUMPER_FADE_IN_MS  = 3_000;
+const BUMPER_FADE_IN_MS  = 5_000;
 const BUMPER_HOLD_MS     = 9_000;
-const BUMPER_FADE_OUT_MS = 3_000;
+const BUMPER_FADE_OUT_MS = 5_000;
 
 // ── Bumper file pool ──────────────────────────────────────────────────────────
 // 23 pause files served from CDN. We pick at random while avoiding recent

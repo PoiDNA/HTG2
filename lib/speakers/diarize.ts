@@ -66,7 +66,11 @@ function mimeFromUrl(url: string): { mime: string; ext: string } {
  * HLS (m3u8) wymaga preprocessingu — ten helper odrzuca m3u8 jawnie,
  * PR 6 dla backfillu doda ścieżkę HLS → single MP3.
  */
-export async function fetchAudio(url: string): Promise<ArrayBuffer> {
+export async function fetchAudio(url: string): Promise<{
+  buffer: ArrayBuffer;
+  contentType: string | null;
+  firstBytesHex: string;
+}> {
   const { ext } = mimeFromUrl(url);
   if (ext === 'm3u8') {
     throw new DiarizeError(
@@ -81,7 +85,13 @@ export async function fetchAudio(url: string): Promise<ArrayBuffer> {
       `HTTP ${res.status} przy pobieraniu audio`,
     );
   }
-  return await res.arrayBuffer();
+  const buffer = await res.arrayBuffer();
+  const contentType = res.headers.get('content-type');
+  const firstBytes = new Uint8Array(buffer.slice(0, 16));
+  const firstBytesHex = Array.from(firstBytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return { buffer, contentType, firstBytesHex };
 }
 
 /**
@@ -94,8 +104,12 @@ export async function diarizeAudio(params: {
   audioBuffer: ArrayBuffer;
   sourceUrl: string;
   language?: string | null;
+  /** Override MIME (np. z signed.mimeType). Fallback: inferencja z URL. */
+  explicitMime?: string | null;
+  /** Override extension dla nazwy pliku uploadowanego do OpenAI. */
+  explicitExt?: string | null;
 }): Promise<DiarizeResult> {
-  const { audioBuffer, sourceUrl, language } = params;
+  const { audioBuffer, sourceUrl, language, explicitMime, explicitExt } = params;
 
   if (audioBuffer.byteLength > MAX_FILE_SIZE) {
     throw new DiarizeError(
@@ -109,13 +123,21 @@ export async function diarizeAudio(params: {
     throw new DiarizeError('no_api_key', 'OPENAI_API_KEY nie jest skonfigurowany');
   }
 
-  const { mime, ext } = mimeFromUrl(sourceUrl);
+  const inferred = mimeFromUrl(sourceUrl);
+  const mime = explicitMime ?? inferred.mime;
+  const ext = explicitExt ?? inferred.ext;
   const blob = new Blob([audioBuffer], { type: mime });
   const fd = new FormData();
   fd.append('file', blob, `session.${ext}`);
   fd.append('model', DIARIZE_MODEL);
   fd.append('response_format', 'diarized_json');
   if (language) fd.append('language', language);
+  console.info('[diarize] upload', {
+    bytes: audioBuffer.byteLength,
+    mime,
+    ext,
+    filename: `session.${ext}`,
+  });
 
   let res: Response;
   try {

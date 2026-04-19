@@ -76,11 +76,30 @@ export async function POST(req: NextRequest, { params }: Params) {
   // 2. Fetch + diarize.
   const start = Date.now();
   try {
-    const audio = await fetchAudio(signed.url);
+    const fetched = await fetchAudio(signed.url);
+    console.info('[diarize] fetched', {
+      sessionId,
+      bytes: fetched.buffer.byteLength,
+      contentType: fetched.contentType,
+      firstBytesHex: fetched.firstBytesHex,
+      bunnyVideoId: tmpl.bunny_video_id,
+      deliveryType: signed.deliveryType,
+      signedMime: signed.mimeType,
+    });
+
+    // Wybór ext/mime z priorytetem: signMedia → bunny_video_id path → URL
+    const pathExt = (tmpl.bunny_video_id ?? '').toLowerCase().split('.').pop() ?? '';
+    const explicitExt = ['m4a', 'mp4', 'mp3', 'm4v', 'wav', 'ogg', 'webm'].includes(pathExt)
+      ? (pathExt === 'm4v' ? 'mp4' : pathExt)
+      : null;
+    const explicitMime = signed.mimeType;
+
     const result = await diarizeAudio({
-      audioBuffer: audio,
+      audioBuffer: fetched.buffer,
       sourceUrl: signed.url,
       language: body.language ?? 'pl',
+      explicitMime,
+      explicitExt,
     });
 
     // 3. Write import + segments.

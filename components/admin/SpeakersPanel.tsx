@@ -68,7 +68,7 @@ export default function SpeakersPanel({
   }, [load]);
 
   const runDiarize = useCallback(async () => {
-    if (!confirm('Uruchomić diarize (OpenAI gpt-4o-transcribe-diarize) dla tej sesji? Proces może potrwać kilka minut.')) return;
+    if (!confirm('Wygenerować transkrypcję dla tej sesji? Proces może potrwać kilka minut.')) return;
     setDiarizing(true);
     setDiarizeMsg(null);
     try {
@@ -124,7 +124,7 @@ export default function SpeakersPanel({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/20 hover:bg-htg-sage/30 text-htg-sage rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
             >
               {diarizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              {diarizing ? 'Diarize w toku…' : 'Uruchom diarize (OpenAI)'}
+              {diarizing ? 'Generowanie transkrypcji…' : 'Pokaż transkrypcję'}
             </button>
             {diarizeMsg && (
               <p className={`text-[11px] ${diarizeMsg.startsWith('Gotowe') ? 'text-htg-sage' : 'text-red-400'}`}>

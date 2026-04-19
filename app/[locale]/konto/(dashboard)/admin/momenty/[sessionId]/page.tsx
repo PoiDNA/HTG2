@@ -1,7 +1,7 @@
 import { setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n-config';
 import { redirect } from '@/i18n-config';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdminOrEditor } from '@/lib/admin/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Bookmark, BookOpen, AlertTriangle } from 'lucide-react';
@@ -15,7 +15,7 @@ export default async function AdminFragmentEditorPage({ params }: Params) {
   const { locale, sessionId } = await params;
   setRequestLocale(locale);
 
-  const result = await requireAdmin();
+  const result = await requireAdminOrEditor();
   if ('error' in result) return redirect({ href: '/konto', locale });
 
   const db = createSupabaseServiceRole();
@@ -44,15 +44,27 @@ export default async function AdminFragmentEditorPage({ params }: Params) {
     description_i18n?: Record<string, string>;
     is_impulse?: boolean;
     impulse_order?: number | null;
+    tags?: string[];
   }[] = [];
 
   let migrationsNeeded = false;
 
-  const { data: fragsData, error: fragsError } = await db
+  let { data: fragsData, error: fragsError } = await db
     .from('session_fragments')
-    .select('id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n, is_impulse, impulse_order')
+    .select('id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n, is_impulse, impulse_order, tags')
     .eq('session_template_id', sessionId)
     .order('ordinal', { ascending: true });
+
+  // Fallback: migracja 093 (tags) jeszcze nie uruchomiona — czytaj bez tags.
+  if (fragsError?.code === '42703') {
+    const retry = await db
+      .from('session_fragments')
+      .select('id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n, is_impulse, impulse_order')
+      .eq('session_template_id', sessionId)
+      .order('ordinal', { ascending: true });
+    fragsData = retry.data as typeof fragsData;
+    fragsError = retry.error;
+  }
 
   if (fragsError?.code === '42P01') {
     migrationsNeeded = true;
@@ -65,6 +77,7 @@ export default async function AdminFragmentEditorPage({ params }: Params) {
       description_i18n: (f.description_i18n as Record<string, string>) ?? undefined,
       is_impulse: f.is_impulse ?? false,
       impulse_order: (f.impulse_order as number | null) ?? null,
+      tags: Array.isArray(f.tags) ? (f.tags as string[]) : [],
     }));
   }
 

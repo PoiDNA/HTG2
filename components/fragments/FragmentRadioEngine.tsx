@@ -42,6 +42,12 @@ export interface FragmentRadioSave {
   fragmentTitle: string;
   /** Optional share-token scenario (not used today, reserved for future) */
   shareToken?: string;
+  /**
+   * When present, this is a pytania-answer fragment (not a user save).
+   * The engine uses /api/pytania/answer-token with sessionFragmentId instead
+   * of /api/video/fragment-token with saveId.
+   */
+  sessionFragmentId?: string;
 }
 
 export interface FragmentRadioEngineProps {
@@ -199,15 +205,17 @@ export const FragmentRadioEngine = forwardRef<
 
     let token: TokenResponse;
     try {
-      const res = await fetch('/api/video/fragment-token', {
+      // Pytania-answer fragments use a dedicated token endpoint
+      const isPytania = Boolean(s.sessionFragmentId);
+      const tokenUrl = isPytania ? '/api/pytania/answer-token' : '/api/video/fragment-token';
+      const tokenBody = isPytania
+        ? { sessionFragmentId: s.sessionFragmentId, deviceId }
+        : { saveId: s.saveId, deviceId, radio: true, ...(s.shareToken ? { shareToken: s.shareToken } : {}) };
+
+      const res = await fetch(tokenUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          saveId: s.saveId,
-          deviceId,
-          radio: true,
-          ...(s.shareToken ? { shareToken: s.shareToken } : {}),
-        }),
+        body: JSON.stringify(tokenBody),
         signal: abort.signal,
       });
       token = await res.json();

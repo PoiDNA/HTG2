@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Radio, Star, Bookmark, ListMusic } from 'lucide-react';
+import { Radio, Star, Bookmark, ListMusic, CheckCircle } from 'lucide-react';
 import RadioPlayer from '@/components/fragments/RadioPlayer';
 
 interface Category {
@@ -23,6 +23,7 @@ interface Props {
 type ScopeOption =
   | { id: 'all';       label: string; icon: React.ReactNode }
   | { id: 'favorites'; label: string; icon: React.ReactNode }
+  | { id: 'pytania';   label: string; icon: React.ReactNode }
   | { id: string;      label: string; icon: React.ReactNode; categoryId: string }
   | { id: string;      label: string; icon: React.ReactNode; sessionId: string };
 
@@ -30,8 +31,9 @@ export default function RadioPageClient({ categories, sessions }: Props) {
   const [activeScope, setActiveScope] = useState<string>('all');
 
   const baseOptions: ScopeOption[] = [
-    { id: 'all',       label: 'Wszystkie Momenty', icon: <Radio className="w-3.5 h-3.5" /> },
-    { id: 'favorites', label: '⭐ Ulubione',        icon: <Star  className="w-3.5 h-3.5" /> },
+    { id: 'all',       label: 'Wszystkie Momenty',    icon: <Radio         className="w-3.5 h-3.5" /> },
+    { id: 'favorites', label: '⭐ Ulubione',           icon: <Star          className="w-3.5 h-3.5" /> },
+    { id: 'pytania',   label: '✅ Pytania Rozpoznane', icon: <CheckCircle   className="w-3.5 h-3.5 text-emerald-500" /> },
     ...categories.map(cat => ({
       id: `cat:${cat.id}`,
       label: cat.name,
@@ -50,14 +52,12 @@ export default function RadioPageClient({ categories, sessions }: Props) {
   const active =
     [...baseOptions, ...sessionOptions].find(s => s.id === activeScope) ?? baseOptions[0];
 
-  const scope: 'all' | 'favorites' | 'category' | 'session' =
-    active.id === 'all'
-      ? 'all'
-      : active.id === 'favorites'
-      ? 'favorites'
-      : 'sessionId' in active
-      ? 'session'
-      : 'category';
+  const scope: 'all' | 'favorites' | 'category' | 'session' | 'pytania' =
+    active.id === 'all'       ? 'all'
+    : active.id === 'favorites' ? 'favorites'
+    : active.id === 'pytania'   ? 'pytania'
+    : 'sessionId' in active     ? 'session'
+    : 'category';
 
   const scopeId =
     'categoryId' in active

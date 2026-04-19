@@ -37,9 +37,11 @@ interface RadioSave {
   custom_end_sec: number | null;
   custom_title: string | null;
   session_templates: { id: string; title: string; slug: string };
+  /** Set by radio/next when scope='pytania' — signals pytania-answer-token path */
+  pytaniaSessionFragmentId?: string;
 }
 
-type RadioScope = 'all' | 'favorites' | 'category' | 'session';
+type RadioScope = 'all' | 'favorites' | 'category' | 'session' | 'pytania';
 type RadioStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
 
 // ---------------------------------------------------------------------------
@@ -68,6 +70,8 @@ function toEngineSave(save: RadioSave): EngineFragmentSave {
     endSec,
     sessionTitle: save.session_templates.title,
     fragmentTitle: getSaveTitle(save),
+    // Pass sessionFragmentId so the engine uses pytania-answer-token
+    ...(save.pytaniaSessionFragmentId ? { sessionFragmentId: save.pytaniaSessionFragmentId } : {}),
   };
 }
 

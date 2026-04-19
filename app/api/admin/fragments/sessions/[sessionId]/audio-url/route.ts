@@ -7,20 +7,13 @@ import { signMedia } from '@/lib/media-signing';
  * GET /api/admin/fragments/sessions/[sessionId]/audio-url
  *
  * Zwraca podpisany URL do audio sesji dla admin/editor.
- * Obsługuje wszystkie 3 ścieżki dystrybucji (signMedia):
- *   - backup_storage_path (HTG2 Pull Zone — direct audio)
- *   - bunny_video_id + bunny_library_id (Bunny Stream HLS)
- *   - bunny_video_id (Private CDN — direct audio)
+ *
+ * UWAGA: session_templates nie mają backup_storage_path (to kolumna
+ * booking_recordings). Dla sesji bibliotecznych źródła to:
+ *   - bunny_video_id + bunny_library_id → Bunny Stream HLS
+ *   - bunny_video_id (sam) → Private CDN direct
  *
  * TTL 15 min.
- *
- * Response: {
- *   url: string,
- *   deliveryType: 'hls' | 'direct',
- *   mimeType: string | null,
- *   peaksUrl: string | null,
- *   durationSec: number | null
- * }
  */
 
 type Params = { params: Promise<{ sessionId: string }> };
@@ -34,11 +27,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const { data, error } = await db
     .from('session_templates')
-    .select('id, bunny_video_id, bunny_library_id, backup_storage_path, waveform_peaks_url, duration_minutes')
+    .select('id, bunny_video_id, bunny_library_id, waveform_peaks_url, duration_minutes')
     .eq('id', sessionId)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
+    console.error('[admin/audio-url] session_templates query failed', { sessionId, error });
+    return NextResponse.json({ error: `DB error: ${error.message}` }, { status: 500 });
+  }
+
+  if (!data) {
     return NextResponse.json({ error: 'Session not found' }, { status: 404 });
   }
 
@@ -46,14 +44,17 @@ export async function GET(_req: NextRequest, { params }: Params) {
     {
       bunny_video_id: data.bunny_video_id,
       bunny_library_id: data.bunny_library_id,
-      backup_storage_path: data.backup_storage_path,
+      backup_storage_path: null,
     },
     900,
   );
 
   if (!signed) {
     return NextResponse.json(
-      { error: 'Session has no media source (brak bunny_video_id i backup_storage_path)' },
+      {
+        error:
+          'Sesja nie ma źródła audio — brak bunny_video_id. Wgraj nagranie do Bunny Stream i uzupełnij session_templates.bunny_video_id.',
+      },
       { status: 422 },
     );
   }

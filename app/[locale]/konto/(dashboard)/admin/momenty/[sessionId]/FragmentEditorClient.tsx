@@ -8,6 +8,7 @@ import {
 import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
 import SessionAudioPlayer, { type SessionAudioPlayerHandle } from '@/components/admin/SessionAudioPlayer';
 import SpeakersPanel from '@/components/admin/SpeakersPanel';
+import { fragmentText, type SpeakerSegment, type SpeakersResponse } from '@/lib/speakers/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -186,7 +187,17 @@ export default function FragmentEditorClient({
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [currentSec, setCurrentSec] = useState(0);
+  const [speakerSegments, setSpeakerSegments] = useState<SpeakerSegment[]>([]);
   const playerRef = useRef<SessionAudioPlayerHandle | null>(null);
+
+  const handleSpeakerSeek = useCallback((sec: number) => {
+    playerRef.current?.seekTo(sec);
+  }, []);
+
+  const handleSpeakersData = useCallback((data: SpeakersResponse) => {
+    setSpeakerSegments(data.segments);
+  }, []);
 
   const selectedIdxRef = useRef<number | null>(null);
   useEffect(() => { selectedIdxRef.current = selectedIdx; }, [selectedIdx]);
@@ -391,10 +402,17 @@ export default function FragmentEditorClient({
         ref={playerRef}
         sessionId={sessionId}
         onDurationReady={setAudioDuration}
+        onTimeUpdate={setCurrentSec}
       />
 
-      {/* Mówcy — PR 1 empty state; lane overlay + transcript w PR 2 */}
-      <SpeakersPanel sessionId={sessionId} />
+      {/* Mówcy + transkrypcja */}
+      <SpeakersPanel
+        sessionId={sessionId}
+        durationSec={effectiveDuration}
+        currentSec={currentSec}
+        onSeek={handleSpeakerSeek}
+        onData={handleSpeakersData}
+      />
 
       {/* Visual timeline ruler */}
       <FragmentTimeline
@@ -419,6 +437,7 @@ export default function FragmentEditorClient({
                 idx={idx}
                 total={fragments.length}
                 isSelected={idx === selectedIdx}
+                speakerSegments={speakerSegments}
                 onUpdate={(patch) => updateFragment(idx, patch)}
                 onMoveUp={() => moveUp(idx)}
                 onMoveDown={() => moveDown(idx)}
@@ -454,6 +473,7 @@ interface RowProps {
   idx: number;
   total: number;
   isSelected: boolean;
+  speakerSegments: SpeakerSegment[];
   onUpdate: (patch: Partial<Fragment>) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -462,9 +482,12 @@ interface RowProps {
 }
 
 function FragmentRow({
-  frag, idx, total, isSelected,
+  frag, idx, total, isSelected, speakerSegments,
   onUpdate, onMoveUp, onMoveDown, onRemove, onSelect,
 }: RowProps) {
+  const [showTranscript, setShowTranscript] = useState(false);
+  const transcript = fragmentText(speakerSegments, frag.start_sec, frag.end_sec);
+  const hasTranscript = transcript.length > 0;
   const [startRaw, setStartRaw] = useState(fmtSec(frag.start_sec));
   const [endRaw, setEndRaw] = useState(fmtSec(frag.end_sec));
 
@@ -632,6 +655,44 @@ function FragmentRow({
           );
         })}
       </div>
+
+      {/* Transcript snippet dla Momentu */}
+      {hasTranscript && (
+        <div className="mt-3 ml-8">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowTranscript((v) => !v); }}
+            className="text-[11px] text-htg-fg-muted hover:text-htg-sage transition-colors"
+          >
+            {showTranscript ? '− Ukryj transkrypcję' : `+ Transkrypcja (${transcript.length} ${transcript.length === 1 ? 'wypowiedź' : 'wypowiedzi'})`}
+          </button>
+          {showTranscript && (
+            <div className="mt-2 space-y-2 text-xs bg-htg-surface/50 border border-htg-card-border rounded-lg p-3">
+              {transcript.map((p, i) => (
+                <p key={i} className="leading-snug">
+                  <span className="font-semibold text-htg-sage">
+                    {p.displayName ?? p.speakerKey}:
+                  </span>{' '}
+                  <span className="text-htg-fg-secondary">{p.text}</span>
+                </p>
+              ))}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const txt = transcript
+                    .map((p) => `${p.displayName ?? p.speakerKey}: ${p.text}`)
+                    .join('\n\n');
+                  navigator.clipboard?.writeText(txt).catch(() => {});
+                }}
+                className="text-[10px] text-htg-fg-muted hover:text-htg-sage transition-colors"
+              >
+                Kopiuj tekst
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* New / impulse badges */}
       {(isNew || frag.is_impulse) && (

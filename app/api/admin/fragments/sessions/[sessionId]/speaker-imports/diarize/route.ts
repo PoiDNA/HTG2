@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   // 1. Fetch session + signed audio URL (direct only — HLS w PR 6).
   const { data: tmpl, error: tmplErr } = await db
     .from('session_templates')
-    .select('id, bunny_video_id, bunny_library_id, duration_minutes')
+    .select('id, bunny_video_id, bunny_library_id, duration_minutes, media_version')
     .eq('id', sessionId)
     .maybeSingle();
 
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       bunny_video_id: tmpl.bunny_video_id,
       bunny_library_id: tmpl.bunny_library_id,
       backup_storage_path: null,
+      media_version: (tmpl.media_version as number | null) ?? 0,
     },
     900,
   );

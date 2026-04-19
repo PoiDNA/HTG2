@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         .from('session_fragments')
         .select(`
           id, start_sec, end_sec, session_template_id, is_impulse,
-          session_templates!inner(id, is_published, bunny_video_id, bunny_library_id, title)
+          session_templates!inner(id, is_published, bunny_video_id, bunny_library_id, title, media_version)
         `)
         .eq('id', sessionFragmentId)
         .eq('is_impulse', true)
@@ -164,6 +164,7 @@ export async function POST(request: NextRequest) {
         bunny_video_id: st.bunny_video_id,
         bunny_library_id: st.bunny_library_id,
         backup_storage_path: null,
+        media_version: (st.media_version as number | null) ?? 0,
       }, 3600);
 
       if (!signed) {
@@ -245,7 +246,7 @@ export async function POST(request: NextRequest) {
 
       const { data: session } = await db
         .from('session_templates')
-        .select('bunny_video_id, bunny_library_id')
+        .select('bunny_video_id, bunny_library_id, media_version')
         .eq('id', save.session_template_id)
         .single();
 
@@ -261,6 +262,7 @@ export async function POST(request: NextRequest) {
         bunny_video_id: session.bunny_video_id,
         bunny_library_id: session.bunny_library_id,
         backup_storage_path: null,
+        media_version: (session.media_version as number | null) ?? 0,
       }, 3600);
 
       if (!signed) {

@@ -10,9 +10,15 @@ import { usePlayer } from '@/lib/player-context';
  * Shows only when there's an active session. Persists across pages.
  * Mini progress bar (not waveform). Click title to scroll to content.
  */
+// Fragment/radio kinds have their own in-card play/pause controls; bar adds no value.
+const FRAGMENT_KINDS = new Set([
+  'fragment_review', 'fragment_recording_review',
+  'pytania_answer', 'impulse', 'fragment_radio',
+]);
+
 export default function StickyPlayer() {
   const t = useTranslations('Player');
-  const { activeSession, playerState, engineHandle, stopPlayback } = usePlayer();
+  const { activeSession, activePlayback, playerState, engineHandle, stopPlayback } = usePlayer();
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState<number | null>(null);
 
@@ -34,8 +40,9 @@ export default function StickyPlayer() {
     }
   }, [engineHandle]);
 
-  // Don't show if no active session
+  // Don't show if no active session, or if it's a fragment (has in-card controls)
   if (!activeSession) return null;
+  if (activePlayback && FRAGMENT_KINDS.has(activePlayback.kind)) return null;
 
   // Ended state — show "Sesja zakończona" briefly
   if (playerState.status === 'ended') {

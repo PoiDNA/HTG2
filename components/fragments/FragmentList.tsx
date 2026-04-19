@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Star, Trash2, Play, Lock, Bookmark,
+  Star, Trash2, Play, Pause, Lock, Bookmark,
   Mic, Music, Loader2, Plus, Radio, CheckCircle,
 } from 'lucide-react';
 import { Link } from '@/i18n-config';
@@ -148,6 +148,24 @@ function FragmentCard({ save, accessible, onPlay, onToggleFavorite, onDelete }: 
   const { startSec, endSec } = getSaveRange(save);
   const duration = endSec - startSec;
 
+  // Play/pause state
+  const { activePlayback, playerState, engineHandle } = usePlayer();
+  const isActive = accessible && (
+    (activePlayback?.kind === 'fragment_review' && (activePlayback as FragmentPlayback).saveId === save.id) ||
+    (activePlayback?.kind === 'fragment_recording_review' && (activePlayback as RecordingFragmentPlayback).saveId === save.id)
+  );
+  const isPlaying = isActive && playerState.status === 'playing';
+
+  function handlePlayPause() {
+    if (!accessible) return;
+    if (isActive) {
+      if (isPlaying) engineHandle?.pause();
+      else if (playerState.status === 'paused') engineHandle?.play();
+    } else {
+      onPlay();
+    }
+  }
+
   const handleDelete = async () => {
     if (!confirmDelete) { setConfirmDelete(true); return; }
     setDeleting(true);
@@ -182,17 +200,24 @@ function FragmentCard({ save, accessible, onPlay, onToggleFavorite, onDelete }: 
 
       {/* Actions */}
       <div className="flex items-center gap-2 mt-3">
-        {/* Play */}
+        {/* Play / Pause */}
         <button
-          onClick={onPlay}
+          onClick={handlePlayPause}
           disabled={!accessible}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
                      ${accessible
-                       ? 'bg-htg-sage text-white hover:bg-htg-sage/90'
+                       ? isPlaying
+                         ? 'bg-htg-sage/80 text-white hover:bg-htg-sage'
+                         : 'bg-htg-sage text-white hover:bg-htg-sage/90'
                        : 'bg-htg-surface text-htg-fg-muted cursor-not-allowed'}`}
         >
-          {accessible ? <Play className="w-3 h-3 fill-white" /> : <Lock className="w-3 h-3" />}
-          {accessible ? 'Odtwórz' : 'Brak dostępu'}
+          {!accessible ? (
+            <><Lock className="w-3 h-3" /> Brak dostępu</>
+          ) : isPlaying ? (
+            <><Pause className="w-3 h-3 fill-white" /> Pauza</>
+          ) : (
+            <><Play className="w-3 h-3 fill-white" /> Odtwórz</>
+          )}
         </button>
 
         {/* Favorite toggle */}
@@ -251,8 +276,25 @@ interface PytaniaCardProps {
 function PytaniaCard({ item, onPlay }: PytaniaCardProps) {
   const f = item.answer_fragment;
   const duration = f.end_sec - f.start_sec;
+
+  // Play/pause state
+  const { activePlayback, playerState, engineHandle } = usePlayer();
+  const isActive = activePlayback?.kind === 'pytania_answer' &&
+    (activePlayback as PytaniaAnswerPlayback).sessionFragmentId === f.id;
+  const isPlaying = isActive && playerState.status === 'playing';
+
+  function handlePlayPause() {
+    if (isActive) {
+      if (isPlaying) engineHandle?.pause();
+      else if (playerState.status === 'paused') engineHandle?.play();
+    } else {
+      onPlay();
+    }
+  }
+
   return (
-    <div className="group bg-htg-card border border-htg-card-border hover:border-emerald-300/50 rounded-xl p-4 transition-all">
+    <div className={`group bg-htg-card border rounded-xl p-4 transition-all
+                    ${isActive ? 'border-emerald-400/60' : 'border-htg-card-border hover:border-emerald-300/50'}`}>
       <div className="flex items-center gap-1.5 text-xs text-htg-fg-muted mb-1.5">
         <CheckCircle className="w-3 h-3 text-emerald-500" />
         {f.month_title ? `${f.month_title} · ` : ''}{f.session_title}
@@ -263,12 +305,15 @@ function PytaniaCard({ item, onPlay }: PytaniaCardProps) {
         <span className="ml-2 text-htg-fg-muted/60">({formatTime(duration)})</span>
       </p>
       <button
-        onClick={onPlay}
-        className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                   bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+        onClick={handlePlayPause}
+        className={`mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+                   ${isPlaying ? 'bg-emerald-700 text-white hover:bg-emerald-800' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
       >
-        <Play className="w-3 h-3 fill-white" />
-        Odtwórz odpowiedź
+        {isPlaying ? (
+          <><Pause className="w-3 h-3 fill-white" /> Pauza</>
+        ) : (
+          <><Play className="w-3 h-3 fill-white" /> Odtwórz</>
+        )}
       </button>
     </div>
   );

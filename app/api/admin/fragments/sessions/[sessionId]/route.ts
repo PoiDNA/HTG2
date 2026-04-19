@@ -23,6 +23,7 @@ import { isValidFragmentTag } from '@/lib/constants/fragment-tags';
  *   description_i18n?: Record<string,string>
  *   is_impulse?: boolean
  *   impulse_order?: number | null
+ *   is_slowo?: boolean
  *   tags?: string[]        // must be subset of FRAGMENT_TAGS
  * }
  */
@@ -31,7 +32,7 @@ type Params = { params: Promise<{ sessionId: string }> };
 
 const SELECT_COLS =
   'id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n, ' +
-  'is_impulse, impulse_order, tags, created_at, updated_at';
+  'is_impulse, impulse_order, is_slowo, tags, created_at, updated_at';
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const auth = await requireAdminOrEditor();
@@ -140,6 +141,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         description_i18n: f.description_i18n ?? {},
         is_impulse: f.is_impulse ?? false,
         impulse_order: f.impulse_order ?? null,
+        is_slowo: f.is_slowo ?? false,
         tags: (f.tags as string[] | undefined) ?? [],
         updated_at: new Date().toISOString(),
       })
@@ -163,6 +165,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       description_i18n: (f.description_i18n as object) ?? {},
       is_impulse: (f.is_impulse as boolean) ?? false,
       impulse_order: (f.impulse_order as number | null) ?? null,
+      is_slowo: (f.is_slowo as boolean) ?? false,
       tags: (f.tags as string[] | undefined) ?? [],
       created_by: auth.user.id,
     }));

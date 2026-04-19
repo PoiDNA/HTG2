@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown,
-  AlertTriangle, CheckCircle, Zap, Tag,
+  AlertTriangle, CheckCircle, Zap, Tag, BookOpen,
 } from 'lucide-react';
 import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
 import SessionAudioPlayer, { type SessionAudioPlayerHandle } from '@/components/admin/SessionAudioPlayer';
@@ -23,6 +23,8 @@ interface Fragment {
   /** Admin-curated impulse — appears in 🔥 Impuls for all users */
   is_impulse?: boolean;
   impulse_order?: number | null;
+  /** Staff-curated Słowo — appears in 📖 Słowo for all users */
+  is_slowo?: boolean;
   tags?: string[];
 }
 
@@ -617,6 +619,23 @@ function FragmentRow({
           <Zap className="w-4 h-4" />
         </button>
 
+        {/* Słowo toggle */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onUpdate({ is_slowo: !frag.is_slowo });
+          }}
+          title={frag.is_slowo ? 'Usuń ze Słowa' : 'Oznacz jako Słowo 📖'}
+          className={[
+            'p-1.5 rounded-lg transition-colors shrink-0',
+            frag.is_slowo
+              ? 'text-htg-warm bg-htg-warm/10 hover:bg-htg-warm/20'
+              : 'text-htg-fg-muted/40 hover:text-htg-warm hover:bg-htg-warm/10',
+          ].join(' ')}
+        >
+          <BookOpen className="w-4 h-4" />
+        </button>
+
         {/* Delete */}
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -694,15 +713,20 @@ function FragmentRow({
         </div>
       )}
 
-      {/* New / impulse badges */}
-      {(isNew || frag.is_impulse) && (
-        <div className="flex gap-2 mt-2 ml-8">
+      {/* New / impulse / slowo badges */}
+      {(isNew || frag.is_impulse || frag.is_slowo) && (
+        <div className="flex flex-wrap gap-2 mt-2 ml-8">
           {isNew && (
             <p className="text-xs text-htg-sage">Nowy — zostanie zapisany po kliknięciu &quot;Zapisz wszystko&quot;</p>
           )}
           {frag.is_impulse && (
             <p className="text-xs text-htg-lavender flex items-center gap-1">
               <Zap className="w-3 h-3" /> Impuls — widoczny w sekcji 🔥 dla wszystkich
+            </p>
+          )}
+          {frag.is_slowo && (
+            <p className="text-xs text-htg-warm flex items-center gap-1">
+              <BookOpen className="w-3 h-3" /> Słowo — widoczny w sekcji 📖 dla wszystkich
             </p>
           )}
         </div>

@@ -121,18 +121,18 @@ export async function POST(request: NextRequest) {
       const { data: fragment } = await db
         .from('session_fragments')
         .select(`
-          id, start_sec, end_sec, session_template_id, is_impulse,
+          id, start_sec, end_sec, session_template_id, is_impulse, is_slowo,
           session_templates!inner(id, is_published, bunny_video_id, bunny_library_id, title, media_version)
         `)
         .eq('id', sessionFragmentId)
-        .eq('is_impulse', true)
+        .or('is_impulse.eq.true,is_slowo.eq.true')
         .single();
 
       if (!fragment) {
         return NextResponse.json({
           allowed: false,
           title: 'Fragment niedostępny',
-          message: 'Impuls nie istnieje lub nie jest dostępny.',
+          message: 'Fragment nie istnieje lub nie jest dostępny.',
         });
       }
 

@@ -43,11 +43,17 @@ export interface FragmentRadioSave {
   /** Optional share-token scenario (not used today, reserved for future) */
   shareToken?: string;
   /**
-   * When present, this is a pytania-answer fragment (not a user save).
-   * The engine uses /api/pytania/answer-token with sessionFragmentId instead
-   * of /api/video/fragment-token with saveId.
+   * When present, this is a non-save fragment (pytania or slowo).
+   * Engine uses sessionFragmentId in the token body instead of saveId.
    */
   sessionFragmentId?: string;
+  /**
+   * Override the token endpoint. Defaults to:
+   *   - '/api/pytania/answer-token' when sessionFragmentId is set (pytania, legacy)
+   *   - '/api/video/fragment-token' otherwise
+   * Set explicitly for slowo fragments (also use fragment-token but with sessionFragmentId body).
+   */
+  tokenEndpoint?: string;
 }
 
 export interface FragmentRadioEngineProps {
@@ -205,10 +211,11 @@ export const FragmentRadioEngine = forwardRef<
 
     let token: TokenResponse;
     try {
-      // Pytania-answer fragments use a dedicated token endpoint
-      const isPytania = Boolean(s.sessionFragmentId);
-      const tokenUrl = isPytania ? '/api/pytania/answer-token' : '/api/video/fragment-token';
-      const tokenBody = isPytania
+      // Non-save fragments (pytania/slowo) use sessionFragmentId in body
+      const hasFragmentId = Boolean(s.sessionFragmentId);
+      const defaultUrl = hasFragmentId ? '/api/pytania/answer-token' : '/api/video/fragment-token';
+      const tokenUrl = s.tokenEndpoint ?? defaultUrl;
+      const tokenBody = hasFragmentId
         ? { sessionFragmentId: s.sessionFragmentId, deviceId }
         : { saveId: s.saveId, deviceId, radio: true, ...(s.shareToken ? { shareToken: s.shareToken } : {}) };
 

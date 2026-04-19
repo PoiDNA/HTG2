@@ -2,9 +2,9 @@ import { setRequestLocale } from 'next-intl/server';
 import { Link } from '@/i18n-config';
 import { redirect } from '@/i18n-config';
 import { locales } from '@/i18n-config';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdminOrEditor } from '@/lib/admin/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { Bookmark, BookOpen, ChevronRight, PenLine, CalendarDays } from 'lucide-react';
+import { Bookmark, BookOpen, ChevronRight, PenLine, CalendarDays, Users } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,7 @@ export default async function AdminMomentyPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const result = await requireAdmin();
+  const result = await requireAdminOrEditor();
   if ('error' in result) return redirect({ href: '/konto', locale });
 
   const db = createSupabaseServiceRole();
@@ -62,6 +62,18 @@ export default async function AdminMomentyPage({
     }
   }
 
+  // ── User saves per session_template — priorytet segmentacji ─────────────────
+  const saveCounts: Map<string, number> = new Map();
+  const { data: saveRows } = await db
+    .from('user_fragment_saves')
+    .select('session_template_id')
+    .not('session_template_id', 'is', null);
+
+  for (const row of saveRows ?? []) {
+    const sid = row.session_template_id as string;
+    saveCounts.set(sid, (saveCounts.get(sid) ?? 0) + 1);
+  }
+
   // ── Build grouped structure ──────────────────────────────────────────────────
   type SessionRow = {
     id: string;
@@ -79,16 +91,30 @@ export default async function AdminMomentyPage({
     sessions: SessionRow[];
   }> = [];
 
+  // Sort: najpierw sesje bez fragmentów, a wśród nich — najwięcej zapisów userów.
+  // Sesje już posegmentowane lądują na końcu grupy.
+  const byPriority = (a: SessionRow, b: SessionRow) => {
+    const ca = fragmentCounts.get(a.id) ?? 0;
+    const cb = fragmentCounts.get(b.id) ?? 0;
+    if ((ca === 0) !== (cb === 0)) return ca === 0 ? -1 : 1;
+    const sa = saveCounts.get(a.id) ?? 0;
+    const sb = saveCounts.get(b.id) ?? 0;
+    return sb - sa;
+  };
+
   for (const set of sets ?? []) {
-    const sessions = (set.set_sessions ?? [])
+    const sessions = ((set.set_sessions ?? [])
       .map((ss: any) => ss.session)
-      .filter(Boolean) as SessionRow[];
+      .filter(Boolean) as SessionRow[])
+      .sort(byPriority);
     sessions.forEach(s => setSessionIds.add(s.id));
     groups.push({ monthLabel: set.month_label, setTitle: set.title, sessions });
   }
 
   // Sessions not in any set
-  const orphanSessions = (allSessions ?? []).filter(s => !setSessionIds.has(s.id));
+  const orphanSessions = (allSessions ?? [])
+    .filter(s => !setSessionIds.has(s.id))
+    .sort(byPriority);
   if (orphanSessions.length > 0) {
     groups.push({ monthLabel: null, setTitle: null, sessions: orphanSessions });
   }
@@ -99,6 +125,8 @@ export default async function AdminMomentyPage({
 
   function SessionCard({ session }: { session: SessionRow }) {
     const count = fragmentCounts.get(session.id) ?? 0;
+    const saves = saveCounts.get(session.id) ?? 0;
+    const needsWork = count === 0 && saves > 0;
     const title = (session.title_i18n as Record<string, string> | null)?.pl
       || session.title
       || session.id;
@@ -111,7 +139,7 @@ export default async function AdminMomentyPage({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-htg-fg truncate">{title}</p>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                 session.is_published
                   ? 'bg-green-500/10 text-green-500'
@@ -119,10 +147,21 @@ export default async function AdminMomentyPage({
               }`}>
                 {session.is_published ? 'opublikowana' : 'szkic'}
               </span>
+              {needsWork && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                  priorytet
+                </span>
+              )}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-4 shrink-0">
+          {saves > 0 && (
+            <div className="flex items-center gap-1 text-htg-fg-muted" title={`${saves} zapisów userów`}>
+              <Users className="w-3.5 h-3.5" />
+              <span className="text-xs font-semibold tabular-nums">{saves}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <Bookmark className={`w-3.5 h-3.5 ${count > 0 ? 'text-htg-sage' : 'text-htg-fg-muted'}`} />
             <span className={`text-sm font-semibold tabular-nums ${count > 0 ? 'text-htg-sage' : 'text-htg-fg-muted'}`}>

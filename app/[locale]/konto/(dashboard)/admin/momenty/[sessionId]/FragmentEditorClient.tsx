@@ -3,8 +3,9 @@
 import { useState, useCallback } from 'react';
 import {
   Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown,
-  AlertTriangle, CheckCircle, Zap,
+  AlertTriangle, CheckCircle, Zap, Tag,
 } from 'lucide-react';
+import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ interface Fragment {
   /** Admin-curated impulse — appears in 🔥 Impuls for all users */
   is_impulse?: boolean;
   impulse_order?: number | null;
+  tags?: string[];
 }
 
 interface Props {
@@ -545,6 +547,35 @@ function FragmentRow({
         >
           <Trash2 className="w-4 h-4" />
         </button>
+      </div>
+
+      {/* Tag chips */}
+      <div className="mt-3 ml-8 flex items-center gap-2 flex-wrap">
+        <Tag className="w-3.5 h-3.5 text-htg-fg-muted shrink-0" />
+        {FRAGMENT_TAGS.map((tag) => {
+          const active = (frag.tags ?? []).includes(tag);
+          return (
+            <button
+              key={tag}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const current = new Set(frag.tags ?? []);
+                if (active) current.delete(tag);
+                else current.add(tag);
+                onUpdate({ tags: Array.from(current) as FragmentTag[] });
+              }}
+              className={[
+                'text-[11px] px-2 py-0.5 rounded-full border transition-colors',
+                active
+                  ? 'bg-htg-sage/20 border-htg-sage/40 text-htg-sage'
+                  : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:border-htg-card-border/80',
+              ].join(' ')}
+            >
+              {FRAGMENT_TAG_LABELS[tag].pl}
+            </button>
+          );
+        })}
       </div>
 
       {/* New / impulse badges */}

@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdminOrEditor } from '@/lib/admin/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { isValidFragmentTag } from '@/lib/constants/fragment-tags';
 
 /**
  * GET /api/admin/fragments/sessions/[sessionId]
- * List all fragments for a session (admin view — includes unpublished sessions).
+ * List all fragments for a session (admin/editor view — includes unpublished).
  *
  * POST /api/admin/fragments/sessions/[sessionId]
  * Diff-upsert: accepts desired full state; computes to_delete/to_update/to_insert.
  * IDs in the payload are STABLE — existing saves with session_fragment_id keep
  * their FK alive as long as the fragment ID is present in the desired array.
- * Removed fragment IDs cause saves to become orphan (FK SET NULL → orphan branch of CHECK).
  *
  * Body: { fragments: DesiredFragment[] }
  * DesiredFragment: {
- *   id?: string         // existing ID to update; omit for new fragments
- *   ordinal: number     // must be unique per session (DEFERRABLE)
+ *   id?: string
+ *   ordinal: number
  *   start_sec: number
  *   end_sec: number
  *   title: string
@@ -23,13 +23,18 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
  *   description_i18n?: Record<string,string>
  *   is_impulse?: boolean
  *   impulse_order?: number | null
+ *   tags?: string[]        // must be subset of FRAGMENT_TAGS
  * }
  */
 
 type Params = { params: Promise<{ sessionId: string }> };
 
+const SELECT_COLS =
+  'id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n, ' +
+  'is_impulse, impulse_order, tags, created_at, updated_at';
+
 export async function GET(_req: NextRequest, { params }: Params) {
-  const auth = await requireAdmin();
+  const auth = await requireAdminOrEditor();
   if ('error' in auth) return auth.error;
 
   const { sessionId } = await params;
@@ -37,7 +42,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const { data, error } = await db
     .from('session_fragments')
-    .select('id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n, is_impulse, impulse_order, created_at, updated_at')
+    .select(SELECT_COLS)
     .eq('session_template_id', sessionId)
     .order('ordinal', { ascending: true });
 
@@ -50,7 +55,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
-  const auth = await requireAdmin();
+  const auth = await requireAdminOrEditor();
   if ('error' in auth) return auth.error;
 
   const { sessionId } = await params;
@@ -60,7 +65,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'fragments array required' }, { status: 400 });
   }
 
-  // Validate desired fragments
   const desired = body.fragments as Array<Record<string, unknown>>;
   for (const f of desired) {
     if (typeof f.ordinal !== 'number' || f.ordinal < 1) {
@@ -72,11 +76,18 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!f.title || typeof f.title !== 'string') {
       return NextResponse.json({ error: 'Each fragment must have a title' }, { status: 400 });
     }
+    if (f.tags !== undefined) {
+      if (!Array.isArray(f.tags) || !f.tags.every(isValidFragmentTag)) {
+        return NextResponse.json(
+          { error: `Fragment "${f.title}" has invalid tags — allowed: see lib/constants/fragment-tags.ts` },
+          { status: 400 },
+        );
+      }
+    }
   }
 
   const db = createSupabaseServiceRole();
 
-  // Verify session exists
   const { data: session } = await db
     .from('session_templates')
     .select('id')
@@ -87,7 +98,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Session not found' }, { status: 404 });
   }
 
-  // Fetch current fragment IDs
   const { data: current } = await db
     .from('session_fragments')
     .select('id')
@@ -101,8 +111,6 @@ export async function POST(request: NextRequest, { params }: Params) {
   const toInsert = desired.filter((f) => !f.id || !currentIds.has(f.id as string));
   const toUpdate = desiredWithId.filter((f) => currentIds.has(f.id as string));
 
-  // ── Step 1: Delete removed fragments ─────────────────────────────────────
-  // Saves referencing these fragments become orphan (FK SET NULL).
   if (toDelete.length > 0) {
     const { error: delErr } = await db
       .from('session_fragments')
@@ -116,9 +124,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
   }
 
-  // ── Step 2: Update existing fragments ────────────────────────────────────
-  // Sort: shrinking fragments (smaller new end_sec) first, expanding ones last.
-  // Reduces risk of EXCLUDE constraint violations during range updates.
   const sortedUpdates = [...toUpdate].sort(
     (a, b) => (a.end_sec as number) - (b.end_sec as number),
   );
@@ -135,6 +140,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         description_i18n: f.description_i18n ?? {},
         is_impulse: f.is_impulse ?? false,
         impulse_order: f.impulse_order ?? null,
+        tags: (f.tags as string[] | undefined) ?? [],
         updated_at: new Date().toISOString(),
       })
       .eq('id', f.id as string)
@@ -146,7 +152,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
   }
 
-  // ── Step 3: Insert new fragments ─────────────────────────────────────────
   if (toInsert.length > 0) {
     const rows = toInsert.map((f) => ({
       session_template_id: sessionId,
@@ -158,6 +163,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       description_i18n: (f.description_i18n as object) ?? {},
       is_impulse: (f.is_impulse as boolean) ?? false,
       impulse_order: (f.impulse_order as number | null) ?? null,
+      tags: (f.tags as string[] | undefined) ?? [],
       created_by: auth.user.id,
     }));
 
@@ -171,10 +177,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
   }
 
-  // Return final state
   const { data: result } = await db
     .from('session_fragments')
-    .select('id, ordinal, start_sec, end_sec, title, title_i18n, description_i18n, is_impulse, impulse_order, updated_at')
+    .select(SELECT_COLS)
     .eq('session_template_id', sessionId)
     .order('ordinal', { ascending: true });
 

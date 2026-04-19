@@ -56,22 +56,6 @@ html:not(.dark) body {
   background-size: 250px 250px;
 }
 
-/* Gear CTA — Momenty / Sesje animations */
-@keyframes gear-cw  { to { transform: rotate( 360deg); } }
-@keyframes gear-ccw { to { transform: rotate(-360deg); } }
-
-.gear-spin-cw  { animation: gear-cw  18s linear infinite; transform-origin: center; transform-box: fill-box; }
-.gear-spin-ccw { animation: gear-ccw 18s linear infinite; transform-origin: center; transform-box: fill-box; }
-
-.gear-counter-cw  { animation: gear-ccw 18s linear infinite; transform-origin: center; }
-.gear-counter-ccw { animation: gear-cw  18s linear infinite; transform-origin: center; }
-
-/* Shared hover on .gear-pair speeds both gears */
-.gear-pair:hover .gear-spin-cw,
-.gear-pair:hover .gear-spin-ccw  { animation-duration: 9s; }
-.gear-pair:hover .gear-counter-cw,
-.gear-pair:hover .gear-counter-ccw { animation-duration: 9s; }
-
 /* Hide footer on login page */
 body.hide-footer footer {
   display: none;

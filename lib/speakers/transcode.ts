@@ -18,7 +18,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 export interface TranscodeOptions {
-  /** Bitrate docelowy w kbps. Default 24 (mowa mono). */
+  /** Bitrate docelowy w kbps. Default 64 (dobry balans jakość/rozmiar dla mowy). */
   bitrateKbps?: number;
   /** Sample rate. Default 22050 (wystarczające dla mowy). */
   sampleRate?: number;
@@ -40,7 +40,7 @@ export async function transcodeToLowMp3(
   inputExt: string,
   opts: TranscodeOptions = {},
 ): Promise<TranscodeResult> {
-  const bitrate = opts.bitrateKbps ?? 24;
+  const bitrate = opts.bitrateKbps ?? 64;
   const sampleRate = opts.sampleRate ?? 22050;
   const start = Date.now();
 
@@ -112,7 +112,7 @@ export async function transcodeAndChunkToMp3(
   chunkSeconds: number,
   opts: TranscodeOptions = {},
 ): Promise<TranscodeChunksResult> {
-  const bitrate = opts.bitrateKbps ?? 24;
+  const bitrate = opts.bitrateKbps ?? 64;
   const sampleRate = opts.sampleRate ?? 22050;
   const start = Date.now();
 

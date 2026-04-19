@@ -73,12 +73,22 @@ function hash(s: string): number {
   return Math.abs(h);
 }
 
+/**
+ * Zwraca klucz bazowy speakera — stripuje prefix chunka `c{n}_` dodawany
+ * przez backfill script żeby zachować unikalność między chunkami.
+ * c0_A → A, c1_B → B, spk_0 → spk_0 (bez prefiksu — niezmieniony).
+ */
+export function speakerBaseKey(speakerKey: string): string {
+  return speakerKey.replace(/^c\d+_/, '');
+}
+
 export function speakerColor(
   role: SpeakerRole | null,
   speakerKey: string,
 ): { bar: string; pill: string; ring: string } {
   if (role && role !== 'unknown') return ROLE_COLORS[role];
-  return FALLBACK_PALETTE[hash(speakerKey) % FALLBACK_PALETTE.length];
+  // Używaj klucza bazowego (strip prefix chunka) żeby c0_A i c1_A miały ten sam kolor.
+  return FALLBACK_PALETTE[hash(speakerBaseKey(speakerKey)) % FALLBACK_PALETTE.length];
 }
 
 /**

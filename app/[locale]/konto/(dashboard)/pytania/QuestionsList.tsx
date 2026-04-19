@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { ThumbsUp, MessageSquare, CheckCircle, Clock, ChevronRight, Play } from 'lucide-react';
+import {
+  ThumbsUp, MessageSquare, CheckCircle, Clock, ChevronRight,
+  Play, Pause, Bookmark, BookmarkCheck, X, Loader2,
+} from 'lucide-react';
 import { Link } from '@/i18n-config';
 import { usePlayer } from '@/lib/player-context';
+import type { PytaniaAnswerPlayback } from '@/lib/player-context';
 
 export interface AnswerFragment {
   id: string;
@@ -12,6 +16,8 @@ export interface AnswerFragment {
   end_sec: number;
   session_template_id: string;
   session_title: string;
+  /** Human-readable month name from monthly_sets.title, e.g. "Marzec 2026" */
+  month_title: string | null;
 }
 
 export interface QuestionItem {
@@ -27,6 +33,226 @@ export interface QuestionItem {
   answer_fragment: AnswerFragment | null;
 }
 
+// ---------------------------------------------------------------------------
+// AnswerFragmentCard
+// ---------------------------------------------------------------------------
+// Handles play/pause toggle and save-to-Moments per answer fragment.
+// Defined at module level (not inside QuestionsList) so it is stable
+// across renders and can manage its own local state safely.
+
+interface AnswerFragmentCardProps {
+  fragment: AnswerFragment;
+  questionTitle: string;
+}
+
+function AnswerFragmentCard({ fragment, questionTitle }: AnswerFragmentCardProps) {
+  const { activePlayback, playerState, engineHandle, startPlayback } = usePlayer();
+
+  // Is this specific fragment the one currently loaded in the player?
+  const isActive =
+    activePlayback?.kind === 'pytania_answer' &&
+    (activePlayback as PytaniaAnswerPlayback).sessionFragmentId === fragment.id;
+  const isThisPlaying = isActive && playerState.status === 'playing';
+
+  // Per-card save state
+  type SaveStatus = 'idle' | 'saving' | 'saved' | 'already' | 'noaccess' | 'error';
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [showSave, setShowSave] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [catId, setCatId] = useState('');
+  const [catsLoading, setCatsLoading] = useState(false);
+
+  // ── Play / Pause ──────────────────────────────────────────────────────────
+
+  function handlePlayPause() {
+    if (isActive) {
+      if (isThisPlaying) {
+        engineHandle?.pause();
+      } else if (playerState.status === 'paused') {
+        engineHandle?.play();
+      }
+      // 'loading' → ignore (player is busy)
+    } else {
+      startPlayback({
+        kind: 'pytania_answer',
+        sessionFragmentId: fragment.id,
+        sessionId: fragment.session_template_id,
+        title: fragment.session_title,
+        fragmentTitle: questionTitle,
+        startSec: fragment.start_sec,
+        endSec: fragment.end_sec,
+      });
+    }
+  }
+
+  // ── Save panel ────────────────────────────────────────────────────────────
+
+  async function openSaveMenu() {
+    if (saveStatus === 'saved' || saveStatus === 'already') return;
+    const next = !showSave;
+    setShowSave(next);
+    if (next && categories.length === 0 && !catsLoading) {
+      setCatsLoading(true);
+      try {
+        const res = await fetch('/api/fragments/categories');
+        if (res.ok) {
+          const data = await res.json();
+          setCategories(data.categories ?? []);
+        }
+      } finally {
+        setCatsLoading(false);
+      }
+    }
+  }
+
+  async function handleSave() {
+    setSaveStatus('saving');
+    try {
+      const body: Record<string, unknown> = {
+        session_template_id: fragment.session_template_id,
+        fragment_type: 'predefined',
+        session_fragment_id: fragment.id,
+        fallback_start_sec: fragment.start_sec,
+        fallback_end_sec: fragment.end_sec,
+      };
+      if (catId) body.category_id = catId;
+
+      const res = await fetch('/api/fragments/saves', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (res.status === 409) {
+        setSaveStatus('already');
+        setShowSave(false);
+      } else if (res.status === 403) {
+        setSaveStatus('noaccess');
+      } else if (res.ok) {
+        setSaveStatus('saved');
+        setShowSave(false);
+      } else {
+        setSaveStatus('error');
+      }
+    } catch {
+      setSaveStatus('error');
+    }
+  }
+
+  const isSaved = saveStatus === 'saved' || saveStatus === 'already';
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+  return (
+    <div className="mt-3 rounded-lg border border-emerald-200 overflow-hidden">
+      {/* Main row — clicking the row plays/pauses */}
+      <div className="flex items-center gap-3 bg-emerald-50 px-3 py-2.5 hover:bg-emerald-100/70 transition-colors">
+        {/* Play / Pause button */}
+        <button
+          onClick={handlePlayPause}
+          aria-label={isThisPlaying ? 'Pauza' : 'Odtwórz odpowiedź'}
+          className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+            isThisPlaying
+              ? 'bg-emerald-600 hover:bg-emerald-700'
+              : 'bg-emerald-500 hover:bg-emerald-600'
+          }`}
+        >
+          {isThisPlaying
+            ? <Pause className="w-3.5 h-3.5 text-white fill-white" />
+            : <Play className="w-3.5 h-3.5 text-white fill-white" />}
+        </button>
+
+        {/* Text info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider leading-none mb-1">
+            Odpowiedź w nagraniu
+          </p>
+          {fragment.month_title && (
+            <p className="text-[11px] text-emerald-600/70 leading-none mb-0.5">{fragment.month_title}</p>
+          )}
+          <p className="text-sm text-emerald-900 truncate font-medium">{fragment.session_title}</p>
+        </div>
+
+        {/* Timestamp */}
+        <span className="text-xs text-emerald-600 shrink-0 font-mono">{fmt(fragment.start_sec)}</span>
+
+        {/* Bookmark / save button */}
+        <button
+          onClick={openSaveMenu}
+          title={isSaved ? 'Zapisano w Momentach' : 'Zapisz jako Moment'}
+          aria-label={isSaved ? 'Zapisano w Momentach' : 'Zapisz jako Moment'}
+          className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+            isSaved
+              ? 'text-emerald-600 cursor-default'
+              : 'text-emerald-400 hover:text-emerald-700 hover:bg-emerald-200/60'
+          }`}
+        >
+          {isSaved
+            ? <BookmarkCheck className="w-4 h-4" />
+            : <Bookmark className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* Save panel — expanded below the main row */}
+      {showSave && (
+        <div className="bg-white border-t border-emerald-200 px-3 py-2">
+          {saveStatus === 'noaccess' ? (
+            <p className="text-xs text-amber-700">
+              Zapisywanie Momentów wymaga aktywnej subskrypcji Momentów.
+            </p>
+          ) : saveStatus === 'error' ? (
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-red-600 flex-1">Błąd zapisu. Spróbuj ponownie.</p>
+              <button onClick={() => { setSaveStatus('idle'); }} className="text-xs text-htg-fg-muted hover:text-htg-fg underline">
+                Resetuj
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-htg-fg-muted shrink-0">Kategoria:</span>
+              {catsLoading ? (
+                <span className="text-xs text-htg-fg-muted/60 flex-1 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Ładowanie…
+                </span>
+              ) : (
+                <select
+                  value={catId}
+                  onChange={e => setCatId(e.target.value)}
+                  className="flex-1 text-xs border border-htg-card-border rounded px-1.5 py-1 bg-htg-surface text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage min-w-0"
+                >
+                  <option value="">Bez kategorii</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={saveStatus === 'saving' || catsLoading}
+                className="text-xs px-3 py-1 bg-htg-sage text-white rounded hover:bg-htg-sage/90 disabled:opacity-50 transition-colors shrink-0 flex items-center gap-1"
+              >
+                {saveStatus === 'saving'
+                  ? <><Loader2 className="w-3 h-3 animate-spin" /> Zapis…</>
+                  : 'Zapisz'}
+              </button>
+              <button
+                onClick={() => setShowSave(false)}
+                aria-label="Zamknij"
+                className="text-htg-fg-muted/50 hover:text-htg-fg-muted shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// QuestionsList
+// ---------------------------------------------------------------------------
+
 interface Props {
   initialItems: QuestionItem[];
   initialSort: string;
@@ -38,19 +264,6 @@ export default function QuestionsList({ initialItems, initialSort, initialStatus
   const [sort, setSort] = useState(initialSort);
   const [status, setStatus] = useState(initialStatus);
   const [, startTransition] = useTransition();
-  const { startPlayback } = usePlayer();
-
-  function playFragment(fragment: AnswerFragment, questionTitle: string) {
-    startPlayback({
-      kind: 'pytania_answer',
-      sessionFragmentId: fragment.id,
-      sessionId: fragment.session_template_id,
-      title: fragment.session_title,
-      fragmentTitle: questionTitle,
-      startSec: fragment.start_sec,
-      endSec: fragment.end_sec,
-    });
-  }
 
   async function refetch(newSort: string, newStatus: string) {
     const params = new URLSearchParams({ sort: newSort });
@@ -99,7 +312,7 @@ export default function QuestionsList({ initialItems, initialSort, initialStatus
           ))}
         </div>
         <div className="flex rounded-lg border border-htg-card-border overflow-hidden text-sm">
-          {[['', 'Wszystkie'], ['oczekujace', 'Oczekujące'], ['rozpoznane', 'Rozpoznane']] .map(([val, label]) => (
+          {[['', 'Wszystkie'], ['oczekujace', 'Oczekujące'], ['rozpoznane', 'Rozpoznane']].map(([val, label]) => (
             <button
               key={val}
               onClick={() => changeStatus(val)}
@@ -151,23 +364,12 @@ export default function QuestionsList({ initialItems, initialSort, initialStatus
                 </Link>
               </div>
 
-              {/* Answer fragment — plays inline via global player */}
+              {/* Answer fragment — play/pause + save */}
               {q.status === 'rozpoznane' && q.answer_fragment && (
-                <button
-                  onClick={() => playFragment(q.answer_fragment!, q.title)}
-                  className="mt-3 w-full flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 hover:bg-emerald-100 transition-colors group text-left"
-                >
-                  <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 transition-colors">
-                    <Play className="w-4 h-4 text-white fill-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider leading-none mb-0.5">Odpowiedź w nagraniu</p>
-                    <p className="text-sm text-emerald-900 truncate">{q.answer_fragment.title}</p>
-                  </div>
-                  <span className="text-xs text-emerald-600 shrink-0">
-                    {Math.floor(q.answer_fragment.start_sec / 60)}:{String(Math.floor(q.answer_fragment.start_sec % 60)).padStart(2, '0')}
-                  </span>
-                </button>
+                <AnswerFragmentCard
+                  fragment={q.answer_fragment}
+                  questionTitle={q.title}
+                />
               )}
 
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-htg-card-border">

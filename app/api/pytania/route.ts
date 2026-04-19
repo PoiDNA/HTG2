@@ -71,14 +71,27 @@ export async function GET(req: NextRequest) {
   const { data: fragments } = fragmentIds.length > 0
     ? await supabase
         .from('session_fragments')
-        .select('id, title, start_sec, end_sec, session_template_id, session_templates(title)')
+        .select('id, title, start_sec, end_sec, session_template_id, session_templates(title, set_sessions(monthly_sets(title)))')
         .in('id', fragmentIds)
     : { data: [] };
   const fragmentMap = new Map((fragments ?? []).map(f => {
-    const sessionTitle = Array.isArray(f.session_templates)
-      ? (f.session_templates[0] as { title: string } | undefined)?.title ?? ''
-      : (f.session_templates as { title: string } | null)?.title ?? '';
-    return [f.id, { id: f.id, title: f.title, start_sec: f.start_sec, end_sec: f.end_sec, session_template_id: f.session_template_id, session_title: sessionTitle }];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const st: any = Array.isArray(f.session_templates) ? f.session_templates[0] : f.session_templates;
+    const sessionTitle: string = st?.title ?? '';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const firstSet: any = Array.isArray(st?.set_sessions) ? st.set_sessions[0] : st?.set_sessions;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ms: any = Array.isArray(firstSet?.monthly_sets) ? firstSet.monthly_sets[0] : firstSet?.monthly_sets;
+    const monthTitle: string | null = ms?.title ?? null;
+    return [f.id, {
+      id: f.id,
+      title: f.title,
+      start_sec: f.start_sec,
+      end_sec: f.end_sec,
+      session_template_id: f.session_template_id,
+      session_title: sessionTitle,
+      month_title: monthTitle,
+    }];
   }));
 
   const items = (data ?? []).map(q => ({

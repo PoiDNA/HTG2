@@ -102,14 +102,32 @@ export default async function PytaniaPage({
   const { data: fragments } = fragmentIds.length > 0
     ? await db
         .from('session_fragments')
-        .select('id, title, start_sec, end_sec, session_template_id, session_templates(title)')
+        // Also pull set_sessions → monthly_sets for the month label shown on each card.
+        // PostgREST returns set_sessions as an array (one-to-many from session_templates).
+        // We take the first set_session's monthly_set title as the display label.
+        .select('id, title, start_sec, end_sec, session_template_id, session_templates(title, set_sessions(monthly_sets(title)))')
         .in('id', fragmentIds)
     : { data: [] };
   const fragmentMap = new Map((fragments ?? []).map(f => {
-    const sessionTitle = Array.isArray(f.session_templates)
-      ? (f.session_templates[0] as { title: string } | undefined)?.title ?? ''
-      : (f.session_templates as { title: string } | null)?.title ?? '';
-    return [f.id, { id: f.id, title: f.title, start_sec: f.start_sec, end_sec: f.end_sec, session_template_id: f.session_template_id, session_title: sessionTitle }];
+    // session_templates can come back as object or single-element array
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const st: any = Array.isArray(f.session_templates) ? f.session_templates[0] : f.session_templates;
+    const sessionTitle: string = st?.title ?? '';
+    // set_sessions is an array; take first entry's monthly_sets
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const firstSet: any = Array.isArray(st?.set_sessions) ? st.set_sessions[0] : st?.set_sessions;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ms: any = Array.isArray(firstSet?.monthly_sets) ? firstSet.monthly_sets[0] : firstSet?.monthly_sets;
+    const monthTitle: string | null = ms?.title ?? null;
+    return [f.id, {
+      id: f.id,
+      title: f.title,
+      start_sec: f.start_sec,
+      end_sec: f.end_sec,
+      session_template_id: f.session_template_id,
+      session_title: sessionTitle,
+      month_title: monthTitle,
+    }];
   }));
 
   // User's likes

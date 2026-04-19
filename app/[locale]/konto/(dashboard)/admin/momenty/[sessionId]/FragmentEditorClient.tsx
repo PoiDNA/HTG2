@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle, Zap, Tag,
 } from 'lucide-react';
 import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
+import SessionAudioPlayer, { type SessionAudioPlayerHandle } from '@/components/admin/SessionAudioPlayer';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -183,6 +184,11 @@ export default function FragmentEditorClient({
   const [status, setStatus] = useState<{ kind: 'success' | 'error'; msg: string } | null>(null);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const playerRef = useRef<SessionAudioPlayerHandle | null>(null);
+
+  const selectedIdxRef = useRef<number | null>(null);
+  useEffect(() => { selectedIdxRef.current = selectedIdx; }, [selectedIdx]);
 
   const updateFragment = useCallback((idx: number, patch: Partial<Fragment>) => {
     setFragments(prev => {
@@ -245,6 +251,9 @@ export default function FragmentEditorClient({
 
   const handleSelectFragment = (idx: number) => {
     setSelectedIdx(idx);
+    // Seek audio player to fragment start
+    const frag = fragments[idx];
+    if (frag) playerRef.current?.seekTo(frag.start_sec);
     // Scroll the corresponding card into view
     document
       .querySelector(`[data-fragment-idx="${idx}"]`)
@@ -252,12 +261,47 @@ export default function FragmentEditorClient({
   };
 
   const handleTimelineClick = (sec: number) => {
+    playerRef.current?.seekTo(sec);
     addFragment(sec);
   };
 
+  // ── Keyboard: S = start here, E = end here ───────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 's' && e.key !== 'S' && e.key !== 'e' && e.key !== 'E') return;
+      const el = document.activeElement;
+      const inInput = el instanceof HTMLElement && (
+        el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable
+      );
+      if (inInput) return;
+      const t = playerRef.current?.getCurrentTime() ?? 0;
+      const isStart = e.key === 's' || e.key === 'S';
+      e.preventDefault();
+
+      const idx = selectedIdxRef.current;
+      if (isStart) {
+        if (idx === null) {
+          // Start new fragment at current time
+          addFragment(t);
+          // Select newly added fragment
+          setTimeout(() => setSelectedIdx(fragments.length), 0);
+        } else {
+          updateFragment(idx, { start_sec: Math.max(0, t) });
+        }
+      } else {
+        // End mark
+        if (idx === null) return;
+        updateFragment(idx, { end_sec: Math.max(t, (fragments[idx]?.start_sec ?? 0) + 0.1) });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fragments.length]);
+
   // Compute effective total duration for the timeline
   const maxFragEnd = fragments.reduce((m, f) => Math.max(m, f.end_sec), 0);
-  const effectiveDuration = Math.max(totalDurationSec, maxFragEnd, 600);
+  const effectiveDuration = Math.max(totalDurationSec, audioDuration, maxFragEnd, 600);
 
   const handleSave = async () => {
     // Basic validation
@@ -340,6 +384,13 @@ export default function FragmentEditorClient({
           </button>
         </div>
       </div>
+
+      {/* Audio player z falą — Space/S/E, klik = seek */}
+      <SessionAudioPlayer
+        ref={playerRef}
+        sessionId={sessionId}
+        onDurationReady={setAudioDuration}
+      />
 
       {/* Visual timeline ruler */}
       <FragmentTimeline

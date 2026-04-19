@@ -13,7 +13,9 @@
     "migrate:wix:dry": "npx tsx scripts/migrate-wix.ts --dry-run",
     "seed:products": "npx tsx scripts/seed-products.ts",
     "review": "tsx scripts/review.ts --staged",
-    "review:deep": "tsx scripts/review.ts --staged --mode deep"
+    "review:deep": "tsx scripts/review.ts --staged --mode deep",
+    "backfill:diarize:dry": "tsx scripts/backfill-monthly-diarize.ts --dry-run",
+    "backfill:diarize": "tsx scripts/backfill-monthly-diarize.ts"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",

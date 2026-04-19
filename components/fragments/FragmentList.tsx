@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Star, Trash2, Play, Pause, Lock, Bookmark,
-  Mic, Music, Loader2, Plus, Radio, CheckCircle,
+  Mic, Music, Loader2, Plus, Radio, CheckCircle, Tag as TagIcon,
 } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import { usePlayer } from '@/lib/player-context';
 import type { FragmentPlayback, RecordingFragmentPlayback, PytaniaAnswerPlayback } from '@/lib/player-context';
+import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
 
 // ---------------------------------------------------------------------------
 // Types (subset of what the API returns)
@@ -21,6 +22,7 @@ interface SessionFragment {
   title: string;
   title_i18n: Record<string, string>;
   is_impulse: boolean;
+  tags?: string[];
 }
 
 interface SessionTemplate {
@@ -335,6 +337,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
   const [saves, setSaves] = useState<FragmentSave[]>(initialSaves);
   const [pytaniaItems, setPytaniaItems] = useState<PytaniaItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>(VIRTUAL_ALL);
+  const [activeTags, setActiveTags] = useState<Set<FragmentTag>>(new Set());
   const [loadingPytania, setLoadingPytania] = useState(false);
   const accessSet = new Set(accessibleIds);
 
@@ -385,18 +388,45 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
   // ── Filtered views ────────────────────────────────────────────────────────
 
   const filteredSaves = (() => {
+    let base: FragmentSave[];
     switch (activeCategory) {
       case VIRTUAL_ALL:
-        return saves;
+        base = saves; break;
       case VIRTUAL_FAVORITES:
-        return saves.filter(s => s.is_favorite);
+        base = saves.filter(s => s.is_favorite); break;
       case VIRTUAL_RECORDINGS:
-        return saves.filter(s => s.booking_recording_id);
+        base = saves.filter(s => s.booking_recording_id); break;
       case VIRTUAL_PYTANIA:
         return []; // pytania shown separately
       default:
-        return saves.filter(s => s.category_id === activeCategory);
+        base = saves.filter(s => s.category_id === activeCategory);
     }
+    if (activeTags.size === 0) return base;
+    // Match: fragment has at least one of the selected tags (OR semantics)
+    return base.filter(s => {
+      const tags = s.session_fragments?.tags ?? [];
+      return tags.some(t => activeTags.has(t as FragmentTag));
+    });
+  })();
+
+  // Count of predefined fragments per tag (across current category scope)
+  const tagCounts = (() => {
+    const counts: Record<string, number> = {};
+    const scope = (() => {
+      switch (activeCategory) {
+        case VIRTUAL_ALL: return saves;
+        case VIRTUAL_FAVORITES: return saves.filter(s => s.is_favorite);
+        case VIRTUAL_RECORDINGS: return saves.filter(s => s.booking_recording_id);
+        case VIRTUAL_PYTANIA: return [];
+        default: return saves.filter(s => s.category_id === activeCategory);
+      }
+    })();
+    for (const s of scope) {
+      for (const t of s.session_fragments?.tags ?? []) {
+        counts[t] = (counts[t] ?? 0) + 1;
+      }
+    }
+    return counts;
   })();
 
   const totalByCategory = {
@@ -588,6 +618,50 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
                 onPlay={() => handlePlayPytania(item)}
               />
             ))}
+          </div>
+        )}
+
+        {/* Tag filter chips — only for predefined Moments */}
+        {activeCategory !== VIRTUAL_PYTANIA && (
+          <div className="mb-4 flex items-center gap-2 flex-wrap">
+            <TagIcon className="w-3.5 h-3.5 text-htg-fg-muted shrink-0" />
+            {FRAGMENT_TAGS.map(tag => {
+              const count = tagCounts[tag] ?? 0;
+              const active = activeTags.has(tag);
+              if (count === 0 && !active) return null;
+              return (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setActiveTags(prev => {
+                      const next = new Set(prev);
+                      if (next.has(tag)) next.delete(tag);
+                      else next.add(tag);
+                      return next;
+                    });
+                  }}
+                  className={[
+                    'text-[11px] px-2 py-0.5 rounded-full border transition-colors',
+                    active
+                      ? 'bg-htg-sage/20 border-htg-sage/40 text-htg-sage'
+                      : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg',
+                  ].join(' ')}
+                >
+                  {FRAGMENT_TAG_LABELS[tag].pl}
+                  {count > 0 && (
+                    <span className="ml-1 text-htg-fg-muted/60">{count}</span>
+                  )}
+                </button>
+              );
+            })}
+            {activeTags.size > 0 && (
+              <button
+                onClick={() => setActiveTags(new Set())}
+                className="text-[11px] px-2 py-0.5 text-htg-fg-muted hover:text-htg-fg transition-colors"
+              >
+                wyczyść
+              </button>
+            )}
           </div>
         )}
 

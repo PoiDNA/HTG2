@@ -37,6 +37,7 @@ export interface FragmentPlayback {
   fragmentTitle?: string;     // optional fragment-level title
   startSec: number;
   endSec: number;
+  shareToken?: string;        // present when playing a shared fragment via by-token link
 }
 
 /** Fragment of a personal booking recording */

@@ -58,11 +58,25 @@ export default function GlobalPlayer() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engineRef.current, setEngineHandle]);
 
-  // Token request body override for fragment_radio (needs `radio: true`)
+  // Token request body override for fragment variants that need extra fields
   const tokenRequestBuilder = useMemo(() => {
-    if (!activePlayback || activePlayback.kind !== 'fragment_radio') return undefined;
-    const saveId = activePlayback.saveId;
-    return (deviceId: string) => ({ saveId, deviceId, radio: true });
+    if (!activePlayback) return undefined;
+    if (activePlayback.kind === 'fragment_radio') {
+      const saveId = activePlayback.saveId;
+      const shareToken = activePlayback.shareToken;
+      return (deviceId: string) => ({
+        saveId, deviceId, radio: true,
+        ...(shareToken ? { shareToken } : {}),
+      });
+    }
+    if (activePlayback.kind === 'fragment_review') {
+      const shareToken = activePlayback.shareToken;
+      if (shareToken) {
+        const saveId = activePlayback.saveId;
+        return (deviceId: string) => ({ saveId, deviceId, shareToken });
+      }
+    }
+    return undefined;
   }, [activePlayback]);
 
   if (!activePlayback) return null;

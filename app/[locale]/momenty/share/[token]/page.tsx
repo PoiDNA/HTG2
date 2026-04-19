@@ -1,9 +1,9 @@
 import { setRequestLocale } from 'next-intl/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { Link } from '@/i18n-config';
-import { Bookmark, Lock, Music, ArrowLeft } from 'lucide-react';
+import { Lock, ArrowLeft } from 'lucide-react';
+import SharePageClient from './SharePageClient';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -12,29 +12,38 @@ export const metadata: Metadata = {
 
 type Props = { params: Promise<{ locale: string; token: string }> };
 
-function formatTime(sec: number | null): string {
-  if (sec == null) return '?';
-  const s = Math.floor(sec);
-  const m = Math.floor(s / 60);
-  const ss = s % 60;
-  return `${m}:${ss.toString().padStart(2, '0')}`;
+// Inline error page helper — keeps share-specific messaging vs. generic 404
+function ShareError({ title, message }: { title: string; message: string }) {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center px-4">
+      <div className="text-center max-w-sm">
+        <Lock className="w-12 h-12 text-htg-fg-muted mx-auto mb-4" />
+        <h1 className="text-xl font-semibold text-htg-fg mb-2">{title}</h1>
+        <p className="text-sm text-htg-fg-muted mb-6">{message}</p>
+        <Link
+          href="/konto"
+          className="inline-flex items-center gap-1.5 text-sm text-htg-sage hover:underline"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Wróć do konta
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export default async function ShareTokenPage({ params }: Props) {
   const { locale, token } = await params;
   setRequestLocale(locale);
 
+  // Auth is enforced by middleware — if we reach here the user is logged in.
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-
-  // Login required — redirect to login with return URL
-  if (!user) {
-    redirect(`/${locale}/logowanie?next=/${locale}/momenty/share/${token}`);
-  }
+  if (!user) return null;
 
   const db = createSupabaseServiceRole();
 
-  // Look up share (no rate-limit server-side here — the API route enforces it)
+  // Look up share by token
   const { data: share } = await db
     .from('category_shares')
     .select('id, category_id, owner_user_id, recipient_user_id, can_resave, expires_at, revoked_at')
@@ -42,66 +51,50 @@ export default async function ShareTokenPage({ params }: Props) {
     .is('revoked_at', null)
     .single();
 
-  // Invalid / revoked
   if (!share) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="text-center max-w-sm">
-          <Lock className="w-12 h-12 text-htg-fg-muted mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-htg-fg mb-2">Link nieważny</h1>
-          <p className="text-sm text-htg-fg-muted mb-6">
-            Ten link do udostępnienia nie istnieje lub został unieważniony.
-          </p>
-          <Link href="/konto" className="text-htg-sage text-sm hover:underline">← Wróć do konta</Link>
-        </div>
-      </div>
+      <ShareError
+
+        title="Link nieważny"
+        message="Ten link do udostępnienia nie istnieje lub został unieważniony."
+      />
     );
   }
 
-  // Expired
   if (share.expires_at && new Date(share.expires_at) < new Date()) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="text-center max-w-sm">
-          <Lock className="w-12 h-12 text-htg-fg-muted mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-htg-fg mb-2">Link wygasł</h1>
-          <p className="text-sm text-htg-fg-muted mb-6">
-            Ten link udostępniający wygasł. Poproś właściciela o nowy.
-          </p>
-          <Link href="/konto" className="text-htg-sage text-sm hover:underline">← Wróć do konta</Link>
-        </div>
-      </div>
+      <ShareError
+
+        title="Link wygasł"
+        message="Ten link udostępniający wygasł. Poproś właściciela o nowy."
+      />
     );
   }
 
-  // Recipient restriction (direct share)
   if (share.recipient_user_id && share.recipient_user_id !== user.id) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="text-center max-w-sm">
-          <Lock className="w-12 h-12 text-htg-fg-muted mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-htg-fg mb-2">Brak dostępu</h1>
-          <p className="text-sm text-htg-fg-muted mb-6">
-            Ten link jest przypisany do innego konta.
-          </p>
-          <Link href="/konto" className="text-htg-sage text-sm hover:underline">← Wróć do konta</Link>
-        </div>
-      </div>
+      <ShareError
+
+        title="Brak dostępu"
+        message="Ten link jest przypisany do innego konta."
+      />
     );
   }
 
-  // Fetch category
+  // Fetch category info
   const { data: category } = await db
     .from('user_categories')
     .select('id, name, color')
     .eq('id', share.category_id)
     .single();
 
-  // Fetch saves in category (field allowlist — no owner PII)
+  // Fetch saves — include session_template_id for playback (needed client-side, not PII)
+  // booking_recording saves cannot appear in shared categories by design
   const { data: rawSaves } = await db
     .from('user_fragment_saves')
     .select(`
       id, fragment_type,
+      session_template_id,
       custom_start_sec, custom_end_sec, custom_title,
       fallback_start_sec, fallback_end_sec,
       session_fragments(title),
@@ -112,25 +105,36 @@ export default async function ShareTokenPage({ params }: Props) {
     .order('created_at', { ascending: false })
     .limit(100);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const saves = (rawSaves ?? []).map((s: any) => {
     const isCustom = s.fragment_type === 'custom';
-    const startSec = isCustom ? s.custom_start_sec : s.fallback_start_sec;
-    const endSec = isCustom ? s.custom_end_sec : s.fallback_end_sec;
-    const fragmentTitle = s.custom_title
+    const startSec: number = isCustom ? (s.custom_start_sec ?? 0) : (s.fallback_start_sec ?? 0);
+    const endSec: number   = isCustom ? (s.custom_end_sec ?? 0)   : (s.fallback_end_sec ?? 0);
+    const fragmentTitle: string | null = s.custom_title
       ?? (Array.isArray(s.session_fragments) ? s.session_fragments[0]?.title : s.session_fragments?.title)
       ?? null;
     const st = Array.isArray(s.session_templates) ? s.session_templates[0] : s.session_templates;
+
+    const fmt = (sec: number) => {
+      const m = Math.floor(sec / 60);
+      const ss = Math.floor(sec % 60);
+      return `${m}:${ss.toString().padStart(2, '0')}`;
+    };
+
     return {
-      id: s.id,
-      title: fragmentTitle ?? `${formatTime(startSec)} – ${formatTime(endSec)}`,
-      startSec,
-      endSec,
-      sessionTitle: st?.title ?? null,
+      id: s.id as string,
+      title: fragmentTitle ?? `${fmt(startSec)} – ${fmt(endSec)}`,
+      start_sec: startSec,
+      end_sec: endSec,
+      duration: endSec - startSec,
+      session_title: (st?.title ?? '') as string,
+      session_slug: (st?.slug ?? null) as string | null,
+      session_template_id: (s.session_template_id ?? st?.id ?? null) as string | null,
     };
   });
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8">
       {/* Back link */}
       <Link
         href="/konto"
@@ -140,52 +144,15 @@ export default async function ShareTokenPage({ params }: Props) {
         Wróć do konta
       </Link>
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: category?.color ? `${category.color}20` : undefined }}
-        >
-          <Bookmark className="w-5 h-5" style={{ color: category?.color ?? undefined }} />
-        </div>
-        <div>
-          <p className="text-xs text-htg-fg-muted uppercase tracking-wide">Udostępnione Momenty</p>
-          <h1 className="text-xl font-semibold text-htg-fg">{category?.name ?? 'Momenty'}</h1>
-        </div>
-      </div>
-
-      {/* Resave note */}
-      {share.can_resave && (
-        <p className="text-xs text-htg-fg-muted bg-htg-surface border border-htg-card-border rounded-lg px-4 py-2 mb-6">
-          Możesz zapisać te Momenty do swojej biblioteki.
-        </p>
-      )}
-
-      {/* Fragment list (read-only) */}
-      {saves.length === 0 ? (
-        <div className="text-center py-16 text-htg-fg-muted">
-          <Bookmark className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Ta kategoria jest pusta.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {saves.map(save => (
-            <div
-              key={save.id}
-              className="bg-htg-card border border-htg-card-border rounded-xl p-4"
-            >
-              <div className="flex items-center gap-1.5 text-xs text-htg-fg-muted mb-1">
-                <Music className="w-3 h-3 text-htg-sage" />
-                <span>{save.sessionTitle}</span>
-              </div>
-              <p className="text-htg-fg font-medium text-sm">{save.title}</p>
-              <p className="text-xs text-htg-fg-muted mt-0.5">
-                {formatTime(save.startSec)} – {formatTime(save.endSec)}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+      <SharePageClient
+        shareToken={token}
+        categoryName={category?.name ?? 'Momenty'}
+        categoryColor={category?.color ?? null}
+        canResave={share.can_resave}
+        expiresAt={share.expires_at ?? null}
+        saves={saves}
+        userId={user.id}
+      />
     </div>
   );
 }

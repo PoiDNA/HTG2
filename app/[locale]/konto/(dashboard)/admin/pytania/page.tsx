@@ -25,16 +25,22 @@ export default async function AdminPytaniaPage({
 
   const db = createSupabaseServiceRole();
 
-  const [{ data: questions }, { data: fragments }] = await Promise.all([
+  const [{ data: questions }, { data: fragments }, { data: usedFragmentRows }] = await Promise.all([
     db
       .from('session_questions_ranked')
       .select('*')
       .order('created_at', { ascending: false }),
     db
       .from('session_fragments')
-      .select('id, title, start_sec, end_sec, session_template_id, session_templates(title)')
+      .select('id, title, start_sec, end_sec, session_template_id, session_templates(title, set_sessions(sort_order, monthly_sets(title)))')
       .order('created_at', { ascending: false }),
+    db
+      .from('session_questions')
+      .select('answer_fragment_id')
+      .not('answer_fragment_id', 'is', null),
   ]);
+
+  const usedFragmentIds = new Set((usedFragmentRows ?? []).map(r => r.answer_fragment_id as string));
 
   // Author profiles
   const authorIds = [...new Set((questions ?? []).map(q => q.author_id))];
@@ -56,15 +62,26 @@ export default async function AdminPytaniaPage({
   }));
 
   const fragmentOptions = (fragments ?? []).map(f => {
-    const sessionTitle = Array.isArray(f.session_templates)
-      ? (f.session_templates[0] as { title: string } | undefined)?.title
-      : (f.session_templates as { title: string } | null)?.title;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const st: any = Array.isArray(f.session_templates) ? f.session_templates[0] : f.session_templates;
+    const sessionTitle: string = st?.title ?? 'Sesja';
+    const sessionId: string = f.session_template_id as string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const firstSet: any = Array.isArray(st?.set_sessions) ? st.set_sessions[0] : st?.set_sessions;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ms: any = Array.isArray(firstSet?.monthly_sets) ? firstSet.monthly_sets[0] : firstSet?.monthly_sets;
+    const monthTitle: string | null = ms?.title ?? null;
+    const sessionOrder: number | null = firstSet?.sort_order ?? null;
     return {
       id: f.id as string,
       title: f.title as string,
       start_sec: f.start_sec as number,
       end_sec: f.end_sec as number,
-      session_title: sessionTitle ?? 'Sesja',
+      session_id: sessionId,
+      session_title: sessionTitle,
+      session_order: sessionOrder,
+      month_title: monthTitle,
+      is_pytania: usedFragmentIds.has(f.id as string),
     };
   });
 

@@ -371,6 +371,44 @@ export async function sendAssistantBookingNotification(to: string, data: {
   });
 }
 
+export async function sendNewQuestionNotification(to: string | string[], data: {
+  authorName: string;
+  authorEmail: string;
+  questionTitle: string;
+  questionBody: string | null;
+  adminUrl: string;
+}) {
+  const recipients = Array.isArray(to) ? to : [to];
+  return getResend().emails.send({
+    from: FROM_EMAIL,
+    to: recipients,
+    replyTo: REPLY_TO,
+    subject: `Nowe pytanie do sesji — ${data.questionTitle.slice(0, 60)}`,
+    html: `
+      <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; color: #1a1a2e;">
+        <div style="background: #1a1a2e; padding: 32px; text-align: center;">
+          <h1 style="color: #c9b97a; margin: 0; font-size: 28px;">HTG</h1>
+          <p style="color: #a0a0b0; margin: 8px 0 0;">Pytania do sesji badawczych</p>
+        </div>
+        <div style="padding: 32px; background: #f8f6f0;">
+          <h2 style="color: #1a1a2e; margin-top: 0;">Nowe pytanie oczekuje moderacji</h2>
+          <p><strong>${escapeHtml(data.authorName)}</strong> (${escapeHtml(data.authorEmail)}) zadał/a pytanie:</p>
+          <div style="background: white; border-left: 4px solid #8B9E7C; padding: 16px 20px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; font-weight: bold; color: #1a1a2e;">${escapeHtml(data.questionTitle)}</p>
+            ${data.questionBody ? `<p style="margin: 8px 0 0; color: #444; font-size: 14px;">${escapeHtml(data.questionBody)}</p>` : ''}
+          </div>
+          <a href="${escapeHtml(data.adminUrl)}" style="display: inline-block; background: #8B9E7C; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+            Przejdź do panelu Pytań →
+          </a>
+        </div>
+        <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
+          <p>HTG Operator PSA | htg@htg.cyou</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
 export async function sendInvitationAccepted(to: string, data: {
   inviterName: string;
   newUserName: string;

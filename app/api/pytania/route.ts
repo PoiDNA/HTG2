@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePytaniaAuth, forbiddenForPoSesji } from '@/lib/pytania/auth';
+import { sendNewQuestionNotification } from '@/lib/email/resend';
+
+// Moderation recipients: admin + Natalia
+const QUESTION_MODERATORS = ['htg@htg.cyou', 'natalia@htg.cyou'];
 
 const SORT_OPTIONS = ['likes', 'comments', 'new'] as const;
 type Sort = typeof SORT_OPTIONS[number];
@@ -140,6 +144,22 @@ export async function POST(req: NextRequest) {
     console.error('POST /api/pytania error:', error);
     return NextResponse.json({ error: 'Failed to create question' }, { status: 500 });
   }
+
+  // Notify moderators (fire-and-forget — do not block response)
+  const authorProfile = await auth.supabase
+    .from('profiles')
+    .select('display_name, email')
+    .eq('id', auth.user.id)
+    .maybeSingle()
+    .then(r => r.data);
+
+  sendNewQuestionNotification(QUESTION_MODERATORS, {
+    authorName: authorProfile?.display_name ?? authorProfile?.email ?? auth.user.email ?? 'Uczestnik',
+    authorEmail: authorProfile?.email ?? auth.user.email ?? '',
+    questionTitle: title.trim(),
+    questionBody: questionBody?.trim() || null,
+    adminUrl: 'https://htgcyou.com/pl/konto/admin/pytania',
+  }).catch(err => console.error('[pytania] notification failed', err));
 
   return NextResponse.json(data, { status: 201 });
 }

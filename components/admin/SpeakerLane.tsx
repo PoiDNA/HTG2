@@ -1,6 +1,6 @@
 'use client';
 
-import { speakerColor, type SpeakerSegment, type SpeakerSummary } from '@/lib/speakers/client';
+import { speakerColor, speakerBaseKey, type SpeakerSegment, type SpeakerSummary } from '@/lib/speakers/client';
 
 /**
  * Lane widoczności mówców — jeden poziomy pasek pod wavesurferem.
@@ -23,14 +23,21 @@ export default function SpeakerLane({ segments, speakers, durationSec, currentSe
 
   return (
     <div className="space-y-2">
-      {/* Legenda */}
+      {/* Legenda — deduplikacja po kluczu bazowym (c0_A i c1_A = ten sam mówca) */}
       <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
-        {speakers.map((s) => {
+        {Array.from(
+          speakers.reduce((map, s) => {
+            const base = speakerBaseKey(s.speakerKey);
+            if (!map.has(base)) map.set(base, s);
+            return map;
+          }, new Map<string, SpeakerSummary>()).values()
+        ).map((s) => {
           const c = speakerColor(s.role, s.speakerKey);
+          const label = s.displayName ?? speakerBaseKey(s.speakerKey);
           return (
-            <span key={s.speakerKey} className="flex items-center gap-1.5 text-[11px]">
+            <span key={speakerBaseKey(s.speakerKey)} className="flex items-center gap-1.5 text-[11px]">
               <span className={`inline-block w-3 h-3 rounded-sm ${c.bar}`} aria-hidden />
-              <span className="truncate max-w-32">{s.displayName ?? s.speakerKey}</span>
+              <span className="truncate max-w-32">{label}</span>
               {s.role && <span className="text-htg-fg-muted">({s.role})</span>}
             </span>
           );

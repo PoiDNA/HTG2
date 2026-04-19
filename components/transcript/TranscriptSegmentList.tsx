@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { speakerColor, type SpeakerSegment } from '@/lib/speakers/client';
+import { speakerColor, speakerBaseKey, type SpeakerSegment } from '@/lib/speakers/client';
 
 /**
  * Lista segmentów transkrypcji z podświetleniem aktywnego (po currentSec)
@@ -59,7 +59,7 @@ export default function TranscriptSegmentList({ segments, currentSec, onSeek }: 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-[11px] font-semibold truncate">
-                  {s.displayName ?? s.speakerKey}
+                  {s.displayName ?? speakerBaseKey(s.speakerKey)}
                 </span>
                 <span className="text-[10px] font-mono tabular-nums text-htg-fg-muted shrink-0">
                   {fmt(s.startSec)}

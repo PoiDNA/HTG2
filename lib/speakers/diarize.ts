@@ -140,12 +140,18 @@ export async function diarizeAudio(params: {
     filename: `session.${ext}`,
   });
 
+  // Diarize 20-min audio chunk może zająć 5-8 min na OpenAI.
+  // Undici (Node fetch) ma domyślny bodyTimeout ~5 min → abort.
+  // Vercel maxDuration=800 — 780s tutaj daje margines.
+  const timeoutSignal = AbortSignal.timeout(780_000);
+
   let res: Response;
   try {
     res = await fetch(OPENAI_TRANSCRIBE_URL, {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}` },
       body: fd,
+      signal: timeoutSignal,
     });
   } catch (e) {
     throw new DiarizeError(

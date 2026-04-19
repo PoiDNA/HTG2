@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
 
   const { scope = 'all', scopeId, excludeIds = [] } = body as {
-    scope?: 'all' | 'favorites' | 'category' | 'session' | 'pytania';
+    scope?: 'all' | 'favorites' | 'category' | 'session' | 'pytania' | 'slowo';
     scopeId?: string;
     excludeIds?: string[];
   };
@@ -92,6 +92,52 @@ export async function POST(request: NextRequest) {
         custom_title: q.title,   // question title shown in radio UI
         session_templates: { id: st?.id ?? '', title: st?.title ?? '', slug: st?.slug ?? '' },
         pytaniaSessionFragmentId: frag?.id ?? q.answer_fragment_id,
+      },
+    });
+  }
+  // ── Słowo scope: admin-curated is_slowo=true fragments ───────────────────
+  if (scope === 'slowo') {
+    const db = createSupabaseServiceRole();
+    let slwoQuery = db
+      .from('session_fragments')
+      .select(`
+        id, start_sec, end_sec, title, session_template_id,
+        session_templates!inner(id, title, slug, is_published)
+      `)
+      .eq('is_slowo', true)
+      .eq('session_templates.is_published', true);
+
+    // Exclude recently played (by session_fragment_id)
+    if (safeExcludes.length > 0) {
+      slwoQuery = slwoQuery.not('id', 'in', `(${safeExcludes.join(',')})`);
+    }
+
+    const { data: fragments, error: slwoError } = await slwoQuery;
+    if (slwoError) {
+      console.error('[fragments/radio/next slowo] query failed', slwoError);
+      return NextResponse.json({ error: slwoError.message }, { status: 500 });
+    }
+    if (!fragments || fragments.length === 0) {
+      return NextResponse.json({ save: null });
+    }
+
+    const idx = Math.floor(Math.random() * fragments.length);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const f: any = fragments[idx];
+    const st = Array.isArray(f.session_templates) ? f.session_templates[0] : f.session_templates;
+
+    return NextResponse.json({
+      save: {
+        id: f.id,   // session_fragment_id used as excludeId key
+        session_template_id: f.session_template_id ?? null,
+        fragment_type: 'predefined',
+        fallback_start_sec: f.start_sec ?? 0,
+        fallback_end_sec: f.end_sec ?? 0,
+        custom_start_sec: null,
+        custom_end_sec: null,
+        custom_title: f.title,   // fragment title shown in radio UI
+        session_templates: { id: st?.id ?? '', title: st?.title ?? '', slug: st?.slug ?? '' },
+        slowoSessionFragmentId: f.id,   // signals fragment-token path in engine
       },
     });
   }

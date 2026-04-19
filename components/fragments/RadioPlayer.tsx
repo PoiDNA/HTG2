@@ -39,9 +39,11 @@ interface RadioSave {
   session_templates: { id: string; title: string; slug: string };
   /** Set by radio/next when scope='pytania' — signals pytania-answer-token path */
   pytaniaSessionFragmentId?: string;
+  /** Set by radio/next when scope='slowo' — signals impulse/fragment-token path with sessionFragmentId */
+  slowoSessionFragmentId?: string;
 }
 
-type RadioScope = 'all' | 'favorites' | 'category' | 'session' | 'pytania';
+type RadioScope = 'all' | 'favorites' | 'category' | 'session' | 'pytania' | 'slowo';
 type RadioStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error';
 
 // ---------------------------------------------------------------------------
@@ -70,8 +72,13 @@ function toEngineSave(save: RadioSave): EngineFragmentSave {
     endSec,
     sessionTitle: save.session_templates.title,
     fragmentTitle: getSaveTitle(save),
-    // Pass sessionFragmentId so the engine uses pytania-answer-token
+    // Pytania: use pytania-answer-token with sessionFragmentId
     ...(save.pytaniaSessionFragmentId ? { sessionFragmentId: save.pytaniaSessionFragmentId } : {}),
+    // Słowo: use fragment-token (PATH B) with sessionFragmentId — explicit endpoint to override default
+    ...(save.slowoSessionFragmentId ? {
+      sessionFragmentId: save.slowoSessionFragmentId,
+      tokenEndpoint: '/api/video/fragment-token',
+    } : {}),
   };
 }
 

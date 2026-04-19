@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Radio, Star, Bookmark, ListMusic, CheckCircle } from 'lucide-react';
+import { Radio, Star, Bookmark, ListMusic, CheckCircle, BookOpen } from 'lucide-react';
 import RadioPlayer from '@/components/fragments/RadioPlayer';
 
 interface Category {
@@ -24,6 +24,7 @@ type ScopeOption =
   | { id: 'all';       label: string; icon: React.ReactNode }
   | { id: 'favorites'; label: string; icon: React.ReactNode }
   | { id: 'pytania';   label: string; icon: React.ReactNode }
+  | { id: 'slowo';     label: string; icon: React.ReactNode }
   | { id: string;      label: string; icon: React.ReactNode; categoryId: string }
   | { id: string;      label: string; icon: React.ReactNode; sessionId: string };
 
@@ -34,6 +35,7 @@ export default function RadioPageClient({ categories, sessions }: Props) {
     { id: 'all',       label: 'Wszystkie Momenty',    icon: <Radio         className="w-3.5 h-3.5" /> },
     { id: 'favorites', label: '⭐ Ulubione',           icon: <Star          className="w-3.5 h-3.5" /> },
     { id: 'pytania',   label: '✅ Pytania Rozpoznane', icon: <CheckCircle   className="w-3.5 h-3.5 text-emerald-500" /> },
+    { id: 'slowo',     label: '📖 Słowo',              icon: <BookOpen      className="w-3.5 h-3.5 text-htg-warm" /> },
     ...categories.map(cat => ({
       id: `cat:${cat.id}`,
       label: cat.name,
@@ -52,10 +54,11 @@ export default function RadioPageClient({ categories, sessions }: Props) {
   const active =
     [...baseOptions, ...sessionOptions].find(s => s.id === activeScope) ?? baseOptions[0];
 
-  const scope: 'all' | 'favorites' | 'category' | 'session' | 'pytania' =
+  const scope: 'all' | 'favorites' | 'category' | 'session' | 'pytania' | 'slowo' =
     active.id === 'all'       ? 'all'
     : active.id === 'favorites' ? 'favorites'
     : active.id === 'pytania'   ? 'pytania'
+    : active.id === 'slowo'     ? 'slowo'
     : 'sessionId' in active     ? 'session'
     : 'category';
 

@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Star, Trash2, Play, Pause, Lock, Bookmark,
-  Mic, Music, Loader2, Plus, Radio, CheckCircle, Tag as TagIcon,
+  Mic, Music, Loader2, Plus, Radio, CheckCircle, Tag as TagIcon, BookOpen,
 } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import { usePlayer } from '@/lib/player-context';
-import type { FragmentPlayback, RecordingFragmentPlayback, PytaniaAnswerPlayback } from '@/lib/player-context';
+import type { FragmentPlayback, RecordingFragmentPlayback, PytaniaAnswerPlayback, ImpulsePlayback } from '@/lib/player-context';
 import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
 
 // ---------------------------------------------------------------------------
@@ -77,6 +77,16 @@ interface PytaniaItem {
   answer_fragment: PytaniaAnswerFragment;
 }
 
+interface SlwoItem {
+  id: string;               // session_fragment_id
+  title: string;
+  start_sec: number;
+  end_sec: number;
+  session_template_id: string;
+  session_title: string;
+  month_title: string | null;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -130,6 +140,7 @@ const VIRTUAL_ALL = '__all__';
 const VIRTUAL_FAVORITES = '__favorites__';
 const VIRTUAL_RECORDINGS = '__recordings__';
 const VIRTUAL_PYTANIA = '__pytania__';
+const VIRTUAL_SLOWO = '__slowo__';
 
 // ---------------------------------------------------------------------------
 // FragmentCard
@@ -322,6 +333,62 @@ function PytaniaCard({ item, onPlay }: PytaniaCardProps) {
 }
 
 // ---------------------------------------------------------------------------
+// SlwoCard
+// ---------------------------------------------------------------------------
+
+interface SlwoCardProps {
+  item: SlwoItem;
+  onPlay: () => void;
+}
+
+function SlwoCard({ item, onPlay }: SlwoCardProps) {
+  const duration = item.end_sec - item.start_sec;
+
+  // Play/pause state — reuses ImpulsePlayback kind (same token path)
+  const { activePlayback, playerState, engineHandle } = usePlayer();
+  const isActive = activePlayback?.kind === 'impulse' &&
+    (activePlayback as ImpulsePlayback).sessionFragmentId === item.id;
+  const isPlaying = isActive && playerState.status === 'playing';
+
+  function handlePlayPause() {
+    if (isActive) {
+      if (isPlaying) engineHandle?.pause();
+      else if (playerState.status === 'paused') engineHandle?.play();
+    } else {
+      onPlay();
+    }
+  }
+
+  return (
+    <div className={`group bg-htg-card border rounded-xl p-4 transition-all
+                    ${isActive ? 'border-htg-warm/60' : 'border-htg-card-border hover:border-htg-warm/40'}`}>
+      <div className="flex items-center gap-1.5 text-xs text-htg-fg-muted mb-1.5">
+        <BookOpen className="w-3 h-3 text-htg-warm" />
+        {item.month_title ? `${item.month_title} · ` : ''}{item.session_title}
+      </div>
+      <p className="text-htg-fg font-medium text-sm mb-0.5 line-clamp-2 leading-snug">{item.title}</p>
+      <p className="text-xs text-htg-fg-muted">
+        {formatTime(item.start_sec)} – {formatTime(item.end_sec)}
+        <span className="ml-2 text-htg-fg-muted/60">({formatTime(duration)})</span>
+      </p>
+      <button
+        onClick={handlePlayPause}
+        className={`mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+                   ${isPlaying
+                     ? 'bg-htg-warm/80 text-white hover:bg-htg-warm'
+                     : 'bg-htg-warm text-white hover:bg-htg-warm/90'}`}
+      >
+        {isPlaying ? (
+          <><Pause className="w-3 h-3 fill-white" /> Pauza</>
+        ) : (
+          <><Play className="w-3 h-3 fill-white" /> Odtwórz</>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main FragmentList
 // ---------------------------------------------------------------------------
 
@@ -336,9 +403,11 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
   const { startPlayback } = usePlayer();
   const [saves, setSaves] = useState<FragmentSave[]>(initialSaves);
   const [pytaniaItems, setPytaniaItems] = useState<PytaniaItem[]>([]);
+  const [slwoItems, setSlwoItems] = useState<SlwoItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>(VIRTUAL_ALL);
   const [activeTags, setActiveTags] = useState<Set<FragmentTag>>(new Set());
   const [loadingPytania, setLoadingPytania] = useState(false);
+  const [loadingSlwo, setLoadingSlwo] = useState(false);
   const accessSet = new Set(accessibleIds);
 
   // ── Category management ───────────────────────────────────────────────────
@@ -385,6 +454,16 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
       .finally(() => setLoadingPytania(false));
   }, []);
 
+  // Load Słowo fragments on mount
+  useEffect(() => {
+    setLoadingSlwo(true);
+    fetch('/api/fragments/slowo')
+      .then(r => r.json())
+      .then(d => { if (d.items) setSlwoItems(d.items); })
+      .catch(() => {})
+      .finally(() => setLoadingSlwo(false));
+  }, []);
+
   // ── Filtered views ────────────────────────────────────────────────────────
 
   const filteredSaves = (() => {
@@ -398,6 +477,8 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
         base = saves.filter(s => s.booking_recording_id); break;
       case VIRTUAL_PYTANIA:
         return []; // pytania shown separately
+      case VIRTUAL_SLOWO:
+        return []; // slowo shown separately
       default:
         base = saves.filter(s => s.category_id === activeCategory);
     }
@@ -418,6 +499,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
         case VIRTUAL_FAVORITES: return saves.filter(s => s.is_favorite);
         case VIRTUAL_RECORDINGS: return saves.filter(s => s.booking_recording_id);
         case VIRTUAL_PYTANIA: return [];
+        case VIRTUAL_SLOWO: return [];
         default: return saves.filter(s => s.category_id === activeCategory);
       }
     })();
@@ -433,6 +515,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
     [VIRTUAL_FAVORITES]: saves.filter(s => s.is_favorite).length,
     [VIRTUAL_RECORDINGS]: saves.filter(s => s.booking_recording_id).length,
     [VIRTUAL_PYTANIA]: pytaniaItems.length,
+    [VIRTUAL_SLOWO]: slwoItems.length,
   } as Record<string, number>;
 
   for (const cat of catList) {
@@ -485,6 +568,19 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
     startPlayback(playback);
   }, [startPlayback]);
 
+  const handlePlaySlwo = useCallback((item: SlwoItem) => {
+    const playback: ImpulsePlayback = {
+      kind: 'impulse',
+      sessionFragmentId: item.id,
+      sessionId: item.session_template_id,
+      title: item.session_title,
+      fragmentTitle: item.title,
+      startSec: item.start_sec,
+      endSec: item.end_sec,
+    };
+    startPlayback(playback);
+  }, [startPlayback]);
+
   const handleToggleFavorite = useCallback(async (save: FragmentSave) => {
     const newVal = !save.is_favorite;
     setSaves(prev => prev.map(s => s.id === save.id ? { ...s, is_favorite: newVal } : s));
@@ -511,13 +607,15 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
     { id: VIRTUAL_FAVORITES, label: '⭐ Ulubione', count: totalByCategory[VIRTUAL_FAVORITES] },
     { id: VIRTUAL_RECORDINGS, label: '🎙 Twoje Nagrania Sesji', count: totalByCategory[VIRTUAL_RECORDINGS] },
     { id: VIRTUAL_PYTANIA, label: '✅ Pytania Rozpoznane', count: totalByCategory[VIRTUAL_PYTANIA] },
+    { id: VIRTUAL_SLOWO, label: '📖 Słowo', count: totalByCategory[VIRTUAL_SLOWO] },
     ...catList.map(cat => ({ id: cat.id, label: cat.name, count: totalByCategory[cat.id] ?? 0 })),
   ];
 
   // ── Empty state ───────────────────────────────────────────────────────────
 
-  const isEmpty = activeCategory === VIRTUAL_PYTANIA
-    ? pytaniaItems.length === 0
+  const isEmpty =
+    activeCategory === VIRTUAL_PYTANIA ? pytaniaItems.length === 0
+    : activeCategory === VIRTUAL_SLOWO ? slwoItems.length === 0
     : filteredSaves.length === 0;
 
   return (
@@ -606,6 +704,9 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
           {activeCategory === VIRTUAL_PYTANIA && loadingPytania && (
             <Loader2 className="w-4 h-4 text-htg-fg-muted animate-spin" />
           )}
+          {activeCategory === VIRTUAL_SLOWO && loadingSlwo && (
+            <Loader2 className="w-4 h-4 text-htg-fg-muted animate-spin" />
+          )}
         </div>
 
         {/* Pytania Rozpoznane grid */}
@@ -621,8 +722,21 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
           </div>
         )}
 
+        {/* Słowo grid */}
+        {activeCategory === VIRTUAL_SLOWO && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {slwoItems.map(item => (
+              <SlwoCard
+                key={item.id}
+                item={item}
+                onPlay={() => handlePlaySlwo(item)}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Tag filter chips — only for predefined Moments */}
-        {activeCategory !== VIRTUAL_PYTANIA && (
+        {activeCategory !== VIRTUAL_PYTANIA && activeCategory !== VIRTUAL_SLOWO && (
           <div className="mb-4 flex items-center gap-2 flex-wrap">
             <TagIcon className="w-3.5 h-3.5 text-htg-fg-muted shrink-0" />
             {FRAGMENT_TAGS.map(tag => {
@@ -666,7 +780,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
         )}
 
         {/* Saves grid */}
-        {activeCategory !== VIRTUAL_PYTANIA && (
+        {activeCategory !== VIRTUAL_PYTANIA && activeCategory !== VIRTUAL_SLOWO && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {filteredSaves.map(save => {
               const sourceId = save.session_template_id ?? save.booking_recording_id ?? '';
@@ -686,12 +800,17 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
         )}
 
         {/* Empty state */}
-        {isEmpty && !loadingPytania && (
+        {isEmpty && !loadingPytania && !loadingSlwo && (
           <div className="text-center py-16 text-htg-fg-muted">
             {activeCategory === VIRTUAL_PYTANIA ? (
               <>
                 <CheckCircle className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
                 <p className="text-sm">Brak rozpoznanych pytań z przypisaną odpowiedzią.</p>
+              </>
+            ) : activeCategory === VIRTUAL_SLOWO ? (
+              <>
+                <BookOpen className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
+                <p className="text-sm">Brak fragmentów oznaczonych jako Słowo.</p>
               </>
             ) : activeCategory === VIRTUAL_ALL ? (
               <>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 /**
  * POST /api/fragments/radio/next
@@ -9,15 +10,16 @@ import { createSupabaseServer } from '@/lib/supabase/server';
  * (radio only supports session_template context in MVP; no fragment_radio for recordings).
  *
  * Body:
- *   scope: 'all' | 'favorites' | 'category' | 'session'
+ *   scope: 'all' | 'favorites' | 'category' | 'session' | 'pytania'
  *   scopeId?: string          — category_id or session_template_id when scope = category|session
- *   excludeIds?: string[]     — saveIds to exclude (rolling non-repeat window, max 20)
+ *   excludeIds?: string[]     — saveIds / sessionFragmentIds to exclude (rolling window, max 20)
  *
  * Response:
  *   { save: { id, session_template_id, fragment_type, fallback_start_sec, fallback_end_sec,
  *             custom_start_sec, custom_end_sec, custom_title,
- *             session_templates: { id, title } } }
- *   or { save: null } when the pool is exhausted (client resets excludeIds and retries)
+ *             session_templates: { id, title },
+ *             pytaniaSessionFragmentId? } }
+ *   or { save: null } when pool exhausted
  */
 
 const MAX_EXCLUDE = 20;
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
 
   const { scope = 'all', scopeId, excludeIds = [] } = body as {
-    scope?: 'all' | 'favorites' | 'category' | 'session';
+    scope?: 'all' | 'favorites' | 'category' | 'session' | 'pytania';
     scopeId?: string;
     excludeIds?: string[];
   };
@@ -40,6 +42,60 @@ export async function POST(request: NextRequest) {
   const safeExcludes: string[] = Array.isArray(excludeIds)
     ? excludeIds.filter(id => typeof id === 'string').slice(0, MAX_EXCLUDE)
     : [];
+
+  // ── Pytania scope: recognized questions with answer fragments ─────────────
+  if (scope === 'pytania') {
+    const db = createSupabaseServiceRole();
+    let pytQuery = db
+      .from('session_questions')
+      .select(`
+        id, title, answer_fragment_id,
+        session_fragments!answer_fragment_id(
+          id, start_sec, end_sec,
+          session_template_id,
+          session_templates(id, title, slug)
+        )
+      `)
+      .eq('status', 'rozpoznane')
+      .not('answer_fragment_id', 'is', null);
+
+    // Exclude recently played (by session_fragment_id)
+    if (safeExcludes.length > 0) {
+      pytQuery = pytQuery.not('answer_fragment_id', 'in', `(${safeExcludes.join(',')})`);
+    }
+
+    const { data: questions, error: pytError } = await pytQuery;
+    if (pytError) {
+      console.error('[fragments/radio/next pytania] query failed', pytError);
+      return NextResponse.json({ error: pytError.message }, { status: 500 });
+    }
+    if (!questions || questions.length === 0) {
+      return NextResponse.json({ save: null });
+    }
+
+    const idx = Math.floor(Math.random() * questions.length);
+    const q = questions[idx];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const frag: any = Array.isArray(q.session_fragments) ? q.session_fragments[0] : q.session_fragments;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const st: any = frag ? (Array.isArray(frag.session_templates) ? frag.session_templates[0] : frag.session_templates) : null;
+
+    return NextResponse.json({
+      save: {
+        id: frag?.id ?? q.answer_fragment_id,  // session_fragment_id used as excludeId key
+        session_template_id: frag?.session_template_id ?? null,
+        fragment_type: 'predefined',
+        fallback_start_sec: frag?.start_sec ?? 0,
+        fallback_end_sec: frag?.end_sec ?? 0,
+        custom_start_sec: null,
+        custom_end_sec: null,
+        custom_title: q.title,   // question title shown in radio UI
+        session_templates: { id: st?.id ?? '', title: st?.title ?? '', slug: st?.slug ?? '' },
+        pytaniaSessionFragmentId: frag?.id ?? q.answer_fragment_id,
+      },
+    });
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Build query — only session_template saves, not booking_recordings
   let query = supabase

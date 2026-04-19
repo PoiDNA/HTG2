@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Users, Loader2, AlertTriangle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Users, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
 import SpeakerLane from './SpeakerLane';
 import TranscriptSegmentList from '@/components/transcript/TranscriptSegmentList';
 import type { SpeakersResponse } from '@/lib/speakers/client';
@@ -18,6 +18,7 @@ const SOURCE_LABEL: Record<NonNullable<SpeakersResponse['activeImport']>['source
   manual: 'ręczny seed',
   livekit_phase2_pertrack: 'LiveKit per-track',
   livekit_phase2_diarize: 'diarization',
+  archival_diarize: 'archival diarize (OpenAI)',
 };
 
 interface Props {
@@ -35,32 +36,60 @@ export default function SpeakersPanel({
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [data, setData] = useState<SpeakersResponse | null>(null);
+  const [diarizing, setDiarizing] = useState(false);
+  const [diarizeMsg, setDiarizeMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setStatus('loading');
+    setErrMsg(null);
+    try {
+      const res = await fetch(`/api/admin/fragments/sessions/${sessionId}/speakers`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? `HTTP ${res.status}`);
+      }
+      const json = (await res.json()) as SpeakersResponse;
+      setData(json);
+      setStatus('ready');
+      onData?.(json);
+    } catch (e) {
+      setStatus('error');
+      setErrMsg(e instanceof Error ? e.message : 'Błąd');
+    }
+  }, [sessionId, onData]);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setStatus('loading');
-      setErrMsg(null);
-      try {
-        const res = await fetch(`/api/admin/fragments/sessions/${sessionId}/speakers`);
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error ?? `HTTP ${res.status}`);
-        }
-        const json = (await res.json()) as SpeakersResponse;
-        if (cancelled) return;
-        setData(json);
-        setStatus('ready');
-        onData?.(json);
-      } catch (e) {
-        if (cancelled) return;
-        setStatus('error');
-        setErrMsg(e instanceof Error ? e.message : 'Błąd');
-      }
-    }
-    load();
+    (async () => {
+      if (cancelled) return;
+      await load();
+    })();
     return () => { cancelled = true; };
-  }, [sessionId, onData]);
+  }, [load]);
+
+  const runDiarize = useCallback(async () => {
+    if (!confirm('Uruchomić diarize (OpenAI gpt-4o-transcribe-diarize) dla tej sesji? Proces może potrwać kilka minut.')) return;
+    setDiarizing(true);
+    setDiarizeMsg(null);
+    try {
+      const res = await fetch(
+        `/api/admin/fragments/sessions/${sessionId}/speaker-imports/diarize`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' },
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error ?? `HTTP ${res.status}`);
+      }
+      setDiarizeMsg(
+        `Gotowe: ${json.segmentsInserted} segmentów, ${json.rawSpeakerCount} mówców (${(json.elapsedMs / 1000).toFixed(1)}s)`,
+      );
+      await load();
+    } catch (e) {
+      setDiarizeMsg(e instanceof Error ? e.message : 'Błąd diarize');
+    } finally {
+      setDiarizing(false);
+    }
+  }, [sessionId, load]);
 
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-4 space-y-3">
@@ -84,10 +113,25 @@ export default function SpeakersPanel({
 
       {status === 'ready' && data && (
         data.activeImport === null || data.segments.length === 0 ? (
-          <p className="text-xs text-htg-fg-muted">
-            Brak transkrypcji dla tej sesji. Lane mówców i tekst pojawią się po
-            wgraniu importu (manual / LiveKit Faza 2 / diarization).
-          </p>
+          <div className="space-y-2">
+            <p className="text-xs text-htg-fg-muted">
+              Brak transkrypcji dla tej sesji.
+            </p>
+            <button
+              type="button"
+              onClick={runDiarize}
+              disabled={diarizing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/20 hover:bg-htg-sage/30 text-htg-sage rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {diarizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {diarizing ? 'Diarize w toku…' : 'Uruchom diarize (OpenAI)'}
+            </button>
+            {diarizeMsg && (
+              <p className={`text-[11px] ${diarizeMsg.startsWith('Gotowe') ? 'text-htg-sage' : 'text-red-400'}`}>
+                {diarizeMsg}
+              </p>
+            )}
+          </div>
         ) : (
           <div className="space-y-3">
             <SpeakerLane

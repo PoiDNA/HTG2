@@ -23,11 +23,94 @@
  *   - BUNNY_PRIVATE_CDN_URL, BUNNY_PRIVATE_TOKEN_KEY (dla htg-private pull zone)
  */
 
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { createClient } from '@supabase/supabase-js';
 import { signMedia } from '../lib/media-signing';
-import { transcodeToLowMp3 } from '../lib/speakers/transcode';
-import { diarizeAudio, MAX_FILE_SIZE } from '../lib/speakers/diarize';
+import { transcodeAndChunkToMp3 } from '../lib/speakers/transcode';
+import type { DiarizeSegment } from '../lib/speakers/diarize';
 import { writeActiveImport } from '../lib/speakers/import-writer';
+
+/** Diarize ma limit 1400 s per request — chunkujemy po 1200 s (20 min) z zapasem. */
+const CHUNK_SECONDS = 1200;
+
+const OPENAI_TRANSCRIBE_URL = 'https://api.openai.com/v1/audio/transcriptions';
+
+/**
+ * Diarize chunk via curl (child_process) — omija Node fetch headersTimeout=300s
+ * który uderza gdy OpenAI przetwarza 20 min audio przez 5-8 min.
+ */
+async function curlDiarize(
+  chunkBuf: Buffer,
+  apiKey: string,
+  language: string,
+): Promise<{ segments: DiarizeSegment[]; rawSpeakerCount: number }> {
+  const dir = await mkdtemp(join(tmpdir(), 'htg-curl-'));
+  const audioPath = join(dir, 'chunk.mp3');
+  const responsePath = join(dir, 'response.json');
+
+  try {
+    await writeFile(audioPath, chunkBuf);
+
+    const exitCode = await new Promise<number>((resolve) => {
+      const proc = spawn('curl', [
+        '--silent', '--show-error',
+        '--max-time', '780',
+        '-X', 'POST',
+        OPENAI_TRANSCRIBE_URL,
+        '-H', `Authorization: Bearer ${apiKey}`,
+        '-F', `file=@${audioPath};type=audio/mpeg`,
+        '-F', 'model=gpt-4o-transcribe-diarize',
+        '-F', 'response_format=diarized_json',
+        '-F', 'chunking_strategy=auto',
+        '-F', `language=${language}`,
+        '-o', responsePath,
+      ]);
+      let stderr = '';
+      proc.stderr.on('data', (c) => { stderr += c.toString(); });
+      proc.on('close', (code) => {
+        if (stderr) console.log(`    curl stderr: ${stderr.slice(0, 200)}`);
+        resolve(code ?? 1);
+      });
+    });
+
+    if (exitCode !== 0) throw new Error(`curl exited ${exitCode}`);
+
+    const raw = await readFile(responsePath, 'utf-8');
+    const json = JSON.parse(raw) as {
+      error?: { message: string };
+      segments?: Array<{
+        start?: number; end?: number; speaker?: string; text?: string;
+        confidence?: number; avg_logprob?: number;
+      }>;
+    };
+
+    if (json.error) throw new Error(`OpenAI: ${json.error.message}`);
+    if (!Array.isArray(json.segments)) throw new Error('brak segments[] w odpowiedzi');
+
+    const speakerKeys = new Set<string>();
+    const segments: DiarizeSegment[] = [];
+    for (const s of json.segments) {
+      const startSec = typeof s.start === 'number' ? s.start : null;
+      const endSec = typeof s.end === 'number' ? s.end : null;
+      const speakerKey = typeof s.speaker === 'string' && s.speaker ? s.speaker : null;
+      if (startSec === null || endSec === null || endSec <= startSec || !speakerKey) continue;
+      speakerKeys.add(speakerKey);
+      const confidence =
+        typeof s.confidence === 'number' ? Math.max(0, Math.min(1, s.confidence))
+        : typeof s.avg_logprob === 'number' ? Math.max(0, Math.min(1, Math.exp(s.avg_logprob)))
+        : null;
+      segments.push({ startSec, endSec, speakerKey, text: (s.text ?? '').trim(), confidence });
+    }
+
+    if (segments.length === 0) throw new Error('wszystkie segmenty odfiltrowane');
+    return { segments, rawSpeakerCount: speakerKeys.size };
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
 
 interface CliArgs {
   dryRun: boolean;
@@ -81,6 +164,7 @@ async function processSession(
   db: ReturnType<typeof createClient>,
   row: SessionRow,
   force: boolean,
+  apiKey: string,
 ): Promise<{ status: 'done' | 'skipped' | 'failed'; note: string }> {
   const sessionId = row.id;
   const sourceJobKey = `backfill_monthly_${sessionId}`;
@@ -118,45 +202,54 @@ async function processSession(
 
   // 1. Fetch original.
   const fetched = await fetchAudioBuffer(signed.url);
+  console.log(`  fetched: ${(fetched.buffer.byteLength / 1024 / 1024).toFixed(1)} MB`);
 
-  // 2. Transcode jeśli za duży.
-  let uploadBuffer: Buffer;
-  let uploadExt: string;
-  let uploadMime: string;
-  if (fetched.buffer.byteLength > MAX_FILE_SIZE) {
-    const tr = await transcodeToLowMp3(fetched.buffer, fetched.ext);
-    uploadBuffer = tr.mp3Buffer;
-    uploadExt = 'mp3';
-    uploadMime = 'audio/mpeg';
-    console.log(
-      `  transcode: ${(tr.originalBytes / 1024 / 1024).toFixed(1)} MB → ` +
-      `${(tr.outputBytes / 1024 / 1024).toFixed(1)} MB (${tr.elapsedMs}ms)`,
-    );
-    if (uploadBuffer.byteLength > MAX_FILE_SIZE) {
-      return {
-        status: 'failed',
-        note: `nawet po transcode >25 MB (${(uploadBuffer.byteLength / 1024 / 1024).toFixed(1)} MB) — sesja dłuższa niż ~2h30m`,
-      };
+  // 2. Transcode + chunking w jednym ffmpeg (24 kbps mono mp3, 20 min/chunk).
+  const tr = await transcodeAndChunkToMp3(fetched.buffer, fetched.ext, CHUNK_SECONDS);
+  console.log(`  chunks: ${tr.chunks.length} × ~${CHUNK_SECONDS}s (${tr.elapsedMs}ms)`);
+
+  // 3. Diarize każdy chunk; scal segmenty z offsetem czasu i prefixem speaker_key.
+  const allSegments: DiarizeSegment[] = [];
+  const speakerKeys = new Set<string>();
+  for (const chunk of tr.chunks) {
+    const ab = chunk.buffer.buffer.slice(
+      chunk.buffer.byteOffset,
+      chunk.buffer.byteOffset + chunk.buffer.byteLength,
+    ) as ArrayBuffer;
+
+    // curl zamiast Node fetch — omija undici headersTimeout=300s
+    // (OpenAI przetwarza 20 min audio przez 5-8 min przed odesłaniem headers).
+    let lastErr: unknown = null;
+    let result: { segments: DiarizeSegment[]; rawSpeakerCount: number } | null = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        result = await curlDiarize(chunk.buffer, apiKey, 'pl');
+        break;
+      } catch (e) {
+        lastErr = e;
+        const msg = e instanceof Error ? e.message : String(e);
+        console.log(`    chunk ${chunk.idx} attempt ${attempt}/3 failed: ${msg.slice(0, 120)}`);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 5000 * attempt));
+      }
     }
-  } else {
-    uploadBuffer = fetched.buffer;
-    uploadExt = fetched.ext;
-    uploadMime = fetched.ext === 'm4a' || fetched.ext === 'mp4' || fetched.ext === 'm4v'
-      ? 'audio/mp4'
-      : 'audio/mpeg';
+    if (!result) throw lastErr;
+    for (const s of result.segments) {
+      const prefixedKey = `c${chunk.idx}_${s.speakerKey}`;
+      speakerKeys.add(prefixedKey);
+      allSegments.push({
+        startSec: s.startSec + chunk.offsetSec,
+        endSec: s.endSec + chunk.offsetSec,
+        speakerKey: prefixedKey,
+        text: s.text,
+        confidence: s.confidence,
+      });
+    }
+    console.log(`    chunk ${chunk.idx}: ${result.segments.length} seg, ${result.rawSpeakerCount} spk`);
   }
 
-  // 3. Diarize.
-  const result = await diarizeAudio({
-    audioBuffer: uploadBuffer.buffer.slice(
-      uploadBuffer.byteOffset,
-      uploadBuffer.byteOffset + uploadBuffer.byteLength,
-    ) as ArrayBuffer,
-    sourceUrl: signed.url,
-    language: 'pl',
-    explicitMime: uploadMime,
-    explicitExt: uploadExt,
-  });
+  if (allSegments.length === 0) {
+    return { status: 'failed', note: 'wszystkie chunki zwróciły 0 segmentów' };
+  }
 
   // 4. Write import.
   const write = await writeActiveImport({
@@ -166,12 +259,12 @@ async function processSession(
     sourceJobKey,
     sourceRef: row.bunny_video_id,
     createdBy: null,
-    segments: result.segments,
+    segments: allSegments,
   });
 
   return {
     status: 'done',
-    note: `segments=${write.segmentsInserted} speakers=${result.rawSpeakerCount} importId=${write.importId}`,
+    note: `segments=${write.segmentsInserted} prefixedSpeakers=${speakerKeys.size} chunks=${tr.chunks.length} importId=${write.importId}`,
   };
 }
 
@@ -179,7 +272,7 @@ async function main() {
   const args = parseArgs();
   const supabaseUrl = assertEnv('NEXT_PUBLIC_SUPABASE_URL');
   const serviceKey = assertEnv('SUPABASE_SERVICE_ROLE_KEY');
-  assertEnv('OPENAI_API_KEY');
+  const apiKey = assertEnv('OPENAI_API_KEY');
 
   const db = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -222,7 +315,7 @@ async function main() {
     const prefix = `[${i + 1}/${sessions.length}]`;
     console.log(`${prefix} ${row.id} — ${row.bunny_video_id}`);
     try {
-      const res = await processSession(db, row, args.force);
+      const res = await processSession(db, row, args.force, apiKey);
       console.log(`  ${res.status === 'done' ? '✅' : res.status === 'skipped' ? '⏭️ ' : '❌'} ${res.note}`);
       if (res.status === 'done') done++;
       else if (res.status === 'skipped') skipped++;

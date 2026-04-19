@@ -13,7 +13,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -77,6 +77,87 @@ export async function transcodeToLowMp3(
       mp3Buffer,
       originalBytes: inputBuffer.byteLength,
       outputBytes: mp3Buffer.byteLength,
+      elapsedMs: Date.now() - start,
+    };
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+export interface TranscodeChunk {
+  buffer: Buffer;
+  offsetSec: number;
+  idx: number;
+}
+
+export interface TranscodeChunksResult {
+  chunks: TranscodeChunk[];
+  originalBytes: number;
+  elapsedMs: number;
+}
+
+/**
+ * Transcode + segmentacja czasowa w jednym przebiegu ffmpeg.
+ *
+ * Motywacja: gpt-4o-transcribe-diarize ma limit 1400 s per request. Dla sesji
+ * >23 min trzeba chunkować. Robimy to razem z transcode (24 kbps mono mp3),
+ * żeby jedno wywołanie ffmpeg dało gotowe segmenty do diarize.
+ *
+ * Speaker keys między chunkami są niezależne — caller musi dodać prefix
+ * (np. `c{idx}_{key}`) przed zapisem do DB.
+ */
+export async function transcodeAndChunkToMp3(
+  inputBuffer: Buffer,
+  inputExt: string,
+  chunkSeconds: number,
+  opts: TranscodeOptions = {},
+): Promise<TranscodeChunksResult> {
+  const bitrate = opts.bitrateKbps ?? 24;
+  const sampleRate = opts.sampleRate ?? 22050;
+  const start = Date.now();
+
+  const dir = await mkdtemp(join(tmpdir(), 'htg-chunk-'));
+  const inputPath = join(dir, `in.${inputExt.replace(/^\./, '')}`);
+  const outputPattern = join(dir, 'out_%03d.mp3');
+
+  try {
+    await writeFile(inputPath, inputBuffer);
+
+    await new Promise<void>((resolve, reject) => {
+      const ff = spawn('ffmpeg', [
+        '-y',
+        '-i', inputPath,
+        '-vn',
+        '-ac', '1',
+        '-ar', String(sampleRate),
+        '-b:a', `${bitrate}k`,
+        '-f', 'segment',
+        '-segment_time', String(chunkSeconds),
+        '-reset_timestamps', '1',
+        outputPattern,
+      ]);
+      let stderr = '';
+      ff.stderr.on('data', (c) => { stderr += c.toString(); });
+      ff.on('error', (e) => reject(new Error(`ffmpeg spawn failed: ${e.message}`)));
+      ff.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`ffmpeg exited ${code}: ${stderr.slice(-500)}`));
+      });
+    });
+
+    const files = (await readdir(dir))
+      .filter((f) => f.startsWith('out_') && f.endsWith('.mp3'))
+      .sort();
+
+    const chunks: TranscodeChunk[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const buf = await readFile(join(dir, files[i]));
+      chunks.push({ buffer: buf, offsetSec: i * chunkSeconds, idx: i });
+    }
+
+    return {
+      chunks,
+      originalBytes: inputBuffer.byteLength,
       elapsedMs: Date.now() - start,
     };
   } finally {

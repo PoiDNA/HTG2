@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Star, Trash2, Play, Lock, Bookmark, Zap,
-  Mic, Music, Loader2, Plus, Radio,
+  Star, Trash2, Play, Lock, Bookmark,
+  Mic, Music, Loader2, Plus, Radio, CheckCircle,
 } from 'lucide-react';
 import { Link } from '@/i18n-config';
 import { usePlayer } from '@/lib/player-context';
-import type { FragmentPlayback, RecordingFragmentPlayback, ImpulsePlayback } from '@/lib/player-context';
+import type { FragmentPlayback, RecordingFragmentPlayback, PytaniaAnswerPlayback } from '@/lib/player-context';
 
 // ---------------------------------------------------------------------------
 // Types (subset of what the API returns)
@@ -60,16 +60,19 @@ interface FragmentSave {
   user_categories: UserCategory | null;
 }
 
-interface ImpulseFragment {
+interface PytaniaAnswerFragment {
   id: string;
-  ordinal: number;
   start_sec: number;
   end_sec: number;
-  title: string;
-  title_i18n: Record<string, string>;
-  impulse_order: number | null;
   session_template_id: string;
-  session_templates: SessionTemplate;
+  session_title: string;
+  month_title: string | null;
+}
+
+interface PytaniaItem {
+  id: string;          // question id
+  title: string;       // question title
+  answer_fragment: PytaniaAnswerFragment;
 }
 
 interface Category {
@@ -124,7 +127,7 @@ function getSaveSourceTitle(save: FragmentSave): string {
 const VIRTUAL_ALL = '__all__';
 const VIRTUAL_FAVORITES = '__favorites__';
 const VIRTUAL_RECORDINGS = '__recordings__';
-const VIRTUAL_IMPULSES = '__impulses__';
+const VIRTUAL_PYTANIA = '__pytania__';
 
 // ---------------------------------------------------------------------------
 // FragmentCard
@@ -237,34 +240,35 @@ function FragmentCard({ save, accessible, onPlay, onToggleFavorite, onDelete }: 
 }
 
 // ---------------------------------------------------------------------------
-// ImpulseCard
+// PytaniaCard
 // ---------------------------------------------------------------------------
 
-interface ImpulseCardProps {
-  impulse: ImpulseFragment;
+interface PytaniaCardProps {
+  item: PytaniaItem;
   onPlay: () => void;
 }
 
-function ImpulseCard({ impulse, onPlay }: ImpulseCardProps) {
-  const duration = impulse.end_sec - impulse.start_sec;
+function PytaniaCard({ item, onPlay }: PytaniaCardProps) {
+  const f = item.answer_fragment;
+  const duration = f.end_sec - f.start_sec;
   return (
-    <div className="group bg-htg-card border border-htg-card-border hover:border-htg-sage/30 rounded-xl p-4 transition-all">
+    <div className="group bg-htg-card border border-htg-card-border hover:border-emerald-300/50 rounded-xl p-4 transition-all">
       <div className="flex items-center gap-1.5 text-xs text-htg-fg-muted mb-1.5">
-        <Zap className="w-3 h-3 text-amber-400" />
-        {impulse.session_templates.title}
+        <CheckCircle className="w-3 h-3 text-emerald-500" />
+        {f.month_title ? `${f.month_title} · ` : ''}{f.session_title}
       </div>
-      <p className="text-htg-fg font-medium text-sm mb-0.5 truncate">{impulse.title}</p>
+      <p className="text-htg-fg font-medium text-sm mb-0.5 line-clamp-2 leading-snug">{item.title}</p>
       <p className="text-xs text-htg-fg-muted">
-        {formatTime(impulse.start_sec)} – {formatTime(impulse.end_sec)}
+        {formatTime(f.start_sec)} – {formatTime(f.end_sec)}
         <span className="ml-2 text-htg-fg-muted/60">({formatTime(duration)})</span>
       </p>
       <button
         onClick={onPlay}
         className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
-                   bg-htg-sage text-white hover:bg-htg-sage/90 transition-colors"
+                   bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
       >
         <Play className="w-3 h-3 fill-white" />
-        Odtwórz impuls
+        Odtwórz odpowiedź
       </button>
     </div>
   );
@@ -284,9 +288,9 @@ interface Props {
 export default function FragmentList({ initialSaves, categories, accessibleIds, userId }: Props) {
   const { startPlayback } = usePlayer();
   const [saves, setSaves] = useState<FragmentSave[]>(initialSaves);
-  const [impulses, setImpulses] = useState<ImpulseFragment[]>([]);
+  const [pytaniaItems, setPytaniaItems] = useState<PytaniaItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>(VIRTUAL_ALL);
-  const [loadingImpulses, setLoadingImpulses] = useState(false);
+  const [loadingPytania, setLoadingPytania] = useState(false);
   const accessSet = new Set(accessibleIds);
 
   // ── Category management ───────────────────────────────────────────────────
@@ -323,14 +327,14 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
     }
   }, [newCatName]);
 
-  // Load impulses on mount
+  // Load pytania on mount
   useEffect(() => {
-    setLoadingImpulses(true);
-    fetch('/api/fragments/impulses')
+    setLoadingPytania(true);
+    fetch('/api/fragments/pytania-answers')
       .then(r => r.json())
-      .then(d => { if (d.impulses) setImpulses(d.impulses); })
+      .then(d => { if (d.items) setPytaniaItems(d.items); })
       .catch(() => {})
-      .finally(() => setLoadingImpulses(false));
+      .finally(() => setLoadingPytania(false));
   }, []);
 
   // ── Filtered views ────────────────────────────────────────────────────────
@@ -343,8 +347,8 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
         return saves.filter(s => s.is_favorite);
       case VIRTUAL_RECORDINGS:
         return saves.filter(s => s.booking_recording_id);
-      case VIRTUAL_IMPULSES:
-        return []; // impulses shown separately
+      case VIRTUAL_PYTANIA:
+        return []; // pytania shown separately
       default:
         return saves.filter(s => s.category_id === activeCategory);
     }
@@ -353,7 +357,7 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
   const totalByCategory = {
     [VIRTUAL_FAVORITES]: saves.filter(s => s.is_favorite).length,
     [VIRTUAL_RECORDINGS]: saves.filter(s => s.booking_recording_id).length,
-    [VIRTUAL_IMPULSES]: impulses.length,
+    [VIRTUAL_PYTANIA]: pytaniaItems.length,
   } as Record<string, number>;
 
   for (const cat of catList) {
@@ -392,15 +396,16 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
     }
   }, [startPlayback]);
 
-  const handlePlayImpulse = useCallback((impulse: ImpulseFragment) => {
-    const playback: ImpulsePlayback = {
-      kind: 'impulse',
-      sessionFragmentId: impulse.id,
-      sessionId: impulse.session_template_id,
-      title: impulse.session_templates.title,
-      fragmentTitle: impulse.title,
-      startSec: impulse.start_sec,
-      endSec: impulse.end_sec,
+  const handlePlayPytania = useCallback((item: PytaniaItem) => {
+    const f = item.answer_fragment;
+    const playback: PytaniaAnswerPlayback = {
+      kind: 'pytania_answer',
+      sessionFragmentId: f.id,
+      sessionId: f.session_template_id,
+      title: f.session_title,
+      fragmentTitle: item.title,
+      startSec: f.start_sec,
+      endSec: f.end_sec,
     };
     startPlayback(playback);
   }, [startPlayback]);
@@ -430,14 +435,14 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
     { id: VIRTUAL_ALL, label: 'Wszystkie', count: allSavesCount },
     { id: VIRTUAL_FAVORITES, label: '⭐ Ulubione', count: totalByCategory[VIRTUAL_FAVORITES] },
     { id: VIRTUAL_RECORDINGS, label: '🎙 Twoje Nagrania Sesji', count: totalByCategory[VIRTUAL_RECORDINGS] },
-    { id: VIRTUAL_IMPULSES, label: '🔥 Impuls', count: totalByCategory[VIRTUAL_IMPULSES] },
+    { id: VIRTUAL_PYTANIA, label: '✅ Pytania Rozpoznane', count: totalByCategory[VIRTUAL_PYTANIA] },
     ...catList.map(cat => ({ id: cat.id, label: cat.name, count: totalByCategory[cat.id] ?? 0 })),
   ];
 
   // ── Empty state ───────────────────────────────────────────────────────────
 
-  const isEmpty = activeCategory === VIRTUAL_IMPULSES
-    ? impulses.length === 0
+  const isEmpty = activeCategory === VIRTUAL_PYTANIA
+    ? pytaniaItems.length === 0
     : filteredSaves.length === 0;
 
   return (
@@ -523,26 +528,26 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
           <h2 className="text-base font-medium text-htg-fg">
             {navItems.find(n => n.id === activeCategory)?.label ?? 'Momenty'}
           </h2>
-          {activeCategory === VIRTUAL_IMPULSES && loadingImpulses && (
+          {activeCategory === VIRTUAL_PYTANIA && loadingPytania && (
             <Loader2 className="w-4 h-4 text-htg-fg-muted animate-spin" />
           )}
         </div>
 
-        {/* Impulse grid */}
-        {activeCategory === VIRTUAL_IMPULSES && (
+        {/* Pytania Rozpoznane grid */}
+        {activeCategory === VIRTUAL_PYTANIA && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {impulses.map(impulse => (
-              <ImpulseCard
-                key={impulse.id}
-                impulse={impulse}
-                onPlay={() => handlePlayImpulse(impulse)}
+            {pytaniaItems.map(item => (
+              <PytaniaCard
+                key={item.id}
+                item={item}
+                onPlay={() => handlePlayPytania(item)}
               />
             ))}
           </div>
         )}
 
         {/* Saves grid */}
-        {activeCategory !== VIRTUAL_IMPULSES && (
+        {activeCategory !== VIRTUAL_PYTANIA && (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {filteredSaves.map(save => {
               const sourceId = save.session_template_id ?? save.booking_recording_id ?? '';
@@ -562,12 +567,12 @@ export default function FragmentList({ initialSaves, categories, accessibleIds, 
         )}
 
         {/* Empty state */}
-        {isEmpty && !loadingImpulses && (
+        {isEmpty && !loadingPytania && (
           <div className="text-center py-16 text-htg-fg-muted">
-            {activeCategory === VIRTUAL_IMPULSES ? (
+            {activeCategory === VIRTUAL_PYTANIA ? (
               <>
-                <Zap className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
-                <p className="text-sm">Brak impulsów. Administrator jeszcze ich nie dodał.</p>
+                <CheckCircle className="w-10 h-10 mx-auto mb-3 text-htg-fg-muted/30" />
+                <p className="text-sm">Brak rozpoznanych pytań z przypisaną odpowiedzią.</p>
               </>
             ) : activeCategory === VIRTUAL_ALL ? (
               <>

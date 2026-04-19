@@ -20,7 +20,11 @@ interface FragmentOption {
   title: string;
   start_sec: number;
   end_sec: number;
+  session_id: string;
   session_title: string;
+  session_order: number | null;
+  month_title: string | null;
+  is_pytania: boolean;
 }
 
 interface Props {
@@ -34,6 +38,10 @@ function fmtTime(sec: number): string {
   return `${m}:${s}`;
 }
 
+function sessionLabel(f: FragmentOption): string {
+  return f.month_title ? `${f.month_title} · ${f.session_title}` : f.session_title;
+}
+
 function QuestionRow({ question, fragmentOptions }: { question: QuestionItem; fragmentOptions: FragmentOption[] }) {
   const [status, setStatus] = useState(question.status);
   const [fragmentId, setFragmentId] = useState(question.answer_fragment_id ?? '');
@@ -41,7 +49,23 @@ function QuestionRow({ question, fragmentOptions }: { question: QuestionItem; fr
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
 
+  // Fragment picker state
+  const [catalogOnly, setCatalogOnly] = useState(true);
+  const [sessionFilter, setSessionFilter] = useState('');
+
   const isResolved = status === 'rozpoznane';
+
+  // Unique sessions from all fragments (for dropdown)
+  const sessions = Array.from(
+    new Map(fragmentOptions.map(f => [f.session_id, { id: f.session_id, label: sessionLabel(f) }])).values()
+  ).sort((a, b) => a.label.localeCompare(b.label, 'pl'));
+
+  // Filtered fragments for the select
+  const displayFragments = fragmentOptions.filter(f => {
+    if (catalogOnly && !f.is_pytania) return false;
+    if (sessionFilter && f.session_id !== sessionFilter) return false;
+    return true;
+  });
 
   async function save() {
     setSaving(true);
@@ -119,22 +143,65 @@ function QuestionRow({ question, fragmentOptions }: { question: QuestionItem; fr
           </div>
 
           {status === 'rozpoznane' && (
-            <div>
-              <label className="text-xs font-medium text-htg-fg-muted uppercase tracking-wider block mb-1">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-htg-fg-muted uppercase tracking-wider block">
                 Fragment odpowiedzi (Moment)
               </label>
-              <select
-                value={fragmentId}
-                onChange={e => setFragmentId(e.target.value)}
-                className="w-full bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg focus:outline-none focus:border-htg-sage"
-              >
-                <option value="">— brak wybranego fragmentu —</option>
-                {fragmentOptions.map(f => (
-                  <option key={f.id} value={f.id}>
-                    {f.session_title} / {f.title} ({fmtTime(f.start_sec)}–{fmtTime(f.end_sec)})
-                  </option>
-                ))}
-              </select>
+
+              {/* Catalog / All toggle + session filter */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex rounded-lg border border-htg-card-border overflow-hidden text-xs">
+                  <button
+                    onClick={() => { setCatalogOnly(true); setSessionFilter(''); }}
+                    className={`px-2.5 py-1.5 transition-colors ${catalogOnly ? 'bg-emerald-600 text-white' : 'text-htg-fg-muted hover:bg-htg-surface'}`}
+                  >
+                    ✅ Katalog Pytań
+                  </button>
+                  <button
+                    onClick={() => setCatalogOnly(false)}
+                    className={`px-2.5 py-1.5 transition-colors ${!catalogOnly ? 'bg-htg-sage text-white' : 'text-htg-fg-muted hover:bg-htg-surface'}`}
+                  >
+                    Wszystkie fragmenty
+                  </button>
+                </div>
+
+                {/* Session filter */}
+                <select
+                  value={sessionFilter}
+                  onChange={e => setSessionFilter(e.target.value)}
+                  className="flex-1 min-w-36 bg-htg-surface border border-htg-card-border rounded-lg px-2 py-1.5 text-xs text-htg-fg focus:outline-none focus:border-htg-sage"
+                >
+                  <option value="">Wszystkie sesje</option>
+                  {sessions.map(s => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Fragment select */}
+              {catalogOnly && displayFragments.length === 0 ? (
+                <p className="text-xs text-amber-600 italic">
+                  Brak fragmentów w katalogu Pytań. Przełącz na &bdquo;Wszystkie fragmenty&rdquo;.
+                </p>
+              ) : (
+                <select
+                  value={fragmentId}
+                  onChange={e => setFragmentId(e.target.value)}
+                  className="w-full bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg focus:outline-none focus:border-htg-sage"
+                >
+                  <option value="">— brak wybranego fragmentu —</option>
+                  {displayFragments.map(f => {
+                    const label = sessionFilter
+                      ? `${f.title} (${fmtTime(f.start_sec)}–${fmtTime(f.end_sec)})`
+                      : `${sessionLabel(f)} / ${f.title} (${fmtTime(f.start_sec)}–${fmtTime(f.end_sec)})`;
+                    return (
+                      <option key={f.id} value={f.id}>
+                        {f.is_pytania ? '✅ ' : ''}{label}
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
             </div>
           )}
 

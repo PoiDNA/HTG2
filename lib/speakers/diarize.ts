@@ -131,6 +131,7 @@ export async function diarizeAudio(params: {
   fd.append('file', blob, `session.${ext}`);
   fd.append('model', DIARIZE_MODEL);
   fd.append('response_format', 'diarized_json');
+  fd.append('chunking_strategy', 'auto');
   if (language) fd.append('language', language);
   console.info('[diarize] upload', {
     bytes: audioBuffer.byteLength,

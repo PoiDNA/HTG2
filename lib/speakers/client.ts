@@ -11,7 +11,8 @@ export type SpeakerRole = 'host' | 'client' | 'assistant' | 'unknown';
 export type SpeakerSource =
   | 'manual'
   | 'livekit_phase2_pertrack'
-  | 'livekit_phase2_diarize';
+  | 'livekit_phase2_diarize'
+  | 'archival_diarize';
 
 export interface SpeakerSegment {
   id: string;

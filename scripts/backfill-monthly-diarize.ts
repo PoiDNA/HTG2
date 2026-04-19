@@ -167,7 +167,10 @@ async function processSession(
   apiKey: string,
 ): Promise<{ status: 'done' | 'skipped' | 'failed'; note: string }> {
   const sessionId = row.id;
-  const sourceJobKey = `backfill_monthly_${sessionId}`;
+  // --force → nowy klucz z timestampem, żeby obejść idempotencję import-writera.
+  const sourceJobKey = force
+    ? `backfill_monthly_${sessionId}_${Date.now()}`
+    : `backfill_monthly_${sessionId}`;
 
   // Skip jeśli już aktywny import (chyba że --force).
   if (!force) {

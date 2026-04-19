@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const { data, error } = await db
     .from('session_templates')
-    .select('id, bunny_video_id, bunny_library_id, waveform_peaks_url, duration_minutes')
+    .select('id, bunny_video_id, bunny_library_id, waveform_peaks_url, duration_minutes, media_version')
     .eq('id', sessionId)
     .maybeSingle();
 
@@ -45,6 +45,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       bunny_video_id: data.bunny_video_id,
       bunny_library_id: data.bunny_library_id,
       backup_storage_path: null,
+      media_version: (data.media_version as number | null) ?? 0,
     },
     900,
   );

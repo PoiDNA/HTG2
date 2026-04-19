@@ -24,6 +24,13 @@ export interface MediaSource {
   bunny_video_id:      string | null;
   bunny_library_id:    string | null;
   backup_storage_path: string | null;
+  /**
+   * Opcjonalny cache-buster. Dodawany do podpisanego URL jako `&v=<n>`
+   * (poza hashem tokenu — Bunny hashuje tylko path). Bumping tej wartości
+   * wymusza nowy URL i tym samym nowy wpis cache na Bunny Pull Zone,
+   * gdy plik został podmieniony pod tą samą ścieżką w Storage.
+   */
+  media_version?:      number | null;
 }
 
 export interface SignedMedia {
@@ -59,14 +66,15 @@ function guessMimeType(path: string | null): string | null {
  * @returns SignedMedia, or null if no viable source is available
  */
 export function signMedia(source: MediaSource, ttlSeconds: number): SignedMedia | null {
-  const { bunny_video_id, bunny_library_id, backup_storage_path } = source;
+  const { bunny_video_id, bunny_library_id, backup_storage_path, media_version } = source;
+  const bust = media_version && media_version > 0 ? `&v=${media_version}` : '';
 
   // ── 1. HTG2 Storage (preferred for recordings) ──────────────────────────
   if (backup_storage_path) {
     const signed = signHtg2StorageUrl(backup_storage_path, ttlSeconds);
     if (!signed) return null; // env vars missing — caller should return 403
     return {
-      url: signed,
+      url: signed + bust,
       deliveryType: 'direct',
       mimeType: guessMimeType(backup_storage_path),
     };
@@ -75,7 +83,7 @@ export function signMedia(source: MediaSource, ttlSeconds: number): SignedMedia 
   // ── 2. Bunny Stream HLS ─────────────────────────────────────────────────
   if (bunny_video_id && bunny_library_id) {
     return {
-      url: signBunnyUrl(bunny_video_id, bunny_library_id, ttlSeconds),
+      url: signBunnyUrl(bunny_video_id, bunny_library_id, ttlSeconds) + bust,
       deliveryType: 'hls',
       mimeType: null, // HLS manifests don't need a MIME type hint
     };
@@ -84,7 +92,7 @@ export function signMedia(source: MediaSource, ttlSeconds: number): SignedMedia 
   // ── 3. Private CDN direct (legacy / VOD without library) ────────────────
   if (bunny_video_id) {
     return {
-      url: signPrivateCdnUrl(bunny_video_id, ttlSeconds),
+      url: signPrivateCdnUrl(bunny_video_id, ttlSeconds) + bust,
       deliveryType: 'direct',
       mimeType: guessMimeType(bunny_video_id),
     };

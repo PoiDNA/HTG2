@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Users, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
+import { Users, Loader2, AlertTriangle, Sparkles, RefreshCw } from 'lucide-react';
 import SpeakerLane from './SpeakerLane';
 import TranscriptSegmentList from '@/components/transcript/TranscriptSegmentList';
 import type { SpeakersResponse } from '@/lib/speakers/client';
@@ -38,6 +38,8 @@ export default function SpeakersPanel({
   const [data, setData] = useState<SpeakersResponse | null>(null);
   const [diarizing, setDiarizing] = useState(false);
   const [diarizeMsg, setDiarizeMsg] = useState<string | null>(null);
+  const [bumping, setBumping] = useState(false);
+  const [bumpMsg, setBumpMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -91,6 +93,26 @@ export default function SpeakersPanel({
     }
   }, [sessionId, load]);
 
+  const bumpMediaVersion = useCallback(async () => {
+    if (!confirm('Podmieniłeś plik audio w Bunny Storage? Ta operacja wymusi odświeżenie cache (CDN), wyczyści peaks i dezaktywuje transkrypcję.')) return;
+    setBumping(true);
+    setBumpMsg(null);
+    try {
+      const res = await fetch(
+        `/api/admin/fragments/sessions/${sessionId}/bump-media-version`,
+        { method: 'POST' },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setBumpMsg(`Cache odświeżony (v=${json.mediaVersion}). Przeładuj stronę.`);
+      await load();
+    } catch (e) {
+      setBumpMsg(e instanceof Error ? e.message : 'Błąd');
+    } finally {
+      setBumping(false);
+    }
+  }, [sessionId, load]);
+
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-2">
@@ -102,7 +124,23 @@ export default function SpeakersPanel({
             Źródło: {SOURCE_LABEL[data.activeImport.source]}
           </span>
         )}
+        <button
+          type="button"
+          onClick={bumpMediaVersion}
+          disabled={bumping}
+          title="Odśwież cache CDN po podmianie pliku w Bunny Storage"
+          className={`inline-flex items-center gap-1 text-[11px] text-htg-fg-muted hover:text-htg-fg transition-colors disabled:opacity-50 ${data?.activeImport ? '' : 'ml-auto'}`}
+        >
+          {bumping ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+          Odśwież audio
+        </button>
       </div>
+
+      {bumpMsg && (
+        <p className={`text-[11px] ${bumpMsg.startsWith('Cache') ? 'text-htg-sage' : 'text-red-400'}`}>
+          {bumpMsg}
+        </p>
+      )}
 
       {status === 'error' && (
         <div className="flex items-center gap-2 text-xs text-red-400">

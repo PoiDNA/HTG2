@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     .from('session_fragments')
     .select(`
       id, start_sec, end_sec,
-      session_templates!inner(bunny_video_id, bunny_library_id, is_published)
+      session_templates!inner(bunny_video_id, bunny_library_id, is_published, media_version)
     `)
     .eq('id', sessionFragmentId)
     .single();
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     bunny_video_id: st.bunny_video_id,
     bunny_library_id: st.bunny_library_id,
     backup_storage_path: null,
+    media_version: (st.media_version as number | null) ?? 0,
   }, 3600);
 
   if (!signed) {

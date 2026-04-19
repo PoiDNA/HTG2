@@ -16,6 +16,7 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import type { ChunkResult } from './chunk-match';
 
 export interface TranscodeOptions {
   /** Bitrate docelowy w kbps. Default 64 (dobry balans jakość/rozmiar dla mowy). */
@@ -159,6 +160,137 @@ export async function transcodeAndChunkToMp3(
       chunks,
       originalBytes: inputBuffer.byteLength,
       elapsedMs: Date.now() - start,
+    };
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+export interface TranscodeChunksBuf {
+  /** Chunk buffer + absolutny offset w oryginale (z overlapem). */
+  chunkBuf: Buffer;
+  chunkResult: Omit<ChunkResult, 'segments'>;
+}
+
+export interface TranscodeWithOverlapResult {
+  /** Bufory do diarize + metadane potrzebne do mergeChunksWithSpeakerMatching. */
+  chunksBuf: TranscodeChunksBuf[];
+  originalBytes: number;
+  elapsedMs: number;
+  overlapSec: number;
+}
+
+/**
+ * Transcode + nakładające się chunki dla spójnego dopasowania mówców.
+ *
+ * Kroki:
+ *  1. Transcode całego pliku do mono mp3 (jedna przepustka).
+ *  2. ffprobe → czas trwania.
+ *  3. Dla każdego chunka: ffmpeg -ss / -t -c copy → szybkie wycinanie.
+ *
+ * Każdy chunk zawiera overlapSec dodatkowego audio przy granicy.
+ * offsetSec = absolutny start chunka w oryginale (wlicza overlap).
+ * Model diarize zwraca timestampy od 0 — chunk-match.ts doda offsetSec.
+ */
+export async function transcodeAndChunkWithOverlap(
+  inputBuffer: Buffer,
+  inputExt: string,
+  chunkSeconds: number,
+  overlapSec: number,
+  opts: TranscodeOptions = {},
+): Promise<TranscodeWithOverlapResult> {
+  const bitrate = opts.bitrateKbps ?? 64;
+  const sampleRate = opts.sampleRate ?? 22050;
+  const start = Date.now();
+
+  const dir = await mkdtemp(join(tmpdir(), 'htg-overlap-'));
+  const inputPath = join(dir, `in.${inputExt.replace(/^\./, '')}`);
+  const mp3Path = join(dir, 'full.mp3');
+
+  try {
+    await writeFile(inputPath, inputBuffer);
+
+    // 1. Transcode to mp3.
+    await new Promise<void>((resolve, reject) => {
+      const ff = spawn('ffmpeg', [
+        '-y', '-i', inputPath,
+        '-vn', '-ac', '1',
+        '-ar', String(sampleRate),
+        '-b:a', `${bitrate}k`,
+        '-f', 'mp3',
+        mp3Path,
+      ]);
+      let stderr = '';
+      ff.stderr.on('data', (c) => { stderr += c.toString(); });
+      ff.on('error', (e) => reject(new Error(`ffmpeg spawn failed: ${e.message}`)));
+      ff.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`ffmpeg exited ${code}: ${stderr.slice(-500)}`));
+      });
+    });
+
+    // 2. Get total duration via ffprobe.
+    const durationSec = await new Promise<number>((resolve, reject) => {
+      const fp = spawn('ffprobe', [
+        '-v', 'quiet',
+        '-print_format', 'json',
+        '-show_format',
+        mp3Path,
+      ]);
+      let stdout = '';
+      fp.stdout.on('data', (c) => { stdout += c.toString(); });
+      fp.on('error', (e) => reject(new Error(`ffprobe spawn failed: ${e.message}`)));
+      fp.on('close', (code) => {
+        if (code !== 0) return reject(new Error(`ffprobe exited ${code}`));
+        try {
+          const json = JSON.parse(stdout) as { format?: { duration?: string } };
+          const d = parseFloat(json.format?.duration ?? '');
+          if (isNaN(d)) return reject(new Error('ffprobe: missing duration'));
+          resolve(d);
+        } catch (e2) { reject(e2); }
+      });
+    });
+
+    // 3. Slice with overlap.
+    const numChunks = Math.ceil(durationSec / chunkSeconds);
+    const chunksBuf: TranscodeChunksBuf[] = [];
+
+    for (let i = 0; i < numChunks; i++) {
+      const chunkStart = Math.max(0, i * chunkSeconds - overlapSec);
+      const chunkEnd = Math.min(durationSec, (i + 1) * chunkSeconds + overlapSec);
+      const duration = chunkEnd - chunkStart;
+      const outPath = join(dir, `chunk_${i.toString().padStart(3, '0')}.mp3`);
+
+      await new Promise<void>((resolve, reject) => {
+        const ff = spawn('ffmpeg', [
+          '-y',
+          '-ss', String(chunkStart),
+          '-t', String(duration),
+          '-i', mp3Path,
+          '-c', 'copy',
+          outPath,
+        ]);
+        let stderr = '';
+        ff.stderr.on('data', (c) => { stderr += c.toString(); });
+        ff.on('error', (e) => reject(new Error(`ffmpeg spawn failed: ${e.message}`)));
+        ff.on('close', (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`ffmpeg chunk ${i} exited ${code}: ${stderr.slice(-300)}`));
+        });
+      });
+
+      const buf = await readFile(outPath);
+      chunksBuf.push({
+        chunkBuf: buf,
+        chunkResult: { offsetSec: chunkStart, idx: i },
+      });
+    }
+
+    return {
+      chunksBuf,
+      originalBytes: inputBuffer.byteLength,
+      elapsedMs: Date.now() - start,
+      overlapSec,
     };
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});

@@ -29,12 +29,15 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createClient } from '@supabase/supabase-js';
 import { signMedia } from '../lib/media-signing';
-import { transcodeAndChunkToMp3 } from '../lib/speakers/transcode';
+import { transcodeAndChunkWithOverlap } from '../lib/speakers/transcode';
 import type { DiarizeSegment } from '../lib/speakers/diarize';
 import { writeActiveImport } from '../lib/speakers/import-writer';
+import { mergeChunksWithSpeakerMatching, type ChunkResult } from '../lib/speakers/chunk-match';
 
 /** Diarize ma limit 1400 s per request — chunkujemy po 1200 s (20 min) z zapasem. */
 const CHUNK_SECONDS = 1200;
+/** Overlap na granicy chunka — oba sąsiednie chunki transkrybują tę strefę. */
+const OVERLAP_SECONDS = 60;
 
 const OPENAI_TRANSCRIBE_URL = 'https://api.openai.com/v1/audio/transcriptions';
 
@@ -207,54 +210,42 @@ async function processSession(
   const fetched = await fetchAudioBuffer(signed.url);
   console.log(`  fetched: ${(fetched.buffer.byteLength / 1024 / 1024).toFixed(1)} MB`);
 
-  // 2. Transcode + chunking w jednym ffmpeg (24 kbps mono mp3, 20 min/chunk).
-  const tr = await transcodeAndChunkToMp3(fetched.buffer, fetched.ext, CHUNK_SECONDS);
-  console.log(`  chunks: ${tr.chunks.length} × ~${CHUNK_SECONDS}s (${tr.elapsedMs}ms)`);
+  // 2. Transcode + nakładające się chunki (overlap dla dopasowania mówców).
+  const tr = await transcodeAndChunkWithOverlap(
+    fetched.buffer, fetched.ext, CHUNK_SECONDS, OVERLAP_SECONDS,
+  );
+  console.log(`  chunks: ${tr.chunksBuf.length} × ~${CHUNK_SECONDS}s +${OVERLAP_SECONDS}s overlap (${tr.elapsedMs}ms)`);
 
-  // 3. Diarize każdy chunk; scal segmenty z offsetem czasu i prefixem speaker_key.
-  const allSegments: DiarizeSegment[] = [];
-  const speakerKeys = new Set<string>();
-  for (const chunk of tr.chunks) {
-    const ab = chunk.buffer.buffer.slice(
-      chunk.buffer.byteOffset,
-      chunk.buffer.byteOffset + chunk.buffer.byteLength,
-    ) as ArrayBuffer;
-
-    // curl zamiast Node fetch — omija undici headersTimeout=300s
-    // (OpenAI przetwarza 20 min audio przez 5-8 min przed odesłaniem headers).
+  // 3. Diarize każdy chunk (timestampy 0-bazowane z modelu, chunk-match doda offsety).
+  const chunkResults: ChunkResult[] = [];
+  for (const { chunkBuf, chunkResult } of tr.chunksBuf) {
     let lastErr: unknown = null;
     let result: { segments: DiarizeSegment[]; rawSpeakerCount: number } | null = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        result = await curlDiarize(chunk.buffer, apiKey, 'pl');
+        result = await curlDiarize(chunkBuf, apiKey, 'pl');
         break;
       } catch (e) {
         lastErr = e;
         const msg = e instanceof Error ? e.message : String(e);
-        console.log(`    chunk ${chunk.idx} attempt ${attempt}/3 failed: ${msg.slice(0, 120)}`);
+        console.log(`    chunk ${chunkResult.idx} attempt ${attempt}/3 failed: ${msg.slice(0, 120)}`);
         if (attempt < 3) await new Promise((r) => setTimeout(r, 5000 * attempt));
       }
     }
     if (!result) throw lastErr;
-    for (const s of result.segments) {
-      const prefixedKey = `c${chunk.idx}_${s.speakerKey}`;
-      speakerKeys.add(prefixedKey);
-      allSegments.push({
-        startSec: s.startSec + chunk.offsetSec,
-        endSec: s.endSec + chunk.offsetSec,
-        speakerKey: prefixedKey,
-        text: s.text,
-        confidence: s.confidence,
-      });
-    }
-    console.log(`    chunk ${chunk.idx}: ${result.segments.length} seg, ${result.rawSpeakerCount} spk`);
+    chunkResults.push({ ...chunkResult, segments: result.segments });
+    console.log(`    chunk ${chunkResult.idx}: ${result.segments.length} seg, ${result.rawSpeakerCount} spk, offset=${chunkResult.offsetSec}s`);
   }
+
+  // 4. Dopasowanie mówców między chunkami → kanoniczne klucze A/B/C.
+  const allSegments = mergeChunksWithSpeakerMatching(chunkResults, CHUNK_SECONDS, OVERLAP_SECONDS);
+  const speakerKeys = new Set(allSegments.map(s => s.speakerKey));
 
   if (allSegments.length === 0) {
     return { status: 'failed', note: 'wszystkie chunki zwróciły 0 segmentów' };
   }
 
-  // 4. Write import.
+  // 5. Write import.
   const write = await writeActiveImport({
     db: db as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     sessionTemplateId: sessionId,
@@ -267,7 +258,7 @@ async function processSession(
 
   return {
     status: 'done',
-    note: `segments=${write.segmentsInserted} prefixedSpeakers=${speakerKeys.size} chunks=${tr.chunks.length} importId=${write.importId}`,
+    note: `segments=${write.segmentsInserted} speakers=${[...speakerKeys].join(',')} chunks=${tr.chunksBuf.length} importId=${write.importId}`,
   };
 }
 

@@ -69,25 +69,33 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error ?? `HTTP ${res.status}`);
         }
-        const { url } = (await res.json()) as { url: string; peaksUrl: string | null };
+        const { url, deliveryType } = (await res.json()) as {
+          url: string;
+          deliveryType: 'hls' | 'direct';
+          peaksUrl: string | null;
+        };
         if (cancelled) return;
 
         const container = containerRef.current;
         if (!container) return;
 
-        // Prepare hidden <audio> element for HLS playback
         const audio = document.createElement('audio');
         audio.preload = 'auto';
         audio.crossOrigin = 'anonymous';
         audioRef.current = audio;
 
-        // Attach HLS (Safari can play m3u8 natively; others need hls.js)
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(url);
-          hls.attachMedia(audio);
-          hlsRef.current = hls;
+        if (deliveryType === 'hls') {
+          // Safari plays m3u8 natively; inni potrzebują hls.js.
+          if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(url);
+            hls.attachMedia(audio);
+            hlsRef.current = hls;
+          } else {
+            audio.src = url;
+          }
         } else {
+          // Direct audio (HTG2 storage lub Private CDN) — sam plik.
           audio.src = url;
         }
 

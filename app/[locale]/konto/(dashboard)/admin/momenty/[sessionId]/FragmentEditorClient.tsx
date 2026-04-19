@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
 import SessionAudioPlayer, { type SessionAudioPlayerHandle } from '@/components/admin/SessionAudioPlayer';
+import SpeakersPanel from '@/components/admin/SpeakersPanel';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -391,6 +392,9 @@ export default function FragmentEditorClient({
         sessionId={sessionId}
         onDurationReady={setAudioDuration}
       />
+
+      {/* Mówcy — PR 1 empty state; lane overlay + transcript w PR 2 */}
+      <SpeakersPanel sessionId={sessionId} />
 
       {/* Visual timeline ruler */}
       <FragmentTimeline

@@ -32,7 +32,7 @@ export default async function FragmentyPage({ params }: Props) {
       fallback_start_sec, fallback_end_sec,
       note, category_id, is_favorite, last_played_at, play_count,
       created_at, updated_at,
-      session_fragments(id, ordinal, start_sec, end_sec, title, title_i18n, is_impulse),
+      session_fragments(id, ordinal, start_sec, end_sec, title, title_i18n, is_impulse, tags),
       session_templates(id, title, slug, thumbnail_url),
       user_categories(id, name, color)
     `)

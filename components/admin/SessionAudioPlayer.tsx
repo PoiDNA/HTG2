@@ -69,12 +69,33 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error ?? `HTTP ${res.status}`);
         }
-        const { url, deliveryType } = (await res.json()) as {
+        const { url, deliveryType, peaksUrl } = (await res.json()) as {
           url: string;
           deliveryType: 'hls' | 'direct';
           peaksUrl: string | null;
         };
         if (cancelled) return;
+
+        // Spróbuj pobrać wstępnie wygenerowane peaks (szybszy render fali).
+        // Format akceptowany przez WaveSurfer: number[] | number[][].
+        let peaks: number[][] | undefined;
+        if (peaksUrl) {
+          try {
+            const pr = await fetch(peaksUrl);
+            if (pr.ok) {
+              const json = await pr.json();
+              if (Array.isArray(json)) {
+                peaks = Array.isArray(json[0]) ? (json as number[][]) : [json as number[]];
+              } else if (Array.isArray((json as { data?: unknown }).data)) {
+                const data = (json as { data: unknown[] }).data;
+                peaks = Array.isArray(data[0]) ? (data as number[][]) : [data as number[]];
+              }
+            }
+          } catch {
+            // fallback: wavesurfer wygeneruje peaks z audio
+          }
+          if (cancelled) return;
+        }
 
         const container = containerRef.current;
         if (!container) return;
@@ -112,6 +133,7 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
           barRadius: 1,
           normalize: true,
           media: audio,
+          peaks,
         });
         wsRef.current = ws;
 

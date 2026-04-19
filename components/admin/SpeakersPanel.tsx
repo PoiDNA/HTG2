@@ -2,55 +2,39 @@
 
 import { useEffect, useState } from 'react';
 import { Users, Loader2, AlertTriangle } from 'lucide-react';
+import SpeakerLane from './SpeakerLane';
+import TranscriptSegmentList from '@/components/transcript/TranscriptSegmentList';
+import type { SpeakersResponse } from '@/lib/speakers/client';
 
 /**
- * Panel widoczności mówców w edytorze Momentów.
+ * Panel widoczności mówców + transkrypcji (PR 2).
  *
- * PR 1 (read-only empty state): ładuje aktywny import + segmenty z
- * /api/admin/fragments/sessions/[id]/speakers i pokazuje krótkie
- * podsumowanie (liczba mówców, łączny czas). Lane overlay i transcript
- * list przychodzą w PR 2. Gdy brak aktywnego importu — placeholder
- * "brak transkrypcji".
+ * Ładuje aktywny import z /api/admin/fragments/sessions/[id]/speakers,
+ * renderuje lane overlay, legendę i synchronizowaną listę transkrypcji.
+ * Reaguje na `currentSec` z playera i propaguje seek przez `onSeek`.
  */
 
-interface Speaker {
-  speakerKey: string;
-  displayName: string | null;
-  role: 'host' | 'client' | 'assistant' | 'unknown' | null;
-  segmentCount: number;
-  totalSec: number;
-}
-
-interface ActiveImport {
-  id: string;
-  source: 'manual' | 'livekit_phase2_pertrack' | 'livekit_phase2_diarize';
-  status: 'processing' | 'ready' | 'failed' | 'superseded';
-  createdAt: string;
-}
-
-interface Response {
-  activeImport: ActiveImport | null;
-  segments: unknown[];
-  speakers: Speaker[];
-}
-
-const SOURCE_LABEL: Record<ActiveImport['source'], string> = {
+const SOURCE_LABEL: Record<NonNullable<SpeakersResponse['activeImport']>['source'], string> = {
   manual: 'ręczny seed',
   livekit_phase2_pertrack: 'LiveKit per-track',
   livekit_phase2_diarize: 'diarization',
 };
 
-function fmtSec(sec: number): string {
-  if (!isFinite(sec) || sec <= 0) return '0:00';
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
+interface Props {
+  sessionId: string;
+  durationSec: number;
+  currentSec: number;
+  onSeek: (sec: number) => void;
+  /** Callback z pełnym response (dla parenta — ekstrakcja tekstu per Moment). */
+  onData?: (data: SpeakersResponse) => void;
 }
 
-export default function SpeakersPanel({ sessionId }: { sessionId: string }) {
+export default function SpeakersPanel({
+  sessionId, durationSec, currentSec, onSeek, onData,
+}: Props) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errMsg, setErrMsg] = useState<string | null>(null);
-  const [data, setData] = useState<Response | null>(null);
+  const [data, setData] = useState<SpeakersResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,10 +47,11 @@ export default function SpeakersPanel({ sessionId }: { sessionId: string }) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error ?? `HTTP ${res.status}`);
         }
-        const json = (await res.json()) as Response;
+        const json = (await res.json()) as SpeakersResponse;
         if (cancelled) return;
         setData(json);
         setStatus('ready');
+        onData?.(json);
       } catch (e) {
         if (cancelled) return;
         setStatus('error');
@@ -75,14 +60,19 @@ export default function SpeakersPanel({ sessionId }: { sessionId: string }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [sessionId]);
+  }, [sessionId, onData]);
 
   return (
-    <div className="bg-htg-card border border-htg-card-border rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="bg-htg-card border border-htg-card-border rounded-xl p-4 space-y-3">
+      <div className="flex items-center gap-2">
         <Users className="w-4 h-4 text-htg-fg-muted" />
-        <h3 className="text-sm font-semibold">Mówcy</h3>
+        <h3 className="text-sm font-semibold">Mówcy i transkrypcja</h3>
         {status === 'loading' && <Loader2 className="w-3.5 h-3.5 animate-spin text-htg-fg-muted" />}
+        {status === 'ready' && data?.activeImport && (
+          <span className="text-[11px] text-htg-fg-muted ml-auto">
+            Źródło: {SOURCE_LABEL[data.activeImport.source]}
+          </span>
+        )}
       </div>
 
       {status === 'error' && (
@@ -93,35 +83,25 @@ export default function SpeakersPanel({ sessionId }: { sessionId: string }) {
       )}
 
       {status === 'ready' && data && (
-        data.activeImport === null || data.speakers.length === 0 ? (
+        data.activeImport === null || data.segments.length === 0 ? (
           <p className="text-xs text-htg-fg-muted">
-            Brak transkrypcji dla tej sesji. Lane mówców i transkrypcja pojawią się po wgraniu
-            importu (manual / LiveKit Faza 2 / diarization).
+            Brak transkrypcji dla tej sesji. Lane mówców i tekst pojawią się po
+            wgraniu importu (manual / LiveKit Faza 2 / diarization).
           </p>
         ) : (
-          <div className="space-y-2">
-            <p className="text-[11px] text-htg-fg-muted">
-              Źródło: {SOURCE_LABEL[data.activeImport.source]} ·{' '}
-              {data.speakers.length} {data.speakers.length === 1 ? 'mówca' : 'mówców'}
-            </p>
-            <ul className="space-y-1">
-              {data.speakers.map((s) => (
-                <li
-                  key={s.speakerKey}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <span className="truncate">
-                    {s.displayName ?? s.speakerKey}
-                    {s.role && (
-                      <span className="ml-2 text-htg-fg-muted">({s.role})</span>
-                    )}
-                  </span>
-                  <span className="font-mono tabular-nums text-htg-fg-muted shrink-0 ml-2">
-                    {fmtSec(s.totalSec)} · {s.segmentCount}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-3">
+            <SpeakerLane
+              segments={data.segments}
+              speakers={data.speakers}
+              durationSec={durationSec}
+              currentSec={currentSec}
+              onSeek={onSeek}
+            />
+            <TranscriptSegmentList
+              segments={data.segments}
+              currentSec={currentSec}
+              onSeek={onSeek}
+            />
           </div>
         )
       )}

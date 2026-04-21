@@ -6,14 +6,6 @@ import SpeakerLane from './SpeakerLane';
 import TranscriptSegmentList from '@/components/transcript/TranscriptSegmentList';
 import type { SpeakersResponse } from '@/lib/speakers/client';
 
-/**
- * Panel widoczności mówców + transkrypcji (PR 2).
- *
- * Ładuje aktywny import z /api/admin/fragments/sessions/[id]/speakers,
- * renderuje lane overlay, legendę i synchronizowaną listę transkrypcji.
- * Reaguje na `currentSec` z playera i propaguje seek przez `onSeek`.
- */
-
 const SOURCE_LABEL: Record<NonNullable<SpeakersResponse['activeImport']>['source'], string> = {
   manual: 'ręczny seed',
   livekit_phase2_pertrack: 'LiveKit per-track',
@@ -21,17 +13,20 @@ const SOURCE_LABEL: Record<NonNullable<SpeakersResponse['activeImport']>['source
   archival_diarize: 'archival diarize (OpenAI)',
 };
 
+type EditLocale = 'pl' | 'en' | 'de' | 'pt';
+
 interface Props {
   sessionId: string;
   durationSec: number;
   currentSec: number;
   onSeek: (sec: number) => void;
-  /** Callback z pełnym response (dla parenta — ekstrakcja tekstu per Moment). */
   onData?: (data: SpeakersResponse) => void;
+  /** Bieżący tryb edycji locale. Domyślnie 'pl' (oryginał). */
+  locale?: EditLocale;
 }
 
 export default function SpeakersPanel({
-  sessionId, durationSec, currentSec, onSeek, onData,
+  sessionId, durationSec, currentSec, onSeek, onData, locale = 'pl',
 }: Props) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -109,13 +104,15 @@ export default function SpeakersPanel({
     await load();
   }, [sessionId, load]);
 
-  const editSegment = useCallback(async (segmentId: string, text: string | null) => {
+  const editSegment = useCallback(async (segmentId: string, text: string | null, editLocale: EditLocale) => {
+    const payload: { text: string | null; locale?: string } = { text };
+    if (editLocale !== 'pl') payload.locale = editLocale;
     const res = await fetch(
       `/api/admin/fragments/sessions/${sessionId}/segments/${segmentId}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(payload),
       },
     );
     if (!res.ok) {
@@ -235,6 +232,7 @@ export default function SpeakersPanel({
               onEditSegment={editSegment}
               onReassignSpeaker={reassignSpeaker}
               speakers={data.speakers}
+              locale={locale}
             />
           </div>
         )

@@ -691,18 +691,18 @@ export default function FragmentEditorClient({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-htg-lavender/20 hover:bg-htg-lavender/30 text-htg-lavender rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {translating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
-            {translating ? 'Tłumaczę…' : 'Przetłumacz Claude (EN/DE/PT)'}
+            {translating ? 'Tłumaczę…' : 'Tłumaczenie Wstępne'}
           </button>
 
           {pageLocale === 'pl' && speakerSegments.length > 0 && (
             <button
               onClick={handleSuggest}
               disabled={suggesting}
-              title="Zaproponuj Momenty z transkrypcji (Claude)"
+              title="Zaproponuj Momenty Kontekstowe z transkrypcji (Claude)"
               className="flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/15 hover:bg-htg-sage/25 text-htg-sage rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {suggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              {suggesting ? 'Analizuję…' : 'Zaproponuj Momenty (Claude)'}
+              {suggesting ? 'Analizuję…' : 'Momenty Kontekstowe'}
             </button>
           )}
 

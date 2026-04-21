@@ -399,12 +399,13 @@ export default function FragmentEditorClient({
         </div>
       </div>
 
-      {/* Audio player z falą — Space/S/E, klik = seek */}
+      {/* Audio player z falą + blocki mówców pod falą (synced przy zoomie) */}
       <SessionAudioPlayer
         ref={playerRef}
         sessionId={sessionId}
         onDurationReady={setAudioDuration}
         onTimeUpdate={setCurrentSec}
+        speakerSegments={speakerSegments}
       />
 
       {/* Mówcy + transkrypcja */}

@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown,
-  AlertTriangle, CheckCircle, Zap, Tag, BookOpen,
+  AlertTriangle, CheckCircle, Zap, Tag, BookOpen, Languages,
 } from 'lucide-react';
 import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
 import SessionAudioPlayer, { type SessionAudioPlayerHandle } from '@/components/admin/SessionAudioPlayer';
@@ -174,6 +174,19 @@ function FragmentTimeline({
   );
 }
 
+// ── Locale helpers ─────────────────────────────────────────────────────────────
+
+type EditLocale = 'pl' | 'en' | 'de' | 'pt';
+
+const EDIT_LOCALES: readonly EditLocale[] = ['pl', 'en', 'de', 'pt'] as const;
+
+const LOCALE_LABEL: Record<EditLocale, string> = {
+  pl: 'PL',
+  en: 'EN',
+  de: 'DE',
+  pt: 'PT',
+};
+
 // ── FragmentEditorClient ───────────────────────────────────────────────────────
 
 export default function FragmentEditorClient({
@@ -191,6 +204,8 @@ export default function FragmentEditorClient({
   const [audioDuration, setAudioDuration] = useState(0);
   const [currentSec, setCurrentSec] = useState(0);
   const [speakerSegments, setSpeakerSegments] = useState<SpeakerSegment[]>([]);
+  const [editLocale, setEditLocale] = useState<EditLocale>('pl');
+  const [translating, setTranslating] = useState(false);
   const playerRef = useRef<SessionAudioPlayerHandle | null>(null);
 
   const handleSpeakerSeek = useCallback((sec: number) => {
@@ -317,23 +332,90 @@ export default function FragmentEditorClient({
   const maxFragEnd = fragments.reduce((m, f) => Math.max(m, f.end_sec), 0);
   const effectiveDuration = Math.max(totalDurationSec, audioDuration, maxFragEnd, 600);
 
-  const handleSave = async () => {
-    // Basic validation
-    for (let i = 0; i < fragments.length; i++) {
-      const f = fragments[i];
-      if (!f.title.trim()) {
-        setStatus({ kind: 'error', msg: `Moment ${i + 1}: brak tytułu` });
+  const handleTranslate = async () => {
+    if (!confirm('Wygenerować tłumaczenia Claude (EN/DE/PT) dla wszystkich Momentów i segmentów transkrypcji? Nadpisze istniejące tłumaczenia.')) return;
+    setTranslating(true);
+    setStatus(null);
+    try {
+      const res = await fetch(`/api/admin/fragments/sessions/${sessionId}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus({ kind: 'error', msg: data.error ?? `HTTP ${res.status}` });
         return;
       }
-      if (f.end_sec <= f.start_sec) {
-        setStatus({ kind: 'error', msg: `Moment ${i + 1}: end_sec musi być większe niż start_sec` });
-        return;
+      setStatus({
+        kind: 'success',
+        msg: `Przetłumaczono ${data.translated?.fragments ?? 0} Momentów i ${data.translated?.segments ?? 0} segmentów (${Math.round((data.elapsedMs ?? 0) / 1000)}s). Przeładuj stronę, aby zobaczyć.`,
+      });
+      // Pobierz świeże fragmenty żeby widok pokazał zapisane title_i18n
+      try {
+        const refresh = await fetch(`/api/admin/fragments/sessions/${sessionId}`);
+        if (refresh.ok) {
+          const rd = await refresh.json();
+          if (Array.isArray(rd.fragments)) {
+            setFragments((rd.fragments as Fragment[]).sort((a, b) => a.ordinal - b.ordinal));
+          }
+        }
+      } catch {
+        /* best-effort refresh */
       }
+    } catch {
+      setStatus({ kind: 'error', msg: 'Błąd połączenia' });
+    } finally {
+      setTranslating(false);
     }
+  };
 
+  const handleSave = async () => {
     setSaving(true);
     setStatus(null);
     try {
+      if (editLocale !== 'pl') {
+        // Tryb tłumaczenia — zapisujemy wyłącznie title_i18n[locale] per fragment
+        // przez dedykowany endpoint /i18n (obsługuje też translatora).
+        let ok = 0;
+        for (const f of fragments) {
+          if (!f.id) continue; // nowe Momenty dodajemy tylko w trybie PL
+          const titleForLocale = f.title_i18n?.[editLocale];
+          const res = await fetch(
+            `/api/admin/fragments/sessions/${sessionId}/fragments/${f.id}/i18n`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                locale: editLocale,
+                title: titleForLocale ?? null,
+              }),
+            },
+          );
+          if (res.ok) ok += 1;
+          else {
+            const err = await res.json().catch(() => ({}));
+            setStatus({ kind: 'error', msg: `Moment ${f.ordinal}: ${err.error ?? 'błąd'}` });
+            return;
+          }
+        }
+        setStatus({ kind: 'success', msg: `Zapisano ${ok} tłumaczeń (${editLocale.toUpperCase()})` });
+        return;
+      }
+
+      // Tryb PL — pełen batch POST (admin/editor).
+      for (let i = 0; i < fragments.length; i++) {
+        const f = fragments[i];
+        if (!f.title.trim()) {
+          setStatus({ kind: 'error', msg: `Moment ${i + 1}: brak tytułu` });
+          return;
+        }
+        if (f.end_sec <= f.start_sec) {
+          setStatus({ kind: 'error', msg: `Moment ${i + 1}: end_sec musi być większe niż start_sec` });
+          return;
+        }
+      }
+
       const res = await fetch(`/api/admin/fragments/sessions/${sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -344,7 +426,6 @@ export default function FragmentEditorClient({
         setStatus({ kind: 'error', msg: data.error ?? `HTTP ${res.status}` });
         return;
       }
-      // Merge returned IDs back into state
       if (Array.isArray(data.fragments)) {
         setFragments(
           (data.fragments as Fragment[]).sort((a, b) => a.ordinal - b.ordinal)
@@ -380,7 +461,43 @@ export default function FragmentEditorClient({
         <p className="text-sm text-htg-fg-muted">
           {fragments.length} {fragments.length === 1 ? 'Moment' : fragments.length >= 2 && fragments.length <= 4 ? 'Momenty' : 'Momentów'}
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          {/* Locale selector */}
+          <div
+            className="inline-flex items-center rounded-lg border border-htg-card-border overflow-hidden text-[11px]"
+            role="tablist"
+            aria-label="Tryb edycji locale"
+          >
+            {EDIT_LOCALES.map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setEditLocale(l)}
+                role="tab"
+                aria-selected={editLocale === l}
+                className={[
+                  'px-2.5 py-1 font-semibold transition-colors',
+                  editLocale === l
+                    ? 'bg-htg-sage/20 text-htg-sage'
+                    : 'text-htg-fg-muted hover:text-htg-fg',
+                ].join(' ')}
+                title={l === 'pl' ? 'Oryginał (PL)' : `Tłumaczenie ${LOCALE_LABEL[l]}`}
+              >
+                {LOCALE_LABEL[l]}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={handleTranslate}
+            disabled={translating}
+            title="Wygeneruj tłumaczenia Claude (EN/DE/PT) dla Momentów i segmentów"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-htg-lavender/20 hover:bg-htg-lavender/30 text-htg-lavender rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+          >
+            {translating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Languages className="w-3.5 h-3.5" />}
+            {translating ? 'Tłumaczę…' : 'Przetłumacz Claude (EN/DE/PT)'}
+          </button>
+
           <button
             onClick={() => addFragment()}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/20 hover:bg-htg-sage/30 text-htg-sage rounded-lg text-xs font-medium transition-colors"
@@ -414,6 +531,7 @@ export default function FragmentEditorClient({
         currentSec={currentSec}
         onSeek={handleSpeakerSeek}
         onData={handleSpeakersData}
+        locale={editLocale}
       />
 
       {/* Visual timeline ruler */}
@@ -440,6 +558,7 @@ export default function FragmentEditorClient({
                 total={fragments.length}
                 isSelected={idx === selectedIdx}
                 speakerSegments={speakerSegments}
+                editLocale={editLocale}
                 onUpdate={(patch) => updateFragment(idx, patch)}
                 onMoveUp={() => moveUp(idx)}
                 onMoveDown={() => moveDown(idx)}
@@ -476,6 +595,7 @@ interface RowProps {
   total: number;
   isSelected: boolean;
   speakerSegments: SpeakerSegment[];
+  editLocale: EditLocale;
   onUpdate: (patch: Partial<Fragment>) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -484,9 +604,27 @@ interface RowProps {
 }
 
 function FragmentRow({
-  frag, idx, total, isSelected, speakerSegments,
+  frag, idx, total, isSelected, speakerSegments, editLocale,
   onUpdate, onMoveUp, onMoveDown, onRemove, onSelect,
 }: RowProps) {
+  // W trybie tłumaczenia edytujemy title_i18n[locale]; fallback widoku — title PL.
+  const localeTitle =
+    editLocale === 'pl' ? frag.title : (frag.title_i18n?.[editLocale] ?? '');
+  const localeTitleFallback = editLocale !== 'pl' && !frag.title_i18n?.[editLocale];
+
+  const setLocaleTitle = (v: string) => {
+    if (editLocale === 'pl') {
+      onUpdate({ title: v });
+    } else {
+      const next = { ...(frag.title_i18n ?? {}) };
+      if (v.trim() === '') {
+        delete next[editLocale];
+      } else {
+        next[editLocale] = v;
+      }
+      onUpdate({ title_i18n: next });
+    }
+  };
   const [showTranscript, setShowTranscript] = useState(false);
   const transcript = fragmentText(speakerSegments, frag.start_sec, frag.end_sec);
   const hasTranscript = transcript.length > 0;
@@ -549,13 +687,29 @@ function FragmentRow({
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-3 items-start">
           {/* Title */}
           <div>
-            <label className="text-xs text-htg-fg-muted mb-1 block">Tytuł Momentu</label>
+            <label className="text-xs text-htg-fg-muted mb-1 block flex items-center gap-1.5">
+              Tytuł Momentu
+              {editLocale !== 'pl' && (
+                <span className="uppercase text-[9px] font-bold text-htg-lavender">
+                  {editLocale}
+                </span>
+              )}
+              {localeTitleFallback && (
+                <span className="text-[9px] text-htg-warm" title={`Brak tłumaczenia ${editLocale.toUpperCase()} — placeholder pokazuje oryginał PL.`}>
+                  (brak — PL: &quot;{frag.title}&quot;)
+                </span>
+              )}
+            </label>
             <input
               type="text"
-              value={frag.title}
-              onChange={(e) => onUpdate({ title: e.target.value })}
+              value={localeTitle}
+              onChange={(e) => setLocaleTitle(e.target.value)}
               onClick={(e) => e.stopPropagation()}
-              placeholder="np. Wstęp – oddychanie"
+              placeholder={
+                editLocale === 'pl'
+                  ? 'np. Wstęp – oddychanie'
+                  : `Tłumaczenie ${editLocale.toUpperCase()} (oryginał: ${frag.title || '—'})`
+              }
               className="w-full px-3 py-1.5 text-sm bg-htg-surface border border-htg-card-border rounded-lg text-htg-fg placeholder:text-htg-fg-muted/40 focus:outline-none focus:border-htg-sage"
             />
           </div>

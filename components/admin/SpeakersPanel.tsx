@@ -21,6 +21,8 @@ const SOURCE_LABEL: Record<NonNullable<SpeakersResponse['activeImport']>['source
   archival_diarize: 'archival diarize (OpenAI)',
 };
 
+type EditLocale = 'pl' | 'en' | 'de' | 'pt';
+
 interface Props {
   sessionId: string;
   durationSec: number;
@@ -28,10 +30,12 @@ interface Props {
   onSeek: (sec: number) => void;
   /** Callback z pełnym response (dla parenta — ekstrakcja tekstu per Moment). */
   onData?: (data: SpeakersResponse) => void;
+  /** Bieżący tryb edycji locale. Domyślnie 'pl' (oryginał). */
+  locale?: EditLocale;
 }
 
 export default function SpeakersPanel({
-  sessionId, durationSec, currentSec, onSeek, onData,
+  sessionId, durationSec, currentSec, onSeek, onData, locale = 'pl',
 }: Props) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -109,13 +113,15 @@ export default function SpeakersPanel({
     await load();
   }, [sessionId, load]);
 
-  const editSegment = useCallback(async (segmentId: string, text: string | null) => {
+  const editSegment = useCallback(async (segmentId: string, text: string | null, editLocale: EditLocale) => {
+    const payload: { text: string | null; locale?: string } = { text };
+    if (editLocale !== 'pl') payload.locale = editLocale;
     const res = await fetch(
       `/api/admin/fragments/sessions/${sessionId}/segments/${segmentId}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(payload),
       },
     );
     if (!res.ok) {
@@ -217,6 +223,7 @@ export default function SpeakersPanel({
               currentSec={currentSec}
               onSeek={onSeek}
               onEditSegment={editSegment}
+              locale={locale}
             />
           </div>
         )

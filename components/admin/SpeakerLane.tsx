@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
+import { Pencil, Loader2 } from 'lucide-react';
 import { speakerColor, speakerBaseKey, type SpeakerSegment, type SpeakerSummary } from '@/lib/speakers/client';
 
 /**
  * Lane widoczności mówców — jeden poziomy pasek pod wavesurferem.
  * Szerokość 100% parenta, segmenty pozycjonowane jako % względem durationSec.
- * Klik w segment = seek.
+ * Klik w segment = seek. Pencil w legendzie = rename mówcy.
  */
 
 interface Props {
@@ -14,12 +16,36 @@ interface Props {
   durationSec: number;
   currentSec: number;
   onSeek: (sec: number) => void;
+  /** Rename mówcy (bulk update po speaker_key w aktywnym imporcie). */
+  onRenameSpeaker?: (speakerKey: string, displayName: string | null) => Promise<void>;
 }
 
-export default function SpeakerLane({ segments, speakers, durationSec, currentSec, onSeek }: Props) {
+export default function SpeakerLane({
+  segments, speakers, durationSec, currentSec, onSeek, onRenameSpeaker,
+}: Props) {
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+
   if (durationSec <= 0 || segments.length === 0) return null;
 
   const playheadPct = Math.max(0, Math.min(100, (currentSec / durationSec) * 100));
+
+  const startEdit = (base: string, current: string | null) => {
+    setEditingKey(base);
+    setDraft(current ?? '');
+  };
+
+  const commit = async () => {
+    if (!editingKey || !onRenameSpeaker) { setEditingKey(null); return; }
+    setSaving(true);
+    try {
+      await onRenameSpeaker(editingKey, draft.trim() === '' ? null : draft.trim());
+      setEditingKey(null);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -33,12 +59,59 @@ export default function SpeakerLane({ segments, speakers, durationSec, currentSe
           }, new Map<string, SpeakerSummary>()).values()
         ).map((s) => {
           const c = speakerColor(s.role, s.speakerKey);
-          const label = s.displayName ?? speakerBaseKey(s.speakerKey);
+          const base = speakerBaseKey(s.speakerKey);
+          const label = s.displayName ?? base;
+          const isEditing = editingKey === base;
           return (
-            <span key={speakerBaseKey(s.speakerKey)} className="flex items-center gap-1.5 text-[11px]">
+            <span key={base} className="flex items-center gap-1.5 text-[11px]">
               <span className={`inline-block w-3 h-3 rounded-sm ${c.bar}`} aria-hidden />
-              <span className="truncate max-w-32">{label}</span>
-              {s.role && <span className="text-htg-fg-muted">({s.role})</span>}
+              {isEditing ? (
+                <>
+                  <input
+                    autoFocus
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commit();
+                      else if (e.key === 'Escape') setEditingKey(null);
+                    }}
+                    placeholder={base}
+                    disabled={saving}
+                    className="w-28 px-1.5 py-0.5 text-[11px] bg-htg-surface border border-htg-sage/60 rounded text-htg-fg focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={commit}
+                    disabled={saving}
+                    className="text-[10px] text-htg-sage hover:underline"
+                  >
+                    {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Zapisz'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingKey(null)}
+                    disabled={saving}
+                    className="text-[10px] text-htg-fg-muted hover:text-htg-fg"
+                  >
+                    Anuluj
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="truncate max-w-32">{label}</span>
+                  {s.role && <span className="text-htg-fg-muted">({s.role})</span>}
+                  {onRenameSpeaker && (
+                    <button
+                      type="button"
+                      onClick={() => startEdit(base, s.displayName)}
+                      title="Nadaj imię"
+                      className="text-htg-fg-muted/60 hover:text-htg-sage transition-colors"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                  )}
+                </>
+              )}
             </span>
           );
         })}

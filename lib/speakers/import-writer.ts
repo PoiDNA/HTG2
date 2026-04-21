@@ -15,7 +15,8 @@ export type ImportSource =
   | 'manual'
   | 'livekit_phase2_pertrack'
   | 'livekit_phase2_diarize'
-  | 'archival_diarize';
+  | 'archival_diarize'
+  | 'fireflies_diarize';
 
 export interface WriteImportParams {
   db: SupabaseClient;

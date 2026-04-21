@@ -11,6 +11,7 @@ const SOURCE_LABEL: Record<NonNullable<SpeakersResponse['activeImport']>['source
   livekit_phase2_pertrack: 'LiveKit per-track',
   livekit_phase2_diarize: 'diarization',
   archival_diarize: 'archival diarize (OpenAI)',
+  fireflies_diarize: 'Fireflies.ai',
 };
 
 type EditLocale = 'pl' | 'en' | 'de' | 'pt';
@@ -35,6 +36,8 @@ export default function SpeakersPanel({
   const [diarizeMsg, setDiarizeMsg] = useState<string | null>(null);
   const [bumping, setBumping] = useState(false);
   const [bumpMsg, setBumpMsg] = useState<string | null>(null);
+  const [ffStatus, setFfStatus] = useState<null | 'uploading' | 'pending' | 'checking' | 'error'>(null);
+  const [ffMsg, setFfMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setStatus('loading');
@@ -138,6 +141,47 @@ export default function SpeakersPanel({
     await load();
   }, [sessionId, load]);
 
+  const runFireflies = useCallback(async () => {
+    setFfStatus('uploading');
+    setFfMsg(null);
+    try {
+      const res = await fetch(
+        `/api/admin/fragments/sessions/${sessionId}/speaker-imports/diarize-fireflies`,
+        { method: 'POST' },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      setFfStatus('pending');
+      setFfMsg('Przesłano. Fireflies przetwarza (5-20 min). Kliknij "Sprawdź" za chwilę.');
+    } catch (e) {
+      setFfStatus('error');
+      setFfMsg(e instanceof Error ? e.message : 'Błąd');
+    }
+  }, [sessionId]);
+
+  const pollFireflies = useCallback(async () => {
+    setFfStatus('checking');
+    try {
+      const res = await fetch(
+        `/api/admin/fragments/sessions/${sessionId}/speaker-imports/diarize-fireflies/poll`,
+        { method: 'POST' },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      if (json.status === 'done') {
+        setFfStatus(null);
+        setFfMsg(null);
+        await load();
+      } else {
+        setFfStatus('pending');
+        setFfMsg(json.message ?? 'Jeszcze przetwarza…');
+      }
+    } catch (e) {
+      setFfStatus('error');
+      setFfMsg(e instanceof Error ? e.message : 'Błąd poll');
+    }
+  }, [sessionId, load]);
+
   const bumpMediaVersion = useCallback(async () => {
     if (!confirm('Podmieniłeś plik audio w Bunny Storage? Ta operacja wymusi odświeżenie cache (CDN), wyczyści peaks i dezaktywuje transkrypcję.')) return;
     setBumping(true);
@@ -200,20 +244,64 @@ export default function SpeakersPanel({
             <p className="text-xs text-htg-fg-muted">
               Brak transkrypcji dla tej sesji.
             </p>
-            <button
-              type="button"
-              onClick={runDiarize}
-              disabled={diarizing}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/20 hover:bg-htg-sage/30 text-htg-sage rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-            >
-              {diarizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              {diarizing ? 'Generowanie transkrypcji…' : 'Pokaż transkrypcję'}
-            </button>
-            {diarizeMsg && (
-              <p className={`text-[11px] ${diarizeMsg.startsWith('Gotowe') ? 'text-htg-sage' : 'text-red-400'}`}>
-                {diarizeMsg}
+
+            {/* Fireflies flow — domyślny */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={runFireflies}
+                disabled={ffStatus === 'uploading' || ffStatus === 'checking'}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/20 hover:bg-htg-sage/30 text-htg-sage rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+              >
+                {ffStatus === 'uploading'
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Sparkles className="w-3.5 h-3.5" />}
+                {ffStatus === 'uploading' ? 'Przesyłam do Fireflies…' : 'Wczytaj transkrypcję (Fireflies)'}
+              </button>
+
+              {ffStatus === 'pending' && (
+                <button
+                  type="button"
+                  onClick={pollFireflies}
+                  disabled={ffStatus !== 'pending'}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Sprawdź gotowość
+                </button>
+              )}
+
+              {ffStatus === 'checking' && (
+                <span className="inline-flex items-center gap-1 text-xs text-htg-fg-muted">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Sprawdzam…
+                </span>
+              )}
+            </div>
+
+            {ffMsg && (
+              <p className={`text-[11px] ${ffStatus === 'error' ? 'text-red-400' : 'text-htg-fg-muted'}`}>
+                {ffMsg}
               </p>
             )}
+
+            {/* Fallback OpenAI */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={runDiarize}
+                disabled={diarizing}
+                className="inline-flex items-center gap-1 text-[11px] text-htg-fg-muted hover:text-htg-fg transition-colors disabled:opacity-50"
+              >
+                {diarizing ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                {diarizing ? 'Generowanie…' : 'Fallback (OpenAI)'}
+              </button>
+              {diarizeMsg && (
+                <p className={`text-[11px] ${diarizeMsg.startsWith('Gotowe') ? 'text-htg-sage' : 'text-red-400'}`}>
+                  {diarizeMsg}
+                </p>
+              )}
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

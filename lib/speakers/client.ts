@@ -12,7 +12,8 @@ export type SpeakerSource =
   | 'manual'
   | 'livekit_phase2_pertrack'
   | 'livekit_phase2_diarize'
-  | 'archival_diarize';
+  | 'archival_diarize'
+  | 'fireflies_diarize';
 
 export interface SpeakerSegment {
   id: string;

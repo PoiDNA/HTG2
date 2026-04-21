@@ -93,6 +93,38 @@ export default function SpeakersPanel({
     }
   }, [sessionId, load]);
 
+  const renameSpeaker = useCallback(async (speakerKey: string, displayName: string | null) => {
+    const res = await fetch(
+      `/api/admin/fragments/sessions/${sessionId}/speakers/${encodeURIComponent(speakerKey)}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? `HTTP ${res.status}`);
+    }
+    await load();
+  }, [sessionId, load]);
+
+  const editSegment = useCallback(async (segmentId: string, text: string | null) => {
+    const res = await fetch(
+      `/api/admin/fragments/sessions/${sessionId}/segments/${segmentId}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? `HTTP ${res.status}`);
+    }
+    await load();
+  }, [sessionId, load]);
+
   const bumpMediaVersion = useCallback(async () => {
     if (!confirm('Podmieniłeś plik audio w Bunny Storage? Ta operacja wymusi odświeżenie cache (CDN), wyczyści peaks i dezaktywuje transkrypcję.')) return;
     setBumping(true);
@@ -178,11 +210,13 @@ export default function SpeakersPanel({
               durationSec={durationSec}
               currentSec={currentSec}
               onSeek={onSeek}
+              onRenameSpeaker={renameSpeaker}
             />
             <TranscriptSegmentList
               segments={data.segments}
               currentSec={currentSec}
               onSeek={onSeek}
+              onEditSegment={editSegment}
             />
           </div>
         )

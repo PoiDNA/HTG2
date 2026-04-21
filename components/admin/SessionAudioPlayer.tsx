@@ -7,6 +7,39 @@ import Hls from 'hls.js';
 import { Play, Pause, Loader2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { speakerColor, type SpeakerSegment } from '@/lib/speakers/client';
 
+// ── Markery: tag → kolor (Tailwind bg class) ────────────────────────────────
+// Wybieramy z pośród palety HTG + neutralnych kolorów Tailwind. Bez tagu → sage.
+const TAG_COLOR: Record<string, string> = {
+  relacje:     'bg-htg-lavender',
+  lek:         'bg-indigo-400',
+  cialo:       'bg-emerald-400',
+  trauma:      'bg-red-400',
+  granice:     'bg-amber-400',
+  emocje:      'bg-pink-400',
+  dziecinstwo: 'bg-sky-400',
+  praca:       'bg-slate-400',
+  sens:        'bg-htg-warm',
+  strata:      'bg-fuchsia-400',
+};
+function markerColorFor(tag?: string): string {
+  if (tag && TAG_COLOR[tag]) return TAG_COLOR[tag];
+  return 'bg-htg-sage';
+}
+
+export interface MarkerFragment {
+  id: string;
+  start_sec: number;
+  end_sec: number;
+  tag?: string;
+}
+
+export interface MarkerSuggestion {
+  id: string;
+  startSec: number;
+  endSec: number;
+  title?: string;
+}
+
 /**
  * Odtwarzacz audio z falą wizualną dla narzędzia segmentacji Momentów.
  *
@@ -37,14 +70,41 @@ interface Props {
   speakerSegments?: SpeakerSegment[];
   /** Callback: user wybrał zakres przez Shift+drag na fali (sec) */
   onRangeSelected?: (startSec: number, endSec: number) => void;
+  /** Zapisane Momenty — renderowane jako markery nad falą. */
+  fragments?: MarkerFragment[];
+  /** Aktualnie wybrany Moment — pełna opacity + draggable handles. */
+  selectedFragmentId?: string | null;
+  /** Sugestie AI — outline dashed, klik = akceptuj. */
+  suggestions?: MarkerSuggestion[];
+  /** Drag jednego z handle'y selected fragmentu — nowy zakres w sec. */
+  onRangeEdit?: (fragmentId: string, startSec: number, endSec: number) => void;
+  /** Klik w marker zapisanego fragmentu. */
+  onFragmentClick?: (fragmentId: string) => void;
+  /** Klik w sugestię AI. */
+  onSuggestionAccept?: (id: string) => void;
 }
 
 const ZOOM_STEPS = [1, 2, 4, 8, 16] as const;
 
 const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function SessionAudioPlayer(
-  { sessionId, onTimeUpdate, onDurationReady, speakerSegments, onRangeSelected },
+  {
+    sessionId,
+    onTimeUpdate,
+    onDurationReady,
+    speakerSegments,
+    onRangeSelected,
+    fragments,
+    selectedFragmentId,
+    suggestions,
+    onRangeEdit,
+    onFragmentClick,
+    onSuggestionAccept,
+  },
   ref,
 ) {
+  const markersLaneRef = useRef<HTMLDivElement | null>(null);
+  const onRangeEditRef = useRef(onRangeEdit);
+  useEffect(() => { onRangeEditRef.current = onRangeEdit; }, [onRangeEdit]);
   // Zewnętrzny scroll (wspólny dla fali i blocków).
   const scrollRef = useRef<HTMLDivElement | null>(null);
   // Wewnętrzny kontener o szerokości = duration * pxPerSec — wavesurfer i bar dzielą tę oś.
@@ -319,6 +379,43 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
   // Szerokość inner gdy jeszcze nie znamy basePxPerSec (przed ready) — 100% scroll.
   const innerStyleWidth = innerWidthPx ? `${innerWidthPx}px` : '100%';
 
+  // ── Drag handle'y dla selected fragmentu ─────────────────────────────────
+  // Użytkownik łapie kreskę start/end i przesuwa — wyliczamy nowy czas wg
+  // pozycji kursora względem szerokości lane i emitujemy onRangeEdit.
+  const startHandleDrag = useCallback(
+    (fragmentId: string, edge: 'start' | 'end', origStart: number, origEnd: number) =>
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const lane = markersLaneRef.current;
+      if (!lane) return;
+      const dur = barBaseDuration;
+      if (dur <= 0) return;
+
+      let curStart = origStart;
+      let curEnd = origEnd;
+
+      const onMove = (ev: MouseEvent) => {
+        const rect = lane.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, ev.clientX - rect.left));
+        const sec = (x / rect.width) * dur;
+        if (edge === 'start') {
+          curStart = Math.max(0, Math.min(sec, curEnd - 0.1));
+        } else {
+          curEnd = Math.max(curStart + 0.1, Math.min(sec, dur));
+        }
+        onRangeEditRef.current?.(fragmentId, curStart, curEnd);
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [barBaseDuration],
+  );
+
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-3">
@@ -374,6 +471,83 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
       {/* Wspólny scroll wrapper dla fali i blocków mówców — jedna oś X */}
       <div ref={scrollRef} className="w-full overflow-x-auto overflow-y-hidden">
         <div ref={innerRef} style={{ width: innerStyleWidth }}>
+
+          {/* Markery nad falą — zapisane Momenty + sugestie AI + edytowalny zakres */}
+          {barBaseDuration > 0 && (
+            <div
+              ref={markersLaneRef}
+              className="relative h-3 w-full mb-1 rounded bg-htg-card-border/20"
+            >
+              {/* Zapisane Momenty */}
+              {fragments?.map((f) => {
+                const leftPct = (f.start_sec / barBaseDuration) * 100;
+                const widthPct = Math.max(0.1, ((f.end_sec - f.start_sec) / barBaseDuration) * 100);
+                const isSelected = selectedFragmentId === f.id;
+                const color = markerColorFor(f.tag);
+                return (
+                  <div
+                    key={`frag-${f.id}`}
+                    title={`${Math.round(f.end_sec - f.start_sec)}s`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFragmentClick?.(f.id);
+                    }}
+                    className={[
+                      'absolute top-0 h-full cursor-pointer transition-opacity rounded-sm',
+                      color,
+                      isSelected
+                        ? 'opacity-100 ring-1 ring-white/80'
+                        : 'opacity-50 hover:opacity-80',
+                    ].join(' ')}
+                    style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                  />
+                );
+              })}
+
+              {/* Sugestie AI — outline dashed */}
+              {suggestions?.map((s) => {
+                const leftPct = (s.startSec / barBaseDuration) * 100;
+                const widthPct = Math.max(0.1, ((s.endSec - s.startSec) / barBaseDuration) * 100);
+                return (
+                  <div
+                    key={`sug-${s.id}`}
+                    title={s.title ?? 'Sugestia AI — kliknij, aby zaakceptować'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSuggestionAccept?.(s.id);
+                    }}
+                    className="absolute top-0 h-full cursor-pointer border border-dashed border-htg-lavender hover:bg-htg-lavender/20 rounded-sm"
+                    style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                  />
+                );
+              })}
+
+              {/* Draggable handles dla selected fragmentu */}
+              {(() => {
+                const sel = fragments?.find((f) => f.id === selectedFragmentId);
+                if (!sel) return null;
+                const startPct = (sel.start_sec / barBaseDuration) * 100;
+                const endPct = (sel.end_sec / barBaseDuration) * 100;
+                return (
+                  <>
+                    <div
+                      onMouseDown={startHandleDrag(sel.id, 'start', sel.start_sec, sel.end_sec)}
+                      title="Przesuń początek"
+                      className="absolute top-[-2px] h-[calc(100%+4px)] w-1 bg-white cursor-ew-resize hover:w-1.5 transition-all"
+                      style={{ left: `calc(${startPct}% - 2px)` }}
+                    />
+                    <div
+                      onMouseDown={startHandleDrag(sel.id, 'end', sel.start_sec, sel.end_sec)}
+                      title="Przesuń koniec"
+                      className="absolute top-[-2px] h-[calc(100%+4px)] w-1 bg-white cursor-ew-resize hover:w-1.5 transition-all"
+                      style={{ left: `calc(${endPct}% - 2px)` }}
+                    />
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
           <div ref={waveRef} className="w-full" />
 
           {/* Pasek mówców pod falą — te same proporcje, ten sam scroll */}
@@ -413,7 +587,7 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
       )}
 
       <p className="text-[11px] text-htg-fg-muted">
-        Spacja — play/pause · klik na falę — seek · S — start tu · E — koniec tu · +/− — zoom fali · Shift+drag — zaznacz zakres
+        Spacja — play/pause · klik na falę — seek · S — start tu · E — koniec tu · +/− — zoom fali · Shift+drag — zaznacz zakres · drag markery — zmień zakres
       </p>
     </div>
   );

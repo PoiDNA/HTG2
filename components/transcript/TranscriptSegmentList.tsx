@@ -11,21 +11,28 @@ import {
 
 /**
  * Lista segmentów transkrypcji z podświetleniem aktywnego (po currentSec)
- * i klik → seek. Auto-scroll aktywnego do widoku. Inline edycja tekstu
- * segmentu dla stafu (pencil → textarea → PATCH). Opcjonalnie: przepinanie
- * segmentu do innego mówcy (ikona UserCog → popover z listą mówców).
+ * i klik → seek. Auto-scroll aktywnego do widoku. Inline edycja tekstu,
+ * przepinanie do innego mówcy, side-by-side PL obok tłumaczenia dla locale≠PL.
  */
+
+type EditLocale = 'pl' | 'en' | 'de' | 'pt';
 
 interface Props {
   segments: SpeakerSegment[];
   currentSec: number;
   onSeek: (sec: number) => void;
-  /** Edycja tekstu segmentu. Gdy undefined — tryb read-only. */
-  onEditSegment?: (segmentId: string, text: string | null) => Promise<void>;
+  /**
+   * Edycja tekstu segmentu. Gdy undefined — tryb read-only.
+   * Trzeci argument: locale — dla 'pl' edycja oryginału, dla innych edycja
+   * text_i18n[locale].
+   */
+  onEditSegment?: (segmentId: string, text: string | null, locale: EditLocale) => Promise<void>;
   /** Przepięcie segmentu do innego mówcy. Gdy undefined — UI ukryte. */
   onReassignSpeaker?: (segmentId: string, speakerKey: string) => Promise<void>;
   /** Lista mówców dla popovera reassign (agregat z GET /speakers). */
   speakers?: SpeakerSummary[];
+  /** Bieżący locale edycji. Domyślnie 'pl'. */
+  locale?: EditLocale;
 }
 
 function fmt(sec: number): string {
@@ -41,6 +48,7 @@ export default function TranscriptSegmentList({
   onEditSegment,
   onReassignSpeaker,
   speakers,
+  locale = 'pl',
 }: Props) {
   const activeIdx = segments.findIndex(
     (s) => s.startSec <= currentSec && s.endSec > currentSec,
@@ -53,10 +61,6 @@ export default function TranscriptSegmentList({
   const [reassignId, setReassignId] = useState<string | null>(null);
   const [reassigning, setReassigning] = useState(false);
 
-  // Deduplikuj listę mówców po baseKey (c0_A i c1_A → jedna pozycja "A").
-  // Zostawiamy pierwszy (z display_name/role) — wybór do PATCH używa
-  // oryginalnego speakerKey pierwszego wariantu; to wystarcza bo segment
-  // jest przepinany tylko na ten sam baseKey w innych segmentach istnieje.
   const dedupedSpeakers = useMemo(() => {
     if (!speakers) return [];
     const byBase = new Map<string, SpeakerSummary>();
@@ -66,7 +70,6 @@ export default function TranscriptSegmentList({
       if (!existing) {
         byBase.set(base, s);
       } else {
-        // Preferuj rekord z displayName/role (bogatsze metadane).
         const score = (x: SpeakerSummary) => (x.displayName ? 2 : 0) + (x.role ? 1 : 0);
         if (score(s) > score(existing)) byBase.set(base, s);
       }
@@ -77,13 +80,12 @@ export default function TranscriptSegmentList({
   }, [speakers]);
 
   useEffect(() => {
-    if (editingId) return; // nie scrolluj gdy user edytuje
+    if (editingId) return;
     if (activeIdx < 0) return;
     const el = listRef.current?.querySelector<HTMLLIElement>(`[data-seg-idx="${activeIdx}"]`);
     el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [activeIdx, editingId]);
 
-  // Zamykaj popover reassign na Escape.
   useEffect(() => {
     if (!reassignId) return;
     const onKey = (e: KeyboardEvent) => {
@@ -99,16 +101,24 @@ export default function TranscriptSegmentList({
     );
   }
 
+  const displayText = (s: SpeakerSegment): { text: string | null; fallback: boolean } => {
+    if (locale === 'pl') return { text: s.text, fallback: false };
+    const tr = s.textI18n?.[locale];
+    if (tr && tr.trim() !== '') return { text: tr, fallback: false };
+    return { text: s.text, fallback: true };
+  };
+
   const startEdit = (s: SpeakerSegment) => {
     setEditingId(s.id);
-    setDraft(s.text ?? '');
+    const initial = locale === 'pl' ? (s.text ?? '') : (s.textI18n?.[locale] ?? '');
+    setDraft(initial);
   };
 
   const commit = async () => {
     if (!editingId || !onEditSegment) { setEditingId(null); return; }
     setSaving(true);
     try {
-      await onEditSegment(editingId, draft.trim() === '' ? null : draft);
+      await onEditSegment(editingId, draft.trim() === '' ? null : draft, locale);
       setEditingId(null);
     } finally {
       setSaving(false);
@@ -130,6 +140,8 @@ export default function TranscriptSegmentList({
     }
   };
 
+  const showReassign = locale === 'pl' && !!onReassignSpeaker && dedupedSpeakers.length > 1;
+
   return (
     <ol ref={listRef} className="space-y-1 max-h-96 overflow-y-auto pr-1">
       {segments.map((s, i) => {
@@ -137,6 +149,7 @@ export default function TranscriptSegmentList({
         const isActive = i === activeIdx;
         const isEditing = editingId === s.id;
         const isReassigning = reassignId === s.id;
+        const { text: shown, fallback } = displayText(s);
         return (
           <li
             key={s.id}
@@ -159,7 +172,15 @@ export default function TranscriptSegmentList({
                 <span className="text-[10px] font-mono tabular-nums text-htg-fg-muted shrink-0">
                   {fmt(s.startSec)}
                 </span>
-                {onReassignSpeaker && dedupedSpeakers.length > 1 && !isEditing && (
+                {locale !== 'pl' && fallback && (
+                  <span
+                    className="text-[9px] uppercase tracking-wide text-htg-warm shrink-0"
+                    title="Brak tłumaczenia — pokazany oryginał (PL)"
+                  >
+                    PL
+                  </span>
+                )}
+                {showReassign && !isEditing && (
                   <div className="relative ml-auto shrink-0">
                     <button
                       type="button"
@@ -237,10 +258,8 @@ export default function TranscriptSegmentList({
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); startEdit(s); }}
-                    title="Popraw tekst"
-                    className={`text-htg-fg-muted/50 hover:text-htg-sage transition-colors shrink-0 ${
-                      onReassignSpeaker && dedupedSpeakers.length > 1 ? '' : 'ml-auto'
-                    }`}
+                    title={locale === 'pl' ? 'Popraw tekst (PL)' : `Edytuj tłumaczenie (${locale.toUpperCase()})`}
+                    className={`text-htg-fg-muted/50 hover:text-htg-sage transition-colors shrink-0 ${showReassign ? '' : 'ml-auto'}`}
                   >
                     <Pencil className="w-3 h-3" />
                   </button>
@@ -248,18 +267,44 @@ export default function TranscriptSegmentList({
               </div>
               {isEditing ? (
                 <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                  <textarea
-                    autoFocus
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') setEditingId(null);
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) commit();
-                    }}
-                    disabled={saving}
-                    rows={Math.max(2, Math.min(8, Math.ceil(draft.length / 80)))}
-                    className="w-full px-2 py-1.5 text-xs bg-htg-card border border-htg-card-border rounded-md text-htg-fg leading-snug resize-y focus:outline-none focus:border-htg-sage"
-                  />
+                  {locale !== 'pl' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wide text-htg-fg-muted opacity-70 mb-0.5">PL</div>
+                        <p className="text-xs leading-snug text-htg-fg-muted/80 bg-htg-surface/40 border border-htg-card-border rounded-md px-2 py-1.5">
+                          {s.text ?? <span className="italic">(bez tekstu)</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wide text-htg-lavender mb-0.5">{locale.toUpperCase()}</div>
+                        <textarea
+                          autoFocus
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') setEditingId(null);
+                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) commit();
+                          }}
+                          disabled={saving}
+                          rows={Math.max(2, Math.min(8, Math.ceil(draft.length / 80)))}
+                          className="w-full px-2 py-1.5 text-xs bg-htg-card border border-htg-card-border rounded-md text-htg-fg leading-snug resize-y focus:outline-none focus:border-htg-sage"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <textarea
+                      autoFocus
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') setEditingId(null);
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) commit();
+                      }}
+                      disabled={saving}
+                      rows={Math.max(2, Math.min(8, Math.ceil(draft.length / 80)))}
+                      className="w-full px-2 py-1.5 text-xs bg-htg-card border border-htg-card-border rounded-md text-htg-fg leading-snug resize-y focus:outline-none focus:border-htg-sage"
+                    />
+                  )}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -268,7 +313,7 @@ export default function TranscriptSegmentList({
                       className="inline-flex items-center gap-1 px-2 py-0.5 bg-htg-sage/20 hover:bg-htg-sage/30 text-htg-sage rounded text-[10px] font-medium"
                     >
                       {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                      Zapisz
+                      Zapisz {locale !== 'pl' && <span className="uppercase">({locale})</span>}
                     </button>
                     <button
                       type="button"
@@ -281,9 +326,26 @@ export default function TranscriptSegmentList({
                     <span className="text-[10px] text-htg-fg-muted ml-auto">⌘/Ctrl+Enter = Zapisz · Esc = Anuluj</span>
                   </div>
                 </div>
+              ) : locale !== 'pl' ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-[9px] uppercase tracking-wide text-htg-fg-muted opacity-70 mb-0.5">PL</div>
+                    <p className="leading-snug text-htg-fg-muted/80">
+                      {s.text ?? <span className="italic text-htg-fg-muted">(bez tekstu)</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-[9px] uppercase tracking-wide text-htg-lavender mb-0.5">{locale.toUpperCase()}</div>
+                    <p className={`leading-snug ${fallback ? 'text-htg-fg-muted italic' : 'text-htg-fg-secondary'}`}>
+                      {fallback
+                        ? <span className="italic text-htg-fg-muted">(brak tłumaczenia)</span>
+                        : (shown ?? <span className="italic text-htg-fg-muted">(bez tekstu)</span>)}
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <p className="text-htg-fg-secondary leading-snug">
-                  {s.text ?? <span className="italic text-htg-fg-muted">(bez tekstu)</span>}
+                  {shown ?? <span className="italic text-htg-fg-muted">(bez tekstu)</span>}
                 </p>
               )}
             </div>

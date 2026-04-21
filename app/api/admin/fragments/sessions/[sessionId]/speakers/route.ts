@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdminOrEditor } from '@/lib/admin/auth';
+import { requireAdminOrEditorOrTranslator } from '@/lib/admin/auth';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 
 /**
@@ -27,6 +27,7 @@ type SegmentRow = {
   display_name: string | null;
   role: 'host' | 'client' | 'assistant' | 'unknown' | null;
   text: string | null;
+  text_i18n: Record<string, string> | null;
   confidence: string | number | null;
 };
 
@@ -70,7 +71,7 @@ function pickLongestNonNull<T extends string>(
 }
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  const auth = await requireAdminOrEditor();
+  const auth = await requireAdminOrEditorOrTranslator();
   if ('error' in auth) return auth.error;
 
   const { sessionId } = await params;
@@ -113,7 +114,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   // 3. Segmenty aktywnego importu.
   const { data: segs, error: segErr } = await db
     .from('session_speaker_segments')
-    .select('id, start_sec, end_sec, speaker_key, display_name, role, text, confidence')
+    .select('id, start_sec, end_sec, speaker_key, display_name, role, text, text_i18n, confidence')
     .eq('import_id', activeImport.id)
     .order('start_sec', { ascending: true });
 
@@ -134,6 +135,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     displayName: r.display_name,
     role: r.role,
     text: r.text,
+    textI18n: (r.text_i18n ?? {}) as Record<string, string>,
     confidence: numOrNull(r.confidence),
   }));
 

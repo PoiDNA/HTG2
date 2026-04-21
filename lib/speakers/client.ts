@@ -22,6 +22,8 @@ export interface SpeakerSegment {
   displayName: string | null;
   role: SpeakerRole | null;
   text: string | null;
+  /** Tłumaczenia segmentu per locale (en|de|pt). Pusty obiekt = brak tłumaczeń. */
+  textI18n?: Record<string, string>;
   confidence: number | null;
 }
 

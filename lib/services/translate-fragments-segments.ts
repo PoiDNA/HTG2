@@ -14,9 +14,8 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
  *   - session_fragments.description_i18n[locale]  (na razie puste — brak PL)
  *   - session_speaker_segments.text_i18n[locale]  (migracja 098)
  *
- * Model: claude-sonnet-4-5 (równoważny sonnet-4-6 — używamy aktualnej
- * stabilnej wersji dostępnej w repo). Jakościowy tryb dla długich
- * transkrypcji sesji medytacyjnych.
+ * Model: konfigurowalny przez env var ANTHROPIC_MODEL (fallback: claude-sonnet-4-6).
+ * Jakościowy tryb dla długich transkrypcji sesji medytacyjnych.
  */
 
 export const TRANSLATE_TARGETS = ['en', 'de', 'pt'] as const;
@@ -29,7 +28,7 @@ const LOCALE_NAMES: Record<TranslateTarget, string> = {
   pt: 'European Portuguese (PT-PT, NOT Brazilian Portuguese)',
 };
 
-const MODEL = 'claude-sonnet-4-5';
+const MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
 const BATCH_SIZE = 20;
 
 // ─── Low-level Claude call ─────────────────────────────────────────────

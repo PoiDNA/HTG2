@@ -732,6 +732,29 @@ export default function FragmentEditorClient({
         onTimeUpdate={setCurrentSec}
         speakerSegments={speakerSegments}
         onRangeSelected={handleRangeSelected}
+        fragments={fragments.map((f, i) => ({
+          id: f.id ?? `new-${i}`,
+          start_sec: f.start_sec,
+          end_sec: f.end_sec,
+          tag: f.tags?.[0],
+        }))}
+        selectedFragmentId={
+          selectedIdx !== null
+            ? (fragments[selectedIdx]?.id ?? `new-${selectedIdx}`)
+            : null
+        }
+        onFragmentClick={(markerId) => {
+          const idx = fragments.findIndex(
+            (f, i) => (f.id ?? `new-${i}`) === markerId,
+          );
+          if (idx >= 0) handleSelectFragment(idx);
+        }}
+        onRangeEdit={(markerId, s, e) => {
+          const idx = fragments.findIndex(
+            (f, i) => (f.id ?? `new-${i}`) === markerId,
+          );
+          if (idx >= 0) updateFragment(idx, { start_sec: s, end_sec: e });
+        }}
       />
 
       {/* Mówcy + transkrypcja */}

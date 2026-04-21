@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback, useMemo } from 'react';
 import WaveSurfer from 'wavesurfer.js';
+import RegionsPlugin, { type Region } from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import Hls from 'hls.js';
 import { Play, Pause, Loader2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { speakerColor, type SpeakerSegment } from '@/lib/speakers/client';
@@ -12,6 +13,7 @@ import { speakerColor, type SpeakerSegment } from '@/lib/speakers/client';
  * - Pobiera podpisany URL HLS z /api/admin/fragments/sessions/[sessionId]/audio-url
  * - HLS → <audio> przez hls.js; wavesurfer używa media element jako backendu
  * - Skrót Space: play/pause. Klik na falę: seek.
+ * - Shift+drag na fali: zaznacz zakres → tworzy nowy Moment (prefill start/end/tytuł).
  * - Ref eksponuje seekTo/play/pause dla parenta (markowanie start/end).
  * - Blocki mówców renderowane są pod falą w tym samym scrollującym wrapperze,
  *   co gwarantuje fizyczną synchronizację po osi X przy zoomie (1×/2×/4×/8×/16×).
@@ -33,12 +35,14 @@ interface Props {
   onDurationReady?: (sec: number) => void;
   /** Segmenty mówców do narysowania pod falą (zsynchronizowane z osią X). */
   speakerSegments?: SpeakerSegment[];
+  /** Callback: user wybrał zakres przez Shift+drag na fali (sec) */
+  onRangeSelected?: (startSec: number, endSec: number) => void;
 }
 
 const ZOOM_STEPS = [1, 2, 4, 8, 16] as const;
 
 const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function SessionAudioPlayer(
-  { sessionId, onTimeUpdate, onDurationReady, speakerSegments },
+  { sessionId, onTimeUpdate, onDurationReady, speakerSegments, onRangeSelected },
   ref,
 ) {
   // Zewnętrzny scroll (wspólny dla fali i blocków).
@@ -49,6 +53,12 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wsRef = useRef<WaveSurfer | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const regionsRef = useRef<RegionsPlugin | null>(null);
+  const disableDragRef = useRef<(() => void) | null>(null);
+  const shiftDownRef = useRef(false);
+  const onRangeSelectedRef = useRef(onRangeSelected);
+
+  useEffect(() => { onRangeSelectedRef.current = onRangeSelected; }, [onRangeSelected]);
 
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -148,6 +158,26 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
         });
         wsRef.current = ws;
 
+        // Regions plugin — Shift+drag → range selection
+        const regions = ws.registerPlugin(RegionsPlugin.create());
+        regionsRef.current = regions;
+
+        regions.on('region-created', (region: Region) => {
+          // Called when user drags to create a new region via enableDragSelection
+          // OR when we programmatically addRegion. Filter: only user-drag creates
+          // have an id starting with "region-" (auto-generated). Our programmatic
+          // regions use id="frag-<idx>".
+          if (region.id.startsWith('frag-')) return;
+          const start = region.start;
+          const end = region.end;
+          // Remove the transient region; parent will addFragment (which may add
+          // a persistent region with id="frag-N").
+          region.remove();
+          if (end > start && onRangeSelectedRef.current) {
+            onRangeSelectedRef.current(start, end);
+          }
+        });
+
         ws.on('ready', (d: number) => {
           if (cancelled) return;
           setDuration(d);
@@ -182,6 +212,9 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
 
     return () => {
       cancelled = true;
+      disableDragRef.current?.();
+      disableDragRef.current = null;
+      regionsRef.current = null;
       wsRef.current?.destroy();
       wsRef.current = null;
       hlsRef.current?.destroy();
@@ -189,6 +222,48 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
       audioRef.current = null;
     };
   }, [sessionId, onDurationReady, onTimeUpdate]);
+
+  // ── Shift key → włącza drag-select na regions plugin ───────────────────────
+  useEffect(() => {
+    const enableDrag = () => {
+      const regions = regionsRef.current;
+      if (!regions || disableDragRef.current) return;
+      disableDragRef.current = regions.enableDragSelection({
+        color: 'rgba(136, 170, 136, 0.25)',
+      });
+    };
+    const disableDrag = () => {
+      disableDragRef.current?.();
+      disableDragRef.current = null;
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift' && !shiftDownRef.current) {
+        shiftDownRef.current = true;
+        enableDrag();
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        shiftDownRef.current = false;
+        disableDrag();
+      }
+    };
+    const onBlur = () => {
+      shiftDownRef.current = false;
+      disableDrag();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+      disableDrag();
+    };
+  }, []);
 
   // ── Zoom: aplikuj minPxPerSec i przelicz szerokość inner wrappera ──────────
   const zoomMultiplier = ZOOM_STEPS[zoomIdx];
@@ -338,7 +413,7 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
       )}
 
       <p className="text-[11px] text-htg-fg-muted">
-        Spacja — play/pause · klik na falę — seek · S — start tu · E — koniec tu · +/− — zoom fali
+        Spacja — play/pause · klik na falę — seek · S — start tu · E — koniec tu · +/− — zoom fali · Shift+drag — zaznacz zakres
       </p>
     </div>
   );

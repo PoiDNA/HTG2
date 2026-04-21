@@ -1,0 +1,8 @@
+# Audio recordings go here. Not committed — see .gitignore.
+# Expected files:
+#   01-clean.wav
+#   02-pauses.wav
+#   03-mistakes.wav
+#   04-skips.wav
+#   05-reorder-improv.wav
+#   01-clean-enhanced.wav

@@ -16,7 +16,7 @@ type Params = { params: Promise<{ sessionId: string }> };
 
 export const maxDuration = 120;
 
-const MODEL = 'claude-sonnet-4-5';
+const MODEL = 'claude-sonnet-4-6';
 
 interface Candidate {
   startSec: number;

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback, useMemo } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import Hls from 'hls.js';
-import { Play, Pause, Loader2, AlertTriangle } from 'lucide-react';
+import { Play, Pause, Loader2, AlertTriangle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { speakerColor, type SpeakerSegment } from '@/lib/speakers/client';
 
 /**
  * Odtwarzacz audio z falą wizualną dla narzędzia segmentacji Momentów.
@@ -12,6 +13,8 @@ import { Play, Pause, Loader2, AlertTriangle } from 'lucide-react';
  * - HLS → <audio> przez hls.js; wavesurfer używa media element jako backendu
  * - Skrót Space: play/pause. Klik na falę: seek.
  * - Ref eksponuje seekTo/play/pause dla parenta (markowanie start/end).
+ * - Blocki mówców renderowane są pod falą w tym samym scrollującym wrapperze,
+ *   co gwarantuje fizyczną synchronizację po osi X przy zoomie (1×/2×/4×/8×/16×).
  */
 
 export interface SessionAudioPlayerHandle {
@@ -28,13 +31,21 @@ interface Props {
   onTimeUpdate?: (sec: number) => void;
   /** Czas całkowity sesji (sec) — raportowany po załadowaniu */
   onDurationReady?: (sec: number) => void;
+  /** Segmenty mówców do narysowania pod falą (zsynchronizowane z osią X). */
+  speakerSegments?: SpeakerSegment[];
 }
 
+const ZOOM_STEPS = [1, 2, 4, 8, 16] as const;
+
 const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function SessionAudioPlayer(
-  { sessionId, onTimeUpdate, onDurationReady },
+  { sessionId, onTimeUpdate, onDurationReady, speakerSegments },
   ref,
 ) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  // Zewnętrzny scroll (wspólny dla fali i blocków).
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  // Wewnętrzny kontener o szerokości = duration * pxPerSec — wavesurfer i bar dzielą tę oś.
+  const innerRef = useRef<HTMLDivElement | null>(null);
+  const waveRef = useRef<HTMLDivElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wsRef = useRef<WaveSurfer | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -44,6 +55,9 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  // Baseline px/sec = szerokość kontenera / duration. Zoom 1× startuje od tej wartości.
+  const [basePxPerSec, setBasePxPerSec] = useState(0);
+  const [zoomIdx, setZoomIdx] = useState(0);
 
   useImperativeHandle(ref, () => ({
     getCurrentTime: () => audioRef.current?.currentTime ?? 0,
@@ -77,7 +91,6 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
         if (cancelled) return;
 
         // Spróbuj pobrać wstępnie wygenerowane peaks (szybszy render fali).
-        // Format akceptowany przez WaveSurfer: number[] | number[][].
         let peaks: number[][] | undefined;
         if (peaksUrl) {
           try {
@@ -97,7 +110,7 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
           if (cancelled) return;
         }
 
-        const container = containerRef.current;
+        const container = waveRef.current;
         if (!container) return;
 
         const audio = document.createElement('audio');
@@ -106,7 +119,6 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
         audioRef.current = audio;
 
         if (deliveryType === 'hls') {
-          // Safari plays m3u8 natively; inni potrzebują hls.js.
           if (Hls.isSupported()) {
             const hls = new Hls();
             hls.loadSource(url);
@@ -116,11 +128,9 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
             audio.src = url;
           }
         } else {
-          // Direct audio (HTG2 storage lub Private CDN) — sam plik.
           audio.src = url;
         }
 
-        // Create wavesurfer using the media element so playback stays in sync
         const ws = WaveSurfer.create({
           container,
           waveColor: 'rgba(136, 170, 136, 0.4)',
@@ -132,6 +142,7 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
           barGap: 1,
           barRadius: 1,
           normalize: true,
+          fillParent: true,
           media: audio,
           peaks,
         });
@@ -140,6 +151,11 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
         ws.on('ready', (d: number) => {
           if (cancelled) return;
           setDuration(d);
+          // Bazowy px/sec = aktualna szerokość scroll containera / duration.
+          const w = scrollRef.current?.clientWidth ?? 0;
+          if (w > 0 && d > 0) {
+            setBasePxPerSec(w / d);
+          }
           setStatus('ready');
           onDurationReady?.(d);
         });
@@ -174,6 +190,19 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
     };
   }, [sessionId, onDurationReady, onTimeUpdate]);
 
+  // ── Zoom: aplikuj minPxPerSec i przelicz szerokość inner wrappera ──────────
+  const zoomMultiplier = ZOOM_STEPS[zoomIdx];
+  const effectivePxPerSec = basePxPerSec > 0 ? basePxPerSec * zoomMultiplier : 0;
+  const innerWidthPx = duration > 0 && effectivePxPerSec > 0 ? duration * effectivePxPerSec : null;
+
+  useEffect(() => {
+    if (!innerWidthPx) return;
+    // Ustaw explicit width na inner wrapperze; wavesurfer z fillParent:true
+    // automatycznie przerenderuje falę do tej szerokości (ResizeObserver).
+    // Blocki mówców poniżej korzystają z tego samego wrappera — oś X spójna.
+    if (innerRef.current) innerRef.current.style.width = `${innerWidthPx}px`;
+  }, [innerWidthPx]);
+
   // ── Space = play/pause (gdy fokus nie jest na inpucie) ─────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -194,6 +223,27 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
     wsRef.current?.playPause();
   }, []);
 
+  const zoomIn = useCallback(() => {
+    setZoomIdx((i) => Math.min(ZOOM_STEPS.length - 1, i + 1));
+  }, []);
+  const zoomOut = useCallback(() => {
+    setZoomIdx((i) => Math.max(0, i - 1));
+  }, []);
+  const zoomReset = useCallback(() => setZoomIdx(0), []);
+
+  // Bar: oblicz fallback duration dla pozycjonowania blocków (gdy wavesurfer
+  // jeszcze nie raportował duration — np. transkrypcja była w cache).
+  const barBaseDuration = useMemo(() => {
+    if (duration > 0) return duration;
+    if (speakerSegments && speakerSegments.length > 0) {
+      return speakerSegments[speakerSegments.length - 1].endSec;
+    }
+    return 0;
+  }, [duration, speakerSegments]);
+
+  // Szerokość inner gdy jeszcze nie znamy basePxPerSec (przed ready) — 100% scroll.
+  const innerStyleWidth = innerWidthPx ? `${innerWidthPx}px` : '100%';
+
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-3">
@@ -210,12 +260,73 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
               : <Play className="w-4 h-4 fill-white ml-0.5" />}
         </button>
 
-        <div className="flex-1 min-w-0">
-          <div ref={containerRef} className="w-full" />
+        <div className="text-xs font-mono text-htg-fg-muted tabular-nums shrink-0 w-24">
+          {fmt(currentTime)} / {fmt(duration)}
         </div>
 
-        <div className="text-xs font-mono text-htg-fg-muted tabular-nums shrink-0 w-24 text-right">
-          {fmt(currentTime)} / {fmt(duration)}
+        {/* Zoom controls — zawsze widoczne, poza scroll area */}
+        <div className="ml-auto flex items-center gap-1 shrink-0">
+          <button
+            onClick={zoomOut}
+            disabled={zoomIdx === 0 || status !== 'ready'}
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-htg-surface border border-htg-card-border text-htg-fg-muted hover:text-htg-fg disabled:opacity-30 transition-colors"
+            title="Pomniejsz"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <span className="text-[11px] font-mono text-htg-fg-muted tabular-nums w-8 text-center">
+            {zoomMultiplier}×
+          </span>
+          <button
+            onClick={zoomIn}
+            disabled={zoomIdx === ZOOM_STEPS.length - 1 || status !== 'ready'}
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-htg-surface border border-htg-card-border text-htg-fg-muted hover:text-htg-fg disabled:opacity-30 transition-colors"
+            title="Powiększ"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={zoomReset}
+            disabled={zoomIdx === 0 || status !== 'ready'}
+            className="w-7 h-7 flex items-center justify-center rounded-lg bg-htg-surface border border-htg-card-border text-htg-fg-muted hover:text-htg-fg disabled:opacity-30 transition-colors"
+            title="Reset zoom"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Wspólny scroll wrapper dla fali i blocków mówców — jedna oś X */}
+      <div ref={scrollRef} className="w-full overflow-x-auto overflow-y-hidden">
+        <div ref={innerRef} style={{ width: innerStyleWidth }}>
+          <div ref={waveRef} className="w-full" />
+
+          {/* Pasek mówców pod falą — te same proporcje, ten sam scroll */}
+          {speakerSegments && speakerSegments.length > 0 && barBaseDuration > 0 && (
+            <div className="relative h-4 w-full mt-1 rounded bg-htg-card-border/40 overflow-hidden">
+              {speakerSegments.map((s) => {
+                const leftPct = (s.startSec / barBaseDuration) * 100;
+                const widthPct = Math.max(0.1, ((s.endSec - s.startSec) / barBaseDuration) * 100);
+                const c = speakerColor(s.role, s.speakerKey);
+                return (
+                  <div
+                    key={s.id}
+                    title={`${s.displayName ?? s.speakerKey} · ${Math.round(s.endSec - s.startSec)}s`}
+                    className={`absolute top-0 h-full ${c.bar}`}
+                    style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                  />
+                );
+              })}
+              {/* Playhead zsynchronizowany z wavesurfer cursor */}
+              {duration > 0 && (
+                <div
+                  className="absolute top-0 h-full w-0.5 bg-white/90 pointer-events-none"
+                  style={{ left: `${(currentTime / barBaseDuration) * 100}%` }}
+                  aria-hidden
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -227,7 +338,7 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
       )}
 
       <p className="text-[11px] text-htg-fg-muted">
-        Spacja — play/pause · klik na falę — seek · S — start tu · E — koniec tu
+        Spacja — play/pause · klik na falę — seek · S — start tu · E — koniec tu · +/− — zoom fali
       </p>
     </div>
   );

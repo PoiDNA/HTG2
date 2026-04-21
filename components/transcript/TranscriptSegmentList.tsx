@@ -144,18 +144,46 @@ export default function TranscriptSegmentList({
               </div>
               {isEditing ? (
                 <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                  <textarea
-                    autoFocus
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') setEditingId(null);
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) commit();
-                    }}
-                    disabled={saving}
-                    rows={Math.max(2, Math.min(8, Math.ceil(draft.length / 80)))}
-                    className="w-full px-2 py-1.5 text-xs bg-htg-card border border-htg-card-border rounded-md text-htg-fg leading-snug resize-y focus:outline-none focus:border-htg-sage"
-                  />
+                  {/* W trybie locale≠PL pokazujemy oryginał PL obok pola edycji (read-only) */}
+                  {locale !== 'pl' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wide text-htg-fg-muted opacity-70 mb-0.5">PL</div>
+                        <p className="text-xs leading-snug text-htg-fg-muted/80 bg-htg-surface/40 border border-htg-card-border rounded-md px-2 py-1.5">
+                          {s.text ?? <span className="italic">(bez tekstu)</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wide text-htg-lavender mb-0.5">{locale.toUpperCase()}</div>
+                        <textarea
+                          autoFocus
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') setEditingId(null);
+                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) commit();
+                          }}
+                          disabled={saving}
+                          rows={Math.max(2, Math.min(8, Math.ceil(draft.length / 80)))}
+                          className="w-full px-2 py-1.5 text-xs bg-htg-card border border-htg-card-border rounded-md text-htg-fg leading-snug resize-y focus:outline-none focus:border-htg-sage"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {locale === 'pl' && (
+                    <textarea
+                      autoFocus
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') setEditingId(null);
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) commit();
+                      }}
+                      disabled={saving}
+                      rows={Math.max(2, Math.min(8, Math.ceil(draft.length / 80)))}
+                      className="w-full px-2 py-1.5 text-xs bg-htg-card border border-htg-card-border rounded-md text-htg-fg leading-snug resize-y focus:outline-none focus:border-htg-sage"
+                    />
+                  )}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -177,8 +205,26 @@ export default function TranscriptSegmentList({
                     <span className="text-[10px] text-htg-fg-muted ml-auto">⌘/Ctrl+Enter = Zapisz · Esc = Anuluj</span>
                   </div>
                 </div>
+              ) : locale !== 'pl' ? (
+                /* Widok niebędący trybem edycji — side-by-side PL (read-only) | tłumaczenie */
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-[9px] uppercase tracking-wide text-htg-fg-muted opacity-70 mb-0.5">PL</div>
+                    <p className="leading-snug text-htg-fg-muted/80">
+                      {s.text ?? <span className="italic text-htg-fg-muted">(bez tekstu)</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="text-[9px] uppercase tracking-wide text-htg-lavender mb-0.5">{locale.toUpperCase()}</div>
+                    <p className={`leading-snug ${fallback ? 'text-htg-fg-muted italic' : 'text-htg-fg-secondary'}`}>
+                      {fallback
+                        ? <span className="italic text-htg-fg-muted">(brak tłumaczenia)</span>
+                        : (shown ?? <span className="italic text-htg-fg-muted">(bez tekstu)</span>)}
+                    </p>
+                  </div>
+                </div>
               ) : (
-                <p className={`leading-snug ${fallback && locale !== 'pl' ? 'text-htg-fg-muted italic' : 'text-htg-fg-secondary'}`}>
+                <p className="leading-snug text-htg-fg-secondary">
                   {shown ?? <span className="italic text-htg-fg-muted">(bez tekstu)</span>}
                 </p>
               )}

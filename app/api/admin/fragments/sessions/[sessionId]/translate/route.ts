@@ -64,6 +64,26 @@ export async function POST(req: NextRequest, { params }: Params) {
     scope = rawScope as TranslateScope;
   }
 
+  // Gate: wersja PL musi być zaakceptowana przez admina/edytora.
+  const { data: tmpl, error: tmplErr } = await auth.supabase
+    .from('session_templates')
+    .select('pl_approved_at')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  if (tmplErr) {
+    return NextResponse.json({ error: `DB error: ${tmplErr.message}` }, { status: 500 });
+  }
+  if (!tmpl) {
+    return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+  }
+  if (!tmpl.pl_approved_at) {
+    return NextResponse.json(
+      { error: 'Wersja PL nie została zaakceptowana. Admin/Editor musi zatwierdzić wersję PL przed auto-tłumaczeniem.' },
+      { status: 403 },
+    );
+  }
+
   try {
     const result = await translateSessionFragmentsAndSegments({
       sessionId,

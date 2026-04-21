@@ -2,6 +2,10 @@
   "name": "htg-web",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev --port 3003",
     "build": "next build",

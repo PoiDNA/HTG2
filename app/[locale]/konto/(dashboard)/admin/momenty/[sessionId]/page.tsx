@@ -134,6 +134,7 @@ export default async function AdminFragmentEditorPage({ params }: Params) {
         <FragmentEditorClient
           sessionId={sessionId}
           initialFragments={fragments}
+          pageLocale={locale}
         />
       )}
     </div>

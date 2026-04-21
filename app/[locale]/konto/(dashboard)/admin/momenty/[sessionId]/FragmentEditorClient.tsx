@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, Save, Loader2, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle, Zap, Tag, BookOpen, Languages,
-  ShieldCheck,
+  ShieldCheck, Sparkles, X, Check,
 } from 'lucide-react';
 import { FRAGMENT_TAGS, FRAGMENT_TAG_LABELS, type FragmentTag } from '@/lib/constants/fragment-tags';
 import SessionAudioPlayer, { type SessionAudioPlayerHandle } from '@/components/admin/SessionAudioPlayer';
@@ -33,6 +33,15 @@ interface Props {
   sessionId: string;
   initialFragments: Fragment[];
   totalDurationSec?: number;
+  pageLocale?: string;
+}
+
+interface MomentSuggestion {
+  id: string;
+  startSec: number;
+  endSec: number;
+  title: string;
+  reason: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -194,6 +203,7 @@ export default function FragmentEditorClient({
   sessionId,
   initialFragments,
   totalDurationSec = 0,
+  pageLocale = 'pl',
 }: Props) {
   const [fragments, setFragments] = useState<Fragment[]>(
     [...initialFragments].sort((a, b) => a.ordinal - b.ordinal)
@@ -207,6 +217,8 @@ export default function FragmentEditorClient({
   const [speakerSegments, setSpeakerSegments] = useState<SpeakerSegment[]>([]);
   const [editLocale, setEditLocale] = useState<EditLocale>('pl');
   const [translating, setTranslating] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<MomentSuggestion[]>([]);
   // PL approval gate — pobierane na mount; admin/editor może akceptować/odwołać.
   const [plApprovedAt, setPlApprovedAt] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
@@ -474,6 +486,51 @@ export default function FragmentEditorClient({
     }
   };
 
+  const handleSuggest = async () => {
+    setSuggesting(true);
+    setStatus(null);
+    try {
+      const res = await fetch(`/api/admin/fragments/sessions/${sessionId}/suggest-moments`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus({ kind: 'error', msg: data.error ?? `HTTP ${res.status}` });
+        return;
+      }
+      const cands = Array.isArray(data.candidates) ? data.candidates : [];
+      const mapped: MomentSuggestion[] = cands.map((c: { startSec: number; endSec: number; title: string; reason: string }, idx: number) => ({
+        id: `sug-${idx}`,
+        startSec: c.startSec,
+        endSec: c.endSec,
+        title: c.title,
+        reason: c.reason,
+      }));
+      setSuggestions(mapped);
+      setStatus({
+        kind: 'success',
+        msg: `Claude zaproponował ${mapped.length} kandydatów (${Math.round((data.elapsedMs ?? 0) / 1000)}s)`,
+      });
+    } catch {
+      setStatus({ kind: 'error', msg: 'Błąd połączenia' });
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const handleSuggestionAccept = useCallback((id: string) => {
+    setSuggestions((prev) => {
+      const s = prev.find((x) => x.id === id);
+      if (s) addFragment(s.startSec, s.endSec, s.title);
+      return prev.filter((x) => x.id !== id);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSuggestionReject = useCallback((id: string) => {
+    setSuggestions((prev) => prev.filter((x) => x.id !== id));
+  }, []);
+
   const handleSave = async () => {
     setSaving(true);
     setStatus(null);
@@ -637,6 +694,18 @@ export default function FragmentEditorClient({
             {translating ? 'Tłumaczę…' : 'Przetłumacz Claude (EN/DE/PT)'}
           </button>
 
+          {pageLocale === 'pl' && speakerSegments.length > 0 && (
+            <button
+              onClick={handleSuggest}
+              disabled={suggesting}
+              title="Zaproponuj Momenty z transkrypcji (Claude)"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/15 hover:bg-htg-sage/25 text-htg-sage rounded-lg text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {suggesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {suggesting ? 'Analizuję…' : 'Zaproponuj Momenty (Claude)'}
+            </button>
+          )}
+
           <button
             onClick={() => addFragment()}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-htg-sage/20 hover:bg-htg-sage/30 text-htg-sage rounded-lg text-xs font-medium transition-colors"
@@ -706,6 +775,56 @@ export default function FragmentEditorClient({
         selectedIdx={selectedIdx}
         onSelectFragment={handleSelectFragment}
       />
+
+      {/* Claude suggestions list */}
+      {suggestions.length > 0 && (
+        <div className="bg-htg-sage/5 border border-htg-sage/30 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-4 h-4 text-htg-sage" />
+            <h3 className="text-sm font-semibold text-htg-sage">
+              Propozycje Claude ({suggestions.length})
+            </h3>
+          </div>
+          {suggestions.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-start gap-3 p-3 bg-htg-surface/60 border border-htg-card-border rounded-xl"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-htg-fg truncate">{s.title}</span>
+                  <span className="text-[11px] font-mono text-htg-fg-muted shrink-0">
+                    {fmtSec(s.startSec)} – {fmtSec(s.endSec)} ({fmtSec(s.endSec - s.startSec)})
+                  </span>
+                </div>
+                {s.reason && (
+                  <p className="text-xs text-htg-fg-secondary mt-1 leading-snug">{s.reason}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionAccept(s.id)}
+                  title="Akceptuj — dodaj jako Moment"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-htg-sage hover:bg-htg-sage/90 text-white rounded-lg text-xs font-medium transition-colors"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Akceptuj
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionReject(s.id)}
+                  title="Odrzuć"
+                  className="flex items-center gap-1 px-2.5 py-1 bg-htg-surface hover:bg-red-500/10 text-htg-fg-muted hover:text-red-400 border border-htg-card-border rounded-lg text-xs font-medium transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Odrzuć
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Fragment rows */}
       {fragments.length === 0 ? (

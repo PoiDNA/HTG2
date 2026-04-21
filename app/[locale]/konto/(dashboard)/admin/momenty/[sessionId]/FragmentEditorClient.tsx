@@ -288,21 +288,65 @@ export default function FragmentEditorClient({
     setStatus(null);
   }, []);
 
-  const addFragment = (startSec?: number) => {
+  const addFragment = (startSec?: number, endSec?: number, title?: string) => {
     const maxOrdinal = fragments.reduce((m, f) => Math.max(m, f.ordinal), 0);
     const lastEnd = fragments.reduce((m, f) => Math.max(m, f.end_sec), 0);
     const start = startSec !== undefined ? startSec : lastEnd;
+    const end = endSec !== undefined && endSec > start ? endSec : start + 60;
     setFragments(prev => [
       ...prev,
       {
         ordinal: maxOrdinal + 1,
         start_sec: start,
-        end_sec: start + 60,
-        title: '',
+        end_sec: end,
+        title: title ?? '',
       },
     ]);
     setStatus(null);
   };
+
+  /**
+   * Auto-sugestia tytułu Momentu z transkrypcji mówców w zakresie [start, end].
+   * Bierze pierwsze ~5-7 słów z pierwszego paragrafu i dodaje wielokropek.
+   */
+  const suggestTitleFromRange = useCallback((startSec: number, endSec: number): string => {
+    const paras = fragmentText(speakerSegments, startSec, endSec);
+    if (paras.length === 0) return '';
+    const firstText = paras[0].text.trim();
+    if (!firstText) return '';
+    const words = firstText.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return '';
+    const take = Math.min(words.length, 6);
+    const snippet = words.slice(0, take).join(' ');
+    // Remove trailing punctuation before adding ellipsis
+    const cleaned = snippet.replace(/[,.;:!?—–-]+$/, '');
+    return words.length > take ? `${cleaned} …` : cleaned;
+  }, [speakerSegments]);
+
+  const handleRangeSelected = useCallback((startSec: number, endSec: number) => {
+    const suggested = suggestTitleFromRange(startSec, endSec);
+    setFragments(prev => {
+      const maxOrdinal = prev.reduce((m, f) => Math.max(m, f.ordinal), 0);
+      const newIdx = prev.length;
+      // Schedule selection + scroll after commit
+      setTimeout(() => {
+        setSelectedIdx(newIdx);
+        document
+          .querySelector(`[data-fragment-idx="${newIdx}"]`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 0);
+      return [
+        ...prev,
+        {
+          ordinal: maxOrdinal + 1,
+          start_sec: startSec,
+          end_sec: endSec,
+          title: suggested,
+        },
+      ];
+    });
+    setStatus(null);
+  }, [suggestTitleFromRange]);
 
   const removeFragment = (idx: number) => {
     const frag = fragments[idx];
@@ -618,6 +662,7 @@ export default function FragmentEditorClient({
         onDurationReady={setAudioDuration}
         onTimeUpdate={setCurrentSec}
         speakerSegments={speakerSegments}
+        onRangeSelected={handleRangeSelected}
       />
 
       {/* Mówcy + transkrypcja */}

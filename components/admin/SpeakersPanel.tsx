@@ -125,6 +125,22 @@ export default function SpeakersPanel({
     await load();
   }, [sessionId, load]);
 
+  const reassignSpeaker = useCallback(async (segmentId: string, speakerKey: string) => {
+    const res = await fetch(
+      `/api/admin/fragments/sessions/${sessionId}/segments/${segmentId}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speakerKey }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? `HTTP ${res.status}`);
+    }
+    await load();
+  }, [sessionId, load]);
+
   const bumpMediaVersion = useCallback(async () => {
     if (!confirm('Podmieniłeś plik audio w Bunny Storage? Ta operacja wymusi odświeżenie cache (CDN), wyczyści peaks i dezaktywuje transkrypcję.')) return;
     setBumping(true);
@@ -217,6 +233,8 @@ export default function SpeakersPanel({
               currentSec={currentSec}
               onSeek={onSeek}
               onEditSegment={editSegment}
+              onReassignSpeaker={reassignSpeaker}
+              speakers={data.speakers}
             />
           </div>
         )

@@ -382,17 +382,17 @@ export default function LoginForm() {
 
   return (
     <div className="p-4 md:bg-htg-card md:border md:border-htg-card-border md:rounded-2xl md:p-8 md:shadow-sm">
-      {/* Title row */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif font-bold text-htg-fg">
-          {step === 'name' ? t('name_subtitle') :
-           step === 'link-sent' ? t('link_sent_subtitle') :
-           step === 'code' ? t('code_subtitle', { email }) :
-           step === 'register' ? t('register_title') :
-           t('login_title')}
-        </h1>
-        {/* Passkey login is handled via Conditional UI (autofill on email input) */}
-      </div>
+      {/* Title row — hidden on main email step (title comes from hero) */}
+      {step !== 'email' && (
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-serif font-bold text-htg-fg">
+            {step === 'name' ? t('name_subtitle') :
+             step === 'link-sent' ? t('link_sent_subtitle') :
+             step === 'code' ? t('code_subtitle', { email }) :
+             t('register_title')}
+          </h1>
+        </div>
+      )}
 
       {/* ─── Name step (new users) ─── */}
       {step === 'name' ? (

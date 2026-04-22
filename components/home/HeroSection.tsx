@@ -19,13 +19,19 @@ export default function HeroSection() {
             {t('hero_title')}
           </h1>
 
-          {/* CTA */}
-          <div>
+          {/* CTA — login */}
+          <div className="flex flex-col items-start gap-3">
             <Link
-              href="/sesje"
+              href="/login"
               className="inline-block bg-htg-indigo text-white px-8 py-4 rounded-2xl text-base font-semibold shadow-lg hover:opacity-90 active:scale-[0.98] transition-all duration-150"
             >
-              {t('hero_cta')}
+              Otwórz przestrzeń
+            </Link>
+            <Link
+              href="/login"
+              className="text-xs tracking-[0.22em] uppercase text-htg-fg-muted/60 hover:text-htg-fg-muted transition-colors"
+            >
+              logowanie
             </Link>
           </div>
         </div>

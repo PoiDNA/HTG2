@@ -82,6 +82,12 @@ interface Props {
   onFragmentClick?: (fragmentId: string) => void;
   /** Klik w sugestię AI. */
   onSuggestionAccept?: (id: string) => void;
+  /** Odrzucenie sugestii AI. */
+  onSuggestionReject?: (id: string) => void;
+  /** Drag handle sugestii AI — nowy zakres w sec. */
+  onSuggestionRangeEdit?: (id: string, startSec: number, endSec: number) => void;
+  /** Klik w tło markera sugestii — seek+play od początku sugestii. */
+  onSuggestionClick?: (startSec: number) => void;
 }
 
 const ZOOM_STEPS = [1, 2, 4, 8, 16] as const;
@@ -99,12 +105,17 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
     onRangeEdit,
     onFragmentClick,
     onSuggestionAccept,
+    onSuggestionReject,
+    onSuggestionRangeEdit,
+    onSuggestionClick,
   },
   ref,
 ) {
   const markersLaneRef = useRef<HTMLDivElement | null>(null);
   const onRangeEditRef = useRef(onRangeEdit);
   useEffect(() => { onRangeEditRef.current = onRangeEdit; }, [onRangeEdit]);
+  const onSuggestionRangeEditRef = useRef(onSuggestionRangeEdit);
+  useEffect(() => { onSuggestionRangeEditRef.current = onSuggestionRangeEdit; }, [onSuggestionRangeEdit]);
   // Zewnętrzny scroll (wspólny dla fali i blocków).
   const scrollRef = useRef<HTMLDivElement | null>(null);
   // Wewnętrzny kontener o szerokości = duration * pxPerSec — wavesurfer i bar dzielą tę oś.
@@ -416,6 +427,40 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
     [barBaseDuration],
   );
 
+  // ── Drag handle'y dla sugestii AI ────────────────────────────────────────
+  const startSuggestionDrag = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>, id: string, edge: 'start' | 'end', origStart: number, origEnd: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const lane = markersLaneRef.current;
+      if (!lane) return;
+      const dur = barBaseDuration;
+      if (dur <= 0) return;
+
+      let curStart = origStart;
+      let curEnd = origEnd;
+
+      const onMove = (ev: MouseEvent) => {
+        const rect = lane.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, ev.clientX - rect.left));
+        const sec = (x / rect.width) * dur;
+        if (edge === 'start') {
+          curStart = Math.max(0, Math.min(sec, curEnd - 0.1));
+        } else {
+          curEnd = Math.max(curStart + 0.1, Math.min(sec, dur));
+        }
+        onSuggestionRangeEditRef.current?.(id, curStart, curEnd);
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [barBaseDuration],
+  );
+
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-3">
@@ -476,7 +521,7 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
           {barBaseDuration > 0 && (
             <div
               ref={markersLaneRef}
-              className="relative h-3 w-full mb-1 rounded bg-htg-card-border/20"
+              className="relative h-6 w-full mb-1 rounded bg-htg-card-border/20"
             >
               {/* Zapisane Momenty */}
               {fragments?.map((f) => {
@@ -504,21 +549,51 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
                 );
               })}
 
-              {/* Sugestie AI — outline dashed */}
+              {/* Sugestie AI — interaktywne markery */}
               {suggestions?.map((s) => {
                 const leftPct = (s.startSec / barBaseDuration) * 100;
                 const widthPct = Math.max(0.1, ((s.endSec - s.startSec) / barBaseDuration) * 100);
                 return (
                   <div
                     key={`sug-${s.id}`}
-                    title={s.title ?? 'Sugestia AI — kliknij, aby zaakceptować'}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSuggestionAccept?.(s.id);
-                    }}
-                    className="absolute top-0 h-full cursor-pointer border border-dashed border-htg-lavender hover:bg-htg-lavender/20 rounded-sm"
+                    className="absolute top-0 h-full group"
                     style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
-                  />
+                  >
+                    {/* tło — dashed outline, klik = seek+play */}
+                    <div
+                      className="absolute inset-0 border-2 border-dashed border-htg-lavender/70 bg-htg-lavender/10 cursor-pointer rounded-sm"
+                      onClick={(e) => { e.stopPropagation(); onSuggestionClick?.(s.startSec); }}
+                      title={s.title ?? 'Propozycja'}
+                    />
+
+                    {/* lewy uchwyt drag */}
+                    <div
+                      className="absolute left-0 top-0 h-full w-1.5 cursor-ew-resize bg-htg-lavender/60 hover:bg-htg-lavender z-10"
+                      onMouseDown={(e) => startSuggestionDrag(e, s.id, 'start', s.startSec, s.endSec)}
+                    />
+
+                    {/* prawy uchwyt drag */}
+                    <div
+                      className="absolute right-0 top-0 h-full w-1.5 cursor-ew-resize bg-htg-lavender/60 hover:bg-htg-lavender z-10"
+                      onMouseDown={(e) => startSuggestionDrag(e, s.id, 'end', s.startSec, s.endSec)}
+                    />
+
+                    {/* accept/reject buttons — widoczne przy hover */}
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center justify-center gap-1 z-20 pointer-events-none">
+                      <button
+                        type="button"
+                        className="pointer-events-auto w-5 h-5 rounded-full bg-htg-sage text-white text-[10px] flex items-center justify-center shadow hover:bg-htg-sage/80"
+                        onClick={(e) => { e.stopPropagation(); onSuggestionAccept?.(s.id); }}
+                        title="Akceptuj"
+                      >✓</button>
+                      <button
+                        type="button"
+                        className="pointer-events-auto w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center shadow hover:bg-red-400"
+                        onClick={(e) => { e.stopPropagation(); onSuggestionReject?.(s.id); }}
+                        title="Odrzuć"
+                      >✗</button>
+                    </div>
+                  </div>
                 );
               })}
 

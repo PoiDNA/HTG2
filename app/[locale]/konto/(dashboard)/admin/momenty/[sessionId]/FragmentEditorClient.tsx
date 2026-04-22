@@ -509,7 +509,7 @@ export default function FragmentEditorClient({
       setSuggestions(mapped);
       setStatus({
         kind: 'success',
-        msg: `Claude zaproponował ${mapped.length} kandydatów (${Math.round((data.elapsedMs ?? 0) / 1000)}s)`,
+        msg: `Propozycje Momentów — ${mapped.length} kandydatów (${Math.round((data.elapsedMs ?? 0) / 1000)}s)`,
       });
     } catch {
       setStatus({ kind: 'error', msg: 'Błąd połączenia' });
@@ -755,6 +755,23 @@ export default function FragmentEditorClient({
           );
           if (idx >= 0) updateFragment(idx, { start_sec: s, end_sec: e });
         }}
+        suggestions={suggestions.map((s) => ({
+          id: s.id,
+          startSec: s.startSec,
+          endSec: s.endSec,
+          title: s.title,
+        }))}
+        onSuggestionAccept={handleSuggestionAccept}
+        onSuggestionReject={handleSuggestionReject}
+        onSuggestionClick={(sec) => {
+          playerRef.current?.seekTo(sec);
+          playerRef.current?.play();
+        }}
+        onSuggestionRangeEdit={(id, start, end) =>
+          setSuggestions((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, startSec: start, endSec: end } : s)),
+          )
+        }
       />
 
       {/* Mówcy + transkrypcja */}
@@ -782,7 +799,7 @@ export default function FragmentEditorClient({
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-htg-sage" />
             <h3 className="text-sm font-semibold text-htg-sage">
-              Propozycje Claude ({suggestions.length})
+              Propozycje ({suggestions.length})
             </h3>
           </div>
           {suggestions.map((s) => (

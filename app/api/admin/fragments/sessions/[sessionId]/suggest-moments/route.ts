@@ -132,13 +132,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 4096,
-      system: [
-        {
-          type: 'text',
-          text: SYSTEM_PROMPT,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
+      system: SYSTEM_PROMPT,
       messages: [
         { role: 'user', content: userContent },
       ],

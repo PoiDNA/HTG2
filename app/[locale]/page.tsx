@@ -3,11 +3,10 @@ import { locales } from '@/i18n-config';
 import type { Metadata } from 'next';
 import HeroSection from '@/components/home/HeroSection';
 import VODPreviewSection from '@/components/home/VODPreviewSection';
+import MomentyPreviewSection from '@/components/home/MomentyPreviewSection';
 import SubscriptionCTASection from '@/components/home/SubscriptionCTASection';
 import YouTubeSection from '@/components/home/YouTubeSection';
-import TeamSection from '@/components/home/TeamSection';
 import TestimonialsSection from '@/components/home/TestimonialsSection';
-import HelpContactSection from '@/components/home/HelpContactSection';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -35,11 +34,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     <>
       <HeroSection />
       <VODPreviewSection />
+      <MomentyPreviewSection />
       <SubscriptionCTASection />
       <YouTubeSection />
-      <TeamSection />
       <TestimonialsSection />
-      <HelpContactSection />
     </>
   );
 }

@@ -1,16 +1,18 @@
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
+import { getLocale } from 'next-intl/server';
 import { Link } from '@/i18n-config';
 import { Play } from 'lucide-react';
+import { getHomePageSessions } from '@/lib/services/homepage-sessions';
 
-export default function VODPreviewSection() {
-  const t = useTranslations('Home');
+const BUNNY_LOOP_URL =
+  'https://htg2-cdn.b-cdn.net/HTG%20CYOU%20-%20Loop%20Canvas%200-3M.mp4';
 
-  // Placeholder — will be replaced with Supabase data
-  const placeholderSessions = [
-    { id: '1', title: 'Sesja wprowadzająca', description: 'Pierwsze kroki na drodze rozwoju duchowego.' },
-    { id: '2', title: 'Medytacja uważności', description: 'Techniki medytacji i pracy z oddechem.' },
-    { id: '3', title: 'Praca z emocjami', description: 'Jak rozpoznawać i przetwarzać emocje.' },
-  ];
+export default async function VODPreviewSection() {
+  const locale = await getLocale();
+  const [t, sessions] = await Promise.all([
+    getTranslations({ locale, namespace: 'Home' }),
+    getHomePageSessions(locale),
+  ]);
 
   return (
     <section className="py-16 md:py-24">
@@ -25,30 +27,66 @@ export default function VODPreviewSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {placeholderSessions.map((session) => (
-            <div
-              key={session.id}
-              className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden hover:shadow-md transition-shadow"
-            >
-              <div className="aspect-video bg-htg-surface flex items-center justify-center">
-                <Play className="w-12 h-12 text-htg-fg-muted" />
-              </div>
-              <div className="p-5">
-                <h3 className="font-serif font-semibold text-lg text-htg-fg mb-2">
-                  {session.title}
-                </h3>
-                <p className="text-htg-fg-muted text-sm mb-4">
-                  {session.description}
-                </p>
-                <Link
-                  href="/sesje"
-                  className="text-htg-sage font-medium text-sm hover:underline"
+          {sessions.length > 0
+            ? sessions.map((session) => (
+                <div
+                  key={session.id}
+                  className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden hover:shadow-lg transition-shadow group"
                 >
-                  {t('vod_subtitle').split('.')[0]} →
-                </Link>
-              </div>
-            </div>
-          ))}
+                  <Link href="/sesje" className="relative block aspect-video overflow-hidden">
+                    <video
+                      src={BUNNY_LOOP_URL}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-black/35 group-hover:bg-black/45 transition-colors flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Play className="w-6 h-6 text-white ml-0.5" fill="white" />
+                      </div>
+                    </div>
+                  </Link>
+                  <div className="p-5">
+                    <h3 className="font-serif font-semibold text-lg text-htg-fg mb-2 leading-snug line-clamp-2">
+                      {session.title}
+                    </h3>
+                    {session.description && (
+                      <p className="text-htg-fg-muted text-sm mb-4 line-clamp-2 leading-relaxed">
+                        {session.description}
+                      </p>
+                    )}
+                    <Link href="/sesje" className="text-htg-sage font-medium text-sm hover:underline">
+                      Odsłuchaj →
+                    </Link>
+                  </div>
+                </div>
+              ))
+            : [1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-htg-card border border-htg-card-border rounded-xl overflow-hidden"
+                >
+                  <div className="aspect-video bg-htg-surface flex items-center justify-center">
+                    <Play className="w-10 h-10 text-htg-fg-muted/30" />
+                  </div>
+                  <div className="p-5 space-y-2">
+                    <div className="h-5 bg-htg-surface rounded w-3/4" />
+                    <div className="h-4 bg-htg-surface rounded w-full" />
+                    <div className="h-4 bg-htg-surface rounded w-2/3" />
+                  </div>
+                </div>
+              ))}
+        </div>
+
+        <div className="text-center mt-10">
+          <Link
+            href="/sesje"
+            className="inline-block border border-htg-card-border text-htg-fg px-6 py-3 rounded-xl text-sm font-medium hover:bg-htg-surface transition-colors"
+          >
+            {t('hero_cta')}
+          </Link>
         </div>
       </div>
     </section>

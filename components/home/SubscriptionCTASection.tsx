@@ -8,20 +8,13 @@ export default function SubscriptionCTASection() {
 
   const tiers = [
     {
-      key: 'a_la_carte',
-      title: ts('a_la_carte_title'),
-      desc: ts('a_la_carte_desc'),
-      price: ts('a_la_carte_price', { price: '30' }),
-      badge: null,
-      notice: ts('ownership_notice'),
-    },
-    {
       key: 'monthly',
       title: ts('monthly_title'),
       desc: ts('monthly_desc'),
       price: ts('monthly_price', { price: '99' }),
       badge: null,
       notice: ts('ownership_notice'),
+      cta: ts('buy'),
     },
     {
       key: 'yearly',
@@ -30,12 +23,13 @@ export default function SubscriptionCTASection() {
       price: ts('yearly_price', { price: '999' }),
       badge: ts('yearly_badge'),
       notice: ts('rental_notice'),
+      cta: ts('subscribe'),
     },
   ];
 
   return (
     <section className="py-16 md:py-24 bg-htg-surface">
-      <div className="mx-auto max-w-6xl px-6">
+      <div className="mx-auto max-w-3xl px-6">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-serif font-bold text-htg-fg mb-4">
             {t('subscriptions_title')}
@@ -45,7 +39,7 @@ export default function SubscriptionCTASection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {tiers.map((tier) => (
             <div
               key={tier.key}
@@ -70,10 +64,10 @@ export default function SubscriptionCTASection() {
                 className={`text-center py-3 px-6 rounded-lg font-medium transition-colors ${
                   tier.badge
                     ? 'bg-htg-sage text-white hover:bg-htg-sage-dark'
-                    : 'bg-htg-indigo text-white hover:bg-htg-indigo-light'
+                    : 'bg-htg-indigo text-white hover:opacity-90'
                 }`}
               >
-                {tier.key === 'yearly' ? ts('subscribe') : ts('buy')}
+                {tier.cta}
               </Link>
             </div>
           ))}

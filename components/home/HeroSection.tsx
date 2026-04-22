@@ -8,11 +8,11 @@ export default function HeroSection() {
   const t = useTranslations('Home');
 
   return (
-    <section className="relative min-h-svh flex flex-col justify-center">
+    <section className="relative min-h-svh flex flex-col justify-center overflow-visible">
       <div className="mx-auto w-full max-w-7xl px-6 lg:px-14 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 py-24 lg:py-16">
 
-        {/* ── Left column ───────────────────────────────────────── */}
-        <div className="flex flex-col justify-center">
+        {/* ── Left column — z-10 so text sits above overflowing particles ── */}
+        <div className="relative z-10 flex flex-col justify-center">
 
           {/* Headline */}
           <h1 className="text-4xl md:text-5xl lg:text-[3.2rem] xl:text-6xl font-serif font-bold leading-[1.12] text-htg-fg mb-6">
@@ -30,7 +30,7 @@ export default function HeroSection() {
           </div>
         </div>
 
-        {/* ── Right column: animation ────────────────────────────── */}
+        {/* ── Right column: animation — canvas bleeds left/top/bottom ── */}
         <div className="relative hidden lg:block" style={{ minHeight: '520px' }}>
           <HeroHostCrumble />
         </div>

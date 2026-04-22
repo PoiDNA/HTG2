@@ -9,6 +9,11 @@ const T_FORM_START = 0.07;
 const T_HOLD_START = 0.58;
 const T_CRUMBLE_START = 0.72;
 
+// Extra canvas space so falling/scatter particles aren't clipped
+const BLEED_LEFT = 200;  // px — particles bleed into left column
+const BLEED_TOP = 120;   // px
+const BLEED_BOTTOM = 140; // px — gravity pulls particles down
+
 interface Particle {
   homeX: number;
   homeY: number;
@@ -16,7 +21,7 @@ interface Particle {
   startY: number;
   crumbleVx: number;
   crumbleVy: number;
-  crumbleDelay: number; // 0–0.7, head crumbles first
+  crumbleDelay: number;
   size: number;
   hue: number;
   saturation: number;
@@ -24,10 +29,20 @@ interface Particle {
   normalizedY: number;
 }
 
-function buildParticles(W: number, H: number): Particle[] {
-  const cx = W / 2;
-  const cy = H * 0.47;
-  const scale = Math.min(W * 0.44, H * 0.52);
+/**
+ * Build particles.
+ * cx/cy: figure origin in CANVAS coordinates (accounts for bleed offset).
+ * visW/visH: visible container dimensions, used for scale + travel distance.
+ */
+function buildParticles(
+  W: number,
+  H: number,
+  cx: number,
+  cy: number,
+  visW: number,
+  visH: number
+): Particle[] {
+  const scale = Math.min(visW * 0.44, visH * 0.52);
 
   const homePos: Array<[number, number]> = [];
 
@@ -46,29 +61,29 @@ function buildParticles(W: number, H: number): Particle[] {
   };
 
   // Humanoid silhouette — normalized coords, roughly −0.5..0.5
-  fillCircle(0, -0.57, 0.11, 52);       // head
-  fillRect(0, -0.41, 0.06, 0.07, 12);   // neck
-  fillRect(0, -0.23, 0.27, 0.28, 95);   // torso
-  fillRect(-0.22, -0.19, 0.09, 0.33, 44); // left upper arm
-  fillRect(0.22, -0.19, 0.09, 0.33, 44);  // right upper arm
-  fillRect(-0.24, 0.07, 0.09, 0.24, 34);  // left forearm
-  fillRect(0.24, 0.07, 0.09, 0.24, 34);   // right forearm
-  fillRect(-0.09, 0.20, 0.10, 0.35, 54);  // left leg
-  fillRect(0.09, 0.20, 0.10, 0.35, 54);   // right leg
-  fillRect(-0.12, 0.41, 0.14, 0.07, 18);  // left foot
-  fillRect(0.12, 0.41, 0.14, 0.07, 18);   // right foot
+  fillCircle(0, -0.57, 0.11, 52);
+  fillRect(0, -0.41, 0.06, 0.07, 12);
+  fillRect(0, -0.23, 0.27, 0.28, 95);
+  fillRect(-0.22, -0.19, 0.09, 0.33, 44);
+  fillRect(0.22, -0.19, 0.09, 0.33, 44);
+  fillRect(-0.24, 0.07, 0.09, 0.24, 34);
+  fillRect(0.24, 0.07, 0.09, 0.24, 34);
+  fillRect(-0.09, 0.20, 0.10, 0.35, 54);
+  fillRect(0.09, 0.20, 0.10, 0.35, 54);
+  fillRect(-0.12, 0.41, 0.14, 0.07, 18);
+  fillRect(0.12, 0.41, 0.14, 0.07, 18);
 
   return homePos.map(([nx, ny]) => {
     const homeX = cx + nx * scale;
     const homeY = cy + ny * scale;
 
-    // Random scatter origin
+    // Scatter origin — spread across full canvas area
     const sa = Math.random() * Math.PI * 2;
     const sd = (0.45 + Math.random() * 0.7) * Math.max(W, H) * 0.38;
     const startX = cx + Math.cos(sa) * sd;
     const startY = cy + Math.sin(sa) * sd;
 
-    // Crumble direction: outward from center with randomness
+    // Crumble direction: outward from figure centre
     const dirX = homeX - cx;
     const dirY = homeY - cy;
     const dirLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
@@ -76,14 +91,13 @@ function buildParticles(W: number, H: number): Particle[] {
     const crumbleVx = (dirX / dirLen) * spd + (Math.random() - 0.5) * 0.7;
     const crumbleVy = (dirY / dirLen) * spd * 0.4 - 0.4 - Math.random() * 0.5;
 
-    // Head crumbles first (low ny = high in screen = small normalizedY)
-    const normalizedY = (ny + 0.68) / 1.16; // ≈ 0 at head, ≈ 1 at feet
+    const normalizedY = (ny + 0.68) / 1.16;
     const crumbleDelay = normalizedY * 0.68;
 
     const useRose = Math.random() < 0.6;
     const hue = useRose
-      ? 330 + Math.random() * 22   // rose/crimson
-      : 22 + Math.random() * 22;   // warm gold/amber
+      ? 330 + Math.random() * 22
+      : 22 + Math.random() * 22;
 
     return {
       homeX,
@@ -107,30 +121,43 @@ function easeOutCubic(t: number) {
 }
 
 export default function HeroHostCrumble() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const particlesRef = useRef<Particle[]>([]);
   const startRef = useRef<number>(0);
+  // Cache visible size for travel distance
+  const visSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const wrapper = wrapperRef.current;
+    if (!canvas || !wrapper) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const setup = () => {
-      const parent = canvas.parentElement;
-      if (!parent) return;
-      const { width, height } = parent.getBoundingClientRect();
-      canvas.width = Math.round(width);
-      canvas.height = Math.round(height);
-      particlesRef.current = buildParticles(canvas.width, canvas.height);
+      const { width: visW, height: visH } = wrapper.getBoundingClientRect();
+      visSizeRef.current = { w: visW, h: visH };
+
+      // Canvas is larger than the visible wrapper by bleed amounts
+      const canvasW = Math.round(visW + BLEED_LEFT);
+      const canvasH = Math.round(visH + BLEED_TOP + BLEED_BOTTOM);
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+
+      // Figure is anchored to the visible portion of the canvas.
+      // cx/cy: centre of the visible area inside the full canvas.
+      const cx = BLEED_LEFT + visW / 2;
+      const cy = BLEED_TOP + visH * 0.47;
+
+      particlesRef.current = buildParticles(canvasW, canvasH, cx, cy, visW, visH);
     };
 
     setup();
 
     const ro = new ResizeObserver(setup);
-    ro.observe(canvas.parentElement!);
+    ro.observe(wrapper);
 
     const loop = (ts: number) => {
       if (!startRef.current) startRef.current = ts;
@@ -138,6 +165,7 @@ export default function HeroHostCrumble() {
 
       const W = canvas.width;
       const H = canvas.height;
+      const { w: visW, h: visH } = visSizeRef.current;
       const dark = document.documentElement.classList.contains('dark');
 
       ctx.clearRect(0, 0, W, H);
@@ -168,7 +196,8 @@ export default function HeroHostCrumble() {
             y = p.homeY;
             alpha = 1;
           } else {
-            const travel = Math.min(W, H) * 0.52;
+            // Travel based on visible size so scale stays consistent
+            const travel = Math.min(visW, visH) * 0.52;
             x = p.homeX + p.crumbleVx * localT * travel;
             y = p.homeY + p.crumbleVy * localT * travel + 0.45 * travel * localT * localT;
             alpha = Math.max(0, 1 - localT * 1.4);
@@ -177,7 +206,6 @@ export default function HeroHostCrumble() {
 
         if (alpha <= 0.01) return;
 
-        // Color: lighter/brighter in dark mode, deeper in light mode
         const sat = dark ? p.saturation : p.saturation * 0.65;
         const lit = dark ? p.lightness : p.lightness * 0.52;
         const color = `hsl(${p.hue},${sat}%,${lit}%)`;
@@ -212,10 +240,20 @@ export default function HeroHostCrumble() {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="block w-full h-full"
-      aria-hidden="true"
-    />
+    // wrapperRef measures the visible column area
+    <div ref={wrapperRef} className="w-full h-full">
+      {/* Canvas overflows the wrapper by BLEED amounts — pointer-events:none so it doesn't block clicks */}
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: -BLEED_TOP,
+          left: -BLEED_LEFT,
+          // width/height set via canvas.width/canvas.height in setup(); CSS just follows
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
   );
 }

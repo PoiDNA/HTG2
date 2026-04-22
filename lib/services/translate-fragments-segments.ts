@@ -28,7 +28,7 @@ const LOCALE_NAMES: Record<TranslateTarget, string> = {
   pt: 'European Portuguese (PT-PT, NOT Brazilian Portuguese)',
 };
 
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
 const BATCH_SIZE = 20;
 
 // ─── Low-level Claude call ─────────────────────────────────────────────

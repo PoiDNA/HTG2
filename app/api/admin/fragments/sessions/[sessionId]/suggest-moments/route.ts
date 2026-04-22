@@ -16,7 +16,7 @@ type Params = { params: Promise<{ sessionId: string }> };
 
 export const maxDuration = 120;
 
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6';
 
 interface Candidate {
   startSec: number;
@@ -70,10 +70,11 @@ export async function POST(_req: NextRequest, { params }: Params) {
     .maybeSingle();
 
   if (impErr) {
-    return NextResponse.json(
-      { error: `Nie można pobrać aktywnego importu: ${impErr.message}` },
-      { status: 500 },
-    );
+    const techDetails = `Nie można pobrać aktywnego importu: ${impErr.message}`;
+    const userMsg = auth.role === 'admin'
+      ? techDetails
+      : 'Tymczasowy błąd — skontaktuj się z adminem i przekaż zrzut ekranu (admin@htg.cyou)';
+    return NextResponse.json({ error: userMsg }, { status: 500 });
   }
   if (!imp) {
     return NextResponse.json(
@@ -91,10 +92,11 @@ export async function POST(_req: NextRequest, { params }: Params) {
     .order('start_sec', { ascending: true });
 
   if (segErr) {
-    return NextResponse.json(
-      { error: `Nie można pobrać segmentów: ${segErr.message}` },
-      { status: 500 },
-    );
+    const techDetails = `Nie można pobrać segmentów: ${segErr.message}`;
+    const userMsg = auth.role === 'admin'
+      ? techDetails
+      : 'Tymczasowy błąd — skontaktuj się z adminem i przekaż zrzut ekranu (admin@htg.cyou)';
+    return NextResponse.json({ error: userMsg }, { status: 500 });
   }
 
   const segments = (segRows ?? []).filter(
@@ -146,10 +148,11 @@ export async function POST(_req: NextRequest, { params }: Params) {
   if (!response.ok) {
     const errText = await response.text().catch(() => '');
     console.error('[suggest-moments] Claude API error', response.status, errText.slice(0, 300));
-    return NextResponse.json(
-      { error: `Claude API error ${response.status}` },
-      { status: 502 },
-    );
+    const techDetails = `Claude API error ${response.status}: ${errText.slice(0, 200)}`;
+    const userMsg = auth.role === 'admin'
+      ? techDetails
+      : 'Tymczasowy błąd — skontaktuj się z adminem i przekaż zrzut ekranu (admin@htg.cyou)';
+    return NextResponse.json({ error: userMsg }, { status: 502 });
   }
 
   const data = await response.json();
@@ -170,10 +173,11 @@ export async function POST(_req: NextRequest, { params }: Params) {
   }
 
   if (!parsed || !Array.isArray(parsed.candidates)) {
-    return NextResponse.json(
-      { error: 'Claude nie zwrócił poprawnego JSON', raw: text.slice(0, 500) },
-      { status: 502 },
-    );
+    const techDetails = `Claude nie zwrócił poprawnego JSON: ${text.slice(0, 200)}`;
+    const userMsg = auth.role === 'admin'
+      ? techDetails
+      : 'Tymczasowy błąd — skontaktuj się z adminem i przekaż zrzut ekranu (admin@htg.cyou)';
+    return NextResponse.json({ error: userMsg }, { status: 502 });
   }
 
   const candidates: Candidate[] = (parsed.candidates as unknown[])

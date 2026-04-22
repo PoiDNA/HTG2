@@ -97,7 +97,7 @@ export default function SessionCatalog({
   const locale = useLocale();
 
   // View mode
-  const [view, setView] = useState<'sessions' | 'months' | 'yearly'>('sessions');
+  const [view, setView] = useState<'months' | 'yearly'>('months');
 
   // Filters
   const [category, setCategory] = useState('all');
@@ -358,7 +358,7 @@ export default function SessionCatalog({
         ? { gift_for_email: giftEmail.trim().toLowerCase(), ...(giftMessage.trim() && { gift_message: giftMessage.trim() }) }
         : {};
 
-      let body: Record<string, any>;
+      let body: Record<string, any> = {};
       if (isYearlyMode) {
         body = {
           items: [{ priceId: yearlyPriceId, quantity: 1 }],
@@ -375,12 +375,6 @@ export default function SessionCatalog({
           metadata: { type: 'monthly', monthLabels: JSON.stringify(
             Array.from(selectedMonthSets).map(id => monthSets.find(m => m.id === id)?.month_label).filter(Boolean)
           ), ...giftMeta },
-        };
-      } else {
-        body = {
-          priceId: prices.sessionPriceId, mode: 'payment',
-          quantity: selectedSessions.size,
-          metadata: { type: 'sessions', sessionIds: JSON.stringify(Array.from(selectedSessions)), ...giftMeta },
         };
       }
 
@@ -400,12 +394,10 @@ export default function SessionCatalog({
     : monthSets.find(ms => ms.id === spotlightId);
   const cartCount = view === 'yearly'
     ? selectedYearlyMonths.size
-    : view === 'months' ? selectedMonthSets.size : selectedSessions.size;
+    : selectedMonthSets.size;
   const totalPrice = view === 'yearly'
     ? (selectedYearlyMonths.size === 12 ? yearlyPrice : 0)
-    : view === 'months'
-      ? selectedMonthSets.size * prices.monthlyAmount
-      : selectedSessions.size * prices.sessionAmount;
+    : selectedMonthSets.size * prices.monthlyAmount;
 
   const hasActiveFilters = category !== 'all' || selectedMonth || selectedTag || hideOwned;
 
@@ -419,15 +411,7 @@ export default function SessionCatalog({
       {/* ── View toggle + Search ── */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {/* View toggle */}
-        <div className="grid grid-cols-3 bg-htg-surface rounded-xl p-1 shrink-0 w-full sm:w-auto sm:min-w-[420px]">
-          <button
-            onClick={() => { setView('sessions'); setSpotlightId(null); }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
-              view === 'sessions' ? 'bg-htg-indigo text-white' : 'text-htg-fg-muted hover:text-htg-fg'
-            }`}
-          >
-            <List className="w-4 h-4 inline mr-1.5" />Sesje
-          </button>
+        <div className="grid grid-cols-2 bg-htg-surface rounded-xl p-1 shrink-0 w-full sm:w-auto sm:min-w-[280px]">
           <button
             onClick={() => setView('months')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center ${
@@ -445,156 +429,14 @@ export default function SessionCatalog({
             <Zap className="w-4 h-4 inline mr-1.5" />Rok
           </button>
         </div>
-
-        {/* Search + Filter — only in sessions view */}
-        {view === 'sessions' && (
-          <>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Szukaj sesji po tytule, opisie, słowach kluczowych..."
-                className="w-full pl-10 pr-4 py-2.5 bg-htg-surface border border-htg-card-border rounded-xl text-htg-fg text-sm placeholder:text-htg-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-htg-sage/50"
-              />
-            </div>
-
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors shrink-0 flex items-center gap-2 ${
-                showFilters ? 'border-htg-sage bg-htg-sage/10 text-htg-sage' : 'border-htg-card-border text-htg-fg-muted hover:text-htg-fg'
-              }`}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-              Filtry
-              {hasActiveFilters && (
-                <span className="w-2 h-2 bg-htg-sage rounded-full" />
-              )}
-            </button>
-          </>
-        )}
       </div>
-
-      {/* ── Filters panel (sessions view only) ── */}
-      {showFilters && view === 'sessions' && (
-        <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-
-          {/* Hide owned toggle — only show if user has any purchased sessions */}
-          {ownedCount > 0 && (
-            <div className="flex items-center justify-between pb-3 border-b border-htg-card-border">
-              <div className="flex items-center gap-2">
-                <EyeOff className="w-4 h-4 text-htg-fg-muted" />
-                <span className="text-sm font-medium text-htg-fg">
-                  Ukryj kupione
-                  <span className="ml-1.5 text-xs text-htg-fg-muted">({ownedCount})</span>
-                </span>
-              </div>
-              <button
-                onClick={() => setHideOwned(!hideOwned)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${hideOwned ? 'bg-htg-sage' : 'bg-htg-surface border border-htg-card-border'}`}
-              >
-                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${hideOwned ? 'translate-x-5' : 'translate-x-0.5'}`} />
-              </button>
-            </div>
-          )}
-
-          {/* Categories */}
-          <div>
-            <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-2">Kategoria</p>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map(c => {
-                const Icon = c.icon;
-                return (
-                  <button
-                    key={c.value}
-                    onClick={() => setCategory(c.value)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      category === c.value
-                        ? 'bg-htg-sage text-white'
-                        : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />{c.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Month filter */}
-          <div>
-            <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-2">Miesiąc</p>
-            <select
-              value={selectedMonth || ''}
-              onChange={e => setSelectedMonth(e.target.value || null)}
-              className="bg-htg-surface border border-htg-card-border rounded-lg px-3 py-2 text-sm text-htg-fg"
-            >
-              <option value="">Wszystkie miesiące</option>
-              {monthOptions.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Tags */}
-          {allTags.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-2">Słowa kluczowe</p>
-              <div className="flex flex-wrap gap-1.5">
-                {allTags.slice(0, 20).map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                    className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
-                      selectedTag === tag
-                        ? 'bg-htg-warm text-white'
-                        : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
-                    }`}
-                  >
-                    <Tag className="w-3 h-3 inline mr-1" />{tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Sort */}
-          <div>
-            <p className="text-xs font-semibold text-htg-fg-muted uppercase tracking-wider mb-2">Sortowanie</p>
-            <div className="flex gap-2">
-              {SORT_OPTIONS.map(s => (
-                <button
-                  key={s.value}
-                  onClick={() => setSort(s.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    sort === s.value ? 'bg-htg-indigo text-white' : 'bg-htg-surface text-htg-fg-muted hover:text-htg-fg'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Clear filters */}
-          {(hasActiveFilters || searchQuery) && (
-            <button
-              onClick={() => { setCategory('all'); setSelectedMonth(null); setSelectedTag(null); setSearchQuery(''); setHideOwned(false); }}
-              className="text-xs text-red-400 hover:text-red-300"
-            >
-              Wyczyść filtry
-            </button>
-          )}
-        </div>
-      )}
 
       {/* ── Matching / Rezonans bar ── */}
       <div className="mb-6 bg-htg-card border border-htg-card-border rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="w-4 h-4 text-htg-warm" />
           <span className="text-sm font-medium text-htg-fg">
-            {view === 'sessions' ? 'Dopasowanie Sesji' : view === 'months' ? 'Dopasowanie Miesięcy' : 'Rezonans 12 Sesji'}
+            {view === 'months' ? 'Dopasowanie Miesięcy' : 'Rezonans 12 Sesji'}
           </span>
           {matchActive && (
             <button onClick={clearMatch} className="text-xs text-red-400 hover:text-red-300 ml-auto">Wyczyść</button>
@@ -621,11 +463,6 @@ export default function SessionCatalog({
             {view === 'yearly' ? 'Dobierz 12' : 'Dopasuj'}
           </button>
         </div>
-        {matchActive && view === 'sessions' && sessionScores.size > 0 && (
-          <p className="text-xs text-htg-fg-muted mt-2">
-            Znaleziono <span className="text-htg-warm font-medium">{sessionScores.size}</span> pasujących sesji — posortowane od najlepszego dopasowania
-          </p>
-        )}
         {matchActive && view === 'months' && monthScores.size > 0 && (
           <p className="text-xs text-htg-fg-muted mt-2">
             Znaleziono <span className="text-htg-warm font-medium">{monthScores.size}</span> pasujących miesięcy
@@ -641,167 +478,11 @@ export default function SessionCatalog({
       {/* ── Stats bar ── */}
       <div className="flex items-center justify-between mb-4 text-sm text-htg-fg-muted">
         <span>
-          {view === 'sessions'
-            ? `${filteredSessions.length} sesji`
-            : view === 'months'
-              ? `${monthSets.length} miesięcy`
-              : `${allYearlyMonths.length} miesięcy`
-          }
-          {view === 'sessions' && !hideOwned && <span className="ml-2">· {prices.sessionAmount} PLN / sesja</span>}
+          {view === 'months' ? `${monthSets.length} miesięcy` : `${allYearlyMonths.length} miesięcy`}
           {view === 'months' && <span className="ml-2">· {prices.monthlyAmount} PLN / miesiąc</span>}
           {view === 'yearly' && <span className="ml-2">· {yearlyPrice} PLN / 12 miesięcy</span>}
-          {hideOwned && filteredSessions.length < allSessions.length && (
-            <span className="ml-2 text-emerald-400/70">· {ownedCount} w kolekcji ukrytych</span>
-          )}
         </span>
       </div>
-
-      {/* ══════════════════════════════════════════════════ */}
-      {/* ── SESSIONS VIEW (flat list) ── */}
-      {/* ══════════════════════════════════════════════════ */}
-      {view === 'sessions' && (
-        <div className="space-y-2">
-          {filteredSessions.map((s) => {
-            const isSelected = selectedSessions.has(s.id);
-            const isExpanded = expandedSession === s.id;
-            const isPurchased = isPurchasedSession(s.id);
-
-            return (
-              <div
-                key={s.id}
-                className={`rounded-xl border-2 transition-all ${
-                  isPurchased
-                    ? 'border-emerald-500/40 bg-emerald-500/5'
-                    : isExpanded
-                      ? 'border-htg-sage/40 bg-htg-card shadow-lg shadow-htg-sage/5'
-                      : isSelected
-                        ? 'border-htg-sage/30 bg-htg-sage/5'
-                        : 'border-htg-card-border bg-htg-card hover:border-htg-sage/20'
-                }`}
-              >
-                {/* Main row */}
-                <div className="flex items-center gap-3 p-4">
-                  {/* Purchased indicator OR checkbox */}
-                  {isPurchased ? (
-                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                      <Check className="w-3 h-3 text-emerald-400" />
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => toggleSession(s.id)}
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        isSelected ? 'bg-htg-sage border-htg-sage' : 'border-htg-fg-muted/30 hover:border-htg-sage'
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3 h-3 text-white" />}
-                    </button>
-                  )}
-
-                  {/* Title + meta */}
-                  <button
-                    onClick={() => setExpandedSession(isExpanded ? null : s.id)}
-                    className="flex-1 text-left min-w-0"
-                  >
-                    <p className={`font-medium text-sm leading-snug ${isPurchased ? 'text-htg-fg' : 'text-htg-fg'}`}>
-                      {s.title}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="text-xs text-htg-fg-muted flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />{s.monthTitle.replace('Sesje ', '')}
-                      </span>
-                      {matchActive && sessionScores.has(s.id) && (
-                        <span className="text-xs bg-htg-warm/20 text-htg-warm px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" />Dopasowanie
-                        </span>
-                      )}
-                      {isPurchased && (
-                        <span className="text-xs bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />W kolekcji
-                        </span>
-                      )}
-                      {s.category === 'slowo_natalii' && (
-                        <span className="text-xs bg-htg-warm/20 text-htg-warm px-2 py-0.5 rounded-full">Słowo od Natalii</span>
-                      )}
-                      {s.category === 'solo_1_1' && (
-                        <span className="text-xs bg-htg-indigo/20 text-htg-indigo px-2 py-0.5 rounded-full">1:1</span>
-                      )}
-                      {(s.view_count || 0) > 0 && (
-                        <span className="text-xs text-htg-fg-muted flex items-center gap-0.5">
-                          <Eye className="w-3 h-3" />{s.view_count}
-                        </span>
-                      )}
-                      {s.tags?.slice(0, 3).map(t => (
-                        <span key={t} className="text-xs bg-htg-surface text-htg-fg-muted px-1.5 py-0.5 rounded">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-
-                  {/* Price (hidden if purchased) OR listen button */}
-                  {isPurchased ? (
-                    <a
-                      href="/pl/konto"
-                      className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium shrink-0 hover:text-emerald-300 transition-colors"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <Headphones className="w-4 h-4" />
-                      Odsłuchaj
-                    </a>
-                  ) : (
-                    <span className="text-htg-sage font-bold text-sm shrink-0">{prices.sessionAmount} PLN</span>
-                  )}
-                  <ChevronDown className={`w-4 h-4 text-htg-fg-muted transition-transform shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
-                </div>
-
-                {/* Expanded detail */}
-                {isExpanded && (
-                  <div className="px-4 pb-5 pt-1 border-t border-htg-card-border/50">
-                    {s.description ? (
-                      <p className="text-htg-fg-muted text-sm leading-relaxed whitespace-pre-line mt-3">
-                        {s.description.slice(0, 800)}
-                        {s.description.length > 800 && '...'}
-                      </p>
-                    ) : (
-                      <p className="text-htg-fg-muted/50 text-sm mt-3 italic">Brak opisu sesji.</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-4">
-                      {isPurchased ? (
-                        <a
-                          href="/pl/konto"
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
-                        >
-                          <Headphones className="w-4 h-4" />
-                          Przejdź do sesji
-                        </a>
-                      ) : (
-                        <button
-                          onClick={() => toggleSession(s.id)}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            isSelected
-                              ? 'bg-htg-sage text-white'
-                              : 'bg-htg-sage/10 border border-htg-sage text-htg-sage hover:bg-htg-sage hover:text-white'
-                          }`}
-                        >
-                          {isSelected ? '✓ W koszyku' : `Dodaj — ${prices.sessionAmount} PLN`}
-                        </button>
-                      )}
-                      <span className="text-xs text-htg-fg-muted">z pakietu {s.monthTitle}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {filteredSessions.length === 0 && (
-            <div className="text-center py-16">
-              <Search className="w-10 h-10 text-htg-fg-muted/30 mx-auto mb-3" />
-              <p className="text-htg-fg-muted">Brak sesji pasujących do filtrów</p>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ══════════════════════════════════════════════════ */}
       {/* ── MONTHS VIEW (grid + spotlight) ── */}
@@ -1178,9 +859,9 @@ export default function SessionCatalog({
           <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <ShoppingCart className="w-5 h-5 text-htg-sage" />
-              <span className="text-htg-fg font-medium">{cartCount} {view === 'sessions' ? 'sesji' : 'pakietów'}</span>
+              <span className="text-htg-fg font-medium">{cartCount} pakietów</span>
               <button
-                onClick={() => { view === 'sessions' ? setSelectedSessions(new Set()) : setSelectedMonthSets(new Set()); setIsGift(false); setShowGiftForm(false); setGiftEmail(''); setGiftMessage(''); }}
+                onClick={() => { setSelectedMonthSets(new Set()); setIsGift(false); setShowGiftForm(false); setGiftEmail(''); setGiftMessage(''); }}
                 className="text-htg-fg-muted hover:text-red-400"
               >
                 <X className="w-4 h-4" />

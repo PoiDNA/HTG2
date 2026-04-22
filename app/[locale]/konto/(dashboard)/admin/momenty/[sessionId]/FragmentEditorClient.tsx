@@ -223,6 +223,10 @@ export default function FragmentEditorClient({
   const [plApprovedAt, setPlApprovedAt] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
   const playerRef = useRef<SessionAudioPlayerHandle | null>(null);
+  /** Odtwarzanie tylko zakresu sugestii: zatrzymaj po osiągnięciu endSec. */
+  const [playingRange, setPlayingRange] = useState<{ end: number } | null>(null);
+  /** Tryb wizualnego dodawania Momentu przez klik na fali. */
+  const [visualAddMode, setVisualAddMode] = useState(false);
 
   // Fetch PL approval status on mount.
   useEffect(() => {
@@ -290,6 +294,15 @@ export default function FragmentEditorClient({
 
   const selectedIdxRef = useRef<number | null>(null);
   useEffect(() => { selectedIdxRef.current = selectedIdx; }, [selectedIdx]);
+
+  // Zatrzymaj odtwarzanie po osiągnięciu końca zakresu sugestii.
+  useEffect(() => {
+    if (!playingRange) return;
+    if (currentSec >= playingRange.end) {
+      playerRef.current?.pause();
+      setPlayingRange(null);
+    }
+  }, [currentSec, playingRange]);
 
   const updateFragment = useCallback((idx: number, patch: Partial<Fragment>) => {
     setFragments(prev => {
@@ -714,6 +727,19 @@ export default function FragmentEditorClient({
             Dodaj Moment
           </button>
           <button
+            onClick={() => setVisualAddMode((v) => !v)}
+            title="Kliknij na falę, aby dodać Moment w wybranym miejscu"
+            className={[
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border',
+              visualAddMode
+                ? 'bg-htg-lavender/20 border-htg-lavender/50 text-htg-lavender'
+                : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:border-htg-card-border/80',
+            ].join(' ')}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Wizualnie
+          </button>
+          <button
             onClick={handleSave}
             disabled={saving}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-htg-sage hover:bg-htg-sage/90 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
@@ -723,6 +749,21 @@ export default function FragmentEditorClient({
           </button>
         </div>
       </div>
+
+      {/* Hint dla trybu wizualnego dodawania */}
+      {visualAddMode && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-htg-lavender/10 border border-htg-lavender/30 text-htg-lavender text-xs">
+          <span>Kliknij na falę, aby dodać Moment w wybranym miejscu</span>
+          <button
+            type="button"
+            onClick={() => setVisualAddMode(false)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-htg-lavender/10 hover:bg-htg-lavender/20 border border-htg-lavender/30 font-medium transition-colors"
+          >
+            <X className="w-3 h-3" />
+            Anuluj
+          </button>
+        </div>
+      )}
 
       {/* Audio player z falą + blocki mówców pod falą (synced przy zoomie) */}
       <SessionAudioPlayer
@@ -763,15 +804,30 @@ export default function FragmentEditorClient({
         }))}
         onSuggestionAccept={handleSuggestionAccept}
         onSuggestionReject={handleSuggestionReject}
-        onSuggestionClick={(sec) => {
+        onSuggestionClick={(sec, endSec) => {
           playerRef.current?.seekTo(sec);
           playerRef.current?.play();
+          setPlayingRange({ end: endSec });
         }}
         onSuggestionRangeEdit={(id, start, end) =>
           setSuggestions((prev) =>
             prev.map((s) => (s.id === id ? { ...s, startSec: start, endSec: end } : s)),
           )
         }
+        visualAddMode={visualAddMode}
+        onVisualAdd={(start, end) => {
+          const wordsInRange = speakerSegments
+            .filter((s) => s.startSec >= start && s.startSec < end && s.text)
+            .map((s) => s.text!)
+            .join(' ');
+          const autoTitle = wordsInRange.slice(0, 60).trim() || 'Nowy moment';
+          const id = `visual-${Date.now()}`;
+          setSuggestions((prev) => [
+            ...prev,
+            { id, startSec: start, endSec: end, title: autoTitle, reason: 'Dodano wizualnie' },
+          ]);
+          setVisualAddMode(false);
+        }}
       />
 
       {/* Mówcy + transkrypcja */}

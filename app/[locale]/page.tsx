@@ -2,11 +2,12 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { locales } from '@/i18n-config';
 import type { Metadata } from 'next';
 import HeroSection from '@/components/home/HeroSection';
+import SessionsIntroSection from '@/components/home/SessionsIntroSection';
+import TestimonialsSection from '@/components/home/TestimonialsSection';
 import VODPreviewSection from '@/components/home/VODPreviewSection';
 import MomentyPreviewSection from '@/components/home/MomentyPreviewSection';
-import SubscriptionCTASection from '@/components/home/SubscriptionCTASection';
 import YouTubeSection from '@/components/home/YouTubeSection';
-import TestimonialsSection from '@/components/home/TestimonialsSection';
+import SubscriptionCTASection from '@/components/home/SubscriptionCTASection';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -33,11 +34,12 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   return (
     <>
       <HeroSection />
+      <SessionsIntroSection />
+      <TestimonialsSection />
       <VODPreviewSection />
       <MomentyPreviewSection />
-      <SubscriptionCTASection />
       <YouTubeSection />
-      <TestimonialsSection />
+      <SubscriptionCTASection />
     </>
   );
 }

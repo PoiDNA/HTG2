@@ -19,11 +19,6 @@ export default function HeroSection() {
             {t('hero_title')}
           </h1>
 
-          {/* Subtitle */}
-          <p className="text-lg text-htg-fg-muted max-w-[30rem] mb-10 leading-relaxed">
-            {t('hero_subtitle')}
-          </p>
-
           {/* CTA */}
           <div>
             <Link

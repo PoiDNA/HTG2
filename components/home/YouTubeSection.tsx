@@ -1,14 +1,15 @@
-import { useTranslations } from 'next-intl';
+import { getTranslations, getLocale } from 'next-intl/server';
+import { getLatestYoutubeVideos } from '@/lib/services/latest-youtube-video';
+import VideoThumbnail from '@/components/VideoThumbnail';
 
-export default function YouTubeSection() {
-  const t = useTranslations('Home');
+export default async function YouTubeSection() {
+  const locale = await getLocale();
+  const [t, videos] = await Promise.all([
+    getTranslations({ locale, namespace: 'Home' }),
+    getLatestYoutubeVideos(locale, 3),
+  ]);
 
-  // Placeholder YouTube IDs — will be replaced with Supabase data
-  const videos = [
-    { id: 'placeholder1', title: 'Wprowadzenie do HTG' },
-    { id: 'placeholder2', title: 'Sesja otwarta' },
-    { id: 'placeholder3', title: 'Pytania i odpowiedzi' },
-  ];
+  if (videos.length === 0) return null;
 
   return (
     <section className="py-16 md:py-24">
@@ -24,13 +25,15 @@ export default function YouTubeSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {videos.map((video) => (
-            <div key={video.id} className="rounded-xl overflow-hidden bg-htg-card border border-htg-card-border">
-              <div className="aspect-video bg-htg-surface flex items-center justify-center text-htg-fg-muted text-sm">
-                {/* Replace with: <iframe src={`https://www.youtube.com/embed/${video.id}`} ... /> */}
-                YouTube: {video.title}
-              </div>
+            <div
+              key={video.youtube_id}
+              className="rounded-xl overflow-hidden bg-htg-card border border-htg-card-border"
+            >
+              <VideoThumbnail youtubeId={video.youtube_id} title={video.title} />
               <div className="p-4">
-                <h3 className="font-medium text-htg-fg">{video.title}</h3>
+                <h3 className="font-serif font-semibold text-htg-fg leading-snug line-clamp-2">
+                  {video.title}
+                </h3>
               </div>
             </div>
           ))}

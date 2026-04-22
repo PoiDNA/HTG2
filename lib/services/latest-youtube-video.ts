@@ -3,14 +3,11 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 /**
  * Fetch the latest YouTube playlist video for the given locale.
  * Falls back to PL if no video exists in the user's locale.
- * Uses service role — RLS only allows is_visible=true reads,
- * but playlist videos are inserted with is_visible=false.
  */
 export async function getLatestYoutubeVideo(locale: string) {
   const db = createSupabaseServiceRole();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  // 1. Try user's locale first
   const { data } = await db
     .from('youtube_videos')
     .select('youtube_id, title, thumbnail_url')
@@ -24,7 +21,6 @@ export async function getLatestYoutubeVideo(locale: string) {
 
   if (data) return data;
 
-  // 2. Fallback to PL
   if (locale !== 'pl') {
     const { data: fallback } = await db
       .from('youtube_videos')
@@ -40,4 +36,34 @@ export async function getLatestYoutubeVideo(locale: string) {
   }
 
   return null;
+}
+
+/**
+ * Fetch the N latest YouTube playlist videos for a given locale.
+ * Used on the public homepage. Falls back to PL locale.
+ */
+export async function getLatestYoutubeVideos(
+  locale: string,
+  count = 3,
+): Promise<Array<{ youtube_id: string; title: string; thumbnail_url: string }>> {
+  const db = createSupabaseServiceRole();
+
+  const query = (loc: string) =>
+    db
+      .from('youtube_videos')
+      .select('youtube_id, title, thumbnail_url')
+      .eq('source', 'playlist')
+      .eq('content_locale', loc)
+      .order('published_at', { ascending: false })
+      .limit(count);
+
+  const { data } = await query(locale);
+  if (data && data.length > 0) return data;
+
+  if (locale !== 'pl') {
+    const { data: fallback } = await query('pl');
+    return fallback ?? [];
+  }
+
+  return [];
 }

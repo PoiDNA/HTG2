@@ -86,8 +86,12 @@ interface Props {
   onSuggestionReject?: (id: string) => void;
   /** Drag handle sugestii AI — nowy zakres w sec. */
   onSuggestionRangeEdit?: (id: string, startSec: number, endSec: number) => void;
-  /** Klik w tło markera sugestii — seek+play od początku sugestii. */
-  onSuggestionClick?: (startSec: number) => void;
+  /** Klik w tło markera sugestii — seek+play od początku sugestii (z endSec do stop). */
+  onSuggestionClick?: (startSec: number, endSec: number) => void;
+  /** Tryb wizualnego dodawania Momentu — kursor crosshair, klik na fali tworzy szkic. */
+  visualAddMode?: boolean;
+  /** Callback po kliknięciu w fali w trybie visualAddMode — zwraca startSec i endSec szkicu. */
+  onVisualAdd?: (startSec: number, endSec: number) => void;
 }
 
 const ZOOM_STEPS = [1, 2, 4, 8, 16] as const;
@@ -108,6 +112,8 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
     onSuggestionReject,
     onSuggestionRangeEdit,
     onSuggestionClick,
+    visualAddMode,
+    onVisualAdd,
   },
   ref,
 ) {
@@ -514,7 +520,23 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
       </div>
 
       {/* Wspólny scroll wrapper dla fali i blocków mówców — jedna oś X */}
-      <div ref={scrollRef} className="w-full overflow-x-auto overflow-y-hidden">
+      <div
+        ref={scrollRef}
+        className={[
+          'w-full overflow-x-auto overflow-y-hidden',
+          visualAddMode ? 'cursor-crosshair' : '',
+        ].join(' ')}
+        onClick={visualAddMode ? (e) => {
+          if (!onVisualAdd || !duration) return;
+          const inner = innerRef.current;
+          if (!inner) return;
+          const rect = inner.getBoundingClientRect();
+          const x = Math.max(0, Math.min(inner.offsetWidth, e.clientX - rect.left));
+          const clickSec = (x / inner.offsetWidth) * duration;
+          const endSec = Math.min(clickSec + 60, duration);
+          onVisualAdd(clickSec, endSec);
+        } : undefined}
+      >
         <div ref={innerRef} style={{ width: innerStyleWidth }}>
 
           {/* Markery nad falą — zapisane Momenty + sugestie AI + edytowalny zakres */}
@@ -562,7 +584,7 @@ const SessionAudioPlayer = forwardRef<SessionAudioPlayerHandle, Props>(function 
                     {/* tło — dashed outline, klik = seek+play */}
                     <div
                       className="absolute inset-0 border-2 border-dashed border-htg-lavender/70 bg-htg-lavender/10 cursor-pointer rounded-sm"
-                      onClick={(e) => { e.stopPropagation(); onSuggestionClick?.(s.startSec); }}
+                      onClick={(e) => { e.stopPropagation(); onSuggestionClick?.(s.startSec, s.endSec); }}
                       title={s.title ?? 'Propozycja'}
                     />
 

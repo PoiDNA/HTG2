@@ -72,7 +72,11 @@ export async function POST(req: NextRequest, { params }: Params) {
     .maybeSingle();
 
   if (tmplErr) {
-    return NextResponse.json({ error: `DB error: ${tmplErr.message}` }, { status: 500 });
+    const techDetails = `DB error: ${tmplErr.message}`;
+    const userMsg = auth.role === 'admin'
+      ? techDetails
+      : 'Tymczasowy błąd — skontaktuj się z adminem i przekaż zrzut ekranu (admin@htg.cyou)';
+    return NextResponse.json({ error: userMsg }, { status: 500 });
   }
   if (!tmpl) {
     return NextResponse.json({ error: 'Session not found' }, { status: 404 });
@@ -94,6 +98,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Translation failed';
     console.error('[admin/fragments/translate] failed', { sessionId, err: msg });
-    return NextResponse.json({ error: msg }, { status: 500 });
+    const userMsg = auth.role === 'admin'
+      ? msg
+      : 'Tymczasowy błąd — skontaktuj się z adminem i przekaż zrzut ekranu (admin@htg.cyou)';
+    return NextResponse.json({ error: userMsg }, { status: 500 });
   }
 }

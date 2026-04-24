@@ -79,7 +79,7 @@ export default function SpikeClient() {
     // Visualization replaced with simple elapsed timer.
 
     const mimeType = getSupportedMimeType();
-    const recorder = new MediaRecorder(stream, { mimeType });
+    const recorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128_000 });
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (e) => {

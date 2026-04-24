@@ -89,19 +89,6 @@ export default async function TranslatorDashboard({
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-serif font-bold text-htg-fg">
-          Witaj, {user.email?.split('@')[0]}
-        </h1>
-        <p className="text-htg-fg-muted text-sm mt-1">
-          {todayStr}
-          {assignedLocale && (
-            <> &mdash; Twój język: <span className="font-medium uppercase">{assignedLocale}</span></>
-          )}
-        </p>
-      </div>
-
       {/* Quick stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-5">

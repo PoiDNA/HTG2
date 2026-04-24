@@ -1,0 +1,56 @@
+{
+  "$schema_version": 1,
+  "recording": "XX-name.wav",
+  "recording_duration_sec": 0.0,
+  "notes": "Free-form notes about this recording (voice actor, environment, etc.)",
+  "labels": [
+    {
+      "segment_id": "seg_001",
+      "take_start_sec": 0.80,
+      "take_end_sec": 6.20,
+      "attempt_index": 0,
+      "status": "ok",
+      "note": ""
+    },
+    {
+      "segment_id": "seg_002",
+      "take_start_sec": 6.50,
+      "take_end_sec": 12.10,
+      "attempt_index": 0,
+      "status": "ok",
+      "note": ""
+    },
+    {
+      "segment_id": "seg_014",
+      "take_start_sec": 84.30,
+      "take_end_sec": 89.00,
+      "attempt_index": 2,
+      "status": "ok",
+      "note": "Translator restarted twice. Attempt 0 starts at 79.1s and is abandoned; attempt 1 at 81.4s; attempt 2 is the KEEPER."
+    },
+    {
+      "segment_id": "seg_031",
+      "take_start_sec": null,
+      "take_end_sec": null,
+      "attempt_index": 0,
+      "status": "skipped",
+      "note": "Translator skipped this segment entirely. Aligner MUST detect as missing."
+    },
+    {
+      "segment_id": "seg_047",
+      "take_start_sec": 245.00,
+      "take_end_sec": 250.80,
+      "attempt_index": 0,
+      "status": "improvised",
+      "note": "Translator said something close but not matching approved EN text. Aligner SHOULD flag as needs_review (low confidence)."
+    },
+    {
+      "segment_id": "seg_052",
+      "take_start_sec": 252.10,
+      "take_end_sec": 257.40,
+      "attempt_index": 0,
+      "status": "out_of_order",
+      "note": "Translator swapped this with seg_053. Local reorder (±1) — aligner should still match correctly."
+    }
+  ]
+}

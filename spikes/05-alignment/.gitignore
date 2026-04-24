@@ -1,0 +1,19 @@
+# Audio fixtures — large binary files, stored out-of-band (shared drive / Bunny Storage dev)
+fixtures/recordings/*.wav
+fixtures/recordings/*.mp3
+fixtures/recordings/*.m4a
+fixtures/recordings/*.webm
+fixtures/recordings/*.flac
+
+# Ground truth JSON for the reference session (may contain non-public content)
+fixtures/session-ground-truth.json
+
+# Spike outputs (model predictions, Whisper transcripts, intermediates)
+out/
+metrics/results.md
+metrics/results.json
+
+# Python cache
+__pycache__/
+*.pyc
+.venv/

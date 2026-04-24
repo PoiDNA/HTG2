@@ -155,16 +155,10 @@ export default function SpikeClient() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     streamRef.current = stream;
 
-    // Set up visualizer
-    const audioCtx = new AudioContext();
-    audioCtxRef.current = audioCtx;
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 1024;
-    source.connect(analyser);
-    analyserRef.current = analyser;
-    animFrameRef.current = requestAnimationFrame(drawWaveform);
-
+    // MediaRecorder MUST be created and started BEFORE Web Audio setup.
+    // In Chrome, createMediaStreamSource() takes ownership of the stream's
+    // audio track — if called first, MediaRecorder gets a silent/empty track
+    // and produces only a WebM header (~1KB) with no audio frames.
     const mimeType = getSupportedMimeType();
     const recorder = new MediaRecorder(stream, { mimeType });
     mediaRecorderRef.current = recorder;
@@ -183,7 +177,6 @@ export default function SpikeClient() {
       setAudioBlob(blob);
       setAudioUrl(url);
 
-      // Decode to get real duration
       try {
         const arrBuf = await blob.arrayBuffer();
         const tmpCtx = new AudioContext();
@@ -197,11 +190,17 @@ export default function SpikeClient() {
       setRecordingState('stopped');
     };
 
-    // No timeslice — single chunk on stop().
-    // Chrome/Opera with timeslice produce fragmented WebM where chunks 2+
-    // contain audio frames without cluster headers; concatenating them gives
-    // a valid-looking but silent file (~4KB header only).
     recorder.start();
+
+    // Web Audio visualizer — initialized AFTER recorder.start()
+    const audioCtx = new AudioContext();
+    audioCtxRef.current = audioCtx;
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+    analyserRef.current = analyser;
+    animFrameRef.current = requestAnimationFrame(drawWaveform);
     setRecordingState('recording');
 
     timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);

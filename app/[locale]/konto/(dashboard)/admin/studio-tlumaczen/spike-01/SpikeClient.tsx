@@ -197,7 +197,11 @@ export default function SpikeClient() {
       setRecordingState('stopped');
     };
 
-    recorder.start(100);
+    // No timeslice — single chunk on stop().
+    // Chrome/Opera with timeslice produce fragmented WebM where chunks 2+
+    // contain audio frames without cluster headers; concatenating them gives
+    // a valid-looking but silent file (~4KB header only).
+    recorder.start();
     setRecordingState('recording');
 
     timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);

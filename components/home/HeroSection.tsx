@@ -20,7 +20,7 @@ export default function HeroSection() {
           </h1>
 
           {/* CTA — login */}
-          <div className="flex flex-col items-start gap-3">
+          <div className="flex flex-col items-center gap-3">
             <Link
               href="/login"
               className="inline-block bg-htg-indigo text-white px-8 py-4 rounded-2xl text-base font-semibold shadow-lg hover:opacity-90 active:scale-[0.98] transition-all duration-150"

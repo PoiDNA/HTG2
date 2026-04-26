@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { isAdminEmail } from '@/lib/roles';
 
 export async function DELETE(
   _request: NextRequest,
@@ -14,14 +15,21 @@ export async function DELETE(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createSupabaseServiceRole();
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  const { data: staffMember } = await supabase.from('staff_members').select('role').eq('user_id', user.id).eq('is_active', true).maybeSingle();
 
-  const isAdmin = profile?.role === 'admin';
-  const isPractitioner = staffMember?.role === 'practitioner';
+  // isAdminEmail is the source of truth (email-based); profiles.role may lag
+  const isAdmin = isAdminEmail(user.email ?? '');
 
-  if (!isAdmin && !isPractitioner) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  if (!isAdmin) {
+    // Also allow practitioner (Natalia) via staff_members
+    const { data: staffMember } = await supabase
+      .from('staff_members')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (staffMember?.role !== 'practitioner') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
   }
 
   // Get booking to find slot_id and order_id

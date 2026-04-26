@@ -93,11 +93,6 @@ export default async function AdminSessionsPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-serif font-bold text-htg-fg">Sesje klientów</h2>
-        <p className="text-sm text-htg-fg-muted">Wszystkie sesje indywidualne — {enriched.length} łącznie</p>
-      </div>
-
       <AdminSessionList
         bookings={enriched}
         todayStr={todayStr}

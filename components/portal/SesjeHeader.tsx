@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
-import { CalendarDays, LogOut, KeyRound, Plus, Trash2, Loader2, Smartphone, X } from 'lucide-react';
+import { LogOut, KeyRound, Plus, Trash2, Loader2, Smartphone, X } from 'lucide-react';
 
 interface SesjeHeaderProps {
   userEmail: string;
@@ -190,8 +191,8 @@ export default function SesjeHeader({ userEmail, locale }: SesjeHeaderProps) {
   return (
     <>
       <header className="flex items-center justify-between mb-8 pb-4 border-b border-htg-card-border">
-        <a href={`/${locale}/konto/sesje-panel`} className="flex items-center gap-2 text-htg-fg hover:text-htg-sage transition-colors">
-          <CalendarDays className="w-6 h-6" />
+        <a href={`/${locale}/konto/admin/sesje`} className="flex items-center gap-2 text-htg-fg hover:text-htg-sage transition-colors">
+          <Image src="/icon.png" alt="HTG" width={32} height={32} className="rounded-full" />
           <span className="text-lg font-serif font-bold">Panel sesji</span>
         </a>
         <div className="flex items-center gap-2">

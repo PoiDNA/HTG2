@@ -80,7 +80,7 @@ function isSesjaAllowed(pathname: string): boolean {
 }
 
 // Paths allowed on the sesje.htg.cyou portal (internal keys, without locale prefix)
-const SESJE_ALLOWED = ['/login', '/auth', '/konto/admin/sesje', '/konto/sesje-panel', '/privacy', '/terms'];
+const SESJE_ALLOWED = ['/login', '/auth', '/konto/admin/sesje', '/privacy', '/terms'];
 
 function isSesjeAllowed(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';

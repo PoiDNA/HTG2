@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import { routing, locales } from './i18n-config';
-import { isNagraniaPortal, NAGRANIA_HOME, isSesjaPortal, SESJA_HOME, isSesjePortal, SESJE_HOME, isAnyPortal, getPortalHome, isPilotSite, PILOT_HOME } from './lib/portal';
+import { isNagraniaPortal, NAGRANIA_HOME, isSesjaPortal, SESJA_HOME, isPlanerPortal, PLANER_HOME, isAnyPortal, getPortalHome, isPilotSite, PILOT_HOME } from './lib/portal';
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -79,13 +79,13 @@ function isSesjaAllowed(pathname: string): boolean {
   return SESJA_ALLOWED.some(p => internal === p || internal.startsWith(`${p}/`));
 }
 
-// Paths allowed on the sesje.htg.cyou portal (internal keys, without locale prefix)
-const SESJE_ALLOWED = ['/login', '/auth', '/konto/admin/sesje', '/privacy', '/terms'];
+// Paths allowed on the planer.htg.cyou portal (internal keys, without locale prefix)
+const PLANER_ALLOWED = ['/login', '/auth', '/konto/admin/sesje', '/privacy', '/terms'];
 
-function isSesjeAllowed(pathname: string): boolean {
+function isPlanerAllowed(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
   const internal = toInternalPath(withoutLocale);
-  return SESJE_ALLOWED.some(p => internal === p || internal.startsWith(`${p}/`));
+  return PLANER_ALLOWED.some(p => internal === p || internal.startsWith(`${p}/`));
 }
 
 export async function middleware(request: NextRequest) {
@@ -93,8 +93,8 @@ export async function middleware(request: NextRequest) {
   const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
   const isNagrania = isNagraniaPortal(host);
   const isSesja = isSesjaPortal(host);
-  const isSesje = isSesjePortal(host);
-  const isPortal = isNagrania || isSesja || isSesje;
+  const isPlaner = isPlanerPortal(host);
+  const isPortal = isNagrania || isSesja || isPlaner;
 
   // Pilot site — serve custom favicon before static asset skip
   if (pathname === '/favicon.ico' && isPilotSite(host)) {
@@ -232,10 +232,10 @@ export async function middleware(request: NextRequest) {
     url.pathname = `/${locale}${SESJA_HOME}`;
     return NextResponse.redirect(url);
   }
-  if (isSesje && !isSesjeAllowed(pathname)) {
+  if (isPlaner && !isPlanerAllowed(pathname)) {
     const locale = getLocaleFromPath(pathname);
     const url = request.nextUrl.clone();
-    url.pathname = `/${locale}${SESJE_HOME}`;
+    url.pathname = `/${locale}${PLANER_HOME}`;
     return NextResponse.redirect(url);
   }
 

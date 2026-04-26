@@ -4,7 +4,7 @@ export const rpName = process.env.WEBAUTHN_RP_NAME || 'HTG';
  * Derive WebAuthn RP ID from the request host.
  *
  * WebAuthn requires the RP ID to be the "effective domain" of the origin.
- * - *.htg.cyou subdomains (nagrania, sesja, sesje) → RP ID = "htg.cyou"
+ * - *.htg.cyou subdomains (nagrania, sesja, planer) → RP ID = "htg.cyou"
  *   Passkeys registered on any *.htg.cyou subdomain work across all of them.
  * - htgcyou.com (main app) → WEBAUTHN_RP_ID env var (default "htgcyou.com")
  * - localhost / other → WEBAUTHN_RP_ID env var fallback

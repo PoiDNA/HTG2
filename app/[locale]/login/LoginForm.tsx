@@ -34,9 +34,9 @@ export default function LoginForm() {
 
   const isNagrania = typeof window !== 'undefined' &&
     (window.location.hostname === 'nagrania.htg.cyou' || window.location.hostname === 'nagrania.localhost');
-  const isSesje = typeof window !== 'undefined' &&
-    (window.location.hostname === 'sesje.htg.cyou' || window.location.hostname === 'sesje.localhost');
-  const hideSSO = isNagrania || isSesje;
+  const isPlaner = typeof window !== 'undefined' &&
+    (window.location.hostname === 'planer.htg.cyou' || window.location.hostname === 'planer.localhost');
+  const hideSSO = isNagrania || isPlaner;
   const portalHome = getPortalHomeClient();
 
   useEffect(() => {
@@ -661,7 +661,7 @@ export default function LoginForm() {
             </div>
           </form>
 
-          {/* Divider + SSO — hidden on nagrania + sesje portals */}
+          {/* Divider + SSO — hidden on nagrania + planer portals */}
           {!hideSSO && (
             <>
               <div className="flex items-center gap-3">

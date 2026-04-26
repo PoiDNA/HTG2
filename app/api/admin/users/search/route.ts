@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { resolveStaffPlaybackScope } from '@/lib/admin/require-playback-actor';
+import { canEditSesje } from '@/lib/staff-config';
 import { checkRateLimit, logRateLimitAction } from '@/lib/rate-limit/check';
 
 /**
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   const db = createSupabaseServiceRole();
   const scope = await resolveStaffPlaybackScope(user, db);
-  if (!scope) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!scope && !canEditSesje(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const rateLimited = await checkRateLimit(user.id, 'admin_user_search');
   if (rateLimited) {

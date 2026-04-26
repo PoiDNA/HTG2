@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { canEditSesje } from '@/lib/staff-config';
 
 export async function PUT(
   request: NextRequest,
@@ -28,7 +29,7 @@ export async function PUT(
     .maybeSingle();
   const isPractitioner = staffMember?.role === 'practitioner';
 
-  if (!isAdmin && !isPractitioner) {
+  if (!isAdmin && !isPractitioner && !canEditSesje(user.email)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

@@ -3,6 +3,7 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
 import { getEffectiveStaffMember } from '@/lib/admin/effective-staff';
+import { canEditSesje } from '@/lib/staff-config';
 
 // POST /api/admin/update-profile-name
 // Body: { userId: string, displayName: string }
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   const isAdmin = isAdminEmail(user.email ?? '');
   const { staffMember } = await getEffectiveStaffMember();
-  if (!isAdmin && !staffMember) {
+  if (!isAdmin && !staffMember && !canEditSesje(user.email)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

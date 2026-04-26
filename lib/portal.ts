@@ -32,7 +32,7 @@ export function isSesjePortal(host: string | null): boolean {
   return h === 'sesje.htg.cyou' || h === 'sesje.localhost';
 }
 
-export const SESJE_HOME = '/konto/sesje-panel';
+export const SESJE_HOME = '/konto/admin/sesje';
 
 // ─── Helpers ──────────────────────────────────────────────────
 

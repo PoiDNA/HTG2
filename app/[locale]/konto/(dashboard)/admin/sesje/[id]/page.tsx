@@ -1,6 +1,7 @@
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { isAdminEmail } from '@/lib/roles';
+import { canEditSesje } from '@/lib/staff-config';
 import { setRequestLocale } from 'next-intl/server';
 import { redirect } from '@/i18n-config';
 import { Link } from '@/i18n-config';
@@ -36,7 +37,9 @@ export default async function AdminSessionDetailPage({
   // Admin auth
   const sessionClient = await createSupabaseServer();
   const { data: { user } } = await sessionClient.auth.getUser();
-  if (!user || !isAdminEmail(user.email ?? '')) redirect({href: '/konto', locale});
+  if (!user) return redirect({href: '/konto', locale});
+  const isAdmin = isAdminEmail(user.email ?? '');
+  if (!isAdmin && !canEditSesje(user.email)) return redirect({href: '/konto', locale});
 
   const db = createSupabaseServiceRole();
 
@@ -215,8 +218,8 @@ export default async function AdminSessionDetailPage({
       {/* Payment comment */}
       <PaymentCommentEditor bookingId={booking.id} initialComment={booking.payment_comment || ''} />
 
-      {/* Delete */}
-      <DeleteSessionButton bookingId={booking.id} locale={locale} />
+      {/* Delete — admin only */}
+      {isAdmin && <DeleteSessionButton bookingId={booking.id} locale={locale} />}
 
       {/* Client history */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Link, useRouter } from '@/i18n-config';
-import { Search, Calendar, CheckCircle, Download, ExternalLink, Plus, X, Loader2, UserCheck, UserPlus } from 'lucide-react';
+import { Search, Calendar, CheckCircle, Download, ExternalLink, Plus, X, Loader2, UserCheck, UserPlus, LayoutList, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
 import RowSessionPlayer from '@/components/recordings/RowSessionPlayer';
 import AssignRecordingModal from '@/components/recordings/AssignRecordingModal';
@@ -26,20 +26,31 @@ const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }>
 import { SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
-const SESSION_TYPES_CONFIG = [
-  { key: 'all',                       label: 'Wszystkie',           short: 'Wszystkie',  className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
-  { key: 'natalia_solo',              label: 'Sesje 1:1',            short: '1:1',        className: 'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-300' },
-  { key: 'natalia_asysta',            label: 'Sesje z Asystą',       short: 'Asysta',     className: 'bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300' },
-  { key: 'natalia_justyna',           label: 'Sesje z Justyną',      short: 'Justyna',    className: 'bg-rose-200 text-rose-900 dark:bg-rose-900/40 dark:text-rose-300' },
-  { key: 'natalia_agata',             label: 'Sesje z Agatą',        short: 'Agata',      className: 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-300' },
-  { key: 'natalia_przemek',           label: 'Sesje z Operatorem',   short: 'Operator',   className: 'bg-sky-200 text-sky-900 dark:bg-sky-900/40 dark:text-sky-300' },
-  { key: 'natalia_para',              label: 'Sesje dla Par',        short: 'Para',       className: 'bg-pink-200 text-pink-900 dark:bg-pink-900/40 dark:text-pink-300' },
-  { key: 'natalia_interpreter_solo',  label: 'Interpreter Solo',     short: 'Interp.1:1', className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
-  { key: 'natalia_interpreter_asysta',label: 'Interpreter z Asystą', short: 'Interp.A',   className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
-  { key: 'natalia_interpreter_para',  label: 'Interpreter Para',     short: 'Interp.P',   className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
+// Filter tabs (no interpreter types — 0 sessions)
+const SESSION_FILTER_TABS = [
+  { key: 'all',           label: 'Wszystkie',         short: 'Wszystkie', className: 'bg-htg-surface text-htg-fg border border-htg-card-border' },
+  { key: 'natalia_solo',  label: 'Sesje 1:1',          short: '1:1',       className: 'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  { key: 'natalia_asysta',label: 'Sesje z Asystą',     short: 'Asysta',    className: 'bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300' },
+  { key: 'natalia_justyna',label:'Sesje z Justyną',    short: 'Justyna',   className: 'bg-rose-200 text-rose-900 dark:bg-rose-900/40 dark:text-rose-300' },
+  { key: 'natalia_agata', label: 'Sesje z Agatą',      short: 'Agata',     className: 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-300' },
+  { key: 'natalia_przemek',label:'Sesje z Operatorem', short: 'Operator',  className: 'bg-sky-200 text-sky-900 dark:bg-sky-900/40 dark:text-sky-300' },
+  { key: 'natalia_para',  label: 'Sesje dla Par',      short: 'Para',      className: 'bg-pink-200 text-pink-900 dark:bg-pink-900/40 dark:text-pink-300' },
 ] as const;
 
-type TypeKey = typeof SESSION_TYPES_CONFIG[number]['key'];
+// Full list for create modal (includes interpreter types)
+const ALL_SESSION_TYPE_OPTIONS = [
+  { key: 'natalia_solo',               label: 'Sesja 1:1 z Natalią' },
+  { key: 'natalia_asysta',             label: 'Sesja z Asystą (nieprzypisana)' },
+  { key: 'natalia_agata',              label: 'Sesja z Natalią i Agatą' },
+  { key: 'natalia_justyna',            label: 'Sesja z Natalią i Justyną' },
+  { key: 'natalia_przemek',            label: 'Sesja z Operatorem' },
+  { key: 'natalia_para',               label: 'Sesja dla par' },
+  { key: 'natalia_interpreter_solo',   label: 'Interpreter Solo' },
+  { key: 'natalia_interpreter_asysta', label: 'Interpreter z Asystą' },
+  { key: 'natalia_interpreter_para',   label: 'Interpreter Para' },
+] as const;
+
+type FilterKey = typeof SESSION_FILTER_TABS[number]['key'];
 
 const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
   natalia_solo:               { className: 'bg-indigo-200 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-300' },
@@ -56,7 +67,6 @@ const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
 const INTERPRETER_TYPES = new Set(['natalia_interpreter_solo', 'natalia_interpreter_asysta', 'natalia_interpreter_para']);
 
 import { translators } from '@/lib/staff-config';
-// Translator slugs → label (source of truth: lib/staff-config.ts)
 const TRANSLATORS = translators.map(t => ({
   slug: t.slug,
   name: `${t.name} (${t.locale.toUpperCase()})`,
@@ -88,6 +98,130 @@ function TypeBadge({ type }: { type: string }) {
     : <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted">{type}</span>;
 }
 
+// ─── Month Calendar View ─────────────────────────────────────────────────────
+const MONTH_NAMES_PL = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+const DAY_HEADERS = ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'];
+
+function MonthCalendar({ bookings, monthKey, onMonthChange, locale, todayStr }: {
+  bookings: any[];
+  monthKey: string;
+  onMonthChange: (m: string) => void;
+  locale: string;
+  todayStr: string;
+}) {
+  const [year, month] = monthKey.split('-').map(Number);
+
+  const firstDay = new Date(year, month - 1, 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  // Mon-first: getDay() 0=Sun→6, 1=Mon→0, …
+  const startDow = (firstDay.getDay() + 6) % 7;
+  const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+
+  // Group by date
+  const byDate: Record<string, any[]> = {};
+  for (const b of bookings) {
+    const slot = getSlot(b);
+    const d = slot?.slot_date;
+    if (d?.startsWith(monthKey)) {
+      if (!byDate[d]) byDate[d] = [];
+      byDate[d].push(b);
+    }
+  }
+  for (const d in byDate) {
+    byDate[d].sort((a: any, b: any) =>
+      (getSlot(a)?.start_time || '').localeCompare(getSlot(b)?.start_time || '')
+    );
+  }
+
+  function prevMonth() {
+    const d = new Date(year, month - 2, 1);
+    onMonthChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  function nextMonth() {
+    const d = new Date(year, month, 1);
+    onMonthChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Month navigation */}
+      <div className="flex items-center justify-between">
+        <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-htg-surface transition-colors text-htg-fg-muted hover:text-htg-fg">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <h3 className="text-base font-serif font-bold text-htg-fg">
+          {MONTH_NAMES_PL[month - 1]} {year}
+        </h3>
+        <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-htg-surface transition-colors text-htg-fg-muted hover:text-htg-fg">
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 gap-1">
+        {DAY_HEADERS.map(d => (
+          <div key={d} className="text-center text-xs font-medium text-htg-fg-muted py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: totalCells }).map((_, i) => {
+          const dayNum = i - startDow + 1;
+          if (dayNum < 1 || dayNum > daysInMonth) {
+            return <div key={i} className="min-h-20 rounded-lg" />;
+          }
+          const dateStr = `${monthKey}-${String(dayNum).padStart(2, '0')}`;
+          const sessions = byDate[dateStr] || [];
+          const isToday = dateStr === todayStr;
+
+          return (
+            <div key={i} className={`min-h-20 p-1 rounded-lg border text-xs overflow-hidden ${
+              isToday ? 'border-htg-sage/50 bg-htg-sage/5' : 'border-htg-card-border bg-htg-card/40'
+            }`}>
+              <div className={`w-6 h-6 flex items-center justify-center rounded-full mb-1 font-bold text-xs ${
+                isToday ? 'bg-htg-sage text-white' : 'text-htg-fg-muted'
+              }`}>{dayNum}</div>
+              <div className="space-y-0.5">
+                {sessions.map((b: any) => {
+                  const slot = getSlot(b);
+                  const client = getClient(b);
+                  const tb = SESSION_TYPE_BADGE[b.session_type];
+                  return (
+                    <Link
+                      key={b.id}
+                      href={{ pathname: '/konto/admin/sesje/[id]', params: { id: b.id } }}
+                      className={`block p-1 rounded cursor-pointer hover:opacity-75 transition-opacity ${
+                        tb?.className || 'bg-htg-surface text-htg-fg-muted'
+                      }`}
+                    >
+                      <div className="font-semibold">{slot?.start_time?.slice(0, 5)}</div>
+                      <div className="truncate">{client?.display_name || client?.email || '—'}</div>
+                      {client?.email && client?.display_name && (
+                        <div className="truncate opacity-60">{client.email}</div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Month summary */}
+      {(() => {
+        const total = Object.values(byDate).reduce((s, arr) => s + arr.length, 0);
+        return total > 0 ? (
+          <p className="text-xs text-htg-fg-muted text-right">{total} sesji w tym miesiącu</p>
+        ) : (
+          <p className="text-xs text-htg-fg-muted text-center py-4">Brak sesji w tym miesiącu.</p>
+        );
+      })()}
+    </div>
+  );
+}
+
 // ─── Create Session Modal ────────────────────────────────────────────────────
 interface UserSuggestion { id: string; email: string; display_name: string | null; }
 
@@ -99,7 +233,6 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
   const [sessionType, setSessionType] = useState<string>('natalia_solo');
   const [translatorSlug, setTranslatorSlug] = useState<string>('melania');
   const [slotDate, setSlotDate] = useState(() => {
-    // Default to today in YYYY-MM-DD (Warsaw timezone)
     return new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
   });
   const [startTime, setStartTime] = useState('09:00');
@@ -119,12 +252,8 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
         const data = await res.json();
         const results = Array.isArray(data) ? data : [];
         setSuggestions(results);
-        // Auto-select if exact email match found
         const exact = results.find((u: UserSuggestion) => u.email.toLowerCase() === q.toLowerCase());
-        if (exact) {
-          setSelectedUser(exact);
-          setSuggestions([]);
-        }
+        if (exact) { setSelectedUser(exact); setSuggestions([]); }
       } catch { setSuggestions([]); }
       finally { setLoadingSuggestions(false); }
     }, 250);
@@ -148,26 +277,15 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
     setError('');
     setSaving(true);
 
-    // Resolve user: use selectedUser or search by typed email
     let userId = selectedUser?.id;
     if (!userId && userQuery.includes('@')) {
       try {
         const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(userQuery.trim())}`);
         const data = await res.json();
         const exact = Array.isArray(data) ? data.find((u: UserSuggestion) => u.email.toLowerCase() === userQuery.toLowerCase().trim()) : null;
-        if (exact) {
-          userId = exact.id;
-          setSelectedUser(exact);
-        } else {
-          setSaving(false);
-          setError('Nie znaleziono użytkownika z tym adresem e-mail.');
-          return;
-        }
-      } catch {
-        setSaving(false);
-        setError('Błąd wyszukiwania użytkownika.');
-        return;
-      }
+        if (exact) { userId = exact.id; setSelectedUser(exact); }
+        else { setSaving(false); setError('Nie znaleziono użytkownika z tym adresem e-mail.'); return; }
+      } catch { setSaving(false); setError('Błąd wyszukiwania użytkownika.'); return; }
     }
     if (!userId) { setSaving(false); setError('Wpisz e-mail użytkownika.'); return; }
 
@@ -175,14 +293,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
       const res = await fetch('/api/admin/booking/create-manual', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          sessionType,
-          slotDate,
-          startTime,
-          paymentStatus,
-          ...(isInterpreter && { translatorSlug }),
-        }),
+        body: JSON.stringify({ userId, sessionType, slotDate, startTime, paymentStatus, ...(isInterpreter && { translatorSlug }) }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Błąd tworzenia sesji.'); return; }
@@ -205,21 +316,14 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-htg-fg">Klient</label>
             <div className="relative">
-              <input
-                type="text"
-                value={userQuery}
-                onChange={handleUserQuery}
-                placeholder="Wpisz e-mail..."
+              <input type="text" value={userQuery} onChange={handleUserQuery} placeholder="Wpisz e-mail..."
                 autoComplete="off"
-                className="w-full px-3 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-sm text-htg-fg placeholder:text-htg-fg-muted focus:outline-none focus:ring-2 focus:ring-htg-indigo/40"
-              />
+                className="w-full px-3 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-sm text-htg-fg placeholder:text-htg-fg-muted focus:outline-none focus:ring-2 focus:ring-htg-indigo/40" />
               {loadingSuggestions && <Loader2 className="absolute right-3 top-2.5 w-4 h-4 animate-spin text-htg-fg-muted" />}
               {suggestions.length > 0 && (
                 <div className="absolute left-0 top-full mt-1 w-full bg-htg-card border border-htg-card-border rounded-lg shadow-lg z-10 overflow-hidden">
                   {suggestions.map(u => (
-                    <button key={u.id} type="button"
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={() => selectUser(u)}
+                    <button key={u.id} type="button" onMouseDown={e => e.preventDefault()} onClick={() => selectUser(u)}
                       className="w-full text-left px-3 py-2 hover:bg-htg-surface text-sm flex flex-col gap-0.5">
                       <span className="text-htg-fg">{u.email}</span>
                       {u.display_name && <span className="text-xs text-htg-fg-muted">{u.display_name}</span>}
@@ -241,13 +345,13 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
             <label className="text-sm font-medium text-htg-fg">Typ sesji</label>
             <select value={sessionType} onChange={e => setSessionType(e.target.value)}
               className="w-full px-3 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-sm text-htg-fg focus:outline-none focus:ring-2 focus:ring-htg-indigo/40">
-              {SESSION_TYPES_CONFIG.filter(t => t.key !== 'all').map(t => (
+              {ALL_SESSION_TYPE_OPTIONS.map(t => (
                 <option key={t.key} value={t.key}>{t.label}</option>
               ))}
             </select>
           </div>
 
-          {/* Translator — visible only for interpreter session types */}
+          {/* Translator — only for interpreter types */}
           {isInterpreter && (
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-htg-fg">Tłumacz</label>
@@ -319,7 +423,7 @@ export default function AdminSessionList({
   adminUserId: string;
 }) {
   const router = useRouter();
-  const [typeTab, setTypeTab] = useState<TypeKey>('all');
+  const [typeTab, setTypeTab] = useState<FilterKey>('all');
   const [statusTab, setStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -327,14 +431,45 @@ export default function AdminSessionList({
   const [showCreate, setShowCreate] = useState(false);
   const [expandedRecordingId, setExpandedRecordingId] = useState<string | null>(null);
   const [assignModalForRecordingId, setAssignModalForRecordingId] = useState<string | null>(null);
+  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // Restore view/month from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const savedView = sessionStorage.getItem('sesje-view') as 'list' | 'calendar' | null;
+      const savedMonth = sessionStorage.getItem('sesje-month');
+      if (savedView) setView(savedView);
+      if (savedMonth) setCalendarMonth(savedMonth);
+    } catch {}
+  }, []);
+
+  // Persist view/month to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('sesje-view', view);
+      sessionStorage.setItem('sesje-month', calendarMonth);
+    } catch {}
+  }, [view, calendarMonth]);
 
   const q = search.toLowerCase().trim();
 
   // Filter by type
   const byType = typeTab === 'all' ? bookings : bookings.filter(b => b.session_type === typeTab);
 
-  // Filter by date range (applied before upcoming/past split)
-  const byDateRange = byType.filter(b => {
+  // Filter by search (used in both views)
+  const bySearch = byType.filter(b => {
+    if (!q) return true;
+    const client = getClient(b);
+    return (client?.display_name || '').toLowerCase().includes(q)
+      || (client?.email || '').toLowerCase().includes(q);
+  });
+
+  // List view filters
+  const byDateRange = bySearch.filter(b => {
     const slot = getSlot(b);
     const d = slot?.slot_date || '';
     if (dateFrom && d < dateFrom) return false;
@@ -342,7 +477,6 @@ export default function AdminSessionList({
     return true;
   });
 
-  // Split upcoming / past
   const upcoming = byDateRange.filter(b => {
     const slot = getSlot(b);
     return slot?.slot_date >= todayStr && b.status !== 'completed';
@@ -367,7 +501,7 @@ export default function AdminSessionList({
       || (client?.email || '').toLowerCase().includes(q);
   });
 
-  function countForType(key: TypeKey, which: 'upcoming' | 'past') {
+  function countForType(key: FilterKey, which: 'upcoming' | 'past') {
     const base = key === 'all' ? bookings : bookings.filter(b => b.session_type === key);
     if (which === 'upcoming') return base.filter(b => { const s = getSlot(b); return s?.slot_date >= todayStr && b.status !== 'completed'; }).length;
     return base.filter(b => { const s = getSlot(b); return s?.slot_date < todayStr || b.status === 'completed'; }).length;
@@ -388,7 +522,7 @@ export default function AdminSessionList({
       </tr>`;
     }).join('');
 
-    const typeCfg = SESSION_TYPES_CONFIG.find(t => t.key === typeTab);
+    const typeCfg = SESSION_FILTER_TABS.find(t => t.key === typeTab);
     const tabLabel = statusTab === 'upcoming' ? 'Nadchodzące' : 'Zakończone';
     const title = `${tabLabel} sesje — ${typeCfg?.label || 'Wszystkie'}${q ? ` — "${search}"` : ''}`;
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
@@ -411,7 +545,7 @@ tr:nth-child(even){background:#f9f9f9}
     <div className="space-y-4">
       {/* Type tabs */}
       <div className="flex flex-wrap gap-2">
-        {SESSION_TYPES_CONFIG.map(cfg => {
+        {SESSION_FILTER_TABS.map(cfg => {
           const count = countForType(cfg.key, statusTab);
           const isActive = typeTab === cfg.key;
           return (
@@ -430,7 +564,7 @@ tr:nth-child(even){background:#f9f9f9}
         })}
       </div>
 
-      {/* Search + date range + PDF + Add */}
+      {/* Search + PDF + Add + View toggle */}
       <div className="flex flex-col gap-2">
         <div className="flex gap-3 items-center">
           <div className="relative flex-1">
@@ -446,6 +580,25 @@ tr:nth-child(even){background:#f9f9f9}
               <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-htg-fg-muted hover:text-htg-fg text-xs">✕</button>
             )}
           </div>
+
+          {/* View toggle */}
+          <div className="shrink-0 flex items-center gap-0.5 bg-htg-surface rounded-xl p-1 border border-htg-card-border">
+            <button
+              onClick={() => setView('list')}
+              className={`p-2 rounded-lg transition-colors ${view === 'list' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'}`}
+              title="Widok listy"
+            >
+              <LayoutList className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setView('calendar')}
+              className={`p-2 rounded-lg transition-colors ${view === 'calendar' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'}`}
+              title="Widok kalendarza"
+            >
+              <Calendar className="w-4 h-4" />
+            </button>
+          </div>
+
           <button onClick={exportPDF}
             className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors">
             <Download className="w-4 h-4" /> PDF
@@ -456,129 +609,149 @@ tr:nth-child(even){background:#f9f9f9}
           </button>
         </div>
 
-        {/* Date range filter */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-htg-fg-muted shrink-0">Zakres dat:</span>
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            className="px-2 py-1.5 bg-htg-card border border-htg-card-border rounded-lg text-xs text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/40" />
-          <span className="text-xs text-htg-fg-muted">—</span>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-            className="px-2 py-1.5 bg-htg-card border border-htg-card-border rounded-lg text-xs text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/40" />
-          {(dateFrom || dateTo) && (
-            <button onClick={() => { setDateFrom(''); setDateTo(''); }}
-              className="text-xs text-htg-fg-muted hover:text-htg-fg flex items-center gap-1">
-              <X className="w-3 h-3" /> Wyczyść
+        {/* Date range filter — list view only */}
+        {view === 'list' && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-htg-fg-muted shrink-0">Zakres dat:</span>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              className="px-2 py-1.5 bg-htg-card border border-htg-card-border rounded-lg text-xs text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/40" />
+            <span className="text-xs text-htg-fg-muted">—</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              className="px-2 py-1.5 bg-htg-card border border-htg-card-border rounded-lg text-xs text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/40" />
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(''); setDateTo(''); }}
+                className="text-xs text-htg-fg-muted hover:text-htg-fg flex items-center gap-1">
+                <X className="w-3 h-3" /> Wyczyść
+              </button>
+            )}
+            {(dateFrom || dateTo) && (
+              <span className="text-xs text-htg-sage ml-1">{filtered.length} sesji</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Calendar view */}
+      {view === 'calendar' && (
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-4">
+          <MonthCalendar
+            bookings={bySearch}
+            monthKey={calendarMonth}
+            onMonthChange={setCalendarMonth}
+            locale={locale}
+            todayStr={todayStr}
+          />
+        </div>
+      )}
+
+      {/* List view */}
+      {view === 'list' && (
+        <>
+          {/* Status tabs */}
+          <div className="flex gap-1 bg-htg-surface rounded-xl p-1">
+            <button onClick={() => setStatusTab('upcoming')}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                statusTab === 'upcoming' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
+              }`}>
+              <Calendar className="w-4 h-4" />
+              Nadchodzące ({upcomingSorted.length})
             </button>
-          )}
-          {(dateFrom || dateTo) && (
-            <span className="text-xs text-htg-sage ml-1">{filtered.length} sesji</span>
-          )}
-        </div>
-      </div>
+            <button onClick={() => setStatusTab('past')}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                statusTab === 'past' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
+              }`}>
+              <CheckCircle className="w-4 h-4" />
+              Zakończone ({pastSorted.length})
+            </button>
+          </div>
 
-      {/* Status tabs */}
-      <div className="flex gap-1 bg-htg-surface rounded-xl p-1">
-        <button onClick={() => setStatusTab('upcoming')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-            statusTab === 'upcoming' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
-          }`}>
-          <Calendar className="w-4 h-4" />
-          Nadchodzące ({upcomingSorted.length})
-        </button>
-        <button onClick={() => setStatusTab('past')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-            statusTab === 'past' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
-          }`}>
-          <CheckCircle className="w-4 h-4" />
-          Zakończone ({pastSorted.length})
-        </button>
-      </div>
+          {/* Session list */}
+          {filtered.length === 0 ? (
+            <p className="text-htg-fg-muted text-sm bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">
+              {q ? 'Brak wyników wyszukiwania.' : (dateFrom || dateTo) ? 'Brak sesji w wybranym zakresie dat.' : statusTab === 'upcoming' ? 'Brak zaplanowanych sesji.' : 'Brak zakończonych sesji.'}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((b: any) => {
+                const slot = getSlot(b);
+                const client = getClient(b);
+                const isToday = slot?.slot_date === todayStr;
+                const ps = PAYMENT_STATUS_BADGE[b.payment_status] || { label: '—', className: 'bg-htg-surface text-htg-fg-muted' };
 
-      {/* Session list */}
-      {filtered.length === 0 ? (
-        <p className="text-htg-fg-muted text-sm bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">
-          {q ? 'Brak wyników wyszukiwania.' : (dateFrom || dateTo) ? 'Brak sesji w wybranym zakresie dat.' : statusTab === 'upcoming' ? 'Brak zaplanowanych sesji.' : 'Brak zakończonych sesji.'}
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((b: any) => {
-            const slot = getSlot(b);
-            const client = getClient(b);
-            const isToday = slot?.slot_date === todayStr;
-            const ps = PAYMENT_STATUS_BADGE[b.payment_status] || { label: '—', className: 'bg-htg-surface text-htg-fg-muted' };
+                const hasRecording = statusTab === 'past' && !!b.readySesjaRecordingId;
+                const isExpanded = expandedRecordingId === b.readySesjaRecordingId;
 
-            const hasRecording = statusTab === 'past' && !!b.readySesjaRecordingId;
-            const isExpanded = expandedRecordingId === b.readySesjaRecordingId;
-
-            return (
-              <div key={b.id}>
-                <div
-                  className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
-                    isToday && statusTab === 'upcoming'
-                      ? 'bg-htg-sage/5 border-htg-sage/30'
-                      : 'bg-htg-card border-htg-card-border'
-                  } ${statusTab === 'past' ? 'opacity-70' : ''}`}
-                >
-                  <Link href={{pathname: '/konto/admin/sesje/[id]', params: {id: b.id}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {isToday && statusTab === 'upcoming' && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
-                      )}
-                      <span className="text-xs text-htg-fg-muted font-normal">{getDayShort(slot?.slot_date)}</span>
-                      <span className="font-bold text-htg-fg">{slot?.slot_date || '—'}</span>
-                      <span className="text-htg-fg">{slot?.start_time?.slice(0, 5) || ''}</span>
-                      {typeTab === 'all' && <TypeBadge type={b.session_type} />}
+                return (
+                  <div key={b.id}>
+                    <div
+                      className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+                        isToday && statusTab === 'upcoming'
+                          ? 'bg-htg-sage/5 border-htg-sage/30'
+                          : 'bg-htg-card border-htg-card-border'
+                      } ${statusTab === 'past' ? 'opacity-70' : ''}`}
+                    >
+                      <Link href={{pathname: '/konto/admin/sesje/[id]', params: {id: b.id}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isToday && statusTab === 'upcoming' && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
+                          )}
+                          <span className="text-xs text-htg-fg-muted font-normal">{getDayShort(slot?.slot_date)}</span>
+                          <span className="font-bold text-htg-fg">{slot?.slot_date || '—'}</span>
+                          <span className="text-htg-fg">{slot?.start_time?.slice(0, 5) || ''}</span>
+                          {typeTab === 'all' && <TypeBadge type={b.session_type} />}
+                        </div>
+                        <p className="text-sm text-htg-fg-muted mt-0.5">
+                          {client?.display_name || client?.email || '—'}
+                          {client?.email && client?.display_name && (
+                            <span className="text-xs ml-1 opacity-60">{client.email}</span>
+                          )}
+                        </p>
+                        {b.topics && statusTab === 'upcoming' && (
+                          <p className="text-xs text-htg-fg-muted mt-0.5 line-clamp-1">📝 {b.topics}</p>
+                        )}
+                      </Link>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
+                        {hasRecording && (
+                          <>
+                            <RowSessionPlayer
+                              isExpanded={isExpanded}
+                              onToggle={() => setExpandedRecordingId(prev => prev === b.readySesjaRecordingId ? null : b.readySesjaRecordingId)}
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setAssignModalForRecordingId(b.readySesjaRecordingId); }}
+                              className="p-1.5 rounded-lg hover:bg-htg-surface transition-colors text-htg-fg-muted hover:text-htg-fg"
+                              title="Przydziel nagranie"
+                            >
+                              <UserPlus className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: b.user_id}}}
+                          className="p-1.5 rounded-lg text-htg-fg-muted hover:text-htg-indigo hover:bg-htg-indigo/10 transition-colors"
+                          title="Profil klienta" onClick={e => e.stopPropagation()}>
+                          <ExternalLink className="w-4 h-4" />
+                        </Link>
+                      </div>
                     </div>
-                    <p className="text-sm text-htg-fg-muted mt-0.5">
-                      {client?.display_name || client?.email || '—'}
-                      {client?.email && client?.display_name && (
-                        <span className="text-xs ml-1 opacity-60">{client.email}</span>
-                      )}
-                    </p>
-                    {b.topics && statusTab === 'upcoming' && (
-                      <p className="text-xs text-htg-fg-muted mt-0.5 line-clamp-1">📝 {b.topics}</p>
-                    )}
-                  </Link>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
-                    {hasRecording && (
-                      <>
-                        <RowSessionPlayer
-                          isExpanded={isExpanded}
-                          onToggle={() => setExpandedRecordingId(prev => prev === b.readySesjaRecordingId ? null : b.readySesjaRecordingId)}
+                    {hasRecording && isExpanded && (
+                      <div className="mt-1 rounded-xl overflow-hidden border border-htg-card-border bg-black">
+                        <SessionReviewPlayer
+                          playbackId={b.readySesjaRecordingId}
+                          idFieldName="recordingId"
+                          userEmail={adminUserEmail}
+                          userId={adminUserId}
+                          tokenEndpoint="/api/video/booking-recording-token"
                         />
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setAssignModalForRecordingId(b.readySesjaRecordingId); }}
-                          className="p-1.5 rounded-lg hover:bg-htg-surface transition-colors text-htg-fg-muted hover:text-htg-fg"
-                          title="Przydziel nagranie"
-                        >
-                          <UserPlus className="w-4 h-4" />
-                        </button>
-                      </>
+                      </div>
                     )}
-                    <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: b.user_id}}}
-                      className="p-1.5 rounded-lg text-htg-fg-muted hover:text-htg-indigo hover:bg-htg-indigo/10 transition-colors"
-                      title="Profil klienta" onClick={e => e.stopPropagation()}>
-                      <ExternalLink className="w-4 h-4" />
-                    </Link>
                   </div>
-                </div>
-                {hasRecording && isExpanded && (
-                  <div className="mt-1 rounded-xl overflow-hidden border border-htg-card-border bg-black">
-                    <SessionReviewPlayer
-                      playbackId={b.readySesjaRecordingId}
-                      idFieldName="recordingId"
-                      userEmail={adminUserEmail}
-                      userId={adminUserId}
-                      tokenEndpoint="/api/video/booking-recording-token"
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* Create session modal */}

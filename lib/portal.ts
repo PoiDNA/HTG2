@@ -24,16 +24,27 @@ export function isSesjaPortal(host: string | null): boolean {
 
 export const SESJA_HOME = '/konto/sesja-panel';
 
+// ─── Sesje portal (zarządzanie sesjami przez staff) ───────────
+
+export function isSesjePortal(host: string | null): boolean {
+  if (!host) return false;
+  const h = host.split(':')[0];
+  return h === 'sesje.htg.cyou' || h === 'sesje.localhost';
+}
+
+export const SESJE_HOME = '/konto/sesje-panel';
+
 // ─── Helpers ──────────────────────────────────────────────────
 
 export function isAnyPortal(host: string | null): boolean {
-  return isNagraniaPortal(host) || isSesjaPortal(host);
+  return isNagraniaPortal(host) || isSesjaPortal(host) || isSesjePortal(host);
 }
 
 /** Server-side: returns the portal home path based on hostname */
 export function getPortalHome(host: string | null): string {
   if (isNagraniaPortal(host)) return NAGRANIA_HOME;
   if (isSesjaPortal(host)) return SESJA_HOME;
+  if (isSesjePortal(host)) return SESJE_HOME;
   return '/konto';
 }
 

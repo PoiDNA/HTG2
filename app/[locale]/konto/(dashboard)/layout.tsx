@@ -6,9 +6,10 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail, isStaffEmail } from '@/lib/roles';
 import { cookies, headers } from 'next/headers';
 import { IMPERSONATE_USER_COOKIE } from '@/lib/admin/impersonate-const';
-import { isNagraniaPortal, isSesjaPortal } from '@/lib/portal';
+import { isNagraniaPortal, isSesjaPortal, isSesjePortal } from '@/lib/portal';
 import NagraniaHeader from '@/components/portal/NagraniaHeader';
 import SesjaHeader from '@/components/portal/SesjaHeader';
+import SesjeHeader from '@/components/portal/SesjeHeader';
 import SidebarLink from './SidebarLink';
 import SpiritIcon from './SpiritIcon';
 import { getDesignVariant } from '@/lib/design-variant';
@@ -57,6 +58,18 @@ export default async function AccountLayout({
     return (
       <div className="mx-auto max-w-3xl px-6 py-8">
         <SesjaHeader userEmail={user?.email ?? ''} locale={locale} />
+        {children}
+      </div>
+    );
+  }
+
+  // ─── Sesje portal (panel staff): minimal layout without sidebar ──
+  if (isSesjePortal(host)) {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    return (
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        <SesjeHeader userEmail={user?.email ?? ''} locale={locale} />
         {children}
       </div>
     );

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Link, useRouter } from '@/i18n-config';
 import { Search, Calendar, CheckCircle, Download, ExternalLink, Plus, X, Loader2, UserCheck, UserPlus, LayoutList, ChevronLeft, ChevronRight } from 'lucide-react';
+import { isAdminEmail } from '@/lib/roles';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
 import RowSessionPlayer from '@/components/recordings/RowSessionPlayer';
 import AssignRecordingModal from '@/components/recordings/AssignRecordingModal';
@@ -423,6 +424,7 @@ export default function AdminSessionList({
   adminUserId: string;
 }) {
   const router = useRouter();
+  const isAdmin = isAdminEmail(adminUserEmail);
   const [typeTab, setTypeTab] = useState<FilterKey>('all');
   const [statusTab, setStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');
@@ -599,10 +601,12 @@ tr:nth-child(even){background:#f9f9f9}
             </button>
           </div>
 
-          <button onClick={exportPDF}
-            className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors">
-            <Download className="w-4 h-4" /> PDF
-          </button>
+          {isAdmin && (
+            <button onClick={exportPDF}
+              className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg-muted hover:text-htg-fg hover:bg-htg-surface transition-colors">
+              <Download className="w-4 h-4" /> PDF
+            </button>
+          )}
           <button onClick={() => setShowCreate(true)}
             className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-htg-indigo text-white rounded-xl text-sm font-medium hover:bg-htg-indigo/80 transition-colors">
             <Plus className="w-4 h-4" /> Dodaj sesję

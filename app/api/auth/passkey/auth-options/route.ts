@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { generateAuthenticationOptions } from '@simplewebauthn/server';
-import { getRpID } from '@/lib/webauthn/config';
+import { getRpIDForHost } from '@/lib/webauthn/config';
 import { signChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
 
 /**
@@ -8,10 +8,11 @@ import { signChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
  * Generate WebAuthn authentication options (no auth required — this is for login).
  * Uses discoverable credentials (passkeys stored on device).
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
   try {
     const options = await generateAuthenticationOptions({
-      rpID: getRpID(),
+      rpID: getRpIDForHost(host),
       userVerification: 'preferred',
       // Empty allowCredentials = discoverable credentials (resident keys)
     });

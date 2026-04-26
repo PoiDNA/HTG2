@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
 import { createServerClient } from '@supabase/ssr';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { getRpID, getOrigin } from '@/lib/webauthn/config';
+import { getRpIDForHost, getOriginForHost } from '@/lib/webauthn/config';
 import { verifyChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
 
 /**
@@ -39,13 +39,14 @@ export async function POST(req: NextRequest) {
   // Decode stored public key from base64 (stored as TEXT column)
   const publicKey = new Uint8Array(Buffer.from(credential.public_key, 'base64'));
 
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
   let verification;
   try {
     verification = await verifyAuthenticationResponse({
       response: authResponse,
       expectedChallenge,
-      expectedOrigin: getOrigin(),
-      expectedRPID: getRpID(),
+      expectedOrigin: getOriginForHost(host),
+      expectedRPID: getRpIDForHost(host),
       credential: {
         id: credential.credential_id,
         publicKey,

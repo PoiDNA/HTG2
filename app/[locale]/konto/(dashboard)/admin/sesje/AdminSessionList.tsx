@@ -545,6 +545,24 @@ tr:nth-child(even){background:#f9f9f9}
 
   return (
     <div className="space-y-4">
+      {/* Status tabs */}
+      <div className="flex gap-1 bg-htg-surface rounded-xl p-1">
+        <button onClick={() => setStatusTab('upcoming')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            statusTab === 'upcoming' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
+          }`}>
+          <Calendar className="w-4 h-4" />
+          Nadchodzące ({upcomingSorted.length})
+        </button>
+        <button onClick={() => setStatusTab('past')}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            statusTab === 'past' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
+          }`}>
+          <CheckCircle className="w-4 h-4" />
+          Zakończone ({pastSorted.length})
+        </button>
+      </div>
+
       {/* Type tabs */}
       <div className="flex flex-wrap gap-2">
         {SESSION_FILTER_TABS.map(cfg => {
@@ -569,20 +587,6 @@ tr:nth-child(even){background:#f9f9f9}
       {/* Search + PDF + Add + View toggle */}
       <div className="flex flex-col gap-2">
         <div className="flex gap-3 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Szukaj po imieniu lub emailu..."
-              className="w-full pl-10 pr-8 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg placeholder-htg-fg-muted focus:outline-none focus:ring-2 focus:ring-htg-sage/30"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-htg-fg-muted hover:text-htg-fg text-xs">✕</button>
-            )}
-          </div>
-
           {/* View toggle */}
           <div className="shrink-0 flex items-center gap-0.5 bg-htg-surface rounded-xl p-1 border border-htg-card-border">
             <button
@@ -599,6 +603,20 @@ tr:nth-child(even){background:#f9f9f9}
             >
               <Calendar className="w-4 h-4" />
             </button>
+          </div>
+
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-htg-fg-muted" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Szukaj po imieniu lub emailu..."
+              className="w-full pl-10 pr-8 py-2.5 bg-htg-card border border-htg-card-border rounded-xl text-sm text-htg-fg placeholder-htg-fg-muted focus:outline-none focus:ring-2 focus:ring-htg-sage/30"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-htg-fg-muted hover:text-htg-fg text-xs">✕</button>
+            )}
           </div>
 
           {isAdmin && (
@@ -651,24 +669,6 @@ tr:nth-child(even){background:#f9f9f9}
       {/* List view */}
       {view === 'list' && (
         <>
-          {/* Status tabs */}
-          <div className="flex gap-1 bg-htg-surface rounded-xl p-1">
-            <button onClick={() => setStatusTab('upcoming')}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                statusTab === 'upcoming' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
-              }`}>
-              <Calendar className="w-4 h-4" />
-              Nadchodzące ({upcomingSorted.length})
-            </button>
-            <button onClick={() => setStatusTab('past')}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                statusTab === 'past' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
-              }`}>
-              <CheckCircle className="w-4 h-4" />
-              Zakończone ({pastSorted.length})
-            </button>
-          </div>
-
           {/* Session list */}
           {filtered.length === 0 ? (
             <p className="text-htg-fg-muted text-sm bg-htg-card border border-htg-card-border rounded-xl p-6 text-center">

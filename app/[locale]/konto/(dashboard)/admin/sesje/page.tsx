@@ -5,7 +5,6 @@ import { createSupabaseServiceRole } from '@/lib/supabase/service';
 import { isAdminEmail } from '@/lib/roles';
 import { canEditSesje } from '@/lib/staff-config';
 import { redirect } from '@/i18n-config';
-import { Presentation } from 'lucide-react';
 import AdminSessionList from './AdminSessionList';
 
 export function generateStaticParams() {
@@ -94,12 +93,9 @@ export default async function AdminSessionsPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Presentation className="w-6 h-6 text-htg-indigo" />
-        <div>
-          <h2 className="text-2xl font-serif font-bold text-htg-fg">Sesje klientów</h2>
-          <p className="text-sm text-htg-fg-muted">Wszystkie sesje indywidualne — {enriched.length} łącznie</p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-serif font-bold text-htg-fg">Sesje klientów</h2>
+        <p className="text-sm text-htg-fg-muted">Wszystkie sesje indywidualne — {enriched.length} łącznie</p>
       </div>
 
       <AdminSessionList

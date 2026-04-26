@@ -32,10 +32,10 @@ export async function DELETE(
     }
   }
 
-  // Get booking to find slot_id and order_id
+  // Get booking including live_session_id to handle circular FK
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, slot_id, order_id')
+    .select('id, slot_id, order_id, live_session_id')
     .eq('id', id)
     .single();
 
@@ -43,24 +43,40 @@ export async function DELETE(
     return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
   }
 
-  // Delete child records first (FK constraints without CASCADE)
+  // ── Step 1: Break circular FK: bookings.live_session_id ↔ live_sessions.booking_id
+  // Must NULL bookings.live_session_id before we can delete live_sessions
+  if (booking.live_session_id) {
+    await supabase.from('bookings').update({ live_session_id: null }).eq('id', id);
+  }
+
+  // ── Step 2: Delete children of live_sessions (no-CASCADE FKs)
+  if (booking.live_session_id) {
+    await supabase.from('session_sharing').delete().eq('live_session_id', booking.live_session_id);
+    await supabase.from('session_listeners').delete().eq('live_session_id', booking.live_session_id);
+  }
+
+  // ── Step 3: Delete booking_recordings (references both bookings + live_sessions)
   await supabase.from('booking_recordings').delete().eq('booking_id', id);
+
+  // ── Step 4: Delete live_sessions (circular FK broken in step 1)
   await supabase.from('live_sessions').delete().eq('booking_id', id);
+
+  // ── Step 5: Delete remaining booking children
   await supabase.from('consent_records').delete().eq('booking_id', id);
   await supabase.from('acceleration_queue').delete().eq('booking_id', id);
 
-  // Delete booking
+  // ── Step 6: Delete booking
   const { error: bookingDeleteError } = await supabase.from('bookings').delete().eq('id', id);
   if (bookingDeleteError) {
     return NextResponse.json({ error: bookingDeleteError.message }, { status: 500 });
   }
 
-  // Delete slot
+  // ── Step 7: Delete slot
   if (booking.slot_id) {
     await supabase.from('booking_slots').delete().eq('id', booking.slot_id);
   }
 
-  // Delete order (if import order, not stripe)
+  // ── Step 8: Delete order (if import order, not stripe)
   if (booking.order_id) {
     const { data: order } = await supabase.from('orders').select('source').eq('id', booking.order_id).single();
     if (order && order.source === 'import') {

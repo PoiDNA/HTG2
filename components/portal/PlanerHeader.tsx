@@ -191,7 +191,7 @@ export default function PlanerHeader({ userEmail, locale }: PlanerHeaderProps) {
   return (
     <>
       <header className="flex items-center justify-between mb-8 pb-4 border-b border-htg-card-border">
-        <a href={`/${locale}/konto/admin/sesje`} className="flex items-center gap-2 text-htg-fg hover:text-htg-sage transition-colors">
+        <a href={`/${locale}/konto/admin/planer`} className="flex items-center gap-2 text-htg-fg hover:text-htg-sage transition-colors">
           <Image src="/icon.png" alt="HTG" width={32} height={32} className="rounded-full" />
           <span className="text-lg font-serif font-bold">Planer HTG</span>
         </a>

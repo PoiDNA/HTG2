@@ -73,7 +73,7 @@ export default async function AdminDashboard({
 
   const quickLinks = [
     { href: '/konto/admin/uzytkownicy' as const, label: 'Użytkownicy', icon: Users },
-    { href: '/konto/admin/sesje' as const, label: 'Sesje', icon: BookOpen },
+    { href: '/konto/admin/planer' as const, label: 'Sesje', icon: BookOpen },
     { href: '/konto/admin/podglad' as const, label: 'Podgląd użytkowników', icon: Eye },
     { href: '/spolecznosc' as const, label: 'Społeczność', icon: MessagesSquare },
     { href: '/konto/admin/skrzynka' as const, label: 'Skrzynka', icon: Mail },

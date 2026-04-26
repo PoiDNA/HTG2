@@ -33,7 +33,7 @@ export function isPlanerPortal(host: string | null): boolean {
   return h === 'planer.htg.cyou' || h === 'planer.localhost';
 }
 
-export const PLANER_HOME = '/konto/admin/sesje';
+export const PLANER_HOME = '/konto/admin/planer';
 
 // ─── Helpers ──────────────────────────────────────────────────
 

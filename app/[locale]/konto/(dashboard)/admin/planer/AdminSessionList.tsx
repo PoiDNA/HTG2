@@ -191,7 +191,7 @@ function MonthCalendar({ bookings, monthKey, onMonthChange, locale, todayStr }: 
                   return (
                     <Link
                       key={b.id}
-                      href={{ pathname: '/konto/admin/sesje/[id]', params: { id: b.id } }}
+                      href={{ pathname: '/konto/admin/planer/[id]', params: { id: b.id } }}
                       className={`block p-1 rounded cursor-pointer hover:opacity-75 transition-opacity ${
                         tb?.className || 'bg-htg-surface text-htg-fg-muted'
                       }`}
@@ -694,7 +694,7 @@ tr:nth-child(even){background:#f9f9f9}
                           : 'bg-htg-card border-htg-card-border'
                       } ${statusTab === 'past' ? 'opacity-70' : ''}`}
                     >
-                      <Link href={{pathname: '/konto/admin/sesje/[id]', params: {id: b.id}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                      <Link href={{pathname: '/konto/admin/planer/[id]', params: {id: b.id}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
                         <div className="flex items-center gap-2 flex-wrap">
                           {isToday && statusTab === 'upcoming' && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>

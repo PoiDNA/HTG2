@@ -55,7 +55,7 @@ export default async function AdminSessionDetailPage({
   if (!booking) {
     return (
       <div className="p-8">
-        <Link href="/konto/admin/sesje" className="text-htg-fg-muted hover:text-htg-fg text-sm flex items-center gap-1 mb-4">
+        <Link href="/konto/admin/planer" className="text-htg-fg-muted hover:text-htg-fg text-sm flex items-center gap-1 mb-4">
           <ArrowLeft className="w-4 h-4" /> Wróć
         </Link>
         <p className="text-htg-fg-muted">Sesja nie znaleziona.</p>
@@ -96,7 +96,7 @@ export default async function AdminSessionDetailPage({
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Back — to admin sessions */}
-      <Link href="/konto/admin/sesje" className="text-htg-fg-muted hover:text-htg-fg text-sm flex items-center gap-1">
+      <Link href="/konto/admin/planer" className="text-htg-fg-muted hover:text-htg-fg text-sm flex items-center gap-1">
         <ArrowLeft className="w-4 h-4" /> Wróć do listy sesji
       </Link>
 
@@ -195,7 +195,7 @@ export default async function AdminSessionDetailPage({
       <PaymentCommentEditor bookingId={booking.id} initialComment={booking.payment_comment || ''} />
 
       {/* Delete — admin only */}
-      {isAdmin && <DeleteSessionButton bookingId={booking.id} locale={locale} returnPath="/konto/admin/sesje" />}
+      {isAdmin && <DeleteSessionButton bookingId={booking.id} locale={locale} returnPath="/konto/admin/planer" />}
 
       {/* Client history */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
@@ -214,7 +214,7 @@ export default async function AdminSessionDetailPage({
               return (
                 <Link
                   key={h.id}
-                  href={{pathname: '/konto/admin/sesje/[id]', params: {id: h.id}}}
+                  href={{pathname: '/konto/admin/planer/[id]', params: {id: h.id}}}
                   className={`flex items-center gap-3 p-2 rounded-lg text-sm transition-colors ${
                     isCurrent ? 'bg-htg-sage/10 border border-htg-sage/30' : 'hover:bg-htg-surface/50'
                   }`}

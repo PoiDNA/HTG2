@@ -139,7 +139,7 @@ export default async function AccountLayout({
 
   const adminItems = [
     { href: '/konto/admin/uzytkownicy', label: tPanel('admin_users'), icon: Users },
-    { href: '/konto/admin/sesje', label: tPanel('admin_sessions'), icon: BookOpen },
+    { href: '/konto/admin/planer', label: tPanel('admin_sessions'), icon: BookOpen },
     { href: '/konto/admin/podglad', label: tPanel('admin_preview'), icon: Eye },
     { href: '/spolecznosc', label: 'Społeczność', icon: MessagesSquare },
     { href: '/konto/admin/skrzynka', label: 'Skrzynka', icon: Mail },

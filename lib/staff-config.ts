@@ -129,3 +129,25 @@ export const staffByRole = (role: StaffRole): StaffMember[] =>
   STAFF.filter(s => s.role === role);
 
 export const translators = STAFF.filter(s => s.role === 'translator') as (StaffMember & { locale: 'en' | 'de' | 'pt' })[];
+
+// ─── Sesje panel access (sesje.htg.cyou) ────────────────────────────────────
+// Edytorzy panelu sesji — mogą tworzyć i edytować wszystkie sesje,
+// ale tylko admin (htg@htg.cyou) może je usuwać.
+export const SESJE_EDITORS: readonly string[] = [
+  'natalia@htg.cyou',
+  'agata@htg.cyou',
+  'przemek@htg.cyou',
+  'htg@htg.cyou',
+];
+
+export const SESJE_ADMIN = 'htg@htg.cyou';
+
+export function canEditSesje(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return SESJE_EDITORS.includes(email.toLowerCase());
+}
+
+export function canDeleteSesje(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return email.toLowerCase() === SESJE_ADMIN;
+}

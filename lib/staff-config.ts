@@ -130,7 +130,7 @@ export const staffByRole = (role: StaffRole): StaffMember[] =>
 
 export const translators = STAFF.filter(s => s.role === 'translator') as (StaffMember & { locale: 'en' | 'de' | 'pt' })[];
 
-// ─── Sesje panel access (sesje.htg.cyou) ────────────────────────────────────
+// ─── Planer panel access (planer.htg.cyou) ──────────────────────────────────
 // Edytorzy panelu sesji — mogą tworzyć i edytować wszystkie sesje,
 // ale tylko admin (htg@htg.cyou) może je usuwać.
 export const SESJE_EDITORS: readonly string[] = [

@@ -2,6 +2,7 @@
  * Hostname detection for standalone portals:
  *   nagrania.htg.cyou — recordings portal
  *   sesja.htg.cyou    — session portal (simplified view for clients)
+ *   planer.htg.cyou   — session management panel for staff
  */
 
 // ─── Nagrania portal ──────────────────────────────────────────
@@ -24,27 +25,27 @@ export function isSesjaPortal(host: string | null): boolean {
 
 export const SESJA_HOME = '/konto/sesja-panel';
 
-// ─── Sesje portal (zarządzanie sesjami przez staff) ───────────
+// ─── Planer portal (zarządzanie sesjami przez staff) ─────────
 
-export function isSesjePortal(host: string | null): boolean {
+export function isPlanerPortal(host: string | null): boolean {
   if (!host) return false;
   const h = host.split(':')[0];
-  return h === 'sesje.htg.cyou' || h === 'sesje.localhost';
+  return h === 'planer.htg.cyou' || h === 'planer.localhost';
 }
 
-export const SESJE_HOME = '/konto/admin/sesje';
+export const PLANER_HOME = '/konto/admin/sesje';
 
 // ─── Helpers ──────────────────────────────────────────────────
 
 export function isAnyPortal(host: string | null): boolean {
-  return isNagraniaPortal(host) || isSesjaPortal(host) || isSesjePortal(host);
+  return isNagraniaPortal(host) || isSesjaPortal(host) || isPlanerPortal(host);
 }
 
 /** Server-side: returns the portal home path based on hostname */
 export function getPortalHome(host: string | null): string {
   if (isNagraniaPortal(host)) return NAGRANIA_HOME;
   if (isSesjaPortal(host)) return SESJA_HOME;
-  if (isSesjePortal(host)) return SESJE_HOME;
+  if (isPlanerPortal(host)) return PLANER_HOME;
   return '/konto';
 }
 

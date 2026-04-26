@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyRegistrationResponse } from '@simplewebauthn/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
-import { getRpID, getOrigin } from '@/lib/webauthn/config';
+import { getRpIDForHost, getOriginForHost } from '@/lib/webauthn/config';
 import { verifyChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
 
 /**
@@ -27,13 +27,14 @@ export async function POST(req: NextRequest) {
 
   const { response: attResponse, friendlyName } = await req.json();
 
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
   let verification;
   try {
     verification = await verifyRegistrationResponse({
       response: attResponse,
       expectedChallenge,
-      expectedOrigin: getOrigin(),
-      expectedRPID: getRpID(),
+      expectedOrigin: getOriginForHost(host),
+      expectedRPID: getRpIDForHost(host),
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });

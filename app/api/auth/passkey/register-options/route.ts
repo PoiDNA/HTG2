@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { generateRegistrationOptions } from '@simplewebauthn/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { rpName, getRpID } from '@/lib/webauthn/config';
+import { rpName, getRpIDForHost } from '@/lib/webauthn/config';
 import { signChallenge, CHALLENGE_COOKIE_NAME } from '@/lib/webauthn/challenge';
 
 /**
  * GET /api/auth/passkey/register-options
  * Generate WebAuthn registration options for an authenticated user.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,9 +19,10 @@ export async function GET() {
     .select('credential_id, transports')
     .eq('user_id', user.id);
 
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
   let rpID: string;
   try {
-    rpID = getRpID();
+    rpID = getRpIDForHost(host);
   } catch (err: any) {
     if (err.message?.includes('Missing required env var')) {
       return NextResponse.json({ error: 'Passkeys not configured' }, { status: 501 });

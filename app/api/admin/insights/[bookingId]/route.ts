@@ -6,7 +6,7 @@
 // /pl/konto/admin/nagrania-klientow.
 //
 // Authorization: canViewClientRecordings allowlist (admin + Natalia only).
-// Other staff (Agata, Justyna, Przemek) are deliberately excluded — RODO
+// Other staff (Agata, Justyna, Operator) are deliberately excluded — RODO
 // data minimization. The same allowlist gates the panel page itself.
 //
 // Audit: every successful response is logged via auditInsightsAccess() with

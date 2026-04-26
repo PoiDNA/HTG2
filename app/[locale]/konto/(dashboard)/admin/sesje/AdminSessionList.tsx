@@ -32,7 +32,7 @@ const SESSION_TYPES_CONFIG = [
   { key: 'natalia_asysta',            label: 'Sesje z Asystą',       short: 'Asysta',     className: 'bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300' },
   { key: 'natalia_justyna',           label: 'Sesje z Justyną',      short: 'Justyna',    className: 'bg-rose-200 text-rose-900 dark:bg-rose-900/40 dark:text-rose-300' },
   { key: 'natalia_agata',             label: 'Sesje z Agatą',        short: 'Agata',      className: 'bg-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-300' },
-  { key: 'natalia_przemek',           label: 'Sesje z Przemkiem',    short: 'Przemek',    className: 'bg-sky-200 text-sky-900 dark:bg-sky-900/40 dark:text-sky-300' },
+  { key: 'natalia_przemek',           label: 'Sesje z Operatorem',   short: 'Operator',   className: 'bg-sky-200 text-sky-900 dark:bg-sky-900/40 dark:text-sky-300' },
   { key: 'natalia_para',              label: 'Sesje dla Par',        short: 'Para',       className: 'bg-pink-200 text-pink-900 dark:bg-pink-900/40 dark:text-pink-300' },
   { key: 'natalia_interpreter_solo',  label: 'Interpreter Solo',     short: 'Interp.1:1', className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },
   { key: 'natalia_interpreter_asysta',label: 'Interpreter z Asystą', short: 'Interp.A',   className: 'bg-violet-200 text-violet-900 dark:bg-violet-900/40 dark:text-violet-300' },

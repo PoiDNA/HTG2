@@ -37,7 +37,7 @@ export async function canControlMeetingRecording(
  * Returns true if the user is allowed to monitor / control recording for the given session.
  * Authorization matrix:
  *   - Global admin (isAdminEmail) — full access
- *   - Main staff (isStaffEmail — Natalia, Agata, Justyna, Przemek) — full access
+ *   - Main staff (isStaffEmail — Natalia, Agata, Justyna, Operator) — full access
  *   - Assigned assistant — only if user.id matches staff_members.user_id of the slot's assistant_id
  *
  * IMPORTANT: booking_slots.assistant_id is a FK to staff_members.id, NOT auth.users.id.

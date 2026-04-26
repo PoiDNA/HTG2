@@ -59,8 +59,8 @@ export const STAFF = [
     color: 'bg-htg-sage',
   },
   {
-    email: 'przemek@htg.cyou',
-    name: 'Przemek',
+    email: 'operator@htg.cyou',
+    name: 'Operator',
     slug: 'przemek',
     role: 'operator' as const,
     description: 'Operator',
@@ -136,7 +136,7 @@ export const translators = STAFF.filter(s => s.role === 'translator') as (StaffM
 export const SESJE_EDITORS: readonly string[] = [
   'natalia@htg.cyou',
   'agata@htg.cyou',
-  'przemek@htg.cyou',
+  'operator@htg.cyou',
   'htg@htg.cyou',
 ];
 

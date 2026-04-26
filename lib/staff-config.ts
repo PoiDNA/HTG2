@@ -137,6 +137,7 @@ export const SESJE_EDITORS: readonly string[] = [
   'natalia@htg.cyou',
   'agata@htg.cyou',
   'przemek@htg.cyou',
+  'operator@htg.cyou',
   'htg@htg.cyou',
 ];
 

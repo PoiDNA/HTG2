@@ -34,6 +34,9 @@ export default function LoginForm() {
 
   const isNagrania = typeof window !== 'undefined' &&
     (window.location.hostname === 'nagrania.htg.cyou' || window.location.hostname === 'nagrania.localhost');
+  const isSesje = typeof window !== 'undefined' &&
+    (window.location.hostname === 'sesje.htg.cyou' || window.location.hostname === 'sesje.localhost');
+  const hideSSO = isNagrania || isSesje;
   const portalHome = getPortalHomeClient();
 
   useEffect(() => {
@@ -658,8 +661,8 @@ export default function LoginForm() {
             </div>
           </form>
 
-          {/* Divider + SSO — hidden on nagrania portal */}
-          {!isNagrania && (
+          {/* Divider + SSO — hidden on nagrania + sesje portals */}
+          {!hideSSO && (
             <>
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-htg-card-border" />

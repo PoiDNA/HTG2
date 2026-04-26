@@ -43,8 +43,17 @@ export async function DELETE(
     return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
   }
 
+  // Delete child records first (FK constraints without CASCADE)
+  await supabase.from('booking_recordings').delete().eq('booking_id', id);
+  await supabase.from('live_sessions').delete().eq('booking_id', id);
+  await supabase.from('consent_records').delete().eq('booking_id', id);
+  await supabase.from('acceleration_queue').delete().eq('booking_id', id);
+
   // Delete booking
-  await supabase.from('bookings').delete().eq('id', id);
+  const { error: bookingDeleteError } = await supabase.from('bookings').delete().eq('id', id);
+  if (bookingDeleteError) {
+    return NextResponse.json({ error: bookingDeleteError.message }, { status: 500 });
+  }
 
   // Delete slot
   if (booking.slot_id) {

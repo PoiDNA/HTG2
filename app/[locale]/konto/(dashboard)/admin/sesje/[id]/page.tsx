@@ -17,7 +17,6 @@ import DeleteSessionButton from '@/app/[locale]/prowadzacy/sesje/[id]/DeleteSess
 import BookingUserEditor from '@/app/[locale]/prowadzacy/sesje/[id]/BookingUserEditor';
 import SessionTimeEditor from '@/app/[locale]/prowadzacy/sesje/[id]/SessionTimeEditor';
 import SessionDateEditor from '@/app/[locale]/prowadzacy/sesje/[id]/SessionDateEditor';
-import OperatorReassignSelector from '@/components/staff/OperatorReassignSelector';
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
@@ -84,19 +83,6 @@ export default async function AdminSessionDetailPage({
     .limit(50);
 
   const slot = Array.isArray(booking.slot) ? booking.slot[0] : booking.slot;
-
-  // Fetch operators (assistants) for reassign dropdown (only when session has operator)
-  const sessionHasOperator = ['natalia_asysta', 'natalia_agata', 'natalia_justyna'].includes(booking.session_type);
-  let operators: Array<{ id: string; name: string; slug: string }> = [];
-  if (sessionHasOperator) {
-    const { data: ops } = await db
-      .from('staff_members')
-      .select('id, name, slug, role, is_active')
-      .in('role', ['assistant', 'operator'])
-      .eq('is_active', true)
-      .order('name');
-    operators = (ops || []).map((o: any) => ({ id: o.id, name: o.name, slug: o.slug }));
-  }
 
   // Generate signed URL for transfer proof (if exists)
   let transferProofSignedUrl: string | null = null;
@@ -186,21 +172,11 @@ export default async function AdminSessionDetailPage({
       {/* Session type selector */}
       {['natalia_asysta', 'natalia_agata', 'natalia_justyna', 'natalia_solo'].includes(booking.session_type) && (
         <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-3">
-          <h2 className="text-base font-serif font-bold text-htg-fg">Typ sesji / Przypisanie asystentki</h2>
+          <h2 className="text-base font-serif font-bold text-htg-fg">Typ sesji / Przypisanie operatorki</h2>
           <SessionTypeSelector bookingId={booking.id} initialType={booking.session_type} />
         </div>
       )}
 
-      {/* Operator reassign (post-hoc) — only when session has an operator */}
-      {sessionHasOperator && (
-        <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">
-          <OperatorReassignSelector
-            bookingId={booking.id}
-            currentAssistantId={slot?.assistant_id ?? null}
-            operators={operators}
-          />
-        </div>
-      )}
 
       {/* Topics */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">

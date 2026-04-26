@@ -49,7 +49,7 @@ Platforma do sesji rozwoju duchowego prowadzonych przez Natalię HTG. VOD + sesj
 ### Rezerwacje
 | Tabela | Opis |
 |--------|------|
-| `staff_members` | Natalia, Agata, Justyna, Przemek + 3 tłumacze (role: practitioner/assistant/translator; `locale` dla tłumaczy: en/de/pt) |
+| `staff_members` | Natalia, Agata, Justyna, Operator + 3 tłumacze (role: practitioner/assistant/translator; `locale` dla tłumaczy: en/de/pt) |
 | `availability_rules` | Harmonogram tygodniowy (dzień + godziny) |
 | `availability_exceptions` | Zablokowane dni |
 | `booking_slots` | Konkretne sloty (data, czas, status, solo_locked; `translator_id FK→staff_members`; session_type: 11 wartości incl. `natalia_interpreter_solo/asysta/para`) |
@@ -284,7 +284,7 @@ Po ściągnięciu na dysk: sortowanie chronologiczne przez `ls`, filtry przez `f
 
 **Auth matrix — recording-status + retry-recording** (`lib/live/recording-auth.ts`):
 - `isAdminEmail()` (globalny admin) **LUB**
-- `isStaffEmail()` (Natalia/Agata/Justyna/Przemek) **LUB**
+- `isStaffEmail()` (Natalia/Agata/Justyna/Operator) **LUB**
 - Asystent przypisany do slota — JOIN przez `staff_members.user_id === auth.users.id` (bo `booking_slots.assistant_id` to FK do `staff_members.id`, NIE `auth.users.id`)
 
 **Pre-existing fix — consent IDOR**:

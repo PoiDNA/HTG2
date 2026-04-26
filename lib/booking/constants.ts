@@ -34,8 +34,8 @@ export const SESSION_CONFIG: Record<SessionType, {
     color: 'bg-htg-warm',
   },
   natalia_przemek: {
-    label: 'Sesja z Natalią i Przemkiem',
-    labelShort: 'Natalia + Przemek',
+    label: 'Sesja z Natalią i Operatorem',
+    labelShort: 'Natalia + Operator',
     durationMinutes: 90,
     pricePln: 1600,
     requiredStaff: ['natalia', 'przemek'],

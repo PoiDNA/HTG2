@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from '@/i18n-config';
 import { Trash2 } from 'lucide-react';
 
-export default function DeleteSessionButton({ bookingId, locale }: { bookingId: string; locale: string }) {
+export default function DeleteSessionButton({ bookingId, locale, returnPath }: { bookingId: string; locale: string; returnPath?: string }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,7 +17,7 @@ export default function DeleteSessionButton({ bookingId, locale }: { bookingId: 
     try {
       const res = await fetch(`/api/booking/${bookingId}/delete`, { method: 'DELETE' });
       if (res.ok) {
-        router.push('/prowadzacy/sesje');
+        window.location.href = `/${locale}${returnPath || '/prowadzacy/sesje'}`;
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error || 'Nie udało się usunąć sesji.');

@@ -195,7 +195,7 @@ export default async function AdminSessionDetailPage({
       <PaymentCommentEditor bookingId={booking.id} initialComment={booking.payment_comment || ''} />
 
       {/* Delete — admin only */}
-      {isAdmin && <DeleteSessionButton bookingId={booking.id} locale={locale} />}
+      {isAdmin && <DeleteSessionButton bookingId={booking.id} locale={locale} returnPath="/konto/admin/sesje" />}
 
       {/* Client history */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">

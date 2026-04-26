@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { canEditSesje } from '@/lib/staff-config';
 
 /**
  * POST /api/admin/booking/change-time
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
 
   const db = createSupabaseServiceRole();
   const { data: profile } = await db.from('profiles').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (profile?.role !== 'admin' && !canEditSesje(user.email)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { bookingId, startTime } = await req.json();
   if (!bookingId || !startTime) return NextResponse.json({ error: 'bookingId and startTime required' }, { status: 400 });

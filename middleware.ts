@@ -80,7 +80,7 @@ function isSesjaAllowed(pathname: string): boolean {
 }
 
 // Paths allowed on the planer.htg.cyou portal (internal keys, without locale prefix)
-const PLANER_ALLOWED = ['/login', '/auth', '/konto/admin/sesje', '/privacy', '/terms'];
+const PLANER_ALLOWED = ['/login', '/auth', '/konto/admin/planer', '/privacy', '/terms'];
 
 function isPlanerAllowed(pathname: string): boolean {
   const withoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';

@@ -76,7 +76,7 @@ export default function UserPanelNav() {
           {isAdmin ? (
             <div className="py-1">
               <DropdownLink href="/konto/admin/uzytkownicy" icon={Users} label={t('admin_users')} onClick={() => setOpen(false)} />
-              <DropdownLink href="/konto/admin/sesje" icon={BookOpen} label={t('admin_sessions')} onClick={() => setOpen(false)} />
+              <DropdownLink href="/konto/admin/planer" icon={BookOpen} label={t('admin_sessions')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/podglad" icon={Eye} label={t('admin_preview')} onClick={() => setOpen(false)} />
               <DropdownLink href="/spolecznosc" icon={MessagesSquare} label={t('community')} onClick={() => setOpen(false)} />
               <DropdownLink href="/konto/admin/skrzynka" icon={Mail} label="Skrzynka" onClick={() => setOpen(false)} />

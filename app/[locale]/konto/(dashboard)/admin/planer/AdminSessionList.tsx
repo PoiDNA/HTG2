@@ -203,7 +203,7 @@ function MonthCalendar({ bookings, monthKey, onMonthChange, locale, todayStr }: 
                         isGhost
                           ? 'border-2 border-dashed border-htg-fg bg-htg-card'
                           : isPendingReschedule
-                            ? (tb?.className || 'bg-htg-surface') + ' ring-2 ring-htg-fg ring-inset opacity-60'
+                            ? 'bg-black text-white border-2 border-black'
                             : (tb?.className || 'bg-htg-surface text-htg-fg-muted')
                       }`}
                     >
@@ -437,7 +437,7 @@ export default function AdminSessionList({
   const router = useRouter();
   const isAdmin = isAdminEmail(adminUserEmail);
   const mySessionKey = EMAIL_TO_OWN_SESSION[adminUserEmail] ?? null;
-  const [typeTab, setTypeTab] = useState<FilterKey>(mySessionKey ?? 'all');
+  const [typeTab, setTypeTab] = useState<FilterKey>('all');
   const [showOtherTabs, setShowOtherTabs] = useState(false);
   const [statusTab, setStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');
@@ -777,7 +777,7 @@ tr:nth-child(even){background:#f9f9f9}
                         isGhost
                           ? 'bg-htg-card border-2 border-dashed border-htg-fg dark:border-htg-fg'
                           : isPendingReschedule
-                            ? 'bg-htg-card border-2 border-htg-fg dark:border-htg-fg opacity-70'
+                            ? 'bg-black text-white border-2 border-black'
                             : isToday && statusTab === 'upcoming'
                               ? 'bg-htg-sage/5 border-htg-sage/30'
                               : 'bg-htg-card border-htg-card-border'
@@ -786,7 +786,7 @@ tr:nth-child(even){background:#f9f9f9}
                       <Link href={{pathname: '/konto/admin/planer/[id]', params: {id: rowLinkId}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
                         <div className="flex items-center gap-2 flex-wrap">
                           {isPendingReschedule && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted border border-htg-fg/30 font-medium">⟳ zmiana terminu</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/40 font-medium">⟳ zmiana terminu</span>
                           )}
                           {!isGhost && isToday && statusTab === 'upcoming' && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
@@ -812,7 +812,7 @@ tr:nth-child(even){background:#f9f9f9}
                             <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border border-red-300 dark:border-red-700 font-medium">Odwołana</span>
                           )}
                         </div>
-                        <p className="text-sm text-htg-fg-muted mt-0.5">
+                        <p className={`text-sm mt-0.5 ${isPendingReschedule ? 'text-white/80' : 'text-htg-fg-muted'}`}>
                           {client?.display_name || client?.email || '—'}
                           {client?.email && client?.display_name && (
                             <span className="text-xs ml-1 opacity-60">{client.email}</span>

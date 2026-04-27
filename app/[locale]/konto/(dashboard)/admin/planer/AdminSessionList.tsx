@@ -38,17 +38,14 @@ const SESSION_FILTER_TABS = [
   { key: 'natalia_para',  label: 'Sesje dla Par',      short: 'Para',      className: 'bg-pink-200 text-pink-900 dark:bg-pink-900/40 dark:text-pink-300' },
 ] as const;
 
-// Full list for create modal (includes interpreter types)
+// Full list for create modal
 const ALL_SESSION_TYPE_OPTIONS = [
-  { key: 'natalia_solo',               label: 'Sesja 1:1 z Natalią' },
-  { key: 'natalia_asysta',             label: 'Sesja z Asystą (nieprzypisana)' },
-  { key: 'natalia_agata',              label: 'Sesja z Natalią i Agatą' },
-  { key: 'natalia_justyna',            label: 'Sesja z Natalią i Justyną' },
-  { key: 'natalia_przemek',            label: 'Sesja z Operatorem' },
-  { key: 'natalia_para',               label: 'Sesja dla par' },
-  { key: 'natalia_interpreter_solo',   label: 'Interpreter Solo' },
-  { key: 'natalia_interpreter_asysta', label: 'Interpreter z Asystą' },
-  { key: 'natalia_interpreter_para',   label: 'Interpreter Para' },
+  { key: 'natalia_solo',    label: 'Sesja 1:1 z Natalią' },
+  { key: 'natalia_asysta',  label: 'Sesja z Asystą (nieprzypisana)' },
+  { key: 'natalia_agata',   label: 'Sesja z Natalią i Agatą' },
+  { key: 'natalia_justyna', label: 'Sesja z Natalią i Justyną' },
+  { key: 'natalia_przemek', label: 'Sesja z Operatorem' },
+  { key: 'natalia_para',    label: 'Sesja dla par' },
 ] as const;
 
 type FilterKey = typeof SESSION_FILTER_TABS[number]['key'];
@@ -434,6 +431,7 @@ export default function AdminSessionList({
   const isAdmin = isAdminEmail(adminUserEmail);
   const mySessionKey = EMAIL_TO_OWN_SESSION[adminUserEmail] ?? null;
   const [typeTab, setTypeTab] = useState<FilterKey>(mySessionKey ?? 'all');
+  const [showOtherTabs, setShowOtherTabs] = useState(false);
   const [statusTab, setStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -572,32 +570,66 @@ tr:nth-child(even){background:#f9f9f9}
       </div>
 
       {/* Type tabs */}
-      <div className="flex flex-wrap gap-2">
-        {(mySessionKey
-          ? [
-              SESSION_FILTER_TABS[0],
-              ...SESSION_FILTER_TABS.filter(t => t.key === mySessionKey),
-              ...SESSION_FILTER_TABS.filter(t => t.key !== 'all' && t.key !== mySessionKey),
-            ]
-          : SESSION_FILTER_TABS
-        ).map(cfg => {
-          const count = countForType(cfg.key, statusTab);
-          const isActive = typeTab === cfg.key;
-          return (
-            <button key={cfg.key} onClick={() => setTypeTab(cfg.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border ${
-                isActive
-                  ? cfg.className + ' opacity-100 ring-2 ring-white/20'
-                  : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:border-htg-fg-muted/30'
-              }`}>
-              <span>{cfg.label}{cfg.key === mySessionKey ? ' ★' : ''}</span>
-              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
-                isActive ? 'bg-white/20 text-white' : 'bg-htg-card text-htg-fg-muted'
-              }`}>{count}</span>
-            </button>
-          );
-        })}
-      </div>
+      {(() => {
+        const primaryTabs = mySessionKey
+          ? [SESSION_FILTER_TABS[0], ...SESSION_FILTER_TABS.filter(t => t.key === mySessionKey)]
+          : SESSION_FILTER_TABS;
+        const otherTabs = mySessionKey
+          ? SESSION_FILTER_TABS.filter(t => t.key !== 'all' && t.key !== mySessionKey)
+          : [];
+        const otherActiveCount = otherTabs.reduce((sum, t) => sum + countForType(t.key, statusTab), 0);
+
+        return (
+          <div className="flex flex-wrap gap-2">
+            {primaryTabs.map(cfg => {
+              const count = countForType(cfg.key, statusTab);
+              const isActive = typeTab === cfg.key;
+              return (
+                <button key={cfg.key} onClick={() => setTypeTab(cfg.key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border ${
+                    isActive
+                      ? cfg.className + ' opacity-100 ring-2 ring-white/20'
+                      : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:border-htg-fg-muted/30'
+                  }`}>
+                  <span>{cfg.label}{cfg.key === mySessionKey ? ' ★' : ''}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-htg-card text-htg-fg-muted'
+                  }`}>{count}</span>
+                </button>
+              );
+            })}
+
+            {/* Other tabs — collapsed by default when user has own key */}
+            {otherTabs.length > 0 && (
+              <>
+                {showOtherTabs && otherTabs.map(cfg => {
+                  const count = countForType(cfg.key, statusTab);
+                  const isActive = typeTab === cfg.key;
+                  return (
+                    <button key={cfg.key} onClick={() => setTypeTab(cfg.key)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border ${
+                        isActive
+                          ? cfg.className + ' opacity-100 ring-2 ring-white/20'
+                          : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:border-htg-fg-muted/30'
+                      }`}>
+                      <span>{cfg.label}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-htg-card text-htg-fg-muted'
+                      }`}>{count}</span>
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setShowOtherTabs(v => !v)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium border bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg transition-colors"
+                >
+                  {showOtherTabs ? '▴ mniej' : `▾ inne (${otherActiveCount})`}
+                </button>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Search + PDF + Add + View toggle */}
       <div className="flex flex-col gap-2">

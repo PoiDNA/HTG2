@@ -179,13 +179,18 @@ function MonthCalendar({ bookings, monthKey, onMonthChange, locale, todayStr }: 
           const dateStr = `${monthKey}-${String(dayNum).padStart(2, '0')}`;
           const sessions = byDate[dateStr] || [];
           const isToday = dateStr === todayStr;
+          const isLowIntensity = dateStr >= '2025-07-11' && dateStr <= '2025-07-19';
 
           return (
             <div key={i} className={`min-h-20 p-1 rounded-lg border text-xs overflow-hidden ${
-              isToday ? 'border-htg-sage/50 bg-htg-sage/5' : 'border-htg-card-border bg-htg-card/40'
+              isToday
+                ? 'border-htg-sage/50 bg-htg-sage/5'
+                : isLowIntensity
+                  ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20'
+                  : 'border-htg-card-border bg-htg-card/40'
             }`}>
               <div className={`w-6 h-6 flex items-center justify-center rounded-full mb-1 font-bold text-xs ${
-                isToday ? 'bg-htg-sage text-white' : 'text-htg-fg-muted'
+                isToday ? 'bg-htg-sage text-white' : isLowIntensity ? 'text-green-700 dark:text-green-400' : 'text-htg-fg-muted'
               }`}>{dayNum}</div>
               <div className="space-y-0.5">
                 {sessions.map((b: any) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Pencil, Check, X, Loader2, UserMinus, UserCheck } from 'lucide-react';
+import { Pencil, Check, X, Loader2, UserMinus, UserCheck, Copy } from 'lucide-react';
 import { useRouter } from '@/i18n-config';
 
 interface Profile {
@@ -204,14 +204,35 @@ export default function BookingUserEditor({ bookingId, currentUserId, currentEma
   }
 
   // View mode
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(currentEmail).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
   return (
-    <button
-      onClick={() => setEditing(true)}
-      className="group flex items-center gap-1.5 text-htg-fg-muted hover:text-htg-fg transition-colors text-sm"
-      title="Zmień użytkownika sesji"
-    >
-      <span>{currentEmail}</span>
-      <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
-    </button>
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={() => setEditing(true)}
+        className="group flex items-center gap-1 text-htg-fg-muted hover:text-htg-fg transition-colors text-sm"
+        title="Zmień użytkownika sesji"
+      >
+        <span>{currentEmail}</span>
+        <Pencil className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
+      </button>
+      <button
+        onClick={handleCopy}
+        className="text-htg-fg-muted hover:text-htg-fg transition-colors shrink-0"
+        title="Kopiuj email"
+      >
+        {copied
+          ? <Check className="w-3.5 h-3.5 text-htg-sage" />
+          : <Copy className="w-3.5 h-3.5" />}
+      </button>
+    </div>
   );
 }

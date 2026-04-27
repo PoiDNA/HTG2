@@ -700,6 +700,8 @@ export async function POST(request: NextRequest) {
           const slotDate = (recSession.slot as unknown as Record<string, unknown>)?.slot_date as string | undefined;
           const fileUrl = egress.fileResults?.[0]?.location ?? null;
           const sourceKey = fileUrl ? extractR2ObjectKey(fileUrl) : null;
+          // sesja phase → permanent (legal_hold); wstep/podsumowanie → 365-day retention (admin-only)
+          const isSesjaPhase = phase === 'sesja';
           const retentionDays = 365;
           const startedAt = getPhaseStartedAt(recSession as SessionLike, phase);
           const title = getPhaseTitle(phase, slotDate ?? null);
@@ -747,9 +749,13 @@ export async function POST(request: NextRequest) {
                 duration_seconds: null,
                 title,
                 min_duration_seconds: minDuration,
-                expires_at: slotDate
-                  ? new Date(new Date(slotDate).getTime() + retentionDays * 86400000).toISOString()
-                  : new Date(Date.now() + retentionDays * 86400000).toISOString(),
+                // sesja = "Nagrania Twoich Sesji" → legal_hold bypasses all retention checks
+                legal_hold: isSesjaPhase,
+                expires_at: isSesjaPhase
+                  ? '2099-12-31T23:59:59Z'
+                  : slotDate
+                    ? new Date(new Date(slotDate).getTime() + retentionDays * 86400000).toISOString()
+                    : new Date(Date.now() + retentionDays * 86400000).toISOString(),
               })
               .select('id')
               .single();
@@ -859,6 +865,7 @@ export async function POST(request: NextRequest) {
 
       // Create as 'failed' for manual admin review (egress_started webhook missing)
       const slotDate = (recSession.slot as unknown as Record<string, unknown>)?.slot_date as string | undefined;
+      const isSesjaPhase = phase === 'sesja';
       const retentionDays = 365;
       const startedAt = getPhaseStartedAt(recSession as SessionLike, phase);
       const title = getPhaseTitle(phase, slotDate ?? null);
@@ -881,9 +888,13 @@ export async function POST(request: NextRequest) {
           last_error: 'egress_started_webhook_missing',
           title,
           min_duration_seconds: minDuration,
-          expires_at: slotDate
-            ? new Date(new Date(slotDate).getTime() + retentionDays * 86400000).toISOString()
-            : new Date(Date.now() + retentionDays * 86400000).toISOString(),
+          // sesja = "Nagrania Twoich Sesji" → legal_hold bypasses all retention checks
+          legal_hold: isSesjaPhase,
+          expires_at: isSesjaPhase
+            ? '2099-12-31T23:59:59Z'
+            : slotDate
+              ? new Date(new Date(slotDate).getTime() + retentionDays * 86400000).toISOString()
+              : new Date(Date.now() + retentionDays * 86400000).toISOString(),
           metadata: { needs_manual_review: true, booking_id: recSession.booking_id },
         })
         .select('id')

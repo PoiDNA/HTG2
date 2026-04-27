@@ -192,19 +192,24 @@ function MonthCalendar({ bookings, monthKey, onMonthChange, locale, todayStr }: 
                   const slot = getSlot(b);
                   const client = getClient(b);
                   const tb = SESSION_TYPE_BADGE[b.session_type];
+                  const isGhost = !!b._isGhost;
+                  const isPendingReschedule = !isGhost && b.reschedule_status === 'pending';
+                  const linkId = b._originalId || b.id;
                   return (
                     <Link
-                      key={b.id}
-                      href={{ pathname: '/konto/admin/planer/[id]', params: { id: b.id } }}
+                      key={isGhost ? `ghost-${b._originalId}` : b.id}
+                      href={{ pathname: '/konto/admin/planer/[id]', params: { id: linkId } }}
                       className={`block p-1 rounded cursor-pointer hover:opacity-75 transition-opacity ${
-                        tb?.className || 'bg-htg-surface text-htg-fg-muted'
+                        isGhost
+                          ? 'border-2 border-dashed border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-900/20 dark:text-amber-200'
+                          : isPendingReschedule
+                            ? (tb?.className || 'bg-htg-surface') + ' ring-2 ring-amber-400 ring-inset opacity-60'
+                            : (tb?.className || 'bg-htg-surface text-htg-fg-muted')
                       }`}
                     >
                       <div className="font-semibold">{slot?.start_time?.slice(0, 5)}</div>
+                      {isGhost && <div className="text-xs font-bold">→ nowy</div>}
                       <div className="truncate">{client?.display_name || client?.email || '—'}</div>
-                      {client?.email && client?.display_name && (
-                        <div className="truncate opacity-60">{client.email}</div>
-                      )}
                     </Link>
                   );
                 })}
@@ -465,8 +470,24 @@ export default function AdminSessionList({
 
   const q = search.toLowerCase().trim();
 
-  // Filter by type
-  const byType = typeTab === 'all' ? bookings : bookings.filter(b => b.session_type === typeTab);
+  // Build ghost entries for pending reschedule proposals
+  const bookingsWithGhosts = (() => {
+    const ghosts: any[] = [];
+    for (const b of bookings) {
+      if (b.reschedule_status === 'pending' && b.proposed_slot_date) {
+        ghosts.push({
+          ...b,
+          _isGhost: true,
+          _originalId: b.id,
+          slot: [{ slot_date: b.proposed_slot_date, start_time: b.proposed_start_time || '09:00:00', end_time: null }],
+        });
+      }
+    }
+    return [...bookings, ...ghosts];
+  })();
+
+  // Filter by type (ghosts inherit session_type from original, exclude from counts)
+  const byType = typeTab === 'all' ? bookingsWithGhosts : bookingsWithGhosts.filter(b => b.session_type === typeTab);
 
   // Filter by search (used in both views)
   const bySearch = byType.filter(b => {
@@ -740,21 +761,35 @@ tr:nth-child(even){background:#f9f9f9}
                 })();
                 const showLiveReminder = b.session_type === 'natalia_solo' && b.live_mode === 'requested' && in4Weeks && statusTab === 'upcoming';
 
-                const hasRecording = statusTab === 'past' && !!b.readySesjaRecordingId;
+                const isGhost = !!b._isGhost;
+                const isPendingReschedule = !isGhost && b.reschedule_status === 'pending';
+                const rowLinkId = b._originalId || b.id;
+
+                const hasRecording = !isGhost && statusTab === 'past' && !!b.readySesjaRecordingId;
                 const isExpanded = expandedRecordingId === b.readySesjaRecordingId;
 
                 return (
-                  <div key={b.id}>
+                  <div key={isGhost ? `ghost-${b._originalId}` : b.id}>
                     <div
                       className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
-                        isToday && statusTab === 'upcoming'
-                          ? 'bg-htg-sage/5 border-htg-sage/30'
-                          : 'bg-htg-card border-htg-card-border'
-                      } ${statusTab === 'past' ? 'opacity-70' : ''}`}
+                        isGhost
+                          ? 'bg-amber-50 border-2 border-dashed border-amber-400 dark:bg-amber-900/10 dark:border-amber-600'
+                          : isPendingReschedule
+                            ? 'bg-amber-50/50 border-amber-300 dark:bg-amber-900/10 dark:border-amber-700 opacity-70'
+                            : isToday && statusTab === 'upcoming'
+                              ? 'bg-htg-sage/5 border-htg-sage/30'
+                              : 'bg-htg-card border-htg-card-border'
+                      } ${!isGhost && statusTab === 'past' ? 'opacity-70' : ''}`}
                     >
-                      <Link href={{pathname: '/konto/admin/planer/[id]', params: {id: b.id}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                      <Link href={{pathname: '/konto/admin/planer/[id]', params: {id: rowLinkId}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {isToday && statusTab === 'upcoming' && (
+                          {isGhost && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-white font-bold">→ Nowy termin</span>
+                          )}
+                          {isPendingReschedule && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-400 font-medium">⟳ Zmiana terminu</span>
+                          )}
+                          {!isGhost && isToday && statusTab === 'upcoming' && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
                           )}
                           <span className="text-xs text-htg-fg-muted font-normal">{getDayShort(slot?.slot_date)}</span>
@@ -793,7 +828,7 @@ tr:nth-child(even){background:#f9f9f9}
                         )}
                       </Link>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>
+                        {!isGhost && <span className={`text-xs px-2 py-1 rounded-full ${ps.className}`}>{ps.label}</span>}
                         {hasRecording && (
                           <>
                             <RowSessionPlayer
@@ -810,11 +845,13 @@ tr:nth-child(even){background:#f9f9f9}
                             </button>
                           </>
                         )}
-                        <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: b.user_id}}}
-                          className="p-1.5 rounded-lg text-htg-fg-muted hover:text-htg-indigo hover:bg-htg-indigo/10 transition-colors"
-                          title="Profil klienta" onClick={e => e.stopPropagation()}>
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
+                        {!isGhost && (
+                          <Link href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: b.user_id}}}
+                            className="p-1.5 rounded-lg text-htg-fg-muted hover:text-htg-indigo hover:bg-htg-indigo/10 transition-colors"
+                            title="Profil klienta" onClick={e => e.stopPropagation()}>
+                            <ExternalLink className="w-4 h-4" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                     {hasRecording && isExpanded && (

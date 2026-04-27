@@ -215,7 +215,7 @@ function MonthCalendar({ bookings, monthKey, onMonthChange, locale, todayStr }: 
                       <div className="font-semibold flex items-center gap-1">
                         {slot?.start_time?.slice(0, 5)}
                         {isGhost && <span className="text-xs font-bold">nowy</span>}
-                        {!isGhost && b.session_type === 'natalia_agata' && <span className="text-xs font-bold">(A)</span>}
+                        {!isGhost && b.created_by_email === 'agata@htg.cyou' && <span className="text-xs font-bold">(A)</span>}
                       </div>
                       <div className="truncate">{client?.display_name || client?.email || '—'}</div>
                     </Link>
@@ -800,7 +800,7 @@ tr:nth-child(even){background:#f9f9f9}
                           <span className={`text-xs font-normal ${isPendingReschedule ? 'text-white/60' : 'text-htg-fg-muted'}`}>{getDayShort(slot?.slot_date)}</span>
                           <span className={`font-bold ${isPendingReschedule ? 'text-white' : 'text-htg-fg'}`}>{slot?.slot_date || '—'}</span>
                           <span className={isPendingReschedule ? 'text-white' : 'text-htg-fg'}>{slot?.start_time?.slice(0, 5) || ''}</span>
-                          {!isGhost && b.session_type === 'natalia_agata' && (
+                          {!isGhost && b.created_by_email === 'agata@htg.cyou' && (
                             <span className={`text-xs font-bold ${isPendingReschedule ? 'text-white' : 'text-htg-fg'}`}>(A)</span>
                           )}
                           {isGhost && <span className="text-xs font-semibold text-htg-fg">nowy</span>}

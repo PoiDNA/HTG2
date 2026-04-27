@@ -797,11 +797,11 @@ tr:nth-child(even){background:#f9f9f9}
                           {!isGhost && isToday && statusTab === 'upcoming' && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
                           )}
-                          <span className="text-xs text-htg-fg-muted font-normal">{getDayShort(slot?.slot_date)}</span>
-                          <span className="font-bold text-htg-fg">{slot?.slot_date || '—'}</span>
-                          <span className="text-htg-fg">{slot?.start_time?.slice(0, 5) || ''}</span>
+                          <span className={`text-xs font-normal ${isPendingReschedule ? 'text-white/60' : 'text-htg-fg-muted'}`}>{getDayShort(slot?.slot_date)}</span>
+                          <span className={`font-bold ${isPendingReschedule ? 'text-white' : 'text-htg-fg'}`}>{slot?.slot_date || '—'}</span>
+                          <span className={isPendingReschedule ? 'text-white' : 'text-htg-fg'}>{slot?.start_time?.slice(0, 5) || ''}</span>
                           {!isGhost && b.session_type === 'natalia_agata' && (
-                            <span className="text-xs font-bold text-htg-fg">(A)</span>
+                            <span className={`text-xs font-bold ${isPendingReschedule ? 'text-white' : 'text-htg-fg'}`}>(A)</span>
                           )}
                           {isGhost && <span className="text-xs font-semibold text-htg-fg">nowy</span>}
                           {typeTab === 'all' && <TypeBadge type={b.session_type} />}

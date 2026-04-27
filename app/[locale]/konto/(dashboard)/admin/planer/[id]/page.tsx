@@ -11,6 +11,7 @@ import { PAYMENT_STATUS_LABELS, SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
 import LiveModeSelector from './LiveModeSelector';
+import RescheduleProposalEditor from './RescheduleProposalEditor';
 import PaymentCommentEditor from '@/app/[locale]/prowadzacy/sesje/[id]/PaymentCommentEditor';
 import SessionTypeSelector from '@/app/[locale]/prowadzacy/sesje/[id]/SessionTypeSelector';
 import ClientNameEditor from '@/app/[locale]/prowadzacy/sesje/[id]/ClientNameEditor';
@@ -49,6 +50,7 @@ export default async function AdminSessionDetailPage({
     .from('bookings')
     .select(`
       id, session_type, status, topics, user_id, payment_status, payment_comment, created_at, transfer_proof_url, transfer_proof_filename, live_mode, completion_status, completion_notes,
+      proposed_slot_date, proposed_start_time, reschedule_status,
       slot:booking_slots(slot_date, start_time, end_time, assistant_id)
     `)
     .eq('id', id)
@@ -210,6 +212,16 @@ export default async function AdminSessionDetailPage({
 
       {/* Payment comment */}
       <PaymentCommentEditor bookingId={booking.id} initialComment={booking.payment_comment || ''} />
+
+      {/* Reschedule proposal */}
+      <RescheduleProposalEditor
+        bookingId={booking.id}
+        currentDate={slot?.slot_date || ''}
+        currentTime={slot?.start_time?.slice(0, 5) || ''}
+        proposedDate={(booking as any).proposed_slot_date ?? null}
+        proposedTime={(booking as any).proposed_start_time?.slice(0, 5) ?? null}
+        rescheduleStatus={(booking as any).reschedule_status ?? null}
+      />
 
       {/* Delete — admin only */}
       {isAdmin && <DeleteSessionButton bookingId={booking.id} locale={locale} returnPath="/konto/admin/planer" />}

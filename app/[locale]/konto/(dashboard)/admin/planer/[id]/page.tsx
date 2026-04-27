@@ -10,6 +10,7 @@ import PaymentStatusBadge from '@/components/staff/PaymentStatusBadge';
 import { PAYMENT_STATUS_LABELS, SESSION_CONFIG } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
+import LiveModeSelector from './LiveModeSelector';
 import PaymentCommentEditor from '@/app/[locale]/prowadzacy/sesje/[id]/PaymentCommentEditor';
 import SessionTypeSelector from '@/app/[locale]/prowadzacy/sesje/[id]/SessionTypeSelector';
 import ClientNameEditor from '@/app/[locale]/prowadzacy/sesje/[id]/ClientNameEditor';
@@ -46,7 +47,7 @@ export default async function AdminSessionDetailPage({
   const { data: booking } = await db
     .from('bookings')
     .select(`
-      id, session_type, status, topics, user_id, payment_status, payment_comment, created_at, transfer_proof_url, transfer_proof_filename,
+      id, session_type, status, topics, user_id, payment_status, payment_comment, created_at, transfer_proof_url, transfer_proof_filename, live_mode,
       slot:booking_slots(slot_date, start_time, end_time, assistant_id)
     `)
     .eq('id', id)
@@ -177,6 +178,14 @@ export default async function AdminSessionDetailPage({
         </div>
       )}
 
+      {/* Live mode — only for natalia_solo */}
+      {booking.session_type === 'natalia_solo' && (
+        <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-3">
+          <h2 className="text-base font-serif font-bold text-htg-fg">Tryb sesji live</h2>
+          <p className="text-xs text-htg-fg-muted">Zaznacz jeśli klient zgłosił chęć sesji na żywo lub jeśli ją potwierdzono.</p>
+          <LiveModeSelector bookingId={booking.id} initialMode={(booking as any).live_mode ?? null} />
+        </div>
+      )}
 
       {/* Topics */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-6">

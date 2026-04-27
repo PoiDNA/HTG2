@@ -1,41 +1,35 @@
 'use client';
 
-// DesertCanvas — Wariant A1: "Oddech światła" (breath of light)
-// Kilka dużych, bardzo miękkich kul światła. Dryfują jak świece w bezwietrznym powietrzu.
-// Ciepłe złoto + blady różowy. Efekt: obecność, ciepło, bezpieczeństwo.
+// DesertCanvas — Wariant B: "Pole energetyczne" (energy field)
+// 30 dużych, miękkich plam światła. Dryfują ledwie zauważalnie, oddychają.
+// Efekt: spokój, przestrzeń, bezpieczeństwo — wspierające tło serwisu duchowego.
 
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useDesignVariant } from '@/lib/design-variant-context';
 
-// ─── Paleta — tylko ciepło i spokój ─────────────────────────────────────────
-const COLORS = [
-  { r: 222, g: 174, b:  68 },  // ciepłe złoto     (--color-htg-warm)
-  { r: 230, g: 190, b:  90 },  // jasne złoto       (świetlistość)
-  { r: 216, g: 168, b: 130 },  // brzoskwiniowo-złoty
-  { r: 210, g: 150, b: 155 },  // blady różowy      (--color-htg-lavender)
-  { r: 225, g: 165, b: 145 },  // ciepły łosoś
-  { r: 235, g: 200, b: 160 },  // kremowa poświata
-] as const;
+// ─── Paleta — ciepłe aureole, spójne z design systemem HTG2 ─────────────────
+// Bardzo niskie opacity — tło oddycha, nie rozprasza
+const ORBS: Array<{ r: number; g: number; b: number }> = [
+  { r: 220, g: 178, b:  72 },  // ciepłe złoto    (--color-htg-warm)
+  { r: 212, g: 158, b: 120 },  // brzoskwiniowy    (pochodna cream)
+  { r: 200, g: 148, b: 158 },  // blady różowy     (--color-htg-lavender)
+  { r: 240, g: 210, b: 150 },  // jasna kremowa    (świetlistość)
+  { r: 190, g: 160, b: 210 },  // delikatny fiolet (głębokość)
+];
 
-interface Candle {
-  x:           number;   // pozycja X (px)
-  y:           number;   // pozycja Y (px)
-  vx:          number;   // bardzo wolny dryf X
-  vy:          number;   // bardzo wolny dryf Y
-  baseR:       number;   // promień bazowy (200–400 px)
-  breathAmp:   number;   // amplituda oddechu — ułamek promienia
-  breathSpeed: number;   // tempo oddechu (rad/ms) — jeden cykl ~30–50 s
-  breathPhase: number;   // faza startowa — każda świeca oddycha inaczej
-  wobbleAmp:   number;   // mikro-chwianie (jak płomień świecy)
-  wobbleSpeed: number;
-  wobblePhase: number;
-  ci:          number;   // indeks koloru
-  maxOpacity:  number;   // peak opacity (0.09–0.18)
+interface Orb {
+  x:           number;   // pozycja X
+  y:           number;   // pozycja Y
+  vx:          number;   // drift poziomy (px/klatkę)
+  vy:          number;   // drift pionowy
+  baseR:       number;   // bazowy promień (80–200 px)
+  breathAmp:   number;   // amplituda oddechu (0.08–0.18 promienia)
+  breathSpeed: number;   // tempo oddechu (rad/klatkę)
+  breathPhase: number;   // faza startowa — każda kula oddycha inaczej
+  ci:          number;   // indeks koloru w ORBS[]
+  maxOpacity:  number;   // max opacity plamy (0.06–0.15)
 }
-
-// Jedno wspólne tempo oddechu dla wszystkich kul — ~40 sekund pełny cykl
-const BREATH_SPEED = 0.000085;  // rad/ms → 2π / 0.000085 ≈ 73 000 ms ≈ 40 s
 
 // ─── Komponent ───────────────────────────────────────────────────────────────
 export default function DesertCanvas() {
@@ -73,40 +67,36 @@ export default function DesertCanvas() {
     }
     resize();
 
-    // ─── Tworzenie świec ──────────────────────────────────────────────────────
-    function makeCandle(i: number, total: number): Candle {
-      // Rozmieść równomiernie po ekranie z losowym przesunięciem
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      const cols = 3;
-      const rows = Math.ceil(total / cols);
+    // ─── Tworzenie pól energetycznych ────────────────────────────────────────
+    function makeOrb(): Orb {
       return {
-        x:           (col + 0.2 + Math.random() * 0.6) * (W / cols),
-        y:           (row + 0.2 + Math.random() * 0.6) * (H / rows),
-        // Jak świeca w bezwietrznym powietrzu — minimalny ruch
-        vx:          (Math.random() - 0.5) * 0.06,
-        vy:          (Math.random() - 0.5) * 0.06,
-        baseR:       200 + Math.random() * 200,    // 200–400 px
-        breathAmp:   0.06 + Math.random() * 0.08,  // ±6–14% promienia
-        breathSpeed: BREATH_SPEED,                 // identyczne tempo dla wszystkich
-        breathPhase: (i / total) * Math.PI * 2,   // równomiernie rozłożone fazy — jak zegar
-        wobbleAmp:   0.015 + Math.random() * 0.01, // mikro-drganie płomienia
-        wobbleSpeed: 0.003 + Math.random() * 0.004,
-        wobblePhase: Math.random() * Math.PI * 2,
-        ci:          i % COLORS.length,
-        maxOpacity:  0.10 + Math.random() * 0.08,  // 0.10–0.18
+        x:           Math.random() * W,
+        y:           Math.random() * H,
+        // Bardzo wolny, ledwie wyczuwalny dryf — 0.05–0.20 px/klatkę
+        vx:          (Math.random() - 0.5) * 0.18,
+        vy:          (Math.random() - 0.5) * 0.18,
+        baseR:       80 + Math.random() * 120,    // 80–200 px
+        breathAmp:   0.08 + Math.random() * 0.10, // ±8–18% promienia
+        breathSpeed: 0.004 + Math.random() * 0.006, // pełen oddech ~20–30 s
+        breathPhase: Math.random() * Math.PI * 2,
+        ci:          Math.floor(Math.random() * ORBS.length),
+        maxOpacity:  0.07 + Math.random() * 0.08, // 0.07–0.15 — subtelne
       };
     }
 
-    const COUNT = 9;  // 9 świec — 3×3 siatka pokrywająca ekran
-    let candles: Candle[] = Array.from({ length: COUNT }, (_, i) => makeCandle(i, COUNT));
+    const COUNT = 30;
+    const orbs: Orb[] = Array.from({ length: COUNT }, makeOrb);
 
     let resizeTimer: ReturnType<typeof setTimeout>;
     const ro = new ResizeObserver(() => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         resize();
-        candles = Array.from({ length: COUNT }, (_, i) => makeCandle(i, COUNT));
+        // Przeskaluj pozycje do nowych wymiarów ekranu
+        for (const o of orbs) {
+          o.x = Math.random() * W;
+          o.y = Math.random() * H;
+        }
       }, 200);
     });
     ro.observe(document.documentElement);
@@ -118,44 +108,30 @@ export default function DesertCanvas() {
 
       if (reducedMotion) return;
 
-      for (const c of candles) {
-        // Oddech — spokojny, głęboki
-        const breathR = c.baseR * (1 + c.breathAmp * Math.sin(t * c.breathSpeed + c.breathPhase));
+      for (const o of orbs) {
+        // Oddech — promień pulsuje spokojnie
+        const r = o.baseR * (1 + o.breathAmp * Math.sin(t * o.breathSpeed + o.breathPhase));
 
-        // Chwianie jak płomień — mikro-przesunięcie centrum
-        const wx = c.wobbleAmp * breathR * Math.sin(t * c.wobbleSpeed + c.wobblePhase);
-        const wy = c.wobbleAmp * breathR * Math.cos(t * c.wobbleSpeed * 0.7 + c.wobblePhase);
+        // Dryf — ledwie zauważalny ruch
+        o.x += o.vx;
+        o.y += o.vy;
 
-        // Dryf — ledwie wyczuwalny
-        c.x += c.vx;
-        c.y += c.vy;
+        // Miękkie odbicie od krawędzi — bez nagłych zmian
+        if (o.x < -r)     { o.x = -r;     o.vx =  Math.abs(o.vx); }
+        if (o.x > W + r)  { o.x = W + r;  o.vx = -Math.abs(o.vx); }
+        if (o.y < -r)     { o.y = -r;     o.vy =  Math.abs(o.vy); }
+        if (o.y > H + r)  { o.y = H + r;  o.vy = -Math.abs(o.vy); }
 
-        // Miękkie granice — świeca obraca się gdy zbliży do krawędzi
-        const margin = breathR * 0.4;
-        if (c.x < margin)        c.vx =  Math.abs(c.vx);
-        if (c.x > W - margin)    c.vx = -Math.abs(c.vx);
-        if (c.y < margin)        c.vy =  Math.abs(c.vy);
-        if (c.y > H - margin)    c.vy = -Math.abs(c.vy);
-
-        const cx = c.x + wx;
-        const cy = c.y + wy;
-
-        // Oddech opacity — to samo tempo co rozmiar, inne fazy → różne momenty cyklu
-        const breathFactor = 0.75 + 0.25 * Math.sin(t * BREATH_SPEED + c.breathPhase);
-        const opacity = c.maxOpacity * breathFactor;
-
-        const { r, g, b } = COLORS[c.ci];
-
-        // Miękka poświata: gradient 3-stopniowy — centrum jaśniejsze, krawędź zanika
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, breathR);
-        grad.addColorStop(0,    `rgba(${r},${g},${b},${(opacity * 0.9).toFixed(3)})`);
-        grad.addColorStop(0.35, `rgba(${r},${g},${b},${(opacity * 0.55).toFixed(3)})`);
-        grad.addColorStop(0.70, `rgba(${r},${g},${b},${(opacity * 0.18).toFixed(3)})`);
-        grad.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+        // Rysuj jako gradient radialny: kolor w centrum → przezroczysty na zewnątrz
+        const { r: cr, g, b } = ORBS[o.ci];
+        const grad = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, r);
+        grad.addColorStop(0,   `rgba(${cr},${g},${b},${o.maxOpacity.toFixed(3)})`);
+        grad.addColorStop(0.5, `rgba(${cr},${g},${b},${(o.maxOpacity * 0.4).toFixed(3)})`);
+        grad.addColorStop(1,   `rgba(${cr},${g},${b},0)`);
 
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(cx, cy, breathR, 0, Math.PI * 2);
+        ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
         ctx.fill();
       }
     }

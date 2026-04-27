@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from '@/i18n-config';
 import { createSupabaseBrowser } from '@/lib/supabase/client';
 import { LogOut, KeyRound, Plus, Trash2, Loader2, Smartphone, X } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface PlanerHeaderProps {
   userEmail: string;
@@ -197,6 +198,7 @@ export default function PlanerHeader({ userEmail, locale }: PlanerHeaderProps) {
         </a>
         <div className="flex items-center gap-2">
           <span className="text-sm text-htg-fg-muted hidden sm:block mr-2">{userEmail}</span>
+          <ThemeToggle />
           <button
             onClick={() => setShowPasskeys(true)}
             className="p-2 rounded-lg text-htg-fg-muted hover:text-htg-sage hover:bg-htg-surface transition-colors"

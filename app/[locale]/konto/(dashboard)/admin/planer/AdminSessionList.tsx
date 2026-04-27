@@ -248,6 +248,9 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
   const [suggestions, setSuggestions] = useState<UserSuggestion[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserSuggestion | null>(null);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  // New-user mode: shown when search returns no results for a valid email
+  const [newUserMode, setNewUserMode] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
   const [sessionType, setSessionType] = useState<string>('natalia_solo');
   const [translatorSlug, setTranslatorSlug] = useState<string>('melania');
   const [slotDate, setSlotDate] = useState(() => {
@@ -262,7 +265,7 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
 
   const fetchSuggestions = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (q.length < 2) { setSuggestions([]); return; }
+    if (q.length < 2) { setSuggestions([]); setNewUserMode(false); return; }
     debounceRef.current = setTimeout(async () => {
       setLoadingSuggestions(true);
       try {
@@ -271,16 +274,28 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
         const results = Array.isArray(data) ? data : [];
         setSuggestions(results);
         const exact = results.find((u: UserSuggestion) => u.email.toLowerCase() === q.toLowerCase());
-        if (exact) { setSelectedUser(exact); setSuggestions([]); }
-      } catch { setSuggestions([]); }
+        if (exact) {
+          setSelectedUser(exact);
+          setSuggestions([]);
+          setNewUserMode(false);
+        } else if (results.length === 0 && q.includes('@') && q.includes('.')) {
+          // Valid-looking email not found — offer new-user creation
+          setNewUserMode(true);
+        } else {
+          setNewUserMode(false);
+        }
+      } catch { setSuggestions([]); setNewUserMode(false); }
       finally { setLoadingSuggestions(false); }
-    }, 250);
+    }, 350);
   }, []);
 
   function handleUserQuery(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;
     setUserQuery(v);
     setSelectedUser(null);
+    setNewUserMode(false);
+    setNewUserName('');
+    setError('');
     fetchSuggestions(v);
   }
 
@@ -288,6 +303,8 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
     setSelectedUser(u);
     setUserQuery(u.email);
     setSuggestions([]);
+    setNewUserMode(false);
+    setNewUserName('');
   }
 
   async function handleSubmit() {
@@ -296,6 +313,28 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
     setSaving(true);
 
     let userId = selectedUser?.id;
+
+    // New-user path: create a guest account first
+    if (!userId && newUserMode) {
+      const emailTrimmed = userQuery.trim().toLowerCase();
+      if (!emailTrimmed.includes('@')) {
+        setSaving(false);
+        setError('Wpisz poprawny adres e-mail klienta.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/admin/users/create-guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailTrimmed, displayName: newUserName.trim() || undefined }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setSaving(false); setError(data.error || 'Nie udało się utworzyć konta.'); return; }
+        userId = data.userId;
+      } catch { setSaving(false); setError('Błąd sieci przy tworzeniu konta.'); return; }
+    }
+
+    // Existing-user fallback: try exact-match search one more time
     if (!userId && userQuery.includes('@')) {
       try {
         const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(userQuery.trim())}`);
@@ -354,6 +393,23 @@ function CreateSessionModal({ locale, onCreated, onClose }: { locale: string; on
               <div className="flex items-center gap-1.5 text-xs text-htg-sage">
                 <UserCheck className="w-3.5 h-3.5" />
                 {selectedUser.display_name ? `${selectedUser.display_name} (${selectedUser.email})` : selectedUser.email}
+              </div>
+            )}
+            {/* New user mode — shown when email not found */}
+            {newUserMode && !selectedUser && (
+              <div className="rounded-lg border border-htg-indigo/30 bg-htg-indigo/5 p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs text-htg-indigo font-medium">
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Nowy klient — nie ma jeszcze konta w systemie
+                </div>
+                <input
+                  type="text"
+                  value={newUserName}
+                  onChange={e => setNewUserName(e.target.value)}
+                  placeholder="Imię i nazwisko (opcjonalnie)"
+                  className="w-full px-3 py-2 bg-htg-surface border border-htg-card-border rounded-lg text-sm text-htg-fg placeholder:text-htg-fg-muted focus:outline-none focus:ring-2 focus:ring-htg-indigo/40"
+                />
+                <p className="text-xs text-htg-fg-muted">Konto zostanie utworzone bez hasła. Klient może ustawić hasło przez reset w mailu.</p>
               </div>
             )}
           </div>

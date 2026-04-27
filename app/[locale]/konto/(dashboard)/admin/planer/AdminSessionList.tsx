@@ -714,6 +714,15 @@ tr:nth-child(even){background:#f9f9f9}
                           <span className="font-bold text-htg-fg">{slot?.slot_date || '—'}</span>
                           <span className="text-htg-fg">{slot?.start_time?.slice(0, 5) || ''}</span>
                           {typeTab === 'all' && <TypeBadge type={b.session_type} />}
+                          {b.live_mode === 'requested' && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-medium">Live?</span>
+                          )}
+                          {b.live_mode === 'confirmed_live' && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-300 dark:border-green-700 font-medium">Live</span>
+                          )}
+                          {b.live_mode === 'confirmed_online' && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300 border border-sky-300 dark:border-sky-700 font-medium">Online</span>
+                          )}
                         </div>
                         <p className="text-sm text-htg-fg-muted mt-0.5">
                           {client?.display_name || client?.email || '—'}

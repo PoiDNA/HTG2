@@ -18,6 +18,7 @@ import DeleteSessionButton from '@/app/[locale]/prowadzacy/sesje/[id]/DeleteSess
 import BookingUserEditor from '@/app/[locale]/prowadzacy/sesje/[id]/BookingUserEditor';
 import SessionTimeEditor from '@/app/[locale]/prowadzacy/sesje/[id]/SessionTimeEditor';
 import SessionDateEditor from '@/app/[locale]/prowadzacy/sesje/[id]/SessionDateEditor';
+import SessionCompletionEditor from './SessionCompletionEditor';
 
 const PAYMENT_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   confirmed_paid:       { label: PAYMENT_STATUS_LABELS.confirmed_paid,       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
@@ -47,7 +48,7 @@ export default async function AdminSessionDetailPage({
   const { data: booking } = await db
     .from('bookings')
     .select(`
-      id, session_type, status, topics, user_id, payment_status, payment_comment, created_at, transfer_proof_url, transfer_proof_filename, live_mode,
+      id, session_type, status, topics, user_id, payment_status, payment_comment, created_at, transfer_proof_url, transfer_proof_filename, live_mode, completion_status, completion_notes,
       slot:booking_slots(slot_date, start_time, end_time, assistant_id)
     `)
     .eq('id', id)
@@ -199,6 +200,13 @@ export default async function AdminSessionDetailPage({
           <p className="text-sm text-htg-fg-muted italic">Klient nie wpisał jeszcze zagadnień.</p>
         )}
       </div>
+
+      {/* Completion status */}
+      <SessionCompletionEditor
+        bookingId={booking.id}
+        initialStatus={(booking.completion_status as 'no_show' | 'cancelled_by_htg' | null) ?? null}
+        initialNotes={booking.completion_notes ?? null}
+      />
 
       {/* Payment comment */}
       <PaymentCommentEditor bookingId={booking.id} initialComment={booking.payment_comment || ''} />

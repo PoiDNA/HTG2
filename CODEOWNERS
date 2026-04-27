@@ -8,3 +8,14 @@
 /lib/supabase/client.ts  @PoiDNA
 /lib/supabase/server.ts  @PoiDNA
 /lib/supabase/service.ts @PoiDNA
+
+# Mobile — ograniczona rezerwa tylko na config natywny i konfig mono-repo.
+# Kod aplikacyjny mobile (ekrany, komponenty, hooki) celowo NIE jest objęty
+# CODEOWNERS żeby nie blokować szybkiego iteracji na scaffold'zie spike'a.
+/apps/mobile/app.config.ts           @PoiDNA
+/apps/mobile/eas.json                @PoiDNA
+/apps/mobile/lib/supabase.ts         @PoiDNA
+/apps/mobile/lib/env.ts              @PoiDNA
+/packages/shared/src/types/**        @PoiDNA
+/packages/shared/src/schemas/**      @PoiDNA
+/app/api/mobile/_lib/**              @PoiDNA

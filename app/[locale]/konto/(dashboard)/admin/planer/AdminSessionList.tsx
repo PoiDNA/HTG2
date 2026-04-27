@@ -67,6 +67,13 @@ const SESSION_TYPE_BADGE: Record<string, { className: string }> = {
 
 const INTERPRETER_TYPES = new Set(['natalia_interpreter_solo', 'natalia_interpreter_asysta', 'natalia_interpreter_para']);
 
+// Maps logged-in staff email → their "own" session type key
+const EMAIL_TO_OWN_SESSION: Partial<Record<string, FilterKey>> = {
+  'agata@htg.cyou':    'natalia_agata',
+  'justyna@htg.cyou':  'natalia_justyna',
+  'operator@htg.cyou': 'natalia_przemek',
+};
+
 import { translators } from '@/lib/staff-config';
 const TRANSLATORS = translators.map(t => ({
   slug: t.slug,
@@ -425,7 +432,8 @@ export default function AdminSessionList({
 }) {
   const router = useRouter();
   const isAdmin = isAdminEmail(adminUserEmail);
-  const [typeTab, setTypeTab] = useState<FilterKey>('all');
+  const mySessionKey = EMAIL_TO_OWN_SESSION[adminUserEmail] ?? null;
+  const [typeTab, setTypeTab] = useState<FilterKey>(mySessionKey ?? 'all');
   const [statusTab, setStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -565,7 +573,14 @@ tr:nth-child(even){background:#f9f9f9}
 
       {/* Type tabs */}
       <div className="flex flex-wrap gap-2">
-        {SESSION_FILTER_TABS.map(cfg => {
+        {(mySessionKey
+          ? [
+              SESSION_FILTER_TABS[0],
+              ...SESSION_FILTER_TABS.filter(t => t.key === mySessionKey),
+              ...SESSION_FILTER_TABS.filter(t => t.key !== 'all' && t.key !== mySessionKey),
+            ]
+          : SESSION_FILTER_TABS
+        ).map(cfg => {
           const count = countForType(cfg.key, statusTab);
           const isActive = typeTab === cfg.key;
           return (
@@ -575,7 +590,7 @@ tr:nth-child(even){background:#f9f9f9}
                   ? cfg.className + ' opacity-100 ring-2 ring-white/20'
                   : 'bg-htg-surface border-htg-card-border text-htg-fg-muted hover:text-htg-fg hover:border-htg-fg-muted/30'
               }`}>
-              <span>{cfg.label}</span>
+              <span>{cfg.label}{cfg.key === mySessionKey ? ' ★' : ''}</span>
               <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
                 isActive ? 'bg-white/20 text-white' : 'bg-htg-card text-htg-fg-muted'
               }`}>{count}</span>

@@ -214,6 +214,7 @@ function MonthCalendar({ bookings, monthKey, onMonthChange, locale, todayStr }: 
                     >
                       <div className="font-semibold flex items-center gap-1">
                         {slot?.start_time?.slice(0, 5)}
+                        {isGhost && b.created_by_email === 'agata@htg.cyou' && <span className="text-xs font-bold">(A)</span>}
                         {isGhost && <span className="text-xs font-bold">nowy</span>}
                         {!isGhost && b.created_by_email === 'agata@htg.cyou' && <span className="text-xs font-bold">(A)</span>}
                       </div>
@@ -858,6 +859,9 @@ tr:nth-child(even){background:#f9f9f9}
                           <span className={isPendingReschedule ? 'text-white' : 'text-htg-fg'}>{slot?.start_time?.slice(0, 5) || ''}</span>
                           {!isGhost && b.created_by_email === 'agata@htg.cyou' && (
                             <span className={`text-xs font-bold ${isPendingReschedule ? 'text-white' : 'text-htg-fg'}`}>(A)</span>
+                          )}
+                          {isGhost && b.created_by_email === 'agata@htg.cyou' && (
+                            <span className="text-xs font-bold text-htg-fg">(A)</span>
                           )}
                           {isGhost && <span className="text-xs font-semibold text-htg-fg">nowy</span>}
                           {typeTab === 'all' && <TypeBadge type={b.session_type} />}

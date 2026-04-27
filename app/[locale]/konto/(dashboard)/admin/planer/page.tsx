@@ -26,7 +26,7 @@ export default async function AdminSessionsPage({ params }: { params: Promise<{ 
   const { data: bookings } = await db
     .from('bookings')
     .select(`
-      id, session_type, status, topics, live_session_id, created_at, payment_status, live_mode,
+      id, session_type, status, topics, live_session_id, created_at, payment_status, live_mode, completion_status,
       slot:booking_slots(slot_date, start_time, end_time),
       user_id,
       recordings:booking_recordings!booking_recordings_booking_id_fkey(

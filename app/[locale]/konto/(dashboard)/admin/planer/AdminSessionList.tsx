@@ -723,6 +723,12 @@ tr:nth-child(even){background:#f9f9f9}
                           {b.live_mode === 'confirmed_online' && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300 border border-sky-300 dark:border-sky-700 font-medium">Online</span>
                           )}
+                          {b.completion_status === 'no_show' && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-medium">Nie stawił się</span>
+                          )}
+                          {b.completion_status === 'cancelled_by_htg' && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border border-red-300 dark:border-red-700 font-medium">Odwołana</span>
+                          )}
                         </div>
                         <p className="text-sm text-htg-fg-muted mt-0.5">
                           {client?.display_name || client?.email || '—'}

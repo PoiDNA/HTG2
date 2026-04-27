@@ -64,13 +64,11 @@ export default function SessionCompletionEditor({
     }
   }
 
-  const activeOption = OPTIONS.find(o => o.value === status) ?? OPTIONS[0];
-
   return (
     <div className="bg-htg-card border border-htg-card-border rounded-xl p-6 space-y-4">
       <h2 className="text-base font-serif font-bold text-htg-fg flex items-center gap-2">
         <AlertTriangle className="w-4 h-4 text-amber-400" />
-        Status realizacji sesji
+        Uwagi do sesji
       </h2>
 
       {/* Radio options */}

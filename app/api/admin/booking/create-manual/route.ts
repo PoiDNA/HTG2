@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { canEditSesje } from '@/lib/staff-config';
 import { SESSION_CONFIG, isInterpreterSessionType } from '@/lib/booking/constants';
 import type { SessionType } from '@/lib/booking/types';
 
@@ -18,7 +19,9 @@ export async function POST(req: NextRequest) {
 
   const db = createSupabaseServiceRole();
   const { data: profile } = await db.from('profiles').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (profile?.role !== 'admin' && !canEditSesje(user.email)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const {
     userId, sessionType, slotDate, startTime, endTime, paymentStatus, topics,
@@ -103,6 +106,7 @@ export async function POST(req: NextRequest) {
       payment_status: paymentStatus || 'pending_verification',
       topics: topics || null,
       interpreter_locale: interpreterLocale,
+      created_by_email: user.email ?? null,
     })
     .select('id')
     .single();

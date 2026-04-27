@@ -437,7 +437,7 @@ export default function AdminSessionList({
   const router = useRouter();
   const isAdmin = isAdminEmail(adminUserEmail);
   const mySessionKey = EMAIL_TO_OWN_SESSION[adminUserEmail] ?? null;
-  const [typeTab, setTypeTab] = useState<FilterKey>(mySessionKey ?? 'all');
+  const [typeTab, setTypeTab] = useState<FilterKey>('all');
   const [showOtherTabs, setShowOtherTabs] = useState(false);
   const [statusTab, setStatusTab] = useState<'upcoming' | 'past'>('upcoming');
   const [search, setSearch] = useState('');

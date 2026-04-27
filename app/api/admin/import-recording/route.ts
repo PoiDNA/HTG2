@@ -124,7 +124,10 @@ export async function POST(request: NextRequest) {
         status: 'uploading',
         import_filename: fileName || null,
         import_confidence: 'admin_assigned',
-        expires_at: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+        // Admin-imported recordings (HTG Sessions) have no time limit —
+        // legal_hold bypasses both expires_at and global retention policy.
+        legal_hold: true,
+        expires_at: '2099-12-31T23:59:59Z',
         metadata: {
           imported_by: user.email,
           imported_at: new Date().toISOString(),

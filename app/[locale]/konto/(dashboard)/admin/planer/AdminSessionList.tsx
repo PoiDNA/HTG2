@@ -201,14 +201,16 @@ function MonthCalendar({ bookings, monthKey, onMonthChange, locale, todayStr }: 
                       href={{ pathname: '/konto/admin/planer/[id]', params: { id: linkId } }}
                       className={`block p-1 rounded cursor-pointer hover:opacity-75 transition-opacity ${
                         isGhost
-                          ? 'border-2 border-dashed border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-900/20 dark:text-amber-200'
+                          ? 'border-2 border-dashed border-htg-fg bg-htg-card'
                           : isPendingReschedule
-                            ? (tb?.className || 'bg-htg-surface') + ' ring-2 ring-amber-400 ring-inset opacity-60'
+                            ? (tb?.className || 'bg-htg-surface') + ' ring-2 ring-htg-fg ring-inset opacity-60'
                             : (tb?.className || 'bg-htg-surface text-htg-fg-muted')
                       }`}
                     >
-                      <div className="font-semibold">{slot?.start_time?.slice(0, 5)}</div>
-                      {isGhost && <div className="text-xs font-bold">→ nowy</div>}
+                      <div className="font-semibold flex items-center gap-1">
+                        {slot?.start_time?.slice(0, 5)}
+                        {isGhost && <span className="text-xs font-bold">nowy</span>}
+                      </div>
                       <div className="truncate">{client?.display_name || client?.email || '—'}</div>
                     </Link>
                   );
@@ -773,9 +775,9 @@ tr:nth-child(even){background:#f9f9f9}
                     <div
                       className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
                         isGhost
-                          ? 'bg-amber-50 border-2 border-dashed border-amber-400 dark:bg-amber-900/10 dark:border-amber-600'
+                          ? 'bg-htg-card border-2 border-dashed border-htg-fg dark:border-htg-fg'
                           : isPendingReschedule
-                            ? 'bg-amber-50/50 border-amber-300 dark:bg-amber-900/10 dark:border-amber-700 opacity-70'
+                            ? 'bg-htg-card border-2 border-htg-fg dark:border-htg-fg opacity-70'
                             : isToday && statusTab === 'upcoming'
                               ? 'bg-htg-sage/5 border-htg-sage/30'
                               : 'bg-htg-card border-htg-card-border'
@@ -783,11 +785,8 @@ tr:nth-child(even){background:#f9f9f9}
                     >
                       <Link href={{pathname: '/konto/admin/planer/[id]', params: {id: rowLinkId}}} className="flex-1 min-w-0 hover:opacity-80 transition-opacity">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {isGhost && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-400 text-white font-bold">→ Nowy termin</span>
-                          )}
                           {isPendingReschedule && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-400 font-medium">⟳ Zmiana terminu</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-htg-surface text-htg-fg-muted border border-htg-fg/30 font-medium">⟳ zmiana terminu</span>
                           )}
                           {!isGhost && isToday && statusTab === 'upcoming' && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-htg-sage text-white font-bold">DZIŚ</span>
@@ -795,6 +794,7 @@ tr:nth-child(even){background:#f9f9f9}
                           <span className="text-xs text-htg-fg-muted font-normal">{getDayShort(slot?.slot_date)}</span>
                           <span className="font-bold text-htg-fg">{slot?.slot_date || '—'}</span>
                           <span className="text-htg-fg">{slot?.start_time?.slice(0, 5) || ''}</span>
+                          {isGhost && <span className="text-xs font-semibold text-htg-fg">nowy</span>}
                           {typeTab === 'all' && <TypeBadge type={b.session_type} />}
                           {b.live_mode === 'requested' && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-medium">Live?</span>

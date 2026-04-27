@@ -682,6 +682,17 @@ tr:nth-child(even){background:#f9f9f9}
                 const isToday = slot?.slot_date === todayStr;
                 const ps = PAYMENT_STATUS_BADGE[b.payment_status] || { label: '—', className: 'bg-htg-surface text-htg-fg-muted' };
 
+                // Live mode reminder: natalia_solo + requested + within 4 weeks
+                const in4Weeks = (() => {
+                  const d = slot?.slot_date;
+                  if (!d) return false;
+                  const plus28 = new Date(todayStr);
+                  plus28.setDate(plus28.getDate() + 28);
+                  const plus28Str = plus28.toISOString().slice(0, 10);
+                  return d >= todayStr && d <= plus28Str;
+                })();
+                const showLiveReminder = b.session_type === 'natalia_solo' && b.live_mode === 'requested' && in4Weeks && statusTab === 'upcoming';
+
                 const hasRecording = statusTab === 'past' && !!b.readySesjaRecordingId;
                 const isExpanded = expandedRecordingId === b.readySesjaRecordingId;
 
@@ -712,6 +723,11 @@ tr:nth-child(even){background:#f9f9f9}
                         </p>
                         {b.topics && statusTab === 'upcoming' && (
                           <p className="text-xs text-htg-fg-muted mt-0.5 line-clamp-1">📝 {b.topics}</p>
+                        )}
+                        {showLiveReminder && (
+                          <p className="text-xs mt-1 font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                            ⚠ Potwierdzić tryb live lub online?
+                          </p>
                         )}
                       </Link>
                       <div className="flex items-center gap-2 shrink-0">

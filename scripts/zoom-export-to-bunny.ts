@@ -231,11 +231,18 @@ async function listUserMeetings(userId: string, from: string, to: string): Promi
 
 /** Fetch full meeting recording details including participant_audio_files. */
 async function getMeetingRecordings(meetingUuid: string): Promise<ZoomMeeting | null> {
-  // Double-encode UUID if it contains / or + (Zoom requirement)
-  const encoded = encodeURIComponent(encodeURIComponent(meetingUuid));
+  // Zoom requires double-encoding only when UUID starts with "/" or contains "//"
+  const needsDouble = meetingUuid.startsWith('/') || meetingUuid.includes('//');
+  const encoded = needsDouble
+    ? encodeURIComponent(encodeURIComponent(meetingUuid))
+    : encodeURIComponent(meetingUuid);
   try {
-    return await zoomGet<ZoomMeeting>(`/meetings/${encoded}/recordings`);
+    const result = await zoomGet<ZoomMeeting>(`/meetings/${encoded}/recordings`);
+    const audioCount = result.participant_audio_files?.length ?? 0;
+    if (audioCount > 0) log(`      → ${audioCount} participant audio file(s)`);
+    return result;
   } catch (e) {
+    log(`      ! getMeetingRecordings failed for ${meetingUuid}: ${(e as Error).message}`);
     return null;
   }
 }

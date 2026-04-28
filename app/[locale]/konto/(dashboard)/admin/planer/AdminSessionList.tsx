@@ -71,6 +71,15 @@ const EMAIL_TO_OWN_SESSION: Partial<Record<string, FilterKey>> = {
   'operator@htg.cyou': 'natalia_przemek',
 };
 
+// Staff who see tabs collapsed into "inne" even without an own session type
+// (e.g. Natalia sees all session types but still prefers compact default view)
+const USES_COLLAPSED_TABS = new Set([
+  'natalia@htg.cyou',
+  'agata@htg.cyou',
+  'justyna@htg.cyou',
+  'operator@htg.cyou',
+]);
+
 import { translators } from '@/lib/staff-config';
 const TRANSLATORS = translators.map(t => ({
   slug: t.slug,
@@ -657,11 +666,12 @@ tr:nth-child(even){background:#f9f9f9}
 
       {/* Type tabs */}
       {(() => {
-        const primaryTabs = mySessionKey
-          ? [SESSION_FILTER_TABS[0], ...SESSION_FILTER_TABS.filter(t => t.key === mySessionKey)]
+        const useCollapsed = USES_COLLAPSED_TABS.has(adminUserEmail) || !!mySessionKey;
+        const primaryTabs = useCollapsed
+          ? [SESSION_FILTER_TABS[0], ...(mySessionKey ? SESSION_FILTER_TABS.filter(t => t.key === mySessionKey) : [])]
           : SESSION_FILTER_TABS;
-        const otherTabs = mySessionKey
-          ? SESSION_FILTER_TABS.filter(t => t.key !== 'all' && t.key !== mySessionKey)
+        const otherTabs = useCollapsed
+          ? SESSION_FILTER_TABS.filter(t => t.key !== 'all' && (mySessionKey ? t.key !== mySessionKey : true))
           : [];
         const otherActiveCount = otherTabs.reduce((sum, t) => sum + countForType(t.key, statusTab), 0);
 

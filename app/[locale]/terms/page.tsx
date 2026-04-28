@@ -55,7 +55,16 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
         Zasady naszej wspólnej przestrzeni
       </h1>
       <p className="text-htg-fg-muted text-sm mb-2">Regulamin Sesji Hacking&nbsp;The&nbsp;Game</p>
-      <p className="text-htg-fg-muted text-sm mb-8">Wersja 4.1 · obowiązuje od 28 kwietnia 2026&nbsp;r.</p>
+      <p className="text-htg-fg-muted text-sm mb-3">Wersja 4.1 · obowiązuje od 28 kwietnia 2026&nbsp;r.</p>
+      <p className="mb-8">
+        <a
+          href="/regulamin-htg-v4.1.docx"
+          download
+          className="inline-flex items-center gap-2 text-sm text-htg-sage hover:underline"
+        >
+          📄 Pobierz Regulamin (.docx)
+        </a>
+      </p>
 
       {/* ── Intro ── */}
       <div className="bg-htg-card border border-htg-card-border rounded-xl p-5 mb-10 text-sm text-htg-fg leading-relaxed">

@@ -148,6 +148,7 @@ interface ZoomRecordingFile {
   download_url: string;
   status: string;
   recording_type?: string;
+  file_name?: string; // present on participant_audio_files, e.g. "Audio only - Agata HTG.m4a"
 }
 
 interface ZoomMeeting {
@@ -330,14 +331,32 @@ function safeSegment(s: string): string {
     .slice(0, 120);
 }
 
+function participantNameFromFile(file: ZoomRecordingFile): string {
+  if (!file.file_name) return file.id;
+  // Zoom names participant audio files like "Audio only - Agata HTG.m4a"
+  // Strip common prefixes and extension, return sanitized participant name
+  let name = file.file_name
+    .replace(/\.[^.]+$/, '')            // strip extension
+    .replace(/^Audio only\s*-\s*/i, '') // strip "Audio only - "
+    .replace(/^Tylko dzwiek\s*-\s*/i, '') // strip Polish variant
+    .trim();
+  return name || file.id;
+}
+
 function bunnyPathForFile(meeting: ZoomMeeting, file: ZoomRecordingFile): string {
   const date = (file.recording_start || meeting.start_time || '').slice(0, 10);
   const year = date.slice(0, 4);
-  // Use meeting topic as folder name (original Zoom name), fall back to meeting ID
   const folderName = meeting.topic ? safeSegment(meeting.topic) : String(meeting.id);
-  const recType = safeSegment(file.recording_type || file.file_type || 'file');
-  // Use file_extension if present, otherwise derive from file_type (e.g. M4A → m4a)
   const ext = (file.file_extension || file.file_type || 'bin').toLowerCase();
+
+  // Participant audio files (M4A, no recording_type): <topic>_<participant>.m4a
+  const isParticipantAudio = file.file_type === 'M4A' && !file.recording_type;
+  if (isParticipantAudio) {
+    const participant = safeSegment(participantNameFromFile(file));
+    return `${ARCHIVE_PREFIX}/${year}/${date}/${folderName}/${folderName}_${participant}.${ext}`;
+  }
+
+  const recType = safeSegment(file.recording_type || file.file_type || 'file');
   return `${ARCHIVE_PREFIX}/${year}/${date}/${folderName}/${recType}-${file.id}.${ext}`;
 }
 

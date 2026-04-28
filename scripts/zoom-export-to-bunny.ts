@@ -318,16 +318,18 @@ async function downloadZoomFile(downloadUrl: string, destPath: string): Promise<
 // ── Path computation ─────────────────────────────────────────────────────
 
 function safeSegment(s: string): string {
-  return s.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80);
+  return s.replace(/[^a-zA-Z0-9._@-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 120);
 }
 
 function bunnyPathForFile(meeting: ZoomMeeting, file: ZoomRecordingFile): string {
   const date = (file.recording_start || meeting.start_time || '').slice(0, 10);
   const year = date.slice(0, 4);
-  const meetingId = String(meeting.id);
+  // Use meeting topic as folder name (original Zoom name), fall back to meeting ID
+  const folderName = meeting.topic ? safeSegment(meeting.topic) : String(meeting.id);
   const recType = safeSegment(file.recording_type || file.file_type || 'file');
-  const ext = (file.file_extension || 'bin').toLowerCase();
-  return `${ARCHIVE_PREFIX}/${year}/${date}/${meetingId}/${recType}-${file.id}.${ext}`;
+  // Use file_extension if present, otherwise derive from file_type (e.g. M4A → m4a)
+  const ext = (file.file_extension || file.file_type || 'bin').toLowerCase();
+  return `${ARCHIVE_PREFIX}/${year}/${date}/${folderName}/${recType}-${file.id}.${ext}`;
 }
 
 function shouldKeep(file: ZoomRecordingFile): boolean {

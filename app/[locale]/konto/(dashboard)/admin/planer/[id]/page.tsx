@@ -110,28 +110,33 @@ export default async function AdminSessionDetailPage({
           {SESSION_CONFIG[booking.session_type as SessionType]?.label || booking.session_type}
         </h1>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2 text-htg-fg-muted">
-            <Calendar className="w-4 h-4" />
-            <SessionDateEditor bookingId={booking.id} initialDate={slot?.slot_date || ''} />
+        <div className="space-y-3 text-sm">
+          {/* Row 1: date + time — whitespace-nowrap prevents date wrapping on mobile */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-htg-fg-muted whitespace-nowrap">
+              <Calendar className="w-4 h-4 shrink-0" />
+              <SessionDateEditor bookingId={booking.id} initialDate={slot?.slot_date || ''} />
+            </div>
+            <div className="flex items-center gap-2 text-htg-fg-muted">
+              <Clock className="w-4 h-4 shrink-0" />
+              <SessionTimeEditor bookingId={booking.id} initialTime={slot?.start_time?.slice(0, 5) || '09:00'} />
+            </div>
           </div>
+          {/* Row 2: client name — full width so long names stay on one line */}
           <div className="flex items-center gap-2 text-htg-fg-muted">
-            <Clock className="w-4 h-4" />
-            <SessionTimeEditor bookingId={booking.id} initialTime={slot?.start_time?.slice(0, 5) || '09:00'} />
-          </div>
-          <div className="flex items-center gap-2 text-htg-fg-muted">
-            <User className="w-4 h-4" />
+            <User className="w-4 h-4 shrink-0" />
             <ClientNameEditor userId={booking.user_id} initialName={clientProfile?.display_name || ''} />
             <Link
               href={{pathname: '/konto/admin/uzytkownicy/[id]', params: {id: booking.user_id}}}
-              className="text-htg-indigo hover:text-htg-indigo/70 transition-colors"
+              className="text-htg-indigo hover:text-htg-indigo/70 transition-colors shrink-0"
               title="Profil użytkownika"
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
           </div>
+          {/* Row 3: email — full width beneath name */}
           <div className="flex items-center gap-2 text-htg-fg-muted">
-            <Mail className="w-4 h-4" />
+            <Mail className="w-4 h-4 shrink-0" />
             <BookingUserEditor
               bookingId={booking.id}
               currentUserId={booking.user_id}
@@ -244,15 +249,21 @@ export default async function AdminSessionDetailPage({
                 <Link
                   key={h.id}
                   href={{pathname: '/konto/admin/planer/[id]', params: {id: h.id}}}
-                  className={`flex items-center gap-3 p-2 rounded-lg text-sm transition-colors ${
+                  className={`flex flex-col gap-0.5 p-2 rounded-lg text-sm transition-colors ${
                     isCurrent ? 'bg-htg-sage/10 border border-htg-sage/30' : 'hover:bg-htg-surface/50'
                   }`}
                 >
-                  <span className="text-htg-fg-muted w-24 shrink-0">{hSlot?.slot_date || '—'}</span>
-                  <span className="text-htg-fg w-14 shrink-0">{hSlot?.start_time?.slice(0, 5) || ''}</span>
-                  <span className="text-xs text-htg-fg-muted flex-1">{SESSION_CONFIG[h.session_type as SessionType]?.labelShort || h.session_type}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${hPs.className}`}>{hPs.label}</span>
-                  {isCurrent && <span className="text-xs text-htg-sage font-bold">← ta sesja</span>}
+                  {/* Row 1: date + time */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-htg-fg-muted w-24 shrink-0 whitespace-nowrap">{hSlot?.slot_date || '—'}</span>
+                    <span className="text-htg-fg w-14 shrink-0">{hSlot?.start_time?.slice(0, 5) || ''}</span>
+                    {isCurrent && <span className="text-xs text-htg-sage font-bold">← ta sesja</span>}
+                  </div>
+                  {/* Row 2: session type + payment badge */}
+                  <div className="flex items-center gap-2 pl-0">
+                    <span className="text-xs text-htg-fg-muted">{SESSION_CONFIG[h.session_type as SessionType]?.labelShort || h.session_type}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${hPs.className}`}>{hPs.label}</span>
+                  </div>
                 </Link>
               );
             })}

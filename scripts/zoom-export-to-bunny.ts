@@ -349,15 +349,17 @@ function bunnyPathForFile(meeting: ZoomMeeting, file: ZoomRecordingFile): string
   const folderName = meeting.topic ? safeSegment(meeting.topic) : String(meeting.id);
   const ext = (file.file_extension || file.file_type || 'bin').toLowerCase();
 
-  // Participant audio files (M4A, no recording_type): <topic>_<participant>.m4a
+  // Participant audio files (M4A, no recording_type): <topic>_<date>_<participant>.m4a
   const isParticipantAudio = file.file_type === 'M4A' && !file.recording_type;
   if (isParticipantAudio) {
     const participant = safeSegment(participantNameFromFile(file));
-    return `${ARCHIVE_PREFIX}/${year}/${date}/${folderName}/${folderName}_${participant}.${ext}`;
+    return `${ARCHIVE_PREFIX}/${year}/${date}/${folderName}/${folderName}_${date}_${participant}.${ext}`;
   }
 
+  // All other files: <topic>_<date>_<recording_type>_<shortId>.<ext>
   const recType = safeSegment(file.recording_type || file.file_type || 'file');
-  return `${ARCHIVE_PREFIX}/${year}/${date}/${folderName}/${recType}-${file.id}.${ext}`;
+  const shortId = file.id.replace(/-/g, '').slice(0, 8);
+  return `${ARCHIVE_PREFIX}/${year}/${date}/${folderName}/${folderName}_${date}_${recType}_${shortId}.${ext}`;
 }
 
 function shouldKeep(file: ZoomRecordingFile): boolean {

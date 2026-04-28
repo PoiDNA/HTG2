@@ -229,6 +229,17 @@ async function listUserMeetings(userId: string, from: string, to: string): Promi
   return all;
 }
 
+/** Fetch full meeting recording details including participant_audio_files. */
+async function getMeetingRecordings(meetingUuid: string): Promise<ZoomMeeting | null> {
+  // Double-encode UUID if it contains / or + (Zoom requirement)
+  const encoded = encodeURIComponent(encodeURIComponent(meetingUuid));
+  try {
+    return await zoomGet<ZoomMeeting>(`/meetings/${encoded}/recordings`);
+  } catch (e) {
+    return null;
+  }
+}
+
 // ── Bunny ────────────────────────────────────────────────────────────────
 
 function bunnyUrl(path: string): string {
@@ -383,7 +394,9 @@ async function main() {
       if (meetings.length === 0) continue;
       log(`  ${win.from}..${win.to}: ${meetings.length} meetings`);
 
-      for (const meeting of meetings) {
+      for (const meetingSummary of meetings) {
+        // Fetch full recording details — list endpoint omits participant_audio_files
+        const meeting = (await getMeetingRecordings(meetingSummary.uuid)) || meetingSummary;
         const files = [
           ...(meeting.recording_files || []),
           ...(meeting.participant_audio_files || []),

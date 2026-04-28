@@ -1,5 +1,9 @@
 import { setRequestLocale } from 'next-intl/server';
 import { locales } from '@/i18n-config';
+import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseServiceRole } from '@/lib/supabase/service';
+import { isAdminEmail } from '@/lib/roles';
+import { ContractsSection, type OperatorContract } from './ContractsSection';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -8,6 +12,9 @@ export function generateStaticParams() {
 export const metadata = {
   title: 'Regulamin Operatora · HTG',
 };
+
+// Dynamic — needs auth check and DB fetch
+export const dynamic = 'force-dynamic';
 
 /* ------------------------------------------------------------------ */
 /*  Reusable styled components for legal pages                        */
@@ -42,6 +49,22 @@ function Why({ children }: { children: React.ReactNode }) {
 export default async function OperatorTermsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  // Auth check (non-blocking — page is public, but admin gets upload UI)
+  let isAdmin = false;
+  try {
+    const sessionClient = await createSupabaseServer();
+    const { data: { user } } = await sessionClient.auth.getUser();
+    if (user?.email) isAdmin = isAdminEmail(user.email);
+  } catch { /* unauthenticated visitors are fine */ }
+
+  // Fetch signed contracts
+  const db = createSupabaseServiceRole();
+  const { data: contracts } = await db
+    .from('operator_signed_contracts')
+    .select('id, operator_name, operator_email, cdn_url, file_name, signed_by, uploaded_at')
+    .order('uploaded_at', { ascending: false });
+
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
@@ -430,6 +453,12 @@ export default async function OperatorTermsPage({ params }: { params: Promise<{ 
           Naprawdę chcemy, żeby ten dokument był dobry dla obu stron.
         </p>
       </div>
+
+      {/* ── Signed contracts ── */}
+      <ContractsSection
+        initialContracts={(contracts ?? []) as OperatorContract[]}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }

@@ -92,6 +92,15 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
   const [giftEmail, setGiftEmail] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
   const [clientEmail, setClientEmail] = useState('');
+
+  // Required consents (Regulamin v4.1: pkt 3.3, 5.2, 7.1 + 8.1)
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptStartService, setAcceptStartService] = useState(false);
+  const [acceptCancelTerms, setAcceptCancelTerms] = useState(false);
+  // Optional consents (Regulamin v4.1: pkt 8.4)
+  const [consentZ2, setConsentZ2] = useState(false);
+  const [consentZ3, setConsentZ3] = useState(false);
+  const consentsOk = acceptTerms && acceptStartService && acceptCancelTerms;
   const router = useRouter();
 
   // Fetch user email client-side if not provided via prop
@@ -232,6 +241,15 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
 
   async function handleCheckout() {
     if (!selectedSession || payAmount <= 0) return;
+    if (!consentsOk) return;
+    const consentMeta = {
+      consent_terms_v4_1: 'true',
+      consent_start_service: 'true',
+      consent_cancel_terms: 'true',
+      consent_z2_social: consentZ2 ? 'true' : 'false',
+      consent_z3_info: consentZ3 ? 'true' : 'false',
+      consent_accepted_at: new Date().toISOString(),
+    };
     // Bank transfer flow
     if (paymentMethod === 'transfer' && paymentMode === 'full') {
       if (!proofFile) return;
@@ -264,6 +282,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             proofFilename: proofFile.name,
             ...(isGift && giftEmail && { giftEmail: giftEmail.trim().toLowerCase() }),
             ...(isGift && giftMessage.trim() && { giftMessage: giftMessage.trim() }),
+            consents: consentMeta,
           }),
         });
         const data = await res.json();
@@ -297,6 +316,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             sessionType: selectedSession.sessionType,
             assistantId: isAsystaSession ? (selectedOperatorForSlot?.id ?? null) : null,
             paymentMethod: 'stripe_pending',
+            consents: consentMeta,
           }),
         });
         const reserveData = await reserveRes.json();
@@ -327,6 +347,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
               installments_total: paymentMode === 'installments' ? String(installmentsCount) : undefined,
               ...(isGift && giftEmail && { gift_for_email: giftEmail.trim().toLowerCase() }),
               ...(isGift && giftMessage.trim() && { gift_message: giftMessage.trim() }),
+              ...consentMeta,
             },
           }),
         });
@@ -364,6 +385,7 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             installments_total: paymentMode === 'installments' ? String(installmentsCount) : undefined,
             ...(isGift && giftEmail && { gift_for_email: giftEmail.trim().toLowerCase() }),
             ...(isGift && giftMessage.trim() && { gift_message: giftMessage.trim() }),
+            ...consentMeta,
           },
         }),
       });
@@ -886,11 +908,84 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
           </div>
 
 
+          {/* Consents (Regulamin v4.1) */}
+          <div className="rounded-xl border border-htg-card-border bg-htg-surface p-4 space-y-3 text-sm">
+            <p className="font-medium text-htg-fg">Zgody i potwierdzenia</p>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptTerms}
+                onChange={e => setAcceptTerms(e.target.checked)}
+                className="mt-0.5 rounded border-htg-card-border accent-htg-sage w-4 h-4 shrink-0"
+              />
+              <span className="text-htg-fg leading-relaxed">
+                Akceptuję{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-htg-sage hover:underline">Regulamin Sesji HTG</a>
+                {' '}oraz{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-htg-sage hover:underline">Politykę Prywatności</a>.
+                Rozumiem, że nagrywanie sesji oraz publikacja w kanałach HTG (Biblioteka Nagrań HTG, kanał YouTube HTG, htgcyou.com, tłumaczenia) są elementem usługi (pkt&nbsp;7.1 i 8.1 Regulaminu).
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptStartService}
+                onChange={e => setAcceptStartService(e.target.checked)}
+                className="mt-0.5 rounded border-htg-card-border accent-htg-sage w-4 h-4 shrink-0"
+              />
+              <span className="text-htg-fg leading-relaxed">
+                Żądam rozpoczęcia świadczenia usługi przed upływem 14&nbsp;dni od zawarcia umowy i przyjmuję do wiadomości, że po pełnym wykonaniu usługi tracę prawo odstąpienia (pkt&nbsp;3.3 Regulaminu, art.&nbsp;38 pkt&nbsp;1 ustawy o prawach konsumenta).
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptCancelTerms}
+                onChange={e => setAcceptCancelTerms(e.target.checked)}
+                className="mt-0.5 rounded border-htg-card-border accent-htg-sage w-4 h-4 shrink-0"
+              />
+              <span className="text-htg-fg leading-relaxed">
+                Akceptuję warunki odwołania: <strong>odwołanie później niż 14&nbsp;dni od daty rezerwacji skutkuje brakiem zwrotu wpłaconych środków</strong> (pkt&nbsp;5.2 Regulaminu).
+              </span>
+            </label>
+
+            <div className="border-t border-htg-card-border pt-3 space-y-3">
+              <p className="text-xs text-htg-fg-muted">Zgody dobrowolne (możesz je w każdej chwili wycofać):</p>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consentZ2}
+                  onChange={e => setConsentZ2(e.target.checked)}
+                  className="mt-0.5 rounded border-htg-card-border accent-htg-warm w-4 h-4 shrink-0"
+                />
+                <span className="text-htg-fg leading-relaxed">
+                  <strong>Z2 — Media społecznościowe.</strong> Zezwalam na publikację nagrania (z moim wizerunkiem i głosem) w mediach społecznościowych Hacking&nbsp;The&nbsp;Game (Instagram, Facebook, TikTok, LinkedIn).
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consentZ3}
+                  onChange={e => setConsentZ3(e.target.checked)}
+                  className="mt-0.5 rounded border-htg-card-border accent-htg-warm w-4 h-4 shrink-0"
+                />
+                <span className="text-htg-fg leading-relaxed">
+                  <strong>Z3 — Materiały informacyjne.</strong> Zezwalam na wykorzystanie fragmentów nagrania w materiałach informacyjnych Administratora Serwisu (reklamy, newslettery, prezentacje, materiały eventowe).
+                </span>
+              </label>
+            </div>
+          </div>
+
           {/* Buy button */}
           <div>
             <button
               onClick={handleCheckout}
-              disabled={loading || (!selectedSlotId && !wantAcceleration) || (paymentMethod === 'stripe' && !selectedSession?.priceId) || (paymentMethod === 'transfer' && (!proofFile || !selectedSlotId)) || (isGift && !giftEmail.trim()) || (isWithAssistant && !!selectedSlotId && !selectedOperatorForSlot)}
+              disabled={loading || !consentsOk || (!selectedSlotId && !wantAcceleration) || (paymentMethod === 'stripe' && !selectedSession?.priceId) || (paymentMethod === 'transfer' && (!proofFile || !selectedSlotId)) || (isGift && !giftEmail.trim()) || (isWithAssistant && !!selectedSlotId && !selectedOperatorForSlot)}
               className="w-full bg-htg-sage text-white py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -926,6 +1021,9 @@ export function SessionPicker({ sessions, userEmail, labels }: SessionPickerProp
             )}
             {paymentMethod === 'transfer' && !proofFile && (
               <p className="text-xs text-htg-warm text-center mt-2">Załącz potwierdzenie przelewu</p>
+            )}
+            {!consentsOk && (
+              <p className="text-xs text-htg-warm text-center mt-2">Zaznacz wymagane zgody powyżej</p>
             )}
             <p className="text-xs text-htg-fg-muted text-center mt-3">{labels.cancel_policy}</p>
           </div>

@@ -595,7 +595,14 @@ export default function AdminSessionList({
   };
   const upcomingSorted = [...upcoming].sort(sortAsc);
   const pastSorted = [...past].sort((a, b) => -sortAsc(a, b));
-  const current = statusTab === 'upcoming' ? upcomingSorted : pastSorted;
+  // When a date range is active, the upcoming/past split no longer makes sense —
+  // show every session in range (past + upcoming together), newest first.
+  // Otherwise honour the tab.
+  const hasDateRange = !!(dateFrom || dateTo);
+  const dateRangeSorted = [...byDateRange].sort((a, b) => -sortAsc(a, b));
+  const current = hasDateRange
+    ? dateRangeSorted
+    : statusTab === 'upcoming' ? upcomingSorted : pastSorted;
 
   const filtered = current.filter(b => {
     if (!q) return true;
@@ -646,18 +653,19 @@ tr:nth-child(even){background:#f9f9f9}
 
   return (
     <div className="space-y-4">
-      {/* Status tabs */}
-      <div className="flex gap-1 bg-htg-surface rounded-xl p-1">
+      {/* Status tabs (visually disabled when date range overrides them) */}
+      <div className={`flex gap-1 bg-htg-surface rounded-xl p-1 ${hasDateRange ? 'opacity-50' : ''}`}
+        title={hasDateRange ? 'Zakres dat ma pierwszeństwo — pokazujemy wszystkie sesje w wybranym przedziale' : undefined}>
         <button onClick={() => setStatusTab('upcoming')}
           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-            statusTab === 'upcoming' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
+            statusTab === 'upcoming' && !hasDateRange ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
           }`}>
           <Calendar className="w-4 h-4" />
           Nadchodzące ({upcomingSorted.length})
         </button>
         <button onClick={() => setStatusTab('past')}
           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-            statusTab === 'past' ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
+            statusTab === 'past' && !hasDateRange ? 'bg-htg-card text-htg-fg shadow-sm' : 'text-htg-fg-muted hover:text-htg-fg'
           }`}>
           <CheckCircle className="w-4 h-4" />
           Zakończone ({pastSorted.length})

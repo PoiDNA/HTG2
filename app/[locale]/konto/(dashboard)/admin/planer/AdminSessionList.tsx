@@ -6,6 +6,7 @@ import { Link, useRouter } from '@/i18n-config';
 import { Search, Calendar, CheckCircle, Download, ExternalLink, Plus, X, Loader2, UserCheck, UserPlus, LayoutList, ChevronLeft, ChevronRight } from 'lucide-react';
 import { isAdminEmail } from '@/lib/roles';
 import { PAYMENT_STATUS_LABELS } from '@/lib/booking/constants';
+import { normalizeDateInput } from '@/lib/date/isoDate';
 import RowSessionPlayer from '@/components/recordings/RowSessionPlayer';
 import AssignRecordingModal from '@/components/recordings/AssignRecordingModal';
 
@@ -571,34 +572,49 @@ export default function AdminSessionList({
       || (client?.email || '').toLowerCase().includes(q);
   });
 
-  // List view filters
+  // List view filters — odporne na różne formaty dat (HTML5 date / DD.MM.YYYY / timestamp z DB).
+  const isoFrom = normalizeDateInput(dateFrom);
+  const isoTo = normalizeDateInput(dateTo);
+  const hasRawDateRange = !!(dateFrom || dateTo);
+  const dateRangeError =
+    hasRawDateRange && (
+      (!!dateFrom && !isoFrom) ||
+      (!!dateTo && !isoTo) ||
+      (!!isoFrom && !!isoTo && isoFrom > isoTo)
+    );
+  const hasValidDateRange = hasRawDateRange && !dateRangeError;
+
   const byDateRange = bySearch.filter(b => {
-    const slot = getSlot(b);
-    const d = slot?.slot_date || '';
-    if (dateFrom && d < dateFrom) return false;
-    if (dateTo && d > dateTo) return false;
+    if (!hasValidDateRange) return true;
+    const d = normalizeDateInput(getSlot(b)?.slot_date);
+    if (!d) return false;
+    if (isoFrom && d < isoFrom) return false;
+    if (isoTo && d > isoTo) return false;
     return true;
   });
 
   const upcoming = byDateRange.filter(b => {
-    const slot = getSlot(b);
-    return slot?.slot_date >= todayStr && b.status !== 'completed';
+    const d = normalizeDateInput(getSlot(b)?.slot_date);
+    return d != null && d >= todayStr && b.status !== 'completed';
   });
   const past = byDateRange.filter(b => {
-    const slot = getSlot(b);
-    return slot?.slot_date < todayStr || b.status === 'completed';
+    const d = normalizeDateInput(getSlot(b)?.slot_date);
+    return (d != null && d < todayStr) || b.status === 'completed';
   });
 
   const sortAsc = (a: any, b: any) => {
     const sa = getSlot(a); const sb = getSlot(b);
-    return ((sa?.slot_date || '') + (sa?.start_time || '')).localeCompare((sb?.slot_date || '') + (sb?.start_time || ''));
+    const da = normalizeDateInput(sa?.slot_date) || '';
+    const db = normalizeDateInput(sb?.slot_date) || '';
+    return (da + (sa?.start_time || '')).localeCompare(db + (sb?.start_time || ''));
   };
   const upcomingSorted = [...upcoming].sort(sortAsc);
   const pastSorted = [...past].sort((a, b) => -sortAsc(a, b));
-  // When a date range is active, the upcoming/past split no longer makes sense —
-  // show every session in range (past + upcoming together), newest first.
-  // Otherwise honour the tab.
-  const hasDateRange = !!(dateFrom || dateTo);
+  // When a valid date range is active, ignore the upcoming/past tab and show
+  // every session in range (past + upcoming together), newest first.
+  // When the date range is invalid (unparseable / inverted), fall back to the
+  // tab so the user still sees something coherent — error UI is shown below.
+  const hasDateRange = hasValidDateRange;
   const dateRangeSorted = [...byDateRange].sort((a, b) => -sortAsc(a, b));
   const current = hasDateRange
     ? dateRangeSorted
@@ -784,21 +800,32 @@ tr:nth-child(even){background:#f9f9f9}
 
         {/* Date range filter — list view only */}
         {view === 'list' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-htg-fg-muted shrink-0">Zakres dat:</span>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="px-2 py-1.5 bg-htg-card border border-htg-card-border rounded-lg text-xs text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/40" />
+              className={`px-2 py-1.5 bg-htg-card border rounded-lg text-xs text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/40 ${
+                !!dateFrom && !isoFrom ? 'border-red-500' : 'border-htg-card-border'
+              }`} />
             <span className="text-xs text-htg-fg-muted">—</span>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="px-2 py-1.5 bg-htg-card border border-htg-card-border rounded-lg text-xs text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/40" />
+              className={`px-2 py-1.5 bg-htg-card border rounded-lg text-xs text-htg-fg focus:outline-none focus:ring-1 focus:ring-htg-sage/40 ${
+                !!dateTo && !isoTo ? 'border-red-500' : 'border-htg-card-border'
+              }`} />
             {(dateFrom || dateTo) && (
               <button onClick={() => { setDateFrom(''); setDateTo(''); }}
                 className="text-xs text-htg-fg-muted hover:text-htg-fg flex items-center gap-1">
                 <X className="w-3 h-3" /> Wyczyść
               </button>
             )}
-            {(dateFrom || dateTo) && (
+            {hasValidDateRange && (
               <span className="text-xs text-htg-sage ml-1">{filtered.length} sesji</span>
+            )}
+            {dateRangeError && (
+              <span className="text-xs text-red-500 ml-1">
+                {!!isoFrom && !!isoTo && isoFrom > isoTo
+                  ? 'Zakres odwrócony — data początkowa jest późniejsza niż końcowa.'
+                  : 'Niepoprawna data (oczekiwano RRRR-MM-DD).'}
+              </span>
             )}
           </div>
         )}

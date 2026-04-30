@@ -166,7 +166,8 @@ export default async function AdminRecordingsPage({
     ? rows.filter((r) =>
         r.sourceEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.participants.some((p) =>
-          (p.display_name ?? p.email ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+          (p.display_name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.email ?? '').toLowerCase().includes(searchQuery.toLowerCase())
         )
       )
     : rows;
